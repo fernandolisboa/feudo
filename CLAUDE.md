@@ -40,14 +40,18 @@ Handlers.
   domain components are free.
 - **Database**: Postgres on Neon via the Vercel integration (`main` = prod, preview branch per PR).
   Drizzle ORM + drizzle-kit migrations committed to the repo.
-- **Auth & tenancy**: Better Auth (ADR pending in Phase 1). Email + password with verification,
-  magic link, password reset, sessions, rate-limited auth endpoints. **Household** is the tenant:
-  roles `owner` and `member`, invite by email, leave/transfer ownership. Emails via Resend.
+- **Auth & tenancy**: Better Auth with its `organization` plugin (ADR-0001). Email + password with
+  verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
+  the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
+  households and works in one active household at a time; invite by email (24h expiry),
+  leave/transfer ownership. Emails via Resend.
 - **Jobs**: Vercel Cron hitting bearer-protected Route Handlers for per-household Pluggy sync and
   indicator refresh. No queue or worker until a measured need appears.
-- **Data sources**: Pluggy (Pluggy Connect widget; each user authorizes their own banks; MeuPluggy
-  only for local development). Pluggy bills per connected item beyond the free tier: confirm with
-  the owner before enabling connections for anyone else. Bacen SGS API for CDI/Selic/IPCA.
+- **Data sources**: each user brings their own Meu Pluggy credentials (free personal tier, per
+  CPF) through a guided wizard; Feudo syncs per user with that user's credentials and never pools
+  CPFs. No Pluggy Connect widget. The provider sits behind a small `DataProvider` interface.
+  Pluggy's paid plan (R$ 2,500/month) and a written OK from Pluggy support gate the closed beta
+  and public launch (ADR-0005). Bacen SGS API for CDI/Selic/IPCA.
 - **AI**: `@anthropic-ai/sdk`, analysis layer only. Sonnet by default; Opus only for the monthly
   deep analysis. Prompts versioned under `prompts/` with fixture tests. Every AI call is attributed
   to a household.
@@ -67,10 +71,12 @@ Confirm with the owner before creating any paid resource.
      explicit trade-offs (liquidity × yield × risk). Persona: conservative analyst; must reference
      the inputs it used; may not recommend a product without stating the counter-argument. Every
      analysis is stored with its inputs, prompt version and model.
-2. **Tenant isolation is a hard invariant.** Every domain table carries `household_id`. Data
-   access goes through household-scoped repositories that take the household from the session; no
-   query path accepts an unscoped id. Every new table ships with an isolation test (household A
-   cannot read or write household B).
+2. **Tenant isolation is a hard invariant.** Every domain table declares its scope: household
+   (`household_id`) or user (`user_id`, only bank connections and provider credentials); an
+   account's `household_id` is nullable only to mean "unassigned" (ADR-0001). Data access goes
+   through scoped repositories that take the household or user from the session; no query path
+   accepts an unscoped id. Every new table ships with an isolation test (household A cannot read
+   or write household B).
 3. **LGPD by design**: terms and privacy policy accepted at registration; explicit consent step
    before any Open Finance connection; data minimization; bank tokens encrypted at rest; account
    data export and deletion flows; audit log of access to financial data. These ship before
