@@ -1,0 +1,9 @@
+node_modules
+.next
+.vercel
+coverage
+dist
+pnpm-lock.yaml
+apps/web/public/sw.js
+apps/web/drizzle
+.claude
