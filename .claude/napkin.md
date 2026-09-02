@@ -11,9 +11,11 @@
 
 1. **[2026-09-02] Orchestrator never implements tickets**
    Do instead: delegate to `.claude/agents/implementer.md` (Sonnet); keep the main session for planning, integration and talking to the user.
-2. **[2026-09-02] Some claude.ai skills are user-only (`setup-matt-pocock-skills`) or absent (`setup-pre-commit`, `to-spec`, `to-tickets`, `better-portuguese`)**
-   Do instead: ask the user to run user-only skills at the next checkpoint; `to-spec`→`to-prd`, `to-tickets`→`to-issues`; pre-commit and pt-BR passes are done by `implementer`/`scribe` agents.
-3. **[2026-09-02] Preview deployments sit behind Vercel Authentication**
+2. **[2026-09-02] Matt Pocock plugin skills are user-invoked: `/mattpocock-skills:{implement,to-spec,to-tickets,triage,grill-with-docs,wayfinder}`**
+   Do instead: they do not appear in the model-invocable list; ask the user to type the slash command, then follow the loaded instructions. Model-invocable: `tdd`, `research`, `domain-modeling`, `codebase-design`, `code-review`, `grilling`, `wizard`, `prototype`, `diagnosing-bugs`.
+3. **[2026-09-02] `setup-pre-commit` and `better-portuguese` skills are absent**
+   Do instead: pre-commit is already set (Husky); pt-BR passes go to the `scribe` agent.
+4. **[2026-09-02] Preview deployments sit behind Vercel Authentication**
    Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
 
 ## Shell & Command Reliability

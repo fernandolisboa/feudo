@@ -198,3 +198,17 @@ numbers follow Brazilian conventions.
   `REGISTRATION_MODE=open`, and monthly as a floor.
 - Product uncertainty → ask the owner. Technical uncertainty → one-paragraph ADR draft, then ask.
 - Secrets: the owner pastes them into Vercel env. Never store them in the repo or in memory.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, operated through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage labels, unchanged (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`); security findings add `security` + `severity:<level>`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` plus `docs/adr/` at the repo root (`UBIQUITOUS_LANGUAGE.md` sits alongside). See `docs/agents/domain.md`.
