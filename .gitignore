@@ -7,3 +7,4 @@ coverage
 dist
 *.tsbuildinfo
 apps/web/public/sw.js
+.playwright-mcp

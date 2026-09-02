@@ -12,10 +12,18 @@
     "test": "pnpm -r --if-present run test",
     "build": "pnpm -r run build",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "9.1.7",
+    "lint-staged": "17.4.1",
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs,json,md,css,yml,yaml}": "prettier --write",
+    "apps/web/src/**/*.{ts,tsx}": "pnpm --filter @feudo/web exec eslint --max-warnings=0",
+    "packages/core/src/**/*.ts": "pnpm --filter @feudo/core exec eslint --max-warnings=0"
   }
 }
