@@ -44,7 +44,10 @@ export function SignInForm() {
 
       <p className="text-muted-foreground text-sm">
         {t.signIn.noAccount}{" "}
-        <Link href="/registrar" className="text-foreground underline underline-offset-4">
+        <Link
+          href="/registrar"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
           {t.signIn.signUpLink}
         </Link>
       </p>
