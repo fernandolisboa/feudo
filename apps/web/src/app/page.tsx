@@ -5,6 +5,7 @@ import { signOutAction, getCurrentSession, t } from "@/modules/auth";
 
 export default async function Home() {
   const session = await getCurrentSession();
+  console.error("DEBUG-TEMP home: session", { hasSession: Boolean(session), name: session?.name });
   if (!session) {
     redirect("/entrar");
   }
