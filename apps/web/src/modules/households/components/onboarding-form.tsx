@@ -19,6 +19,7 @@ import { t } from "../strings";
 import {
   DEFAULT_RESERVE_MULTIPLE,
   DEFAULT_TIME_ZONE,
+  IANA_TIME_ZONES,
   MAX_RESERVE_MULTIPLE,
   MIN_RESERVE_MULTIPLE,
 } from "../validation";
@@ -52,7 +53,18 @@ export function OnboardingForm() {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="timeZone">{t.onboarding.timeZoneLabel}</Label>
-        <Input id="timeZone" name="timeZone" defaultValue={DEFAULT_TIME_ZONE} required />
+        <Select name="timeZone" defaultValue={DEFAULT_TIME_ZONE}>
+          <SelectTrigger id="timeZone">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {IANA_TIME_ZONES.map((timeZone) => (
+              <SelectItem key={timeZone} value={timeZone}>
+                {timeZone}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">
