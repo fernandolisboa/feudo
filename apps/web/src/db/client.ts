@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 
 import { MissingDatabaseUrlError } from "./errors.ts";
+import { attachPoolErrorLogger } from "./pool-error-logger.ts";
 import * as schema from "./schema/index.ts";
 
 export type Database = ReturnType<typeof drizzle<typeof schema>>;
@@ -18,5 +19,6 @@ export function getDb(): Database {
   }
 
   cachedDb = drizzle({ connection: url, schema });
+  attachPoolErrorLogger(cachedDb.$client);
   return cachedDb;
 }

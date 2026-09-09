@@ -135,7 +135,11 @@ the ADR-0008 data map.
 ## WebSocket driver on Vercel
 
 `apps/web/src/db/client.ts` connects with `drizzle-orm/neon-serverless` and no `ws` option: Node 24
-(the runtime everywhere, `.nvmrc`) has a global `WebSocket`, which `@neondatabase/serverless` v1
-picks up automatically. Do not add the `ws` package back — webpack bundling it broke `/api/health`
-in production (`TypeError: b.mask is not a function`) because its `bufferutil` fallback does not
-survive minification.
+(the runtime everywhere, `.nvmrc`, and now `apps/web/package.json`'s `engines.node`) has a global
+`WebSocket`, which `@neondatabase/serverless` v1 picks up automatically. Do not add the `ws`
+package back — webpack bundling it broke `/api/health` in production (`TypeError: b.mask is not a
+function`) because its `bufferutil` fallback does not survive minification.
+
+`getDb()` attaches `attachPoolErrorLogger` (`apps/web/src/db/pool-error-logger.ts`) to the pool's
+`error` event on creation, so Neon dropping an idle WebSocket on a warm serverless instance is
+logged (`error.name`/`code` only, never the message) instead of becoming an uncaught exception.
