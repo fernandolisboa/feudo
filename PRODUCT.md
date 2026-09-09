@@ -14,7 +14,8 @@ serving them or trapping them.
 
 ### 1. Ledger and visibility
 
-Accounts, cards and transactions synced through Open Finance (Pluggy). Categorized spending,
+Accounts, cards and transactions synced from each person's own bank connection (Meu Pluggy today),
+never through a shared credential. Categorized spending,
 monthly evolution, savings rate. Per household, with shared and individual accounts. Transfers
 between the household's own accounts are recognized and never counted as spending.
 

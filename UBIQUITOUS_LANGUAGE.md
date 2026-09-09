@@ -13,6 +13,8 @@
 | Active household                            | casa atual                                     |                                                            |
 | Invite                                      | convite                                        |                                                            |
 | Bank connection                             | conexão bancária                               | "conectar banco"                                           |
+| Data provider                               | provedor de dados                              | "Meu Pluggy" when naming it                                |
+| Provider credentials                        | credenciais do provedor                        |                                                            |
 | Account                                     | conta                                          | bank account only                                          |
 | Shared account                              | conta da casa                                  |                                                            |
 | Individual account                          | conta individual                               |                                                            |
@@ -29,6 +31,11 @@
 | Savings rate                                | taxa de poupança                               |                                                            |
 | Reserve target                              | meta da reserva                                |                                                            |
 | Reserve multiple                            | meses de reserva                               | "6 meses de custo fixo"                                    |
+| Reserve position                            | posição da reserva                             | "faz parte da reserva"                                     |
 | Average fixed cost                          | custo fixo médio                               |                                                            |
 | Bank profile                                | perfil do banco                                |                                                            |
+| Bank comparison                             | comparação de bancos                           |                                                            |
+| Criteria weights                            | pesos dos critérios                            |                                                            |
+| Net real yield                              | rendimento real líquido                        | "depois do imposto e da inflação"                          |
+| FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                     |
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"                                 |

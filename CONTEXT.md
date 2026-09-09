@@ -53,7 +53,7 @@ An account the household treats as one member's own, for reporting purposes. Eve
 _Avoid_: private account, personal account
 
 **Institution**:
-A bank or financial company a user can connect. Referenced by name and Open Finance identifier.
+A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation.
 _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
 
 ### Ledger
@@ -105,6 +105,14 @@ How many months of fixed cost the target covers. Default 6, adjustable per house
 **Reserve position**:
 An account or investment the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
 _Avoid_: reserve account, emergency fund holding
+
+**Net real yield**:
+What a reserve position earns after income tax, compared against the 12-month accumulated IPCA. The number the placement ranking orders by.
+_Avoid_: real return, net rate
+
+**FGC headroom**:
+How much more a CPF can hold in one financial conglomerate while staying inside the FGC coverage limit.
+_Avoid_: FGC room, remaining coverage
 
 **Average fixed cost**:
 The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used.

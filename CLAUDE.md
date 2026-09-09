@@ -45,7 +45,8 @@ Handlers.
   the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
   households and works in one active household at a time; invite by email (24h expiry),
   leave/transfer ownership. Emails via Resend.
-- **Jobs**: Vercel Cron hitting bearer-protected Route Handlers for per-household Pluggy sync and
+- **Jobs**: Vercel Cron hitting bearer-protected Route Handlers for bank-connection sync (the unit
+  of work is the user-owned connection; manual triggers are limited per household, ADR-0005) and
   indicator refresh. No queue or worker until a measured need appears.
 - **Data sources**: each user brings their own Meu Pluggy credentials (free personal tier, per
   CPF) through a guided wizard; Feudo syncs per user with that user's credentials and never pools
@@ -78,7 +79,7 @@ Confirm with the owner before creating any paid resource.
    accepts an unscoped id. Every new table ships with an isolation test (household A cannot read
    or write household B).
 3. **LGPD by design**: terms and privacy policy accepted at registration; explicit consent step
-   before any Open Finance connection; data minimization; bank tokens encrypted at rest; account
+   before any bank connection; data minimization; provider credentials encrypted at rest; account
    data export and deletion flows; audit log of access to financial data. These ship before
    registration opens beyond the first household.
 4. **Deep modules, thin interfaces**: `auth`, `households`, `sync`, `ledger`, `reserve`,
@@ -121,8 +122,9 @@ Confirm with the owner before creating any paid resource.
   write or trigger jobs for household B. Mandatory, blocking.
 - **Integration**: Route Handlers + Drizzle against the PR's Neon preview branch.
 - **E2E**: Playwright against the Vercel preview for the critical paths: registration, email
-  verification, login, household invite and join, Pluggy connect (sandbox), ledger dashboard,
-  reserve view, account deletion.
+  verification, login, household invite and join, bank connection against the in-repo fake
+  `DataProvider` (Meu Pluggy has no sandbox; the real provider gets a manual smoke test), ledger
+  dashboard, reserve view, account deletion.
 - Coverage gate on `packages/core` (≥ 90% lines and branches); no gate on UI.
 - A ticket is not done without tests that fail before the change and pass after: `/tdd` for domain
   logic, tests-alongside for UI.
