@@ -141,7 +141,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm --filter @feudo/web exec playwright install --with-deps chromium
+        run: |
+          set -e
+          attempt=0
+          max_attempts=5
+          until pnpm --filter @feudo/web exec playwright install --with-deps chromium; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "playwright install --with-deps failed after $max_attempts attempts."
+              exit 1
+            fi
+            echo "playwright install --with-deps failed (attempt $attempt/$max_attempts); apt's upstream mirrors are occasionally inconsistent right after a Chrome release, retrying in 15s."
+            sleep 15
+          done
 
       - name: Wait for the Vercel preview deployment
         id: preview
