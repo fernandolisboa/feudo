@@ -91,16 +91,28 @@ describe("getCurrentSession active-household resolution (integration)", () => {
       expect(created.status).toBe("ok");
 
       const secondSessionHeaders = await signInAgain(email, password);
+      const session = await sessionFor(secondSessionHeaders);
 
-      // A fresh sign-in's session row has no activeOrganizationId yet
-      // (Better Auth does not populate it on its own); guarding on that raw
-      // field instead of the membership-resolved CurrentSession would let
-      // this second call through. createHouseholdAction always resolves the
-      // session through getCurrentSession() first, as sessionFor does here,
-      // before calling createHousehold.
+      const rawSession = await getAuth().api.getSession({ headers: secondSessionHeaders });
+      if (!rawSession) throw new Error("second sign-in failed in test setup");
+      await db
+        .update(sessionTable)
+        .set({ activeOrganizationId: null })
+        .where(eq(sessionTable.id, rawSession.session.id));
+      const [sessionRow] = await db
+        .select({ activeOrganizationId: sessionTable.activeOrganizationId })
+        .from(sessionTable)
+        .where(eq(sessionTable.id, rawSession.session.id));
+      expect(sessionRow?.activeOrganizationId).toBeNull();
+
+      // With the raw hint forced back to null, only a guard reading the
+      // membership-resolved CurrentSession.householdId (captured in
+      // `session` above, before this reset) still refuses; a guard reading
+      // session.activeOrganizationId straight off the row would see null
+      // here and let a second household through.
       const secondAttempt = await createHousehold(
         { name: "Segunda casa", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
-        await sessionFor(secondSessionHeaders),
+        session,
         db,
         secondSessionHeaders,
       );
