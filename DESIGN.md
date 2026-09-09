@@ -139,5 +139,6 @@ Every UI ticket ships with: `npx impeccable detect` clean, `/impeccable critique
 with no blocking findings in the default theme, and the token contrast test green for all
 themes. `/impeccable audit` belongs to the owner.
 
-The registration/verification/login screens (ticket #7) ship on the shadcn scaffold theme, not yet
-wired to the Caderno tokens above; ticket #9 (design system wiring) brings them onto `DESIGN.md`.
+The registration/verification/login screens (ticket #7) and the magic-link/password-reset screens
+(ticket #8) ship on the shadcn scaffold theme, not yet wired to the Caderno tokens above; ticket #9
+(design system wiring) brings them onto `DESIGN.md`.

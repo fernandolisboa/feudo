@@ -6,8 +6,8 @@ Registration, verification, login, magic link and password reset run on Better A
 and password reset reuse the existing `verification` table (single-use, expiring rows keyed by
 identifier) — neither adds a table or column, so this ticket ships no new migration. The module's
 public surface is
-`apps/web/src/modules/auth/index.ts`; `auth.ts`, `options.ts`, `service.ts`, `env.ts` and
-`email/*` are private to the module. The two route handlers outside the module that need it — the
+`apps/web/src/modules/auth/index.ts`; `auth.ts`, `options.ts`, `service.ts`, `env.ts`,
+`token-expiry.ts` and `email/*` are private to the module. The two route handlers outside the module that need it — the
 catch-all (`apps/web/src/app/api/auth/[...all]/route.ts`, the module's own HTTP entry point) and
 the test-only mailbox route (`apps/web/src/app/api/test-only/last-email/route.ts`) — import only
 from `apps/web/src/modules/auth/index.ts`, never from the module's internals directly.
@@ -100,15 +100,6 @@ one place (`apps/web/src/modules/auth/email/select.ts`):
   integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). Never written in production —
   see ADR-0008.
 
-## Verification email content
-
-Copy lives in `apps/web/src/modules/auth/strings.ts` (`verificationEmail`, with `{name}`/`{url}`
-placeholders) and is rendered by `buildVerificationEmail`
-(`apps/web/src/modules/auth/email/verification-email.ts`), which HTML-escapes the user's name and
-the verification URL before embedding them in the HTML part. The name comes straight from the
-sign-up form, so an attacker-chosen `<script>`-shaped name cannot inject markup into the email a
-recipient opens.
-
 ## Test-only route
 
 `GET /api/test-only/last-email?to=<email>` returns the last fake-sent message to that address as
@@ -153,12 +144,25 @@ PLAYWRIGHT_BASE_URL=https://<preview-url> TEST_ONLY_TOKEN=<value> VERCEL_AUTOMAT
 about our naming or comment conventions) before running `db:generate` on top of it. The CLI needs
 a reachable `DATABASE_URL` to introspect against, same as any other drizzle-kit command.
 
-## Verification link expiry
+`db:auth-schema` runs an unpinned `npx @better-auth/cli`, whose `latest` can trail the installed
+`better-auth` core and fail to parse `auth.ts` against a newer config shape (e.g. this ticket's
+`onPasswordReset`, `resetPasswordTokenExpiresIn`). Pinning the CLI as a devDependency is tracked in
+#45, not fixed here.
 
-`emailVerification.expiresIn` is `60 * 60` seconds (1 hour, `VERIFICATION_EXPIRES_IN_SECONDS` in
-`options.ts`), matching ADR-0001. This is enforced by Better Auth itself; there is no
-Feudo-specific test that mocks time past that window, since it would only be re-testing the
-library's own configuration option.
+## Link lifetimes
+
+Every single-use link's `expiresIn` is a named constant in
+`apps/web/src/modules/auth/token-expiry.ts` — `VERIFICATION_EXPIRES_IN_SECONDS` (1 hour),
+`MAGIC_LINK_EXPIRES_IN_SECONDS` (5 minutes) and `RESET_PASSWORD_EXPIRES_IN_SECONDS` (1 hour, wired
+to `emailAndPassword.resetPasswordTokenExpiresIn`, since Better Auth's own default for that option
+is undocumented in code and would otherwise silently diverge from the copy) — instead of a bare
+number in `options.ts`. `describeExpiryPtBR` in the same module turns the constant into the phrase
+the emails quote (`{expiresIn}` in `strings.ts`), so the two can never say different numbers. All
+three are enforced by Better Auth itself; there is no Feudo-specific test that mocks time past a
+window, since it would only be re-testing the library's own configuration option.
+
+Magic-link tokens are stored `storeToken: "hashed"` (Better Auth's own default is `"plain"`): the
+`verification` row holds a hash, not the token a phishing read of the database could replay.
 
 ## Magic link never signs up
 
@@ -174,12 +178,17 @@ but never verified), Better Auth treats the successful click as proof of mailbox
 deletes that user's existing credential/OAuth accounts and sessions and flips `emailVerified` to
 `true` before minting the new session (`revokeUnprovenAccountAccess`, a Better Auth 1.7.3 internal).
 This is the library's own anti-hijack behaviour for exactly this case, not something Feudo adds; a
-user in that state has to set a new password via "esqueci minha senha" afterwards. An already
+user in that state has to set a new password via "esqueci minha senha" afterwards (the sign-in form
+always links there, since their old password stops working the moment this fires). An already
 verified user keeps their password untouched.
 
-`requestMagicLink` (`service.ts`) sends the same generic `{ status: "ok" }` outcome whether or not
-the email has a sign-up, matching `signInMagicLink`'s own behaviour (it never checks user existence
-before sending): requesting a link can't be used to test which emails are registered.
+`signInMagicLink` always mints and stores a verification token and always returns the same generic
+`{ status: true }`, whether or not the email has a sign-up — but `options.ts`'s `sendMagicLink`
+looks the address up first (`ctx.context.internalAdapter.findUserByEmail`) and returns without
+calling the `EmailSender` when no account exists. Only the delivery is gated, never the HTTP
+response: requesting a link still can't be used to test which emails are registered, and Feudo
+never becomes an unauthenticated mailer for a stranger's inbox (quota, deliverability reputation).
+`requestMagicLink` (`service.ts`) then reports the same generic `{ status: "ok" }` either way.
 
 ## Password reset
 
@@ -188,7 +197,15 @@ route the reset email through the same `EmailSender` as everything else and revo
 the account the moment the new password is set (Better Auth 1.7.3's own `/reset-password` handler,
 not Feudo code). `/request-password-reset` already returns the same generic message for a known and
 an unknown email (Better Auth's own enumeration protection, simulating the verification-token
-lookup either way) — `requestPasswordReset` (`service.ts`) does not add anything on top.
+lookup either way); `requestPasswordReset` (`service.ts`) additionally pads every call to a 500ms
+floor (`REQUEST_PASSWORD_RESET_MINIMUM_MS`), because Better Auth's own protection only equalizes
+the _work_ done for a known vs. unknown address, not the _time_ it takes — sending a real email is
+slower than the unknown-address branch's dummy lookup, and an observer timing the response could
+otherwise use that gap the same way it could use a differing status code.
+`emailAndPassword.onPasswordReset` deletes every other outstanding `reset-password:*` verification
+row for that user directly (there is no `internalAdapter` method to look rows up by value, only by
+exact identifier), so a second unused reset link from an earlier request can't set the password
+again after this one already did.
 
 The reset link Better Auth builds carries the token as a **path segment**
 (`/reset-password/:token?callbackURL=...`), not a `?token=` query param like the magic-link and
@@ -197,9 +214,27 @@ verification links do; `extractTokenFromEmail`
 page at `/redefinir-senha` reads `?token=` from its own URL because Better Auth's GET
 `/reset-password/:token` callback validates the token and redirects the browser there with it
 attached as a query param before the user ever sees a form; a missing or already-invalid token shows
-a "request a new link" message instead of a broken form.
+a "request a new link" message instead of a broken form. `ResetPasswordForm` strips `?token=` from
+the address bar on mount (`history.replaceState`) once it has captured the token as component
+state, since the query string is otherwise a standing exposure (browser history, a shared device, a
+referrer header on any link the user clicks from that page).
 
-`/sign-in/magic-link`, `/magic-link/verify` and `/reset-password` (the POST that submits the new
-password) get an explicit `rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the
-magic-link plugin's own default is looser (60s / 5), and `/reset-password` submission — unlike
-`/request-password-reset` — isn't covered by any of Better Auth's built-in special rules at all.
+`/sign-in/magic-link` and `/reset-password` (the POST that submits the new password) get a tight
+`rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the magic-link plugin's own
+default is looser (60s / 5), and `/reset-password` submission — unlike `/request-password-reset` —
+isn't covered by any of Better Auth's built-in special rules at all. `/magic-link/verify` and
+`/reset-password/*` (the GET Better Auth's own email links point at) get a much looser ceiling (10s
+/ 20) instead: rate limiting runs ahead of any route handler, so a 429 on a GET the user's browser
+navigates to would render as raw JSON, not the app's error page — the token those routes carry is
+already single-use, so a generous ceiling costs nothing.
+
+## Email copy
+
+`verification-email.ts`, `magic-link-email.ts` and `reset-password-email.ts` all delegate to
+`renderEmail` (`email/render.ts`): it substitutes every `{placeholder}` from `strings.ts` into the
+text part verbatim and into the html part HTML-escaped. Verification and reset emails no longer
+interpolate the account holder's name. For verification that name is attacker-chosen: sign-up
+accepts any `name` alongside any email, so an attacker could land their own text in a stranger's
+inbox before that stranger ever proves they own the address. Reset email's `name` came from the DB
+instead, but the two templates now share the same minimal shape (link + expiry only), which is one
+fewer field to keep escaped and one fewer thing the recipient's name has to appear correct for.

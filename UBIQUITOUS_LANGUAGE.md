@@ -8,6 +8,8 @@
 | User                                        | usuário                                        |                                                                              |
 | Sign up                                     | criar cadastro                                 | the login identity is "cadastro", never "conta" (reserved for bank accounts) |
 | Sign in                                     | entrar                                         |                                                                              |
+| Magic link                                  | link por e-mail                                | route slug `link-magico` (`/entrar/link-magico`)                             |
+| Password reset                              | redefinir senha                                | request step: "esqueci minha senha" (`/esqueci-a-senha`)                     |
 | Verify email                                | confirmar e-mail                               |                                                                              |
 | Terms acceptance                            | aceite dos termos                              |                                                                              |
 | Membership                                  | participação                                   | rarely shown; prefer "membro da casa"                                        |
