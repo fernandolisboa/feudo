@@ -5,6 +5,10 @@ import { nextCookies } from "better-auth/next-js";
 import { evaluateRegistrationMode } from "@feudo/core";
 
 import type { Database } from "@/db/client";
+// Imports the theme module's tokens file directly, not its index: the index
+// re-exports service.ts, which imports "@/modules/auth" to read the current
+// session, and that would make this file part of an auth <-> theme import cycle.
+import { DEFAULT_THEME } from "@/modules/theme/tokens";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
@@ -49,6 +53,12 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           required: true,
           input: false,
           defaultValue: () => new Date(),
+        },
+        theme: {
+          type: "string",
+          required: false,
+          input: false,
+          defaultValue: DEFAULT_THEME,
         },
       },
     },
