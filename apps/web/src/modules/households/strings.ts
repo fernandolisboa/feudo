@@ -27,7 +27,8 @@ const ptBR = {
   onboarding: {
     overline: "Passo 2 de 2",
     title: "Crie sua casa",
-    subtitle: "A casa é onde você e as pessoas com quem divide as finanças mantêm o livro-razão.",
+    subtitle:
+      "A casa é onde você e as pessoas que compartilham suas finanças acompanham o dinheiro e as transações.",
     nameLabel: "Nome da casa",
     namePlaceholder: "Nossa casa",
     timeZoneLabel: "Fuso horário",
