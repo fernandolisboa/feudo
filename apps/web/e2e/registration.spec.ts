@@ -24,10 +24,17 @@ test("sign-up, verification, login and sign-out", async ({ page, request, baseUR
 
   await expect(page).toHaveURL(/\/verificar-email\?email=/);
 
-  const lastEmailResponse = await request.get(
-    `${baseURL}/api/test-only/last-email?to=${encodeURIComponent(email)}`,
-  );
-  expect(lastEmailResponse.ok()).toBe(true);
+  const lastEmailUrl = `${baseURL}/api/test-only/last-email?to=${encodeURIComponent(email)}`;
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(lastEmailUrl);
+        return response.status();
+      },
+      { message: "verification email was not persisted in time", timeout: 15_000 },
+    )
+    .toBe(200);
+  const lastEmailResponse = await request.get(lastEmailUrl);
   const lastEmail = (await lastEmailResponse.json()) as { text: string };
 
   const linkMatch = /https?:\/\/\S+/.exec(lastEmail.text);
