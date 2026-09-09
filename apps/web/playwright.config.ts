@@ -17,9 +17,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   timeout: 60_000,
+  reporter: [["html", { open: "never" }]],
   use: {
     baseURL,
     extraHTTPHeaders,
-    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
 });
