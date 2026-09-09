@@ -1,9 +1,8 @@
 import { cookies } from "next/headers";
 import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
-import { evaluateRegistrationMode } from "@feudo/core";
 
 import { getAuth } from "./auth";
-import { readAuthBaseUrl, readRegistrationMode } from "./env";
+import { readAuthBaseUrl } from "./env";
 import { TERMS_VERSION } from "./terms";
 
 const AUTH_BASE_PATH = "/api/auth";
@@ -44,9 +43,21 @@ async function applyResponseCookies(response: Response): Promise<void> {
 
   for (const setCookie of setCookieValues) {
     for (const [name, attributes] of parseSetCookieHeader(setCookie)) {
-      cookieStore.set(name, attributes.value, toCookieOptions(attributes));
+      try {
+        cookieStore.set(name, attributes.value, toCookieOptions(attributes));
+      } catch (error) {
+        logCookieStoreError(name, error);
+      }
     }
   }
+}
+
+function logCookieStoreError(cookieName: string, error: unknown): void {
+  console.error(
+    "auth handler failed to persist a cookie",
+    cookieName,
+    error instanceof Error ? error.name : "UnknownError",
+  );
 }
 
 async function callAuthHandler(
@@ -80,7 +91,7 @@ export type SignUpInput = {
 };
 
 export type SignUpOutcome =
-  | { status: "ok"; userId: string }
+  | { status: "ok" }
   | { status: "terms_not_accepted" }
   | { status: "registration_closed" }
   | { status: "invite_required" }
@@ -92,16 +103,6 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
     return { status: "terms_not_accepted" };
   }
 
-  const registrationDecision = evaluateRegistrationMode(readRegistrationMode(), false);
-  if (!registrationDecision.allowed) {
-    return {
-      status:
-        registrationDecision.reason === "registration_closed"
-          ? "registration_closed"
-          : "invite_required",
-    };
-  }
-
   const response = await callAuthHandler(
     "/sign-up/email",
     {
@@ -109,7 +110,6 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
       email: input.email,
       password: input.password,
       termsVersion: TERMS_VERSION,
-      termsAcceptedAt: new Date().toISOString(),
       callbackURL: "/entrar",
     },
     requestHeaders,
@@ -141,7 +141,7 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
   if (!body?.user?.id) {
     return { status: "sign_up_failed" };
   }
-  return { status: "ok", userId: body.user.id };
+  return { status: "ok" };
 }
 
 export type SignInInput = { email: string; password: string };

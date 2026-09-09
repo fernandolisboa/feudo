@@ -64,7 +64,7 @@ describe("sign-up, verification and sign-in", () => {
       const signInOutcome = await signIn({ email, password: "correct-horse" }, new Headers());
       expect(signInOutcome.status).toBe("ok");
 
-      const [row] = await db.select().from(user).where(eq(user.id, signUpOutcome.userId));
+      const [row] = await db.select().from(user).where(eq(user.email, email));
       expect(row?.termsVersion).toBe(TERMS_VERSION);
       expect(row?.termsAcceptedAt).toBeInstanceOf(Date);
     });
@@ -182,9 +182,8 @@ describe("sign-up, verification and sign-in", () => {
         new Headers(),
       );
       expect(outcome.status).toBe("ok");
-      if (outcome.status !== "ok") return;
 
-      const [row] = await db.select().from(user).where(eq(user.id, outcome.userId));
+      const [row] = await db.select().from(user).where(eq(user.email, email));
       expect(row).toMatchObject({ termsVersion: TERMS_VERSION });
     });
   });

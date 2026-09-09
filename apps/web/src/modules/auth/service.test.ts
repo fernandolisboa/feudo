@@ -79,4 +79,30 @@ describe("service boundary error handling", () => {
 
     expect(outcome).toEqual({ status: "rate_limited" });
   });
+
+  it("signUp maps the hook's registration_closed response to registration_closed", async () => {
+    handlerMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "registration_closed" }), { status: 403 }),
+    );
+
+    const outcome = await signUp(
+      { name: "A", email: "a@example.com", password: "correct-horse", termsAccepted: true },
+      new Headers(),
+    );
+
+    expect(outcome).toEqual({ status: "registration_closed" });
+  });
+
+  it("signUp maps the hook's terms_not_accepted response to terms_not_accepted", async () => {
+    handlerMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "terms_not_accepted" }), { status: 400 }),
+    );
+
+    const outcome = await signUp(
+      { name: "A", email: "a@example.com", password: "correct-horse", termsAccepted: true },
+      new Headers(),
+    );
+
+    expect(outcome).toEqual({ status: "terms_not_accepted" });
+  });
 });

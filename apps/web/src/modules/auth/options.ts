@@ -47,7 +47,8 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         termsAcceptedAt: {
           type: "date",
           required: true,
-          input: true,
+          input: false,
+          defaultValue: () => new Date(),
         },
       },
     },
@@ -78,6 +79,15 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
 
         if (readTermsVersion(ctx.body) !== TERMS_VERSION) {
           throw new APIError("BAD_REQUEST", { message: "terms_not_accepted" });
+        }
+
+        // termsAcceptedAt is input:false, but Better Auth's sign-up body schema
+        // passes unknown keys through unchanged, so a client-sent value still
+        // reaches parseInputData and either overrides the field's defaultValue
+        // function with itself (unset) or throws (update). Stripping it here is
+        // what actually forces the server-clock defaultValue to run.
+        if (ctx.body && typeof ctx.body === "object") {
+          delete (ctx.body as Record<string, unknown>).termsAcceptedAt;
         }
       }),
     },

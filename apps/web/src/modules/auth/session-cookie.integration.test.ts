@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cookieJar = vi.hoisted(() => new Map<string, string>());
+const recordedSetOptions = vi.hoisted(() => [] as Record<string, unknown>[]);
 
 vi.mock("next/headers", () => ({
   cookies: () =>
     Promise.resolve({
-      set: (name: string, value: string) => {
+      set: (name: string, value: string, options?: Record<string, unknown>) => {
         cookieJar.set(name, value);
+        recordedSetOptions.push(options ?? {});
       },
       get: (name: string) => {
         const value = cookieJar.get(name);
@@ -54,6 +56,7 @@ function extractVerificationToken(emailText: string): string {
 
 beforeEach(() => {
   cookieJar.clear();
+  recordedSetOptions.length = 0;
 });
 
 describe("session cookie persistence through the auth handler", () => {
@@ -84,6 +87,27 @@ describe("session cookie persistence through the auth handler", () => {
 
       const sessionAfterSignOut = await getCurrentSession();
       expect(sessionAfterSignOut).toBeNull();
+    });
+  });
+
+  it("sets the session cookie httpOnly and sameSite=lax", async () => {
+    await withTestDb(async (db) => {
+      const email = "cookie-options@example.com";
+      const password = "correct-horse";
+
+      await signUp({ name: "Cookie Options", email, password, termsAccepted: true }, new Headers());
+
+      const token = extractVerificationToken((await findLastFakeSentEmail(db, email))?.text ?? "");
+      await getAuth().api.verifyEmail({ query: { token } });
+
+      recordedSetOptions.length = 0;
+      await signIn({ email, password }, new Headers());
+
+      expect(recordedSetOptions.length).toBeGreaterThan(0);
+      for (const options of recordedSetOptions) {
+        expect(options.httpOnly).toBe(true);
+        expect(options.sameSite).toBe("lax");
+      }
     });
   });
 });

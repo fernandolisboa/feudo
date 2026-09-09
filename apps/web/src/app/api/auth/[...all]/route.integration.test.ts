@@ -101,4 +101,51 @@ describe("POST /api/auth/sign-up/email enforces policy at the HTTP layer", () =>
       expect(rows).toHaveLength(1);
     });
   });
+
+  it("ignores a forged termsAcceptedAt and stamps the server clock instead", async () => {
+    await withTestDb(async (db) => {
+      const email = "http-forged-terms-accepted-at@example.com";
+
+      const response = await POST(
+        signUpRequest({
+          name: "Direct Post",
+          email,
+          password: "correct-horse",
+          termsVersion: TERMS_VERSION,
+          termsAcceptedAt: "1999-01-01T00:00:00.000Z",
+        }),
+      );
+
+      expect(response.ok).toBe(true);
+
+      const [row] = await db.select().from(user).where(eq(user.email, email));
+      const storedTermsAcceptedAt = row?.termsAcceptedAt;
+      expect(storedTermsAcceptedAt).toBeInstanceOf(Date);
+      const ageInMs = Date.now() - (storedTermsAcceptedAt as Date).getTime();
+      expect(ageInMs).toBeGreaterThanOrEqual(0);
+      expect(ageInMs).toBeLessThan(10_000);
+    });
+  });
+
+  it("never 500s on an unparseable termsAcceptedAt, stamping the server clock instead", async () => {
+    await withTestDb(async (db) => {
+      const email = "http-unparseable-terms-accepted-at@example.com";
+
+      const response = await POST(
+        signUpRequest({
+          name: "Direct Post",
+          email,
+          password: "correct-horse",
+          termsVersion: TERMS_VERSION,
+          termsAcceptedAt: "not-a-date",
+        }),
+      );
+
+      expect(response.status).not.toBe(500);
+      expect(response.ok).toBe(true);
+
+      const [row] = await db.select().from(user).where(eq(user.email, email));
+      expect(row?.termsAcceptedAt).toBeInstanceOf(Date);
+    });
+  });
 });
