@@ -7,7 +7,7 @@ import { member } from "@/db/schema/auth.ts";
 import { householdSettings } from "@/db/schema/households.ts";
 
 import { getAuth } from "./auth";
-import { signUpVerifiedUser } from "./test/signUpVerifiedUser";
+import { signUpVerifiedUser } from "./test/sign-up-verified-user";
 
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";

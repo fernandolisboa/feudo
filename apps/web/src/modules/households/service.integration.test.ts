@@ -10,7 +10,7 @@ import { withTestDb } from "@/db/test/harness";
 import { member } from "@/db/schema/auth.ts";
 import { householdSettings } from "@/db/schema/households.ts";
 import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
-import { signUpVerifiedUser } from "@/modules/auth/test/signUpVerifiedUser";
+import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
 import { createHousehold, listHouseholds, switchHousehold } from "./service";
 

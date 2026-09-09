@@ -9,7 +9,7 @@ vi.mock("next/headers", () => ({
 import { withTestDb } from "@/db/test/harness";
 import { session as sessionTable } from "@/db/schema/auth.ts";
 import { getAuth, getCurrentSession } from "@/modules/auth";
-import { signUpVerifiedUser } from "@/modules/auth/test/signUpVerifiedUser";
+import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
 import { getHouseholdSettings } from "./repository";
 import { householdScope, NoActiveHouseholdError } from "./scope";
