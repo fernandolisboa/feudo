@@ -1,22 +1,21 @@
-import { expect, test } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
-function uniqueEmail(): string {
+export function uniqueEmail(prefix: string): string {
   const suffix = `${Date.now().toString()}-${Math.floor(Math.random() * 1e6).toString()}`;
-  return `e2e-${suffix}@example.com`;
+  return `${prefix}-${suffix}@example.com`;
 }
 
-test("sign-up, verification, login and sign-out", async ({ page, request, baseURL }) => {
-  if (!baseURL) {
-    throw new Error("baseURL is not configured for this Playwright project");
-  }
-
-  const email = uniqueEmail();
-  const password = "correct-horse-battery-staple";
-
+export async function signUpVerifyAndSignIn(
+  page: Page,
+  request: APIRequestContext,
+  baseURL: string,
+  options: { name: string; email: string; password: string },
+): Promise<void> {
   await page.goto("/registrar");
-  await page.getByLabel("Nome").fill("Playwright User");
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await page.getByLabel("Nome").fill(options.name);
+  await page.getByLabel("E-mail").fill(options.email);
+  await page.getByLabel("Senha").fill(options.password);
   await page
     .getByRole("checkbox", { name: "Aceito os termos de uso e a política de privacidade" })
     .check();
@@ -24,7 +23,7 @@ test("sign-up, verification, login and sign-out", async ({ page, request, baseUR
 
   await expect(page).toHaveURL(/\/verificar-email\?email=/);
 
-  const lastEmailUrl = `${baseURL}/api/test-only/last-email?to=${encodeURIComponent(email)}`;
+  const lastEmailUrl = `${baseURL}/api/test-only/last-email?to=${encodeURIComponent(options.email)}`;
   await expect
     .poll(
       async () => {
@@ -49,15 +48,9 @@ test("sign-up, verification, login and sign-out", async ({ page, request, baseUR
   await page.goto(linkMatch[0]);
   await expect(page).toHaveURL(/\/entrar/);
 
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await page.getByLabel("E-mail").fill(options.email);
+  await page.getByLabel("Senha").fill(options.password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: "Olá, Playwright User." })).toBeVisible();
-
-  await page.getByRole("button", { name: "Playwright User" }).click();
-  await page.getByRole("menuitem", { name: "Sair" }).click();
-
-  await expect(page).toHaveURL(/\/entrar/);
-});
+}
