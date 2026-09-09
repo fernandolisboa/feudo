@@ -114,7 +114,8 @@ jobs:
     # every branch's CI run. This job resets and migrates that schema itself,
     # inside its own held `preview-db` concurrency slot, so a concurrent
     # branch's `integration` job cannot wipe the schema mid-run.
-    needs: ci
+    # Runs after `integration` so the two preview-db jobs of one run are never both pending in the shared `preview-db` concurrency group, where GitHub would cancel the older pending job for a newer one.
+    needs: [ci, integration]
     if: github.event_name == 'pull_request'
     timeout-minutes: 20
     concurrency:
