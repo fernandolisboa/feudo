@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 
+import type { SimpleOutcome } from "@/lib/outcome";
 import { getAuth } from "./auth";
 import { readAuthBaseUrl } from "./env";
 import { TERMS_VERSION } from "./terms";
@@ -90,13 +91,14 @@ export type SignUpInput = {
   termsAccepted: boolean;
 };
 
-export type SignUpOutcome =
-  | { status: "ok" }
-  | { status: "terms_not_accepted" }
-  | { status: "registration_closed" }
-  | { status: "invite_required" }
-  | { status: "rate_limited" }
-  | { status: "sign_up_failed" };
+export type SignUpOutcome = SimpleOutcome<
+  | "ok"
+  | "terms_not_accepted"
+  | "registration_closed"
+  | "invite_required"
+  | "rate_limited"
+  | "sign_up_failed"
+>;
 
 export async function signUp(input: SignUpInput, requestHeaders: Headers): Promise<SignUpOutcome> {
   if (!input.termsAccepted) {
@@ -146,12 +148,9 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
 
 export type SignInInput = { email: string; password: string };
 
-export type SignInOutcome =
-  | { status: "ok" }
-  | { status: "invalid_credentials" }
-  | { status: "email_not_verified" }
-  | { status: "rate_limited" }
-  | { status: "failed" };
+export type SignInOutcome = SimpleOutcome<
+  "ok" | "invalid_credentials" | "email_not_verified" | "rate_limited" | "failed"
+>;
 
 export async function signIn(input: SignInInput, requestHeaders: Headers): Promise<SignInOutcome> {
   const response = await callAuthHandler("/sign-in/email", input, requestHeaders);
@@ -171,8 +170,7 @@ export async function signIn(input: SignInInput, requestHeaders: Headers): Promi
   return { status: "ok" };
 }
 
-export type ResendVerificationOutcome =
-  { status: "ok" } | { status: "rate_limited" } | { status: "failed" };
+export type ResendVerificationOutcome = SimpleOutcome<"ok" | "rate_limited" | "failed">;
 
 export async function resendVerification(
   email: string,
