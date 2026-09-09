@@ -7,6 +7,7 @@ import { user } from "@/db/schema/auth.ts";
 import { getAuth } from "@/modules/auth/auth";
 import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
 import { TERMS_VERSION } from "@/modules/auth/terms";
+import { extractTokenFromEmail } from "@/modules/auth/test/extract-token-from-email";
 
 import { POST } from "./route";
 
@@ -42,18 +43,6 @@ function updateUserRequest(body: Record<string, unknown>, cookieHeader: string):
   });
 }
 
-function extractVerificationToken(emailText: string): string {
-  const match = /https?:\/\/\S+/.exec(emailText);
-  if (!match) {
-    throw new Error("verification email did not contain a link");
-  }
-  const token = new URL(match[0]).searchParams.get("token");
-  if (!token) {
-    throw new Error("verification link did not contain a token");
-  }
-  return token;
-}
-
 function sessionCookieFrom(response: Response): string {
   const setCookieValues = response.headers.getSetCookie();
   const sessionCookie = setCookieValues.find((value) =>
@@ -83,7 +72,7 @@ async function signUpVerifyAndSignIn(db: Database, email: string): Promise<strin
   if (!sentEmail) {
     throw new Error(`no email was sent to ${email}`);
   }
-  const token = extractVerificationToken(sentEmail.text);
+  const token = extractTokenFromEmail(sentEmail.text);
   await getAuth().api.verifyEmail({ query: { token } });
 
   const signInResponse = await POST(signInRequest({ email, password: "correct-horse" }));
