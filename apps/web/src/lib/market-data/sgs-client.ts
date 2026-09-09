@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 import type { FetchWindow } from "./fetch-window";
+import type { SgsSeriesCode } from "./series";
 
 const SGS_BASE_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs";
+const SGS_FETCH_TIMEOUT_MS = 10_000;
+
+// A 10-year window of daily observations is at most ~3_653 rows; capped with headroom so a
+// malformed or malicious response can't force an unbounded parse/allocation.
+const MAX_OBSERVATIONS_PER_FETCH = 3_700;
 
 export interface SgsObservation {
   referenceDate: string;
@@ -10,10 +16,10 @@ export interface SgsObservation {
 }
 
 export class SgsFetchError extends Error {
-  readonly seriesCode: string;
+  readonly seriesCode: SgsSeriesCode;
   readonly status: number | undefined;
 
-  constructor(seriesCode: string, message: string, status?: number) {
+  constructor(seriesCode: SgsSeriesCode, message: string, status?: number) {
     super(`SGS series ${seriesCode}: ${message}`);
     this.name = "SgsFetchError";
     this.seriesCode = seriesCode;
@@ -22,9 +28,9 @@ export class SgsFetchError extends Error {
 }
 
 export class SgsResponseShapeError extends Error {
-  readonly seriesCode: string;
+  readonly seriesCode: SgsSeriesCode;
 
-  constructor(seriesCode: string) {
+  constructor(seriesCode: SgsSeriesCode) {
     super(`SGS series ${seriesCode}: response did not match the expected shape`);
     this.name = "SgsResponseShapeError";
     this.seriesCode = seriesCode;
@@ -36,7 +42,7 @@ const sgsObservationSchema = z.object({
   valor: z.string().regex(/^-?\d+(\.\d+)?$/),
 });
 
-const sgsResponseSchema = z.array(sgsObservationSchema);
+const sgsResponseSchema = z.array(sgsObservationSchema).max(MAX_OBSERVATIONS_PER_FETCH);
 
 function splitIntoThreeParts(value: string, separator: string): [string, string, string] {
   const parts = value.split(separator);
@@ -62,7 +68,7 @@ function parseSgsDateToISO(ddmmyyyy: string): string {
 }
 
 export async function fetchSgsSeries(
-  seriesCode: string,
+  seriesCode: SgsSeriesCode,
   window: FetchWindow,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SgsObservation[]> {
@@ -73,7 +79,7 @@ export async function fetchSgsSeries(
 
   let response: Response;
   try {
-    response = await fetchImpl(url);
+    response = await fetchImpl(url, { signal: AbortSignal.timeout(SGS_FETCH_TIMEOUT_MS) });
   } catch {
     throw new SgsFetchError(seriesCode, "network request failed");
   }
@@ -86,7 +92,13 @@ export async function fetchSgsSeries(
     );
   }
 
-  const json: unknown = await response.json();
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new SgsResponseShapeError(seriesCode);
+  }
+
   const parsed = sgsResponseSchema.safeParse(json);
   if (!parsed.success) {
     throw new SgsResponseShapeError(seriesCode);

@@ -14,9 +14,12 @@ describe("fetchSgsSeries", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
     await fetchSgsSeries("12", { fromISODate: "2026-08-01", toISODate: "2026-09-09" }, fetchMock);
 
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0] as [string, { signal?: AbortSignal }];
+    expect(url).toBe(
       "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=01/08/2026&dataFinal=09/09/2026",
     );
+    expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("parses SGS-shaped observations into reference date and raw value", async () => {
@@ -98,5 +101,29 @@ describe("fetchSgsSeries", () => {
     );
 
     expect(observations).toEqual([]);
+  });
+
+  it("throws SgsResponseShapeError when the response body is not valid JSON", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response("not json", { status: 200, headers: { "content-type": "text/plain" } }),
+      );
+
+    await expect(
+      fetchSgsSeries("12", { fromISODate: "2026-09-01", toISODate: "2026-09-09" }, fetchMock),
+    ).rejects.toBeInstanceOf(SgsResponseShapeError);
+  });
+
+  it("throws SgsResponseShapeError when the observation array exceeds the 10-year daily cap", async () => {
+    const tooManyObservations = Array.from({ length: 3_701 }, (_, index) => ({
+      data: "01/09/2026",
+      valor: String(index),
+    }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(tooManyObservations));
+
+    await expect(
+      fetchSgsSeries("12", { fromISODate: "2016-09-09", toISODate: "2026-09-09" }, fetchMock),
+    ).rejects.toBeInstanceOf(SgsResponseShapeError);
   });
 });
