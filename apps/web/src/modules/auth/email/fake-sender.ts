@@ -8,6 +8,7 @@ import type { EmailSender, SendEmailInput } from "./sender";
 class FakeEmailSender implements EmailSender {
   async send(input: SendEmailInput): Promise<void> {
     await recordFakeSentEmail(getDb(), input);
+    console.error("DEBUG-TEMP fake-sender: recorded", { to: input.to });
   }
 }
 
