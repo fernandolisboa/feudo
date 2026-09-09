@@ -1,5 +1,3 @@
-export type { ActionState } from "./action-state";
-export { initialActionState } from "./action-state";
 export {
   requestMagicLinkAction,
   requestPasswordResetAction,
