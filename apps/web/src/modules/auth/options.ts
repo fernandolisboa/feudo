@@ -23,6 +23,16 @@ function readTermsVersion(body: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+const CONSENT_FIELDS = ["termsVersion", "termsAcceptedAt"] as const;
+
+function hasConsentField(body: unknown): boolean {
+  if (typeof body !== "object" || body === null) {
+    return false;
+  }
+  const keys = Object.keys(body);
+  return CONSENT_FIELDS.some((field) => keys.includes(field));
+}
+
 export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.env) {
   const baseURL = readAuthBaseUrl(env);
   // Built eagerly, not inside sendVerificationEmail below: Better Auth swallows
@@ -85,6 +95,15 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     hooks: {
       // eslint-disable-next-line @typescript-eslint/require-await -- Better Auth's middleware type requires an async handler even though this hook never awaits.
       before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/update-user") {
+          // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
+          // signed-in session must never be able to rewrite its own consent record.
+          if (hasConsentField(ctx.body)) {
+            throw new APIError("BAD_REQUEST", { message: "consent_fields_immutable" });
+          }
+          return;
+        }
+
         if (ctx.path !== "/sign-up/email") {
           return;
         }

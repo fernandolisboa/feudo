@@ -45,3 +45,4 @@ Feudo is a data controller under LGPD regardless of being free or small, and it 
 - Every table added later must be placed in this map in the same PR; the `reviewer-security` lens checks for it.
 - Any third party that receives personal data (Resend for email, Anthropic for analyses, Pluggy for bank access, Neon and Vercel for hosting) is named in the privacy policy; analyses send computed numbers only, never transactions.
 - The `feudo-preview` Neon project (used by Vercel Preview/Development and by CI) never holds production personal data: it is a separate project from production, not a copy or a restore target, so there is no path by which production data reaches it.
+- Consent fields (`user.terms_version`, `user.terms_accepted_at`) are immutable after sign-up: `hooks.before` rejects any `/update-user` request that carries either field, so a signed-in session can never rewrite its own consent record without a fresh acceptance flow (#25).
