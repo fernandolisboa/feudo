@@ -106,6 +106,7 @@ jobs:
           DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
         run: pnpm test:integration
 
+  # Not yet a required check; promote once it has proven stable across a few PRs.
   e2e:
     name: e2e
     runs-on: ubuntu-latest
