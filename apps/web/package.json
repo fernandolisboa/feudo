@@ -19,7 +19,7 @@
     "db:check": "drizzle-kit check",
     "db:reset": "node scripts/reset-db.mjs",
     "db:reset-schema": "node scripts/reset-schema.mjs",
-    "db:auth-schema": "npx @better-auth/cli generate --config src/modules/auth/cli.ts --output src/db/schema/auth.ts -y"
+    "db:auth-schema": "better-auth generate --config src/modules/auth/cli.ts --output .generated/auth-schema.ts -y && (git --no-pager diff --no-index --stat src/db/schema/auth.ts .generated/auth-schema.ts || true)"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -47,6 +47,7 @@
     "@types/node": "20.19.43",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
+    "auth": "1.7.3",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.4",
