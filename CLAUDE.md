@@ -183,12 +183,20 @@ each ticket in the PR description.
 
 ## Design system tokens
 
-Canonical values live in `DESIGN.md`. This section mirrors them so `/design` and `/design-sync`
-can read them. Filled in Phase 2; until then it is a placeholder.
+Canonical values live in `DESIGN.md`; this is the summary `/design` and `/design-sync` read.
 
-- Direction: calm, trustworthy finance tool for a couple. Not a fintech landing page.
-- Color, type scale, spacing, radius, motion: see `DESIGN.md` (pending).
-- Number and date formatting: pt-BR conventions (`R$ 1.234,56`, `02/09/2026`).
+- Direction: calm, trustworthy household ledger; paper surfaces, serif for headlines and money,
+  hairlines not shadows, one accent used sparingly.
+- Structure (not themeable): collapsible sidebar (224px / 64px), bottom tabs under 768px; page =
+  overline + serif headline + hairline sections; stat tiles, bar lists, 40px table rows.
+- Themes (per-user, `data-theme`, ADR-0010): `caderno` (default) · `painel` · `sala`. Tokens:
+  `--bg --surface --surface-2 --line --line-soft --ink --muted --accent --accent-hover
+--accent-soft --chart-1 --chart-2 --warning --danger --font-display --font-body --radius`.
+- Caderno: bg `#f4efe6`, surface `#fbf8f2`, ink `#2a2622`, muted `#6f675d`, accent `#4f6f52`,
+  chart `#3d8756` / `#6a63c9`, Source Serif 4 + Source Sans 3, radius 6px, body 14px.
+- Type scale: 11 · 12 · 13 · body · 15 · 18 · 22 · 26 · 30 · 34; tabular numerals always.
+- Spacing 4px base; motion 150ms hover, 200ms shell; `prefers-reduced-motion` respected.
+- Formatting: `R$ 1.234,56`, `4,6%`, `02/09/2026`, `agosto de 2026`, household time zone.
 
 ## i18n
 
