@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-import { AuthShell, ResetPasswordForm, t } from "@/modules/auth";
+import { AuthShell, ResetPasswordFlow, t } from "@/modules/auth";
 
 export default async function ResetPasswordPage({
   searchParams,
@@ -14,18 +12,7 @@ export default async function ResetPasswordPage({
       title={t.resetPassword.title}
       subtitle={token ? t.resetPassword.subtitle : undefined}
     >
-      {token ? (
-        <ResetPasswordForm token={token} />
-      ) : (
-        <>
-          <p className="text-sm">{t.resetPassword.invalidOrExpired}</p>
-          <p className="mt-4 text-sm">
-            <Link href="/esqueci-a-senha" className="text-foreground underline underline-offset-4">
-              {t.resetPassword.requestNewLink}
-            </Link>
-          </p>
-        </>
-      )}
+      <ResetPasswordFlow token={token} />
     </AuthShell>
   );
 }

@@ -12,7 +12,7 @@ export { AuthShell } from "./components/auth-shell";
 export { ForgotPasswordForm } from "./components/forgot-password-form";
 export { MagicLinkForm } from "./components/magic-link-form";
 export { ResendVerificationForm } from "./components/resend-verification-form";
-export { ResetPasswordForm } from "./components/reset-password-form";
+export { ResetPasswordFlow } from "./components/reset-password-flow";
 export { SignInForm } from "./components/sign-in-form";
 export { SignUpForm } from "./components/sign-up-form";
 export { findLastFakeSentEmail } from "./email/fake-email-repository";

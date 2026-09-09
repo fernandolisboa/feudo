@@ -44,6 +44,8 @@ const en = {
     passwordLabel: "New password",
     submit: "Save new password",
     invalidOrExpired: "This link is invalid or has expired. Request a new one.",
+    linkRemoved:
+      "The link left your address bar for safety. Request a new one to keep resetting your password.",
     requestNewLink: "Request a new link",
   },
   verifyEmail: {
@@ -137,6 +139,8 @@ const ptBR = {
     passwordLabel: "Nova senha",
     submit: "Salvar nova senha",
     invalidOrExpired: "Este link é inválido ou expirou. Peça um novo link.",
+    linkRemoved:
+      "Por segurança, o link saiu da barra de endereços. Peça um novo link para continuar redefinindo sua senha.",
     requestNewLink: "Pedir novo link",
   },
   verifyEmail: {
