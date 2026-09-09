@@ -10,19 +10,21 @@ A calm, trustworthy finance tool for a couple. Reads like a well-kept household 
 fintech landing page: paper-toned surfaces, a serif for headlines and money, hairlines instead of
 shadows, one accent used sparingly, dense enough for a desktop that is open every day.
 
-## Structure (one, not themeable)
+## Structure (one set of components; the shell layout is themeable)
 
-- **App shell**: collapsible sidebar on desktop (224px open with labels, 64px collapsed with
-  icons only, state remembered per user); bottom tab bar on viewports under 768px. Five
-  destinations: Visão geral, Transações, Reserva, Bancos, Casa. Household switcher at the sidebar
-  foot (or in the mobile header).
+- **App shell**: a CSS grid with named areas (nav, header, content). The theme's `shell` field
+  places the nav: `sidebar` (collapsible, 224px open with labels, 64px collapsed with icons only,
+  state remembered per user) or `topnav` (a horizontal bar under the header). Under 768px every
+  theme uses a bottom tab bar. Five destinations: Visão geral, Transações, Reserva, Bancos, Casa.
+  Household switcher at the nav foot (sidebar), in the bar (topnav) or in the mobile header.
 - **Page**: overline (section · period) + serif headline that states the month's fact in one
   sentence, actions on the right; then sections separated by hairlines with a serif section title
   and a right-aligned meta or action.
 - **Data**: stat tiles in a 4-column hairline grid; bar lists for magnitudes; tables with an
   uppercase 11px header row and 40px rows; notices as bordered panels with an icon and one action.
-- **Themes change tokens only** (color, type, radius, elevation, density). Layout, hierarchy and
-  components are the same in every theme (ADR-0010).
+- **Themes change tokens and the shell layout** (color, type, radius, elevation, density, nav
+  placement). Component anatomy is the same in every theme: the accounts list is a table, the
+  page headline is a sentence, in Caderno, Painel and Sala alike (ADR-0010).
 
 ## Tokens
 
@@ -53,6 +55,7 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 | `--radius`       | `6px`                                                | controls, panels (tags 4px, avatars round)       |
 | `--elevation`    | none                                                 | hairlines only                                   |
 | `--density`      | body 14px, row 40px                                  |                                                  |
+| `shell`          | `sidebar`                                            | nav placement: `sidebar` or `topnav`             |
 
 ### Painel
 
@@ -60,7 +63,7 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 #eceef2` · `--ink #16181d` · `--muted #5c6370` · `--accent #1f5fae` · `--accent-hover #174a8a` ·
 `--accent-soft #eef4fc` · `--chart-1 #2a78d6` · `--chart-2 #c96a2a` · `--warning #7a5f18` ·
 `--danger #b3261e` · display `"IBM Plex Sans"` · body `"IBM Plex Sans"` · `--font-mono "IBM Plex Mono"` for numerals
-· radius 6px · elevation: 1px border cards · density: body 13px, row 36px.
+· radius 6px · elevation: 1px border cards · density: body 13px, row 36px · `shell sidebar`.
 
 ### Sala
 
@@ -69,7 +72,7 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 `--accent-soft #e3f1ee` · `--chart-1 #12907e` · `--chart-2 #c96a2a` · `--warning #7a5f18` ·
 `--danger #a33a2e` · display and body `"Figtree"` · radius 16px (pills 999px) · elevation: soft
 shadow `0 1px 2px rgba(38,35,31,.06), 0 8px 24px -16px rgba(38,35,31,.18)` · density: body 15px,
-row 44px.
+row 44px · `shell topnav`.
 
 ### Type scale (all themes, px)
 
