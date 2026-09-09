@@ -1,8 +1,9 @@
 import { desc, eq, sql } from "drizzle-orm";
 
-import { marketData } from "../schema/market-data.ts";
+import { marketData } from "@/db/schema/market-data";
 
-import type { Database } from "../client.ts";
+import type { SgsSeriesCode } from "./series";
+import type { Database } from "@/db/client";
 
 export interface MarketDataRow {
   referenceDate: string;
@@ -11,7 +12,7 @@ export interface MarketDataRow {
 
 export async function getLastReferenceDate(
   db: Database,
-  seriesCode: string,
+  seriesCode: SgsSeriesCode,
 ): Promise<string | undefined> {
   const rows = await db
     .select({ referenceDate: marketData.referenceDate })
@@ -24,7 +25,7 @@ export async function getLastReferenceDate(
 
 export async function getLatestObservation(
   db: Database,
-  seriesCode: string,
+  seriesCode: SgsSeriesCode,
 ): Promise<MarketDataRow | undefined> {
   const rows = await getLastNObservations(db, seriesCode, 1);
   return rows[0];
@@ -32,7 +33,7 @@ export async function getLatestObservation(
 
 export async function getLastNObservations(
   db: Database,
-  seriesCode: string,
+  seriesCode: SgsSeriesCode,
   count: number,
 ): Promise<MarketDataRow[]> {
   const rows = await db
@@ -44,19 +45,28 @@ export async function getLastNObservations(
   return rows.reverse();
 }
 
+function dedupeByReferenceDate(observations: readonly MarketDataRow[]): MarketDataRow[] {
+  const byReferenceDate = new Map<string, MarketDataRow>();
+  for (const observation of observations) {
+    byReferenceDate.set(observation.referenceDate, observation);
+  }
+  return [...byReferenceDate.values()];
+}
+
 export async function upsertMarketData(
   db: Database,
-  seriesCode: string,
+  seriesCode: SgsSeriesCode,
   observations: readonly MarketDataRow[],
 ): Promise<void> {
-  if (observations.length === 0) {
+  const deduped = dedupeByReferenceDate(observations);
+  if (deduped.length === 0) {
     return;
   }
 
   await db
     .insert(marketData)
     .values(
-      observations.map((observation) => ({
+      deduped.map((observation) => ({
         seriesCode,
         referenceDate: observation.referenceDate,
         value: observation.value,
