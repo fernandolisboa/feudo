@@ -4,6 +4,7 @@
     "lib": ["dom", "dom.iterable", "esnext", "webworker"],
     "types": ["@serwist/next/typings"],
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,

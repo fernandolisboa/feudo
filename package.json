@@ -10,6 +10,7 @@
     "typecheck": "pnpm -r run typecheck",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r --if-present run test",
+    "test:integration": "pnpm --filter @feudo/web run test:integration",
     "build": "pnpm -r run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
