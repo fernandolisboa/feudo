@@ -35,4 +35,9 @@ describe("computeFetchWindow", () => {
       exactlyTenYearsBefore.getTime(),
     );
   });
+
+  it("clamps the first-run lookback from a leap day to the target month's last day", () => {
+    const now = new Date("2024-02-29T12:00:00Z");
+    expect(computeFetchWindow(now, undefined).fromISODate).toBe("2022-02-28");
+  });
 });

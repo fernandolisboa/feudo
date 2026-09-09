@@ -10,8 +10,16 @@ function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function daysInUTCMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
 function subtractMonthsUTC(date: Date, months: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - months, date.getUTCDate()));
+  const targetMonthIndex = date.getUTCMonth() - months;
+  const targetYear = date.getUTCFullYear() + Math.floor(targetMonthIndex / 12);
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
+  const clampedDay = Math.min(date.getUTCDate(), daysInUTCMonth(targetYear, targetMonth));
+  return new Date(Date.UTC(targetYear, targetMonth, clampedDay));
 }
 
 function subtractYearsUTC(date: Date, years: number): Date {
