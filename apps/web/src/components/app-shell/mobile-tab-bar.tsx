@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+import { NAV_ICONS } from "./nav-icons";
 import type { NavItem } from "./nav-items";
 
 export function MobileTabBar({ items }: { items: NavItem[] }) {
@@ -14,6 +15,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
     <nav className="app-shell-tabbar">
       {items.map((item) => {
         const isActive = pathname === item.href;
+        const Icon = NAV_ICONS[item.icon];
 
         if (item.disabled) {
           return (
@@ -22,7 +24,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
               className="app-shell-tab app-shell-tab-disabled"
               aria-disabled="true"
             >
-              <item.icon className="size-5" aria-hidden="true" />
+              <Icon className="size-5" aria-hidden="true" />
               <span>{item.label}</span>
             </span>
           );
@@ -35,7 +37,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
             aria-current={isActive ? "page" : undefined}
             className={cn("app-shell-tab", isActive && "app-shell-tab-active")}
           >
-            <item.icon className="size-5" aria-hidden="true" />
+            <Icon className="size-5" aria-hidden="true" />
             <span>{item.label}</span>
           </Link>
         );

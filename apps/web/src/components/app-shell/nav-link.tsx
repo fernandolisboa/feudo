@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils";
 // sidebar-nav.tsx (this file is bundled for the client too).
 import { t } from "@/modules/theme/strings";
 
+import { NAV_ICONS } from "./nav-icons";
 import type { NavItem } from "./nav-items";
 
 export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean }) {
   const pathname = usePathname();
   const isActive = pathname === item.href;
+  const Icon = NAV_ICONS[item.icon];
 
   if (item.disabled) {
     return (
@@ -23,7 +25,7 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
             <span className="app-shell-nav-link app-shell-nav-link-disabled" aria-disabled="true" />
           }
         >
-          <item.icon className="size-4" aria-hidden="true" />
+          <Icon className="size-4" aria-hidden="true" />
           {showLabel ? <span>{item.label}</span> : null}
         </TooltipTrigger>
         <TooltipContent>{t.nav.comingSoon}</TooltipContent>
@@ -37,7 +39,7 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
       aria-current={isActive ? "page" : undefined}
       className={cn("app-shell-nav-link", isActive && "app-shell-nav-link-active")}
     >
-      <item.icon className="size-4" aria-hidden="true" />
+      <Icon className="size-4" aria-hidden="true" />
       {showLabel ? <span>{item.label}</span> : null}
     </Link>
   );
