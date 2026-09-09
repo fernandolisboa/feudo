@@ -10,6 +10,13 @@ export type HouseholdSettings = {
   reserveMultiple: number;
 };
 
+export class HouseholdSettingsUpdateFailedError extends Error {
+  constructor(householdId: string) {
+    super(`No household_settings row exists for household ${householdId}.`);
+    this.name = "HouseholdSettingsUpdateFailedError";
+  }
+}
+
 // Every repository is constructed with the household taken from the session
 // (ADR-0001): no method below accepts a household id, only the scope closed
 // over at construction time.
@@ -35,10 +42,14 @@ export function createHouseholdSettingsRepository(scope: HouseholdScope) {
       if (Object.keys(patch).length === 0) {
         return;
       }
-      await db
+      const updated = await db
         .update(householdSettings)
         .set(patch)
-        .where(eq(householdSettings.householdId, scope.householdId));
+        .where(eq(householdSettings.householdId, scope.householdId))
+        .returning({ householdId: householdSettings.householdId });
+      if (updated.length === 0) {
+        throw new HouseholdSettingsUpdateFailedError(scope.householdId);
+      }
     },
   };
 }

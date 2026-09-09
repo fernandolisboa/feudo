@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { createHouseholdSettingsRepository } from "./repository";
+import { withTestDb } from "@/db/test/harness";
+
+import {
+  createHouseholdSettingsRepository,
+  HouseholdSettingsUpdateFailedError,
+} from "./repository";
+import { scopeForNewHousehold } from "./scope";
 import { withTwoHouseholds } from "./test/with-two-households";
 
 describe("household settings repository isolation (integration)", () => {
@@ -22,6 +28,16 @@ describe("household settings repository isolation (integration)", () => {
 
       const settingsB = await createHouseholdSettingsRepository(householdB.scope).get(db);
       expect(settingsB).toEqual(householdB.settings);
+    });
+  });
+
+  it("throws instead of silently no-op'ing when the household has no settings row", async () => {
+    await withTestDb(async (db) => {
+      const scope = scopeForNewHousehold(crypto.randomUUID());
+
+      await expect(
+        createHouseholdSettingsRepository(scope).update(db, { reserveMultiple: 12 }),
+      ).rejects.toThrow(HouseholdSettingsUpdateFailedError);
     });
   });
 });
