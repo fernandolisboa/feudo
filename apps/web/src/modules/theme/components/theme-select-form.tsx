@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
@@ -18,17 +18,25 @@ import { THEME_NAMES, type ThemeName } from "../tokens";
 
 export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
   const [state, formAction] = useActionState(updateThemeAction, initialActionState);
-  const formRef = useRef<HTMLFormElement>(null);
+
+  function handleValueChange(value: string | null): void {
+    if (!value) {
+      return;
+    }
+    // Builds FormData from the value onValueChange hands us, rather than
+    // reading a hidden form input and calling requestSubmit(): that input's
+    // DOM value lags one React commit behind onValueChange, so
+    // requestSubmit() would race and submit the previous selection.
+    const formData = new FormData();
+    formData.set("theme", value);
+    formAction(formData);
+  }
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="theme">{t.preferences.themeLabel}</Label>
-        <Select
-          name="theme"
-          defaultValue={currentTheme}
-          onValueChange={() => formRef.current?.requestSubmit()}
-        >
+        <Select defaultValue={currentTheme} onValueChange={handleValueChange}>
           <SelectTrigger id="theme" className="w-56">
             <SelectValue />
           </SelectTrigger>
@@ -53,6 +61,6 @@ export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
           {state.message}
         </p>
       ) : null}
-    </form>
+    </div>
   );
 }

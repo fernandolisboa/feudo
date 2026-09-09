@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -10,9 +10,12 @@ import { Button } from "@/components/ui/button";
 // depends on "@/modules/auth" and, through it, "next/headers".
 import { t } from "@/modules/theme/strings";
 
-import { setSidebarCollapsedAction } from "./actions";
 import { NavLink } from "./nav-link";
 import type { NavItem } from "./nav-items";
+import {
+  SIDEBAR_COLLAPSED_COOKIE,
+  SIDEBAR_COLLAPSED_COOKIE_MAX_AGE_SECONDS,
+} from "./sidebar-cookie-name";
 
 export function SidebarNav({
   items,
@@ -26,14 +29,11 @@ export function SidebarNav({
   householdSwitcher: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
-  const [, startTransition] = useTransition();
 
   function toggleCollapsed() {
     const next = !collapsed;
     setCollapsed(next);
-    startTransition(() => {
-      void setSidebarCollapsedAction(next);
-    });
+    document.cookie = `${SIDEBAR_COLLAPSED_COOKIE}=${next ? "1" : "0"}; path=/; max-age=${SIDEBAR_COLLAPSED_COOKIE_MAX_AGE_SECONDS.toString()}; samesite=lax`;
   }
 
   return (
