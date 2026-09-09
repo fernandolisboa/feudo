@@ -18,8 +18,8 @@ Feudo needs multi-tenant identity from day one (strangers register, invite partn
 
 **Tenancy (household)**
 
-- A user can belong to several households and works in exactly one at a time, the active household, stored on the session (`activeOrganizationId`). Every server action and route handler takes the household from the session, never from the request body or URL.
-- Roles: `owner` (exactly one per household; only role that transfers ownership or deletes the household), `admin` (manages people and settings), `member` (manages only their own bank connections). Better Auth allows several owners; Feudo does not. The `households` module refuses to invite or promote someone to `owner`; ownership changes only through a dedicated transfer action that promotes the new owner and demotes the old one in one database transaction.
+- A user can belong to several households and works in exactly one at a time, the active household, stored on the session (`activeOrganizationId`). Every server action and route handler takes the household from the session, never from the request body or URL, with one deliberate exception: switching which household is active takes the target household id from the client, because that is the action's whole purpose, but the switch itself is only ever applied after the server re-checks that the session's user actually has a membership row in that household — the id is never trusted on its own.
+- Roles: `owner` (exactly one per household; only role that transfers ownership or deletes the household), `admin` (manages people and settings), `member` (manages only their own bank connections). Better Auth allows several owners; Feudo does not. The `households` module refuses to invite or promote someone to `owner`; ownership changes only through a dedicated transfer action that promotes the new owner and demotes the old one in one database transaction. Enforced two ways: `organizationHooks.beforeUpdateMemberRole` (`apps/web/src/modules/auth/options.ts`) rejects any role update to `owner` outright, and a partial unique index on `member (organization_id) where role = 'owner'` makes a second owner row impossible even if that hook is ever bypassed.
 - Invites are sent by email with a role, expire after 24 hours (`invitationExpiresIn`, overriding the plugin's 48-hour default) and can be cancelled by the inviter or any admin/owner.
 - When an owner deletes their user account, ownership passes automatically to the oldest admin, otherwise the oldest member, after the owner has been warned. When the last member leaves, the household is deleted (see ADR-0008 for what that removes).
 
@@ -27,10 +27,16 @@ Feudo needs multi-tenant identity from day one (strangers register, invite partn
 
 Every domain table is scoped in one of two ways, and each table declares which:
 
-| scope     | tables (initial)                                                                                              | key            | who can reach it                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
-| user      | bank connection, provider credentials                                                                         | `user_id`      | only the owning user, in any of their households            |
-| household | account assignment (investment positions are accounts), transactions, categorization, reserve marks, analyses | `household_id` | every member of that household, through scoped repositories |
+| scope     | tables (initial)                                                                                                                                                                                | key            | who can reach it                                            |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| user      | bank connection, provider credentials                                                                                                                                                           | `user_id`      | only the owning user, in any of their households            |
+| household | `household_settings` (name lives on `organization`; time zone, reserve multiple), account assignment (investment positions are accounts), transactions, categorization, reserve marks, analyses | `household_id` | every member of that household, through scoped repositories |
+
+`household_settings.household_id` references the plugin's own `organization.id`, so the household's
+identity row (`organization`, plus `member` and `invitation`) is Better Auth-owned and generated by
+its CLI, while everything Feudo adds about a household — starting with `household_settings` in this
+ticket — is a normal Feudo table carrying `household_id` and going through
+`households.householdScope(session)` and a scoped repository like every other household table.
 
 Bank connections belong to the user who authorized them, never to a household. Each synced account is assigned to exactly one household at a time (default: the user's active household at connection time) and can be moved by its owning user; an account whose household was deleted becomes unassigned and is visible only to its owner until reassigned. Synced transactions are stored once per account and carry the account's current `household_id` so repositories can scope them; moving an account rewrites that column for the account and its transactions in one database transaction.
 

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 
+import type { SimpleOutcome } from "@/lib/outcome";
 import { getAuth } from "./auth";
 import { readAuthBaseUrl } from "./env";
 import { TERMS_VERSION } from "./terms";
@@ -90,13 +91,14 @@ export type SignUpInput = {
   termsAccepted: boolean;
 };
 
-export type SignUpOutcome =
-  | { status: "ok" }
-  | { status: "terms_not_accepted" }
-  | { status: "registration_closed" }
-  | { status: "invite_required" }
-  | { status: "rate_limited" }
-  | { status: "sign_up_failed" };
+export type SignUpOutcome = SimpleOutcome<
+  | "ok"
+  | "terms_not_accepted"
+  | "registration_closed"
+  | "invite_required"
+  | "rate_limited"
+  | "sign_up_failed"
+>;
 
 export async function signUp(input: SignUpInput, requestHeaders: Headers): Promise<SignUpOutcome> {
   if (!input.termsAccepted) {
@@ -146,12 +148,9 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
 
 export type SignInInput = { email: string; password: string };
 
-export type SignInOutcome =
-  | { status: "ok" }
-  | { status: "invalid_credentials" }
-  | { status: "email_not_verified" }
-  | { status: "rate_limited" }
-  | { status: "failed" };
+export type SignInOutcome = SimpleOutcome<
+  "ok" | "invalid_credentials" | "email_not_verified" | "rate_limited" | "failed"
+>;
 
 export async function signIn(input: SignInInput, requestHeaders: Headers): Promise<SignInOutcome> {
   const response = await callAuthHandler("/sign-in/email", input, requestHeaders);
@@ -171,9 +170,9 @@ export async function signIn(input: SignInInput, requestHeaders: Headers): Promi
   return { status: "ok" };
 }
 
-export type SimpleOutcome = { status: "ok" } | { status: "rate_limited" } | { status: "failed" };
+export type RequestEmailFlowOutcome = SimpleOutcome<"ok" | "rate_limited" | "failed">;
 
-function mapSimpleResponse(response: Response | undefined): SimpleOutcome {
+function mapSimpleResponse(response: Response | undefined): RequestEmailFlowOutcome {
   if (!response) {
     return { status: "failed" };
   }
@@ -198,7 +197,7 @@ async function requestEmailFlow(
   body: unknown,
   requestHeaders: Headers,
   options: { minimumMs?: number } = {},
-): Promise<SimpleOutcome> {
+): Promise<RequestEmailFlowOutcome> {
   const start = options.minimumMs !== undefined ? Date.now() : undefined;
   const response = await callAuthHandler(path, body, requestHeaders);
   const outcome = mapSimpleResponse(response);
@@ -216,7 +215,7 @@ async function requestEmailFlow(
 export async function resendVerification(
   email: string,
   requestHeaders: Headers,
-): Promise<SimpleOutcome> {
+): Promise<RequestEmailFlowOutcome> {
   return requestEmailFlow(
     "/send-verification-email",
     { email, callbackURL: "/entrar" },
@@ -231,7 +230,7 @@ export async function signOut(requestHeaders: Headers): Promise<void> {
 export async function requestMagicLink(
   email: string,
   requestHeaders: Headers,
-): Promise<SimpleOutcome> {
+): Promise<RequestEmailFlowOutcome> {
   return requestEmailFlow(
     "/sign-in/magic-link",
     { email, callbackURL: "/", errorCallbackURL: "/entrar/link-magico" },
@@ -248,7 +247,7 @@ const REQUEST_PASSWORD_RESET_MINIMUM_MS = 500;
 export async function requestPasswordReset(
   email: string,
   requestHeaders: Headers,
-): Promise<SimpleOutcome> {
+): Promise<RequestEmailFlowOutcome> {
   return requestEmailFlow(
     "/request-password-reset",
     { email, redirectTo: "/redefinir-senha" },

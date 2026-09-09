@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import type { ActionState } from "./action-state";
+import type { ActionState } from "@/lib/action-state";
 import { t } from "./strings";
 import {
   requestMagicLink,

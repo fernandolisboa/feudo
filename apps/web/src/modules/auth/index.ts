@@ -1,5 +1,3 @@
-export type { ActionState } from "./action-state";
-export { initialActionState } from "./action-state";
 export {
   requestMagicLinkAction,
   requestPasswordResetAction,
@@ -21,4 +19,6 @@ export { findLastFakeSentEmail } from "./email/fake-email-repository";
 export { isFakeEmailProvider } from "./env";
 export type { CurrentSession } from "./session";
 export { getCurrentSession } from "./session";
+export type { SignInInput, SignInOutcome, SignUpInput, SignUpOutcome } from "./service";
+export { signUp } from "./service";
 export { t } from "./strings";

@@ -2,9 +2,11 @@ import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink } from "better-auth/plugins";
+import { magicLink, organization } from "better-auth/plugins";
 import { and, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
+
+import { householdSettings, session as sessionTable } from "@/db/schema";
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
@@ -13,6 +15,7 @@ import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
+import { hasPendingInvitation } from "./invitations";
 import { TERMS_VERSION } from "./terms";
 import {
   describeExpiryPtBR,
@@ -20,6 +23,20 @@ import {
   RESET_PASSWORD_EXPIRES_IN_SECONDS,
   VERIFICATION_EXPIRES_IN_SECONDS,
 } from "./token-expiry";
+
+const INVITATION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
+// A household is a small pool of people, not an org chart: 20 households per
+// user is already generous headroom and keeps a compromised account from
+// spraying orgs.
+const ORGANIZATION_LIMIT = 20;
+// Mirrors households/validation.ts's DEFAULT_TIME_ZONE/DEFAULT_RESERVE_MULTIPLE.
+// Duplicated as literals, not imported: auth must never depend on households
+// (docs/adr/0001), and this is the fallback the raw /organization/create
+// endpoint gets if it is ever called outside households.createHousehold,
+// which immediately overwrites it with the caller's chosen values.
+const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
+const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = 6;
+const OWNER_ROLE = "owner";
 
 function readTermsVersion(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) {
@@ -37,6 +54,14 @@ function hasConsentField(body: unknown): boolean {
   }
   const keys = Object.keys(body);
   return CONSENT_FIELDS.some((field) => keys.includes(field));
+}
+
+function readEmail(body: unknown): string | undefined {
+  if (typeof body !== "object" || body === null) {
+    return undefined;
+  }
+  const value = (body as Record<string, unknown>).email;
+  return typeof value === "string" ? value : undefined;
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
@@ -129,7 +154,6 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       },
     },
     hooks: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- Better Auth's middleware type requires an async handler even though this hook never awaits.
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === "/update-user") {
           // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
@@ -144,7 +168,12 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           return;
         }
 
-        const registrationDecision = evaluateRegistrationMode(readRegistrationMode(env), false);
+        const mode = readRegistrationMode(env);
+        const email = readEmail(ctx.body);
+        const hasPendingInvite =
+          mode === "invite" && email !== undefined ? await hasPendingInvitation(db, email) : false;
+
+        const registrationDecision = evaluateRegistrationMode(mode, hasPendingInvite);
         if (!registrationDecision.allowed) {
           throw new APIError("FORBIDDEN", { message: registrationDecision.reason });
         }
@@ -164,6 +193,76 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       }),
     },
     plugins: [
+      organization({
+        // 24h, overriding the plugin's 48h default (ADR-0001). Owner is the
+        // default creatorRole and owner/admin/member are the plugin's default
+        // roles, so no ac/roles override is needed to match household vocabulary.
+        invitationExpiresIn: INVITATION_EXPIRES_IN_SECONDS,
+        organizationLimit: ORGANIZATION_LIMIT,
+        organizationHooks: {
+          beforeCreateOrganization: ({ organization }) => {
+            if (organization.logo || organization.metadata) {
+              throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
+            }
+            return Promise.resolve();
+          },
+          // Mirrors beforeCreateOrganization: Feudo never uses logo or
+          // metadata on organization, on create or update (data minimization).
+          beforeUpdateOrganization: ({ organization }) => {
+            if (organization.logo || organization.metadata) {
+              throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
+            }
+            return Promise.resolve();
+          },
+          // Safety net for any organization created outside
+          // households.createHousehold (e.g. a direct call to the raw
+          // endpoint): guarantees every household has a settings row, so no
+          // caller can observe a household with none. createHousehold
+          // immediately overwrites this default with the caller's input.
+          afterCreateOrganization: async ({ organization }) => {
+            await db
+              .insert(householdSettings)
+              .values({
+                householdId: organization.id,
+                timeZone: FALLBACK_HOUSEHOLD_TIME_ZONE,
+                reserveMultiple: FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE,
+              })
+              .onConflictDoNothing();
+          },
+          // Owner never transfers through this generic endpoint (ADR-0001):
+          // that needs a dedicated transfer action, not yet built (#11), that
+          // promotes and demotes in one transaction. The partial unique index
+          // on member (organization_id) where role = 'owner' is the
+          // second, DB-level line of defense.
+          beforeUpdateMemberRole: ({ newRole }) => {
+            const roles = Array.isArray(newRole) ? newRole : [newRole];
+            if (roles.includes(OWNER_ROLE)) {
+              throw new APIError("FORBIDDEN", { message: "owner_role_not_transferable" });
+            }
+            return Promise.resolve();
+          },
+          // A removed member's existing sessions must stop scoping data to
+          // the household they were removed from, immediately, not just on
+          // their next getCurrentSession() re-validation.
+          afterRemoveMember: async ({ user, organization }) => {
+            await db
+              .update(sessionTable)
+              .set({ activeOrganizationId: null })
+              .where(
+                and(
+                  eq(sessionTable.userId, user.id),
+                  eq(sessionTable.activeOrganizationId, organization.id),
+                ),
+              );
+          },
+          afterDeleteOrganization: async ({ organization }) => {
+            await db
+              .update(sessionTable)
+              .set({ activeOrganizationId: null })
+              .where(eq(sessionTable.activeOrganizationId, organization.id));
+          },
+        },
+      }),
       magicLink({
         // Sign-up policy (REGISTRATION_MODE, terms acceptance) is enforced
         // only on /sign-up/email's hooks.before; letting magic link mint new
