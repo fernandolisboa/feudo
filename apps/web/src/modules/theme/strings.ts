@@ -8,7 +8,6 @@ const en = {
     comingSoon: "Coming soon",
     collapseSidebar: "Collapse sidebar",
     expandSidebar: "Expand sidebar",
-    openMenu: "Open menu",
   },
   householdSwitcher: {
     placeholder: "Your household",
@@ -50,7 +49,6 @@ const ptBR = {
     comingSoon: "Em breve",
     collapseSidebar: "Recolher menu",
     expandSidebar: "Expandir menu",
-    openMenu: "Abrir menu",
   },
   householdSwitcher: {
     placeholder: "Sua casa",
