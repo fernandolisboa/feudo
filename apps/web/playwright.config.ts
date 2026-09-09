@@ -20,5 +20,6 @@ export default defineConfig({
   use: {
     baseURL,
     extraHTTPHeaders,
+    trace: "retain-on-failure",
   },
 });

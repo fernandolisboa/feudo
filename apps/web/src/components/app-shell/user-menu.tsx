@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -21,10 +22,14 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <User className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>
-          <span className="block truncate">{name}</span>
-          <span className="text-muted-foreground block truncate text-xs font-normal">{email}</span>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <span className="block truncate">{name}</span>
+            <span className="text-muted-foreground block truncate text-xs font-normal">
+              {email}
+            </span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/preferencias" />}>
           <Settings className="size-4" />
