@@ -10,4 +10,5 @@ apps/web/public/sw.js
 .playwright-mcp
 apps/web/test-results
 apps/web/playwright-report
+apps/web/.generated
 .claude/worktrees/
