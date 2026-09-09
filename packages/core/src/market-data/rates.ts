@@ -11,7 +11,7 @@ export class InvalidRateError extends Error {
 
   constructor(ratePpm: number) {
     super(
-      `Rate must be finite and greater than -${String(PPM_SCALE)} ppm, received ${String(ratePpm)}`,
+      `Rate must be an integer greater than -${String(PPM_SCALE)} ppm, received ${String(ratePpm)}`,
     );
     this.name = "InvalidRateError";
     this.ratePpm = ratePpm;

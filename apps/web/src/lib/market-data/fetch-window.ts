@@ -27,7 +27,10 @@ function subtractMonthsUTC(date: Date, months: number): Date {
 }
 
 function subtractYearsUTC(date: Date, years: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear() - years, date.getUTCMonth(), date.getUTCDate()));
+  const targetYear = date.getUTCFullYear() - years;
+  const month = date.getUTCMonth();
+  const clampedDay = Math.min(date.getUTCDate(), daysInUTCMonth(targetYear, month));
+  return new Date(Date.UTC(targetYear, month, clampedDay));
 }
 
 function addDaysUTC(date: Date, days: number): Date {
@@ -48,8 +51,8 @@ export function computeFetchWindow(
   lastStoredDateISO: string | undefined,
   frequency: SeriesFrequency,
 ): FetchWindow {
-  // SGS rejects a query spanning exactly 10 years; staying one day inside keeps every
-  // window strictly under the limit regardless of leap years.
+  // SGS rejects a query spanning exactly 10 years; staying one day inside the
+  // (leap-day-clamped) 10-year mark keeps every window strictly under the limit.
   const earliestAllowed = addDaysUTC(subtractYearsUTC(now, SGS_MAX_WINDOW_YEARS), 1);
   const desiredFrom = lastStoredDateISO
     ? overlapBeforeLastStoredDate(new Date(`${lastStoredDateISO}T00:00:00.000Z`), frequency)

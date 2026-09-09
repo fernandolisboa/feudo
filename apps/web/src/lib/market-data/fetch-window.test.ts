@@ -44,6 +44,16 @@ describe("computeFetchWindow", () => {
     );
   });
 
+  it("caps the window strictly after the 10-year boundary when now is a leap day", () => {
+    const now = new Date("2024-02-29T12:00:00Z");
+    const window = computeFetchWindow(now, "2000-01-01", "daily");
+    expect(window.fromISODate).toBe("2014-03-01");
+    const tenYearsBefore = new Date("2014-02-28T00:00:00.000Z");
+    expect(new Date(`${window.fromISODate}T00:00:00.000Z`).getTime()).toBeGreaterThan(
+      tenYearsBefore.getTime(),
+    );
+  });
+
   it("clamps the first-run lookback from a leap day to the target month's last day", () => {
     const now = new Date("2024-02-29T12:00:00Z");
     expect(computeFetchWindow(now, undefined, "daily").fromISODate).toBe("2022-02-28");
