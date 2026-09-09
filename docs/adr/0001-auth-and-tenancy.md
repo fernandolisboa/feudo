@@ -46,4 +46,4 @@ Repositories are constructed with the household (or user) taken from the session
 
 - Better Auth's vocabulary (organization, member) appears in generated tables and plugin calls only; code, docs and UI use household, membership, invite (see `UBIQUITOUS_LANGUAGE.md`).
 - "Every domain table carries `household_id`" (CLAUDE.md) is refined here: user-scoped tables carry `user_id` instead, and an account's `household_id` is nullable only to represent "unassigned". No other nullable tenant key is allowed.
-- Moving an account between households leaves the destination household without the source household's manual categorizations and internal-transfer marks; what happens to those annotations on move is an open product question escalated to the owner, not something the code guesses.
+- Moving an account between households carries its transactions' manual categorizations and internal-transfer marks along: they are facts about the transactions, not secrets of the source household. The source household's categorization rules do not move; only what they already applied does. Internal-transfer pairs whose other account stays behind are unpaired in the destination.

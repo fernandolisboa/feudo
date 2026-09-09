@@ -102,6 +102,10 @@ _Avoid_: emergency fund goal, safety net
 **Reserve multiple**:
 How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12.
 
+**Reserve position**:
+An account or investment the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
+_Avoid_: reserve account, emergency fund holding
+
 **Average fixed cost**:
 The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used.
 
