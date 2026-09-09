@@ -17,6 +17,7 @@ import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
 import { hasPendingInvitation } from "./invitations";
 import { TERMS_VERSION } from "./terms";
+import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
 import {
   describeExpiryPtBR,
   MAGIC_LINK_EXPIRES_IN_SECONDS,
@@ -155,6 +156,8 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        markTimingFloorRequestStart(ctx.path, ctx.context);
+
         if (ctx.path === "/update-user") {
           // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
           // signed-in session must never be able to rewrite its own consent record.
@@ -190,6 +193,9 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         if (ctx.body && typeof ctx.body === "object") {
           delete (ctx.body as Record<string, unknown>).termsAcceptedAt;
         }
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        await waitForTimingFloor(ctx.path, ctx.context);
       }),
     },
     plugins: [
