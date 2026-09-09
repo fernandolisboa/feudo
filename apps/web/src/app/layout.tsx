@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getCurrentSession } from "@/modules/auth";
-import { DEFAULT_THEME } from "@/modules/theme";
+import { resolveTheme } from "@/modules/theme";
 
 import "./globals.css";
 
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await getCurrentSession();
-  const theme = session?.theme ?? DEFAULT_THEME;
+  const theme = resolveTheme(session?.theme);
 
   return (
     <html lang="pt-BR" data-theme={theme} className={`${fontVariables} h-full antialiased`}>

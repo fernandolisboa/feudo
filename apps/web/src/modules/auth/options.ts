@@ -8,10 +8,6 @@ import { evaluateRegistrationMode } from "@feudo/core";
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
-// Imports the theme module's tokens file directly, not its index: the index
-// re-exports service.ts, which imports "@/modules/auth" to read the current
-// session, and that would make this file part of an auth <-> theme import cycle.
-import { DEFAULT_THEME } from "@/modules/theme/tokens";
 import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
@@ -106,7 +102,9 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           type: "string",
           required: false,
           input: false,
-          defaultValue: DEFAULT_THEME,
+          // Literal, not modules/theme's DEFAULT_THEME: auth must not
+          // import theme at runtime (modules/theme owns theme validity).
+          defaultValue: "caderno",
         },
       },
     },

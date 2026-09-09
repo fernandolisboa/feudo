@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-// Direct file import, not the module's index: see the matching note in
-// sidebar-nav.tsx (this file is bundled for the client too).
-import { t } from "@/modules/theme/strings";
+import { t } from "@/modules/theme";
 
 import { NAV_ICONS } from "./nav-icons";
 import type { NavItem } from "./nav-items";

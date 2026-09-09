@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/page-header";
 import { getCurrentSession } from "@/modules/auth";
-import { t, ThemeSelectForm } from "@/modules/theme";
+import { resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
 
 export default async function PreferencesPage() {
   const session = await getCurrentSession();
@@ -13,7 +13,7 @@ export default async function PreferencesPage() {
   return (
     <>
       <PageHeader overline={t.preferences.overline} title={t.preferences.title} />
-      <ThemeSelectForm currentTheme={session.theme} />
+      <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
     </>
   );
 }

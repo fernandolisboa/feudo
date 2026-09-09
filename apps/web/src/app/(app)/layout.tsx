@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { readSidebarCollapsed } from "@/components/app-shell/sidebar-cookie";
 import { getCurrentSession } from "@/modules/auth";
-import { shellLayoutFor } from "@/modules/theme";
+import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getCurrentSession();
@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/entrar");
   }
 
-  const shell = shellLayoutFor(session.theme);
+  const shell = shellLayoutFor(resolveTheme(session.theme));
   const sidebarCollapsed = shell === "sidebar" ? await readSidebarCollapsed() : false;
 
   return (

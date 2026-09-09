@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { ShellLayout } from "@/modules/theme/tokens";
+import type { ShellLayout } from "@/modules/theme";
 
 import { HouseholdSwitcherPlaceholder } from "./household-switcher-placeholder";
 import { MobileHeader } from "./mobile-header";

@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { initialActionState } from "../action-state";
+import { initialActionState } from "@/modules/auth/action-state";
+
 import { updateThemeAction } from "../actions";
 import { t } from "../strings";
 import { THEME_NAMES, type ThemeName } from "../tokens";

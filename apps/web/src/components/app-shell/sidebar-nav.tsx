@@ -5,10 +5,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-// Direct file import, not the module's index: this file is bundled for the
-// client, and the theme module's index also re-exports service.ts, which
-// depends on "@/modules/auth" and, through it, "next/headers".
-import { t } from "@/modules/theme/strings";
+import { t } from "@/modules/theme";
 
 import { NavLink } from "./nav-link";
 import type { NavItem } from "./nav-items";

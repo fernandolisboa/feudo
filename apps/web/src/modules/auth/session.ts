@@ -1,17 +1,14 @@
 import { headers } from "next/headers";
 import { cache } from "react";
 
-// Imports the theme module's tokens file directly, not its index: see the
-// matching note in options.ts for why (avoids an auth <-> theme import cycle).
-import { DEFAULT_THEME, isThemeName, type ThemeName } from "@/modules/theme/tokens";
-
 import { getAuth } from "./auth";
 
-export type CurrentSession = { userId: string; name: string; email: string; theme: ThemeName };
+export type CurrentSession = { userId: string; name: string; email: string; theme: string };
 
-function readTheme(user: { theme?: unknown }): ThemeName {
-  return typeof user.theme === "string" && isThemeName(user.theme) ? user.theme : DEFAULT_THEME;
-}
+// The theme column's DB default guarantees a value once a user exists;
+// deciding which strings are valid theme names is modules/theme's job
+// (resolveTheme), not auth's — auth must not import theme at runtime.
+const RAW_THEME_FALLBACK = "caderno";
 
 // Wrapped in React's cache() so the root layout, the signed-in route group's
 // layout and a page can each call this once per request without three round
@@ -27,6 +24,6 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
     userId: session.user.id,
     name: session.user.name,
     email: session.user.email,
-    theme: readTheme(session.user),
+    theme: session.user.theme ?? RAW_THEME_FALLBACK,
   };
 });

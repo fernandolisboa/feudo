@@ -8,6 +8,10 @@ export function isThemeName(value: string): value is ThemeName {
   return (THEME_NAMES as readonly string[]).includes(value);
 }
 
+export function resolveTheme(value: string | null | undefined): ThemeName {
+  return typeof value === "string" && isThemeName(value) ? value : DEFAULT_THEME;
+}
+
 export type ShellLayout = "sidebar" | "topnav";
 
 export type ThemeDefinition = {
