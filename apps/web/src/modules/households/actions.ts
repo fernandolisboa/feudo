@@ -32,18 +32,28 @@ export async function createHouseholdAction(
       redirect("/");
     case "unauthenticated":
       return { status: "error", message: t.errors.unauthenticated };
+    case "already_has_household":
+      return { status: "error", message: t.errors.alreadyHasHousehold };
     case "failed":
       return { status: "error", message: t.errors.createFailed };
   }
 }
 
-export async function switchHouseholdAction(householdId: string): Promise<void> {
+export async function switchHouseholdAction(householdId: string): Promise<ActionState> {
   const parsed = switchHouseholdFormSchema.safeParse({ householdId });
   if (!parsed.success) {
-    return;
+    return { status: "error", message: t.errors.invalidInput };
   }
 
   const requestHeaders = await headers();
-  await switchHousehold(parsed.data.householdId, requestHeaders);
-  redirect("/");
+  const outcome = await switchHousehold(parsed.data.householdId, requestHeaders);
+
+  switch (outcome.status) {
+    case "ok":
+      redirect("/");
+    case "not_a_member":
+      return { status: "error", message: t.errors.notAMember };
+    case "failed":
+      return { status: "error", message: t.errors.switchFailed };
+  }
 }

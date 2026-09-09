@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -114,6 +114,12 @@ export const member = pgTable(
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
     index("member_userId_idx").on(table.userId),
+    // Single-owner enforcement (ADR-0001), second line of defense behind
+    // organizationHooks.beforeUpdateMemberRole: at most one 'owner' row per
+    // organization, at the database level.
+    uniqueIndex("member_single_owner_uidx")
+      .on(table.organizationId)
+      .where(sql`${table.role} = 'owner'`),
   ],
 );
 
