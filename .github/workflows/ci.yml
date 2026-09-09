@@ -110,7 +110,12 @@ jobs:
   e2e:
     name: e2e
     runs-on: ubuntu-latest
-    needs: ci
+    # Vercel Preview deployments share the same `feudo-preview` database as the
+    # `integration` job's schema reset; without this, `integration` resetting
+    # the schema mid-run wipes the user e2e just signed up, and sign-in 401s
+    # with "User not found". Depending on `integration` sequences the reset
+    # before e2e's requests land instead of racing them.
+    needs: [ci, integration]
     if: github.event_name == 'pull_request'
     timeout-minutes: 20
     permissions:
