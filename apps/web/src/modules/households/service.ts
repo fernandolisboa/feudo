@@ -1,6 +1,8 @@
 import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 
 import { getAuth, type CurrentSession } from "@/modules/auth";
+import { organization } from "@/db/schema/auth";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/db/client";
@@ -23,6 +25,28 @@ async function deleteOrganization(householdId: string, requestHeaders: Headers):
     .catch(() => undefined);
 }
 
+// Better Auth creates the organization and its owner member row before
+// running afterCreateOrganization (auth/options.ts); if that hook's
+// household_settings insert throws, the call above rejects without ever
+// returning an id, but the organization and membership already exist. The
+// slug is generated locally and unique, so it is the only handle left to
+// find and compensate for the orphan.
+async function deleteOrphanedOrganizationBySlug(
+  db: Database,
+  slug: string,
+  requestHeaders: Headers,
+): Promise<void> {
+  const rows = await db
+    .select({ id: organization.id })
+    .from(organization)
+    .where(eq(organization.slug, slug))
+    .limit(1);
+  const orphanId = rows[0]?.id;
+  if (orphanId) {
+    await deleteOrganization(orphanId, requestHeaders);
+  }
+}
+
 export async function createHousehold(
   input: CreateHouseholdFormInput,
   session: CurrentSession | null,
@@ -40,13 +64,14 @@ export async function createHousehold(
     return { status: "already_has_household" };
   }
 
+  const slug = randomHouseholdSlug();
   let createdOrganization: { id: string };
   try {
     createdOrganization = await getAuth().api.createOrganization({
       headers: requestHeaders,
       body: {
         name: input.name,
-        slug: randomHouseholdSlug(),
+        slug,
         // Deferred to setActiveOrganization below, after settings exist, so
         // a household is never active while its settings are still missing
         // or defaulted.
@@ -57,6 +82,7 @@ export async function createHousehold(
     if (error instanceof APIError && error.status === "UNAUTHORIZED") {
       return { status: "unauthenticated" };
     }
+    await deleteOrphanedOrganizationBySlug(db, slug, requestHeaders);
     return { status: "failed" };
   }
 
