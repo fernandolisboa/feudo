@@ -163,13 +163,29 @@ PLAYWRIGHT_BASE_URL=https://<preview-url> TEST_ONLY_TOKEN=<value> VERCEL_AUTOMAT
   pnpm --filter @feudo/web exec playwright test
 ```
 
-## Regenerating the Better Auth schema
+## The committed schema is hand-maintained, not generated
 
-`pnpm --filter @feudo/web db:auth-schema` runs the Better Auth CLI against `cli.ts`
-(`apps/web/src/modules/auth/cli.ts`, module-private — not part of `auth/index.ts`) and writes
-`src/db/schema/auth.ts`; review the diff (it does not know about our naming or comment conventions
-— it has, for example, dropped a hand-added `withTimezone: true` before) before running
-`db:generate` on top of it.
+`src/db/schema/auth.ts` is the authoritative, hand-maintained schema — it is never overwritten by
+the Better Auth CLI. `generate` performs a full rewrite from the auth/plugin config, not a
+config-aware merge with the existing file, so it cannot express two constructs the committed file
+carries and the CLI has no way to produce: `withTimezone: true` on `user.termsAcceptedAt`, and the
+`member_single_owner_uidx` partial unique index (ADR-0001 single-owner enforcement, second line of
+defense — `.where()` partial indexes have no representation in the `organization` plugin's schema
+description the CLI reads). Any wording implying the generated output must match the committed file
+byte-for-byte does not hold and never has for any CLI version.
+
+`pnpm --filter @feudo/web db:auth-schema` is a comparison aid, run only after upgrading
+`better-auth` or changing plugins/`additionalFields` — not part of the normal edit loop. It runs
+the Better Auth CLI against `cli.ts` (`apps/web/src/modules/auth/cli.ts`, module-private — not part
+of `auth/index.ts`), writes the result to the git-ignored `apps/web/.generated/auth-schema.ts`, and
+then prints a `git diff --stat` between it and the committed `src/db/schema/auth.ts`. Only the
+diff step is tolerant of a difference (it never fails the script, since the two files always
+differ by the two constructs above); a `generate` failure — a broken `cli.ts`, for instance —
+still exits the script non-zero.
+Read the full diff with `git --no-pager diff --no-index src/db/schema/auth.ts
+.generated/auth-schema.ts`, port only the changes the upgrade/plugin change actually intends by
+hand into the committed file, and keep the two hand-added constructs above. Run `db:generate` on
+the committed file afterwards, as usual.
 
 The CLI needs a named `auth` export; `auth.ts` only exports the lazy `getAuth()` singleton on
 purpose (docs/runbooks/auth.md above), so `cli.ts` builds a second, CLI-only `betterAuth` instance
@@ -178,10 +194,13 @@ from the same `buildAuthOptions`, with a placeholder Postgres connection string 
 `RESEND_API_KEY`/`EMAIL_FROM` to run, unlike `db:generate`, `db:migrate` and `db:check`, which do
 need a reachable `DATABASE_URL`.
 
-`db:auth-schema` runs an unpinned `npx @better-auth/cli`, whose `latest` can trail the installed
-`better-auth` core and fail to parse `auth.ts` against a newer config shape (e.g. this ticket's
-`onPasswordReset`, `resetPasswordTokenExpiresIn`). Pinning the CLI as a devDependency is tracked in
-#45, not fixed here.
+`@better-auth/cli` is deprecated as of the 1.5+ release train — Better Auth split its CLI into a
+standalone `auth` package (npm) that ships the `better-auth` bin and is version-locked to the same
+release as the `better-auth` core it depends on. `db:auth-schema` pins `auth` as a devDependency at
+the exact `better-auth` version in use (`apps/web/package.json`), so `pnpm-lock.yaml` governs it and
+`better-auth generate ...` (the pnpm bin, no `npx`) always runs the CLI that matches the installed
+core instead of whatever `npx` last resolved as `latest`. Bump `auth` and `better-auth` together, to
+the same version, in every upgrade.
 
 ## Link lifetimes
 
