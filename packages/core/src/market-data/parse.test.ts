@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { InvalidPercentStringError, parsePercentToRatePpm } from "./parse";
+import { formatRatePpmAsPercent, InvalidPercentStringError, parsePercentToRatePpm } from "./parse";
 
 describe("parsePercentToRatePpm", () => {
   it("parses a whole percentage", () => {
@@ -29,6 +29,24 @@ describe("parsePercentToRatePpm", () => {
 
   it("throws InvalidPercentStringError for an empty string", () => {
     expect(() => parsePercentToRatePpm("")).toThrow(InvalidPercentStringError);
+  });
+});
+
+describe("formatRatePpmAsPercent", () => {
+  it("formats a rate to two decimal places by default", () => {
+    expect(formatRatePpmAsPercent(48_638)).toBe("4.86");
+  });
+
+  it("formats zero", () => {
+    expect(formatRatePpmAsPercent(0)).toBe("0.00");
+  });
+
+  it("formats a negative rate", () => {
+    expect(formatRatePpmAsPercent(-1_000)).toBe("-0.10");
+  });
+
+  it("round-trips through parsePercentToRatePpm at two decimal places", () => {
+    expect(parsePercentToRatePpm(formatRatePpmAsPercent(136_500))).toBe(136_500);
   });
 });
 

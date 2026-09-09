@@ -19,3 +19,7 @@ export function parsePercentToRatePpm(percentValue: string): RatePpm {
   }
   return Math.round(Number(percentValue) * PERCENT_TO_PPM_FACTOR);
 }
+
+export function formatRatePpmAsPercent(ratePpm: RatePpm, decimalPlaces = 2): string {
+  return (ratePpm / PERCENT_TO_PPM_FACTOR).toFixed(decimalPlaces);
+}
