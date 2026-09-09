@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 import { evaluateRegistrationMode } from "@feudo/core";
 
 import { getAuth } from "./auth";
@@ -20,13 +22,42 @@ function buildAuthRequest(path: string, body: unknown, requestHeaders: Headers):
   return new Request(url, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
+// nextCookies() only bridges auth.api.* calls; getAuth().handler() flags its
+// context as router-driven and the plugin skips it. We go through the handler
+// on purpose (docs/runbooks/auth.md) so the DB-backed rate limiter runs, so we
+// bridge the cookies ourselves instead.
+async function applyResponseCookies(response: Response): Promise<void> {
+  const setCookieValues = response.headers.getSetCookie();
+  if (setCookieValues.length === 0) {
+    return;
+  }
+
+  let cookieStore: Awaited<ReturnType<typeof cookies>>;
+  try {
+    cookieStore = await cookies();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("outside a request scope")) {
+      return;
+    }
+    throw error;
+  }
+
+  for (const setCookie of setCookieValues) {
+    for (const [name, attributes] of parseSetCookieHeader(setCookie)) {
+      cookieStore.set(name, attributes.value, toCookieOptions(attributes));
+    }
+  }
+}
+
 async function callAuthHandler(
   path: string,
   body: unknown,
   requestHeaders: Headers,
 ): Promise<Response | undefined> {
   try {
-    return await getAuth().handler(buildAuthRequest(path, body, requestHeaders));
+    const response = await getAuth().handler(buildAuthRequest(path, body, requestHeaders));
+    await applyResponseCookies(response);
+    return response;
   } catch (error) {
     logAuthHandlerError(error);
     return undefined;
@@ -169,5 +200,5 @@ export async function resendVerification(
 }
 
 export async function signOut(requestHeaders: Headers): Promise<void> {
-  await getAuth().api.signOut({ headers: requestHeaders });
+  await callAuthHandler("/sign-out", {}, requestHeaders);
 }
