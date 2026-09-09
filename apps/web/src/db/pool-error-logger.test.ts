@@ -17,12 +17,7 @@ describe("attachPoolErrorLogger", () => {
 
     expect(() => pool.emit("error", error)).not.toThrow();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-
-    const loggedArgs = errorSpy.mock.calls[0] ?? [];
-    const loggedText = loggedArgs.map((arg) => JSON.stringify(arg)).join(" ");
-    expect(loggedText).toContain("Error");
-    expect(loggedText).toContain("57P01");
-    expect(loggedText).not.toContain("connection to server terminated unexpectedly");
+    expect(errorSpy).toHaveBeenCalledWith("Neon Pool error", { name: "Error", code: "57P01" });
 
     errorSpy.mockRestore();
   });
@@ -35,10 +30,10 @@ describe("attachPoolErrorLogger", () => {
 
     expect(() => pool.emit("error", new Error("idle client timeout"))).not.toThrow();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-
-    const loggedArgs = errorSpy.mock.calls[0] ?? [];
-    const loggedText = loggedArgs.map((arg) => JSON.stringify(arg)).join(" ");
-    expect(loggedText).not.toContain("idle client timeout");
+    expect(errorSpy).toHaveBeenCalledWith("Neon Pool error", {
+      name: "Error",
+      code: undefined,
+    });
 
     errorSpy.mockRestore();
   });
