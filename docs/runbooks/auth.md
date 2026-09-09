@@ -178,8 +178,10 @@ byte-for-byte does not hold and never has for any CLI version.
 `better-auth` or changing plugins/`additionalFields` — not part of the normal edit loop. It runs
 the Better Auth CLI against `cli.ts` (`apps/web/src/modules/auth/cli.ts`, module-private — not part
 of `auth/index.ts`), writes the result to the git-ignored `apps/web/.generated/auth-schema.ts`, and
-then prints a `git diff --stat` between it and the committed `src/db/schema/auth.ts` (non-failing:
-the command still exits 0 when the two differ, which they always will by the two constructs above).
+then prints a `git diff --stat` between it and the committed `src/db/schema/auth.ts`. Only the
+diff step is tolerant of a difference (it never fails the script, since the two files always
+differ by the two constructs above); a `generate` failure — a broken `cli.ts`, for instance —
+still exits the script non-zero.
 Read the full diff with `git --no-pager diff --no-index src/db/schema/auth.ts
 .generated/auth-schema.ts`, port only the changes the upgrade/plugin change actually intends by
 hand into the committed file, and keep the two hand-added constructs above. Run `db:generate` on
@@ -197,7 +199,8 @@ standalone `auth` package (npm) that ships the `better-auth` bin and is version-
 release as the `better-auth` core it depends on. `db:auth-schema` pins `auth` as a devDependency at
 the exact `better-auth` version in use (`apps/web/package.json`), so `pnpm-lock.yaml` governs it and
 `better-auth generate ...` (the pnpm bin, no `npx`) always runs the CLI that matches the installed
-core instead of whatever `npx` last resolved as `latest`.
+core instead of whatever `npx` last resolved as `latest`. Bump `auth` and `better-auth` together, to
+the same version, in every upgrade.
 
 ## Link lifetimes
 
