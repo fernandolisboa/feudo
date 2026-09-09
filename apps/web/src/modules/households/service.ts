@@ -56,11 +56,8 @@ export async function createHousehold(
   if (!session) {
     return { status: "unauthenticated" };
   }
-  // householdId comes from getCurrentSession's membership-backed
-  // resolution, not the raw session.activeOrganizationId: Better Auth
-  // leaves that field empty on every fresh sign-in, so guarding on it
-  // directly would let a returning owner create a second household.
-  if (session.householdId) {
+  const rawSession = await getAuth().api.getSession({ headers: requestHeaders });
+  if (rawSession?.session.activeOrganizationId) {
     return { status: "already_has_household" };
   }
 
