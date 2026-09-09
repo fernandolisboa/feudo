@@ -7,10 +7,12 @@ vi.mock("@/db/client", () => ({
 }));
 
 const { GET } = await import("./route");
+const { resetHealthProbeCache } = await import("./probe");
 
 describe("GET /api/health", () => {
   beforeEach(() => {
     executeMock.mockReset();
+    resetHealthProbeCache();
   });
 
   it("returns ok when the database answers", async () => {
@@ -33,5 +35,25 @@ describe("GET /api/health", () => {
     const body: unknown = await response.json();
     expect(body).toEqual({ ok: false, db: false });
     expect(JSON.stringify(body)).not.toContain("postgres://");
+  });
+
+  it("memoizes the database probe instead of querying on every request", async () => {
+    executeMock.mockResolvedValue({ rows: [{ "?column?": 1 }] });
+
+    await GET();
+    await GET();
+    await GET();
+
+    expect(executeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-probes after the cache is reset", async () => {
+    executeMock.mockResolvedValue({ rows: [{ "?column?": 1 }] });
+
+    await GET();
+    resetHealthProbeCache();
+    await GET();
+
+    expect(executeMock).toHaveBeenCalledTimes(2);
   });
 });

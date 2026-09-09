@@ -1,14 +1,10 @@
-import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db/client";
+import { getDbStatus } from "./probe";
 
 export async function GET(): Promise<NextResponse> {
-  try {
-    const db = getDb();
-    await db.execute(sql`select 1`);
-    return NextResponse.json({ ok: true, db: true });
-  } catch {
-    return NextResponse.json({ ok: false, db: false }, { status: 503 });
-  }
+  const ok = await getDbStatus();
+  return ok
+    ? NextResponse.json({ ok: true, db: true })
+    : NextResponse.json({ ok: false, db: false }, { status: 503 });
 }
