@@ -28,7 +28,6 @@ const en = {
     submit: "Send link",
     sent: "If this email has a sign-up, we sent a link to sign in.",
     invalidOrExpired: "This link is invalid or has expired. Request a new one.",
-    requestNewLink: "Request a new link",
     backToSignIn: "Back to sign in",
   },
   forgotPassword: {
@@ -63,18 +62,18 @@ const en = {
   },
   verificationEmail: {
     subject: "Confirm your email at Feudo",
-    text: "Hello, {name}. Confirm your email to start using Feudo: {url}",
-    html: '<p>Hello, {name}.</p><p>Confirm your email to start using Feudo:</p><p><a href="{url}">{url}</a></p>',
+    text: "Confirm your email to start using Feudo: {url}",
+    html: '<p>Confirm your email to start using Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
   magicLinkEmail: {
     subject: "Your sign-in link for Feudo",
-    text: "Use this link to sign in to Feudo: {url}\n\nThe link expires in 5 minutes and works once.",
-    html: '<p>Use this link to sign in to Feudo:</p><p><a href="{url}">{url}</a></p><p>The link expires in 5 minutes and works once.</p>',
+    text: "Use this link to sign in to Feudo: {url}\n\nThe link expires in {expiresIn} and works once.",
+    html: '<p>Use this link to sign in to Feudo:</p><p><a href="{url}">{url}</a></p><p>The link expires in {expiresIn} and works once.</p>',
   },
   resetPasswordEmail: {
     subject: "Reset your password at Feudo",
-    text: "Hello, {name}. Use this link to set a new password: {url}\n\nThe link expires in 1 hour and works once. If you didn't request this, ignore this email.",
-    html: '<p>Hello, {name}.</p><p>Use this link to set a new password:</p><p><a href="{url}">{url}</a></p><p>The link expires in 1 hour and works once. If you didn\'t request this, ignore this email.</p>',
+    text: "Use this link to set a new password: {url}\n\nThe link expires in {expiresIn} and works once. If you didn't request this, ignore this email.",
+    html: '<p>Use this link to set a new password:</p><p><a href="{url}">{url}</a></p><p>The link expires in {expiresIn} and works once. If you didn\'t request this, ignore this email.</p>',
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
@@ -122,7 +121,6 @@ const ptBR = {
     submit: "Enviar link",
     sent: "Se este e-mail tiver cadastro, enviamos um link para entrar.",
     invalidOrExpired: "Este link é inválido ou expirou. Peça um novo link.",
-    requestNewLink: "Pedir novo link",
     backToSignIn: "Voltar para entrar",
   },
   forgotPassword: {
@@ -157,18 +155,18 @@ const ptBR = {
   },
   verificationEmail: {
     subject: "Confirme seu e-mail no Feudo",
-    text: "Olá, {name}. Confirme seu e-mail para começar a usar o Feudo: {url}",
-    html: '<p>Olá, {name}.</p><p>Confirme seu e-mail para começar a usar o Feudo:</p><p><a href="{url}">{url}</a></p>',
+    text: "Confirme seu e-mail para começar a usar o Feudo: {url}",
+    html: '<p>Confirme seu e-mail para começar a usar o Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
   magicLinkEmail: {
     subject: "Seu link para entrar no Feudo",
-    text: "Use este link para entrar no Feudo: {url}\n\nO link expira em 5 minutos e funciona uma única vez.",
-    html: '<p>Use este link para entrar no Feudo:</p><p><a href="{url}">{url}</a></p><p>O link expira em 5 minutos e funciona uma única vez.</p>',
+    text: "Use este link para entrar no Feudo: {url}\n\nO link expira em {expiresIn} e funciona uma única vez.",
+    html: '<p>Use este link para entrar no Feudo:</p><p><a href="{url}">{url}</a></p><p>O link expira em {expiresIn} e funciona uma única vez.</p>',
   },
   resetPasswordEmail: {
     subject: "Redefina sua senha no Feudo",
-    text: "Olá, {name}. Use este link para definir uma nova senha: {url}\n\nO link expira em 1 hora e funciona uma única vez. Se você não pediu isso, ignore este e-mail.",
-    html: '<p>Olá, {name}.</p><p>Use este link para definir uma nova senha:</p><p><a href="{url}">{url}</a></p><p>O link expira em 1 hora e funciona uma única vez. Se você não pediu isso, ignore este e-mail.</p>',
+    text: "Use este link para definir uma nova senha: {url}\n\nO link expira em {expiresIn} e funciona uma única vez. Se você não pediu isso, ignore este e-mail.",
+    html: '<p>Use este link para definir uma nova senha:</p><p><a href="{url}">{url}</a></p><p>O link expira em {expiresIn} e funciona uma única vez. Se você não pediu isso, ignore este e-mail.</p>',
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",

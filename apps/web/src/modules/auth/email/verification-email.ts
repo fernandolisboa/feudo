@@ -1,13 +1,8 @@
 import { t } from "../strings";
-import { escapeHtml } from "./escape-html";
+import { renderEmail, type EmailCopy } from "./render";
 
-export type VerificationEmail = { subject: string; text: string; html: string };
+export type VerificationEmail = EmailCopy;
 
-export function buildVerificationEmail(name: string, url: string): VerificationEmail {
-  const copy = t.verificationEmail;
-  return {
-    subject: copy.subject,
-    text: copy.text.replaceAll("{name}", name).replaceAll("{url}", url),
-    html: copy.html.replaceAll("{name}", escapeHtml(name)).replaceAll("{url}", escapeHtml(url)),
-  };
+export function buildVerificationEmail(url: string): VerificationEmail {
+  return renderEmail(t.verificationEmail, { url });
 }

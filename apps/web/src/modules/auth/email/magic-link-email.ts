@@ -1,13 +1,8 @@
 import { t } from "../strings";
-import { escapeHtml } from "./escape-html";
+import { renderEmail, type EmailCopy } from "./render";
 
-export type MagicLinkEmail = { subject: string; text: string; html: string };
+export type MagicLinkEmail = EmailCopy;
 
-export function buildMagicLinkEmail(url: string): MagicLinkEmail {
-  const copy = t.magicLinkEmail;
-  return {
-    subject: copy.subject,
-    text: copy.text.replaceAll("{url}", url),
-    html: copy.html.replaceAll("{url}", escapeHtml(url)),
-  };
+export function buildMagicLinkEmail(url: string, expiresIn: string): MagicLinkEmail {
+  return renderEmail(t.magicLinkEmail, { url, expiresIn });
 }
