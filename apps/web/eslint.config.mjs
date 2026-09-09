@@ -31,7 +31,15 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/sw.js", "drizzle/**"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "public/sw.js",
+    "drizzle/**",
+    ".generated/**",
+  ]),
 ]);
 
 export default eslintConfig;

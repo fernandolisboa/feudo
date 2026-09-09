@@ -163,13 +163,27 @@ PLAYWRIGHT_BASE_URL=https://<preview-url> TEST_ONLY_TOKEN=<value> VERCEL_AUTOMAT
   pnpm --filter @feudo/web exec playwright test
 ```
 
-## Regenerating the Better Auth schema
+## The committed schema is hand-maintained, not generated
 
-`pnpm --filter @feudo/web db:auth-schema` runs the Better Auth CLI against `cli.ts`
-(`apps/web/src/modules/auth/cli.ts`, module-private — not part of `auth/index.ts`) and writes
-`src/db/schema/auth.ts`; review the diff (it does not know about our naming or comment conventions
-— it has, for example, dropped a hand-added `withTimezone: true` before) before running
-`db:generate` on top of it.
+`src/db/schema/auth.ts` is the authoritative, hand-maintained schema — it is never overwritten by
+the Better Auth CLI. `generate` performs a full rewrite from the auth/plugin config, not a
+config-aware merge with the existing file, so it cannot express two constructs the committed file
+carries and the CLI has no way to produce: `withTimezone: true` on `user.termsAcceptedAt`, and the
+`member_single_owner_uidx` partial unique index (ADR-0001 single-owner enforcement, second line of
+defense — `.where()` partial indexes have no representation in the `organization` plugin's schema
+description the CLI reads). Any wording implying the generated output must match the committed file
+byte-for-byte does not hold and never has for any CLI version.
+
+`pnpm --filter @feudo/web db:auth-schema` is a comparison aid, run only after upgrading
+`better-auth` or changing plugins/`additionalFields` — not part of the normal edit loop. It runs
+the Better Auth CLI against `cli.ts` (`apps/web/src/modules/auth/cli.ts`, module-private — not part
+of `auth/index.ts`), writes the result to the git-ignored `apps/web/.generated/auth-schema.ts`, and
+then prints a `git diff --stat` between it and the committed `src/db/schema/auth.ts` (non-failing:
+the command still exits 0 when the two differ, which they always will by the two constructs above).
+Read the full diff with `git --no-pager diff --no-index src/db/schema/auth.ts
+.generated/auth-schema.ts`, port only the changes the upgrade/plugin change actually intends by
+hand into the committed file, and keep the two hand-added constructs above. Run `db:generate` on
+the committed file afterwards, as usual.
 
 The CLI needs a named `auth` export; `auth.ts` only exports the lazy `getAuth()` singleton on
 purpose (docs/runbooks/auth.md above), so `cli.ts` builds a second, CLI-only `betterAuth` instance
