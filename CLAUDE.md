@@ -38,8 +38,11 @@ Handlers.
   dropdown, select, combobox, popover, tabs, toast, form controls). Never hand-roll these.
   Components are copied into the repo and restyled through `DESIGN.md` tokens. Layout, charts and
   domain components are free.
-- **Database**: Postgres on Neon via the Vercel integration (`main` = prod, preview branch per PR).
-  Drizzle ORM + drizzle-kit migrations committed to the repo.
+- **Database**: Postgres on Neon via the Vercel integration. `main` = prod; **one shared `preview`
+  branch** for every preview deployment and CI run, never a branch per deployment (Neon's free-tier
+  branch limit has broken CI before). The integration's automatic preview branches stay off; CI
+  migrates and resets data at the start of each run; the branch is reset from `main` after each
+  merge. Drizzle ORM + drizzle-kit migrations committed to the repo.
 - **Auth & tenancy**: Better Auth with its `organization` plugin (ADR-0001). Email + password with
   verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
   the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
