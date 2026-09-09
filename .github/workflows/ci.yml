@@ -143,8 +143,20 @@ jobs:
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: node apps/web/scripts/reset-neon-preview.mjs
 
+      - name: Check preview database secret
+        id: check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::DATABASE_URL_PREVIEW secret is not set; skipping the post-restore reset until the owner adds it."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Reset preview data after restore
-        if: ${{ secrets.DATABASE_URL_PREVIEW != '' }}
+        if: steps.check.outputs.ready == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
           DATABASE_RESET_ALLOWED: preview
