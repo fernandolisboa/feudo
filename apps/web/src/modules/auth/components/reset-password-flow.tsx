@@ -19,6 +19,14 @@ function markInProgress(): void {
   }
 }
 
+function clearInProgress(): void {
+  try {
+    window.sessionStorage.removeItem(IN_PROGRESS_STORAGE_KEY);
+  } catch {
+    // Same unavailable-storage case as markInProgress; nothing to clear.
+  }
+}
+
 function readWasInProgress(): boolean {
   try {
     return window.sessionStorage.getItem(IN_PROGRESS_STORAGE_KEY) === "true";
@@ -48,12 +56,26 @@ export function ResetPasswordFlow({ token }: { token?: string }) {
   );
 
   useEffect(() => {
-    if (token) {
-      markInProgress();
+    if (!token) {
+      return;
     }
+    markInProgress();
+    // A successful submit navigates away from this page (to /entrar); this
+    // unmount is the client's only signal for "the reset finished", so the
+    // flag is cleared here rather than lingering for a later, unrelated
+    // visit to this page in the same tab.
+    return () => {
+      clearInProgress();
+    };
   }, [token]);
 
   const state = resolveResetPasswordFlowState(token, wasInProgress);
+
+  useEffect(() => {
+    if (state === "link-removed") {
+      clearInProgress();
+    }
+  }, [state]);
 
   if (state === "form" && token) {
     return <ResetPasswordForm token={token} />;
