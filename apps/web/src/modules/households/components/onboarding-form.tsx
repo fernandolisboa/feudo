@@ -13,7 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { initialActionState } from "@/modules/auth";
+// Direct file import, not the @/modules/auth barrel: the barrel also
+// re-exports session.ts and service.ts, both of which depend on
+// "next/headers" and cannot be pulled into this "use client" component's
+// bundle (auth's own client forms import action-state.ts the same way).
+import { initialActionState } from "@/modules/auth/action-state";
 
 import { createHouseholdAction } from "../actions";
 import { t } from "../strings";
