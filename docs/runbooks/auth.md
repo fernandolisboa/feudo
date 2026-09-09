@@ -178,10 +178,12 @@ from the same `buildAuthOptions`, with a placeholder Postgres connection string 
 `RESEND_API_KEY`/`EMAIL_FROM` to run, unlike `db:generate`, `db:migrate` and `db:check`, which do
 need a reachable `DATABASE_URL`.
 
-`db:auth-schema` runs an unpinned `npx @better-auth/cli`, whose `latest` can trail the installed
-`better-auth` core and fail to parse `auth.ts` against a newer config shape (e.g. this ticket's
-`onPasswordReset`, `resetPasswordTokenExpiresIn`). Pinning the CLI as a devDependency is tracked in
-#45, not fixed here.
+`@better-auth/cli` is deprecated as of the 1.5+ release train — Better Auth split its CLI into a
+standalone `auth` package (npm) that ships the `better-auth` bin and is version-locked to the same
+release as the `better-auth` core it depends on. `db:auth-schema` pins `auth` as a devDependency at
+the exact `better-auth` version in use (`apps/web/package.json`), so `pnpm-lock.yaml` governs it and
+`better-auth generate ...` (the pnpm bin, no `npx`) always runs the CLI that matches the installed
+core instead of whatever `npx` last resolved as `latest`.
 
 ## Link lifetimes
 
