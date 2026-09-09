@@ -19,16 +19,31 @@
    Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
 
 ## Shell & Command Reliability
-
-1. **[2026-09-02] `codex` on PATH is a Windows Volta shim and fails under WSL**
-   Do instead: treat the external Codex reviewer as skipped until `@openai/codex` is installed inside WSL; `review.md` must degrade gracefully.
-2. **[2026-09-02] Toolchain present: node 24 (nvm), pnpm 10, gh (fernandolisboa), vercel CLI (logged in)**
-   Do instead: no Neon CLI installed; Neon goes through the Vercel integration.
+1. **[2026-09-08] lint-staged runs Prettier on Markdown, which re-pads tables; exact-string replaces fail silently**
+   Do instead: anchor edits on line prefixes, always `assert` the match, run `pnpm exec prettier --write` afterwards; Bash `cd` persists across calls, so use absolute paths.
+2. **[2026-09-02] Pushes to `main` are blocked by ruleset 22097993 (PR + CI only); the gh token needed `workflow` scope**
+   Do instead: work on branches and open PRs; the ruleset can only be toggled with the owner's explicit OK.
+3. **[2026-09-02] `npx impeccable skills install` fails with "invalid zip data" (fflate)**
+   Do instead: `curl -L https://impeccable.style/api/download/bundle/universal -o bundle.zip`, `unzip ".claude/*"`, copy `skills/impeccable` and `agents/impeccable-*.md` into `.claude/`; skip its hooks.
+4. **[2026-09-02] Vercel project settings are patched through the REST API, not the CLI**
+   Do instead: token from `~/.local/share/com.vercel.cli/auth.json`; `PATCH /v9/projects/prj_yQ9yIizOTI6fOk1XNsmIOF0ZdTTA?teamId=team_GXogSV1DlEUaBKFFJz96kEmP` (rootDirectory `apps/web`, ssoProtection `preview`).
+5. **[2026-09-02] `vercel integration add neon` installs Neon agent skills into the repo**
+   Do instead: delete `.agents/`, `skills-lock.json`, `.claude/skills/neon*` afterwards; Context7 covers Neon docs.
+6. **[2026-09-02] Next 16 + `@serwist/next` 9 needs `next build --webpack`**
+   Do instead: keep the `--webpack` flag in `apps/web` scripts until Serwist ships stable Turbopack support.
+7. **[2026-09-02] `codex` on PATH is a Windows Volta shim and fails under WSL**
+   Do instead: user installs `@openai/codex` inside WSL; `review.md` skips the external reviewer when `codex` is absent.
+8. **[2026-09-02] Toolchain: node 24 (nvm), pnpm 10.31, gh (fernandolisboa), vercel CLI (team feuxs-projects)**
+   Do instead: Neon has no CLI here; it is managed through the Vercel integration (resource `neon-byzantium-mountain`, Free plan).
+9. **[2026-09-08] `gh pr checks | grep pass` matches the Vercel comment check before `ci` finishes**
+   Do instead: filter the `ci` row (`grep -E "^ci\s"`) before testing pass/fail.
 
 ## Domain Behavior Guardrails
 
-1. **[2026-09-02] Multi-tenant from day one; household is the tenant**
-   Do instead: every domain table carries `household_id`, every query goes through household-scoped repositories, every new table ships an isolation test.
+1. **[2026-09-02] Multi-tenant from day one; household is the tenant, two data scopes (ADR-0001)**
+   Do instead: household tables carry `household_id`; bank connections and provider credentials carry `user_id`; scoped repositories only; every new table ships an isolation test and a row in the ADR-0008 data map.
+3. **[2026-09-08] Pluggy paid plan is R$ 2,500/month; each user brings their own Meu Pluggy credentials (ADR-0005)**
+   Do instead: no Connect widget, no pooled credentials; closed beta needs Pluggy support's written OK (draft in docs/research); public launch needs a paid aggregator.
 2. **[2026-09-02] Money is integer centavos + currency code**
    Do instead: never floats; dates UTC, displayed in household time zone.
 
