@@ -118,6 +118,9 @@ jobs:
     needs: [ci, integration]
     if: github.event_name == 'pull_request'
     timeout-minutes: 20
+    concurrency:
+      group: preview-db
+      cancel-in-progress: false
     permissions:
       contents: read
       deployments: read
