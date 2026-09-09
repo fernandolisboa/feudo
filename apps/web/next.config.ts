@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ["@neondatabase/serverless", "ws"],
-};
+const nextConfig: NextConfig = {};
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",

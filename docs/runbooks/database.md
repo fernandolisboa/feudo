@@ -131,3 +131,11 @@ status 503 with `{ ok: false, db: false }` if the database is unreachable. The r
 for 10 seconds per warm instance, since the endpoint is public and unauthenticated. It never
 returns the connection string or the underlying error. It stores nothing, so it has no entry in
 the ADR-0008 data map.
+
+## WebSocket driver on Vercel
+
+`apps/web/src/db/client.ts` connects with `drizzle-orm/neon-serverless` and no `ws` option: Node 24
+(the runtime everywhere, `.nvmrc`) has a global `WebSocket`, which `@neondatabase/serverless` v1
+picks up automatically. Do not add the `ws` package back — webpack bundling it broke `/api/health`
+in production (`TypeError: b.mask is not a function`) because its `bufferutil` fallback does not
+survive minification.
