@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   InvalidEmailProviderError,
   InvalidRegistrationModeError,
+  isFakeEmailProvider,
   readAuthBaseUrl,
   readEmailProvider,
   readRegistrationMode,
@@ -45,6 +46,17 @@ describe("readEmailProvider", () => {
     expect(() => readEmailProvider({ EMAIL_PROVIDER: "sendgrid" })).toThrow(
       InvalidEmailProviderError,
     );
+  });
+});
+
+describe("isFakeEmailProvider", () => {
+  it("returns true when EMAIL_PROVIDER is fake", () => {
+    expect(isFakeEmailProvider({ EMAIL_PROVIDER: "fake" })).toBe(true);
+  });
+
+  it("returns false when EMAIL_PROVIDER is resend or unset", () => {
+    expect(isFakeEmailProvider({ EMAIL_PROVIDER: "resend" })).toBe(false);
+    expect(isFakeEmailProvider({})).toBe(false);
   });
 });
 

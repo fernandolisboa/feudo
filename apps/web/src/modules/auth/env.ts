@@ -60,6 +60,10 @@ export function readEmailProvider(env: AuthEnv = process.env): EmailProvider {
   return parsed.data;
 }
 
+export function isFakeEmailProvider(env: AuthEnv = process.env): boolean {
+  return readEmailProvider(env) === "fake";
+}
+
 const DEFAULT_LOCAL_BASE_URL = "http://localhost:3000";
 
 // Preview deployments never set BETTER_AUTH_URL (it would have to be pinned per

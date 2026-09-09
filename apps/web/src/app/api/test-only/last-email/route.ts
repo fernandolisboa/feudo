@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { tokensMatch } from "@/lib/timing-safe-token";
-import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
-import { readEmailProvider } from "@/modules/auth/env";
+import { findLastFakeSentEmail, isFakeEmailProvider } from "@/modules/auth";
 
 function isEligibleEnvironment(): boolean {
-  return process.env.VERCEL_ENV !== "production" && readEmailProvider() === "fake";
+  return process.env.VERCEL_ENV !== "production" && isFakeEmailProvider();
 }
 
 function isAuthorized(authorizationHeader: string | null): boolean {

@@ -104,6 +104,6 @@ const ptBR = {
   },
 } satisfies typeof en;
 
-export const authStrings = { en, ptBR } as const;
+const authStrings = { en, ptBR };
 
 export const t = authStrings.ptBR;
