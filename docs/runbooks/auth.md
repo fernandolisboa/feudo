@@ -200,11 +200,26 @@ Magic-link tokens are stored `storeToken: "hashed"` (Better Auth's own default i
 
 Every request for a magic link or a password reset writes a `verification` row, including for an
 address with no sign-up (`disableSignUp`/enumeration protection above), and Better Auth never prunes
-expired ones itself. `GET /api/cron/prune-verification`
-(`apps/web/src/app/api/cron/prune-verification/route.ts`), guarded by the same `isCronRequestAuthorized`
-bearer check as the other cron routes, deletes every `verification` row with `expires_at` in the
-past. `vercel.json` schedules it daily (`0 8 * * *`, UTC, after the market-data cron at `0 7`) —
-Vercel's Hobby plan only allows daily crons, so this can't run more often than that.
+expired ones itself. `pruneExpiredVerifications` (`apps/web/src/modules/auth/verification-prune.ts`,
+exported from the module barrel) deletes every `verification` row with `expires_at` in the past,
+using the driver's `rowCount` rather than `.returning()` since the route only needs a count. It runs
+as one step of the shared housekeeping cron, `GET /api/cron/daily`
+(`apps/web/src/app/api/cron/daily/route.ts`) — see "Cron jobs" below for why the market-data refresh
+and the verification prune share a single route instead of one cron each.
+
+## Cron jobs
+
+Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
+`GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
+(`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
+runs each of its steps — the market-data refresh (`refreshMarketData`) and the expired-verification
+prune (`pruneExpiredVerifications`) — in its own try/catch, so one step failing never stops the
+other from running, and returns a per-step summary:
+`{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
+The response is `200` when every step succeeded and `500` when any step errored or, for
+market-data, fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from
+ADR-0008) becomes a third step of this same route rather than a new cron entry, since the Hobby
+limit leaves no room for a third schedule.
 
 ## Magic link never signs up
 
