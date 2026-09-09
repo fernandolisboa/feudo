@@ -43,4 +43,4 @@ Feudo is a data controller under LGPD regardless of being free or small, and it 
 - The keyed-hash secret and the credentials encryption key are two different secrets; losing the encryption key means users must re-enter credentials, losing the hash key means re-hashing on next sync. Neither loss exposes data.
 - Every table added later must be placed in this map in the same PR; the `reviewer-security` lens checks for it.
 - Any third party that receives personal data (Resend for email, Anthropic for analyses, Pluggy for bank access, Neon and Vercel for hosting) is named in the privacy policy; analyses send computed numbers only, never transactions.
-- The shared Neon `preview` branch never holds production personal data: restoring it from `main` after a merge and every CI run truncate its data in the same job, before any preview deployment or test reads it.
+- The `feudo-preview` Neon project (used by Vercel Preview/Development and by CI) never holds production personal data: it is a separate project from production, not a copy or a restore target, so there is no path by which production data reaches it.

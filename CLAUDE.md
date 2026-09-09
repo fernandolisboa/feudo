@@ -38,11 +38,12 @@ Handlers.
   dropdown, select, combobox, popover, tabs, toast, form controls). Never hand-roll these.
   Components are copied into the repo and restyled through `DESIGN.md` tokens. Layout, charts and
   domain components are free.
-- **Database**: Postgres on Neon via the Vercel integration. `main` = prod; **one shared `preview`
-  branch** for every preview deployment and CI run, never a branch per deployment (Neon's free-tier
-  branch limit has broken CI before). The integration's automatic preview branches stay off; CI
-  migrates and resets data at the start of each run; the branch is reset from `main` after each
-  merge. Drizzle ORM + drizzle-kit migrations committed to the repo.
+- **Database**: Postgres on Neon via the Vercel integration, **one project per environment**:
+  production stays on its own project; Vercel Preview/Development and CI share a separate free
+  `feudo-preview` project, never a branch per deployment (Neon's free-tier branch limit has broken
+  CI before). The integration's automatic preview branches stay off; CI drops and recreates the
+  preview project's schema and migrates it at the start of each run. Drizzle ORM + drizzle-kit
+  migrations committed to the repo.
 - **Auth & tenancy**: Better Auth with its `organization` plugin (ADR-0001). Email + password with
   verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
   the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
@@ -123,7 +124,7 @@ Confirm with the owner before creating any paid resource.
 - **Property-based**: `fast-check` on money math, reserve target and bank scoring.
 - **Isolation**: for every domain table, a test proving a session from household A cannot read,
   write or trigger jobs for household B. Mandatory, blocking.
-- **Integration**: Route Handlers + Drizzle against the shared `preview` branch.
+- **Integration**: Route Handlers + Drizzle against the `feudo-preview` project.
 - **E2E**: Playwright against the Vercel preview for the critical paths: registration, email
   verification, login, household invite and join, bank connection against the in-repo fake
   `DataProvider` (Meu Pluggy has no sandbox; the real provider gets a manual smoke test), ledger
@@ -217,9 +218,9 @@ numbers follow Brazilian conventions.
 - Full `/security-audit` (repo-wide) after any ticket touching auth, tenancy or data access, before
   `REGISTRATION_MODE=open`, and monthly as a floor.
 - Product uncertainty → ask the owner. Technical uncertainty → one-paragraph ADR draft, then ask.
-- Secrets: the owner pastes app secrets into Vercel env. CI-only secrets (Neon API access, the
-  preview database URL) live in GitHub Actions secrets, set via `gh secret set`. Never store either
-  in the repo or in memory.
+- Secrets: the owner pastes app secrets into Vercel env. CI-only secrets (the preview project's
+  database URL) live in GitHub Actions secrets, set via `gh secret set`. Never store either in the
+  repo or in memory.
 
 ## Agent skills
 

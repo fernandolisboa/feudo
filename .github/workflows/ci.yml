@@ -102,62 +102,14 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Migrate the shared preview branch
+      - name: Reset the preview project's schema
+        if: steps.check.outputs.ready == 'true'
+        run: pnpm --filter @feudo/web db:reset-schema
+
+      - name: Migrate the preview project
         if: steps.check.outputs.ready == 'true'
         run: pnpm --filter @feudo/web db:migrate
-
-      - name: Reset preview data
-        if: steps.check.outputs.ready == 'true'
-        run: pnpm --filter @feudo/web db:reset
 
       - name: Integration tests
         if: steps.check.outputs.ready == 'true'
         run: pnpm test:integration
-
-  reset-preview:
-    runs-on: ubuntu-latest
-    needs: integration
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    concurrency:
-      group: preview-db
-      cancel-in-progress: false
-    steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Restore the preview branch from main
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        run: node apps/web/scripts/reset-neon-preview.mjs
-
-      - name: Check preview database secret
-        id: check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::warning::DATABASE_URL_PREVIEW secret is not set; skipping the post-restore reset until the owner adds it."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Reset preview data after restore
-        if: steps.check.outputs.ready == 'true'
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
-          DATABASE_RESET_ALLOWED: preview
-        run: pnpm --filter @feudo/web db:reset
