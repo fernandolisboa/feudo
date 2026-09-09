@@ -11,7 +11,7 @@ export class InvalidRateError extends Error {
 
   constructor(ratePpm: number) {
     super(
-      `Rate must be finite and greater than -${String(PPM_SCALE)} ppm, received ${String(ratePpm)}`,
+      `Rate must be an integer greater than -${String(PPM_SCALE)} ppm, received ${String(ratePpm)}`,
     );
     this.name = "InvalidRateError";
     this.ratePpm = ratePpm;
@@ -34,7 +34,7 @@ export class InvalidDailyPercentError extends Error {
 }
 
 export function assertValidRate(ratePpm: RatePpm): void {
-  if (!Number.isFinite(ratePpm) || ratePpm <= -PPM_SCALE) {
+  if (!Number.isInteger(ratePpm) || ratePpm <= -PPM_SCALE) {
     throw new InvalidRateError(ratePpm);
   }
 }
