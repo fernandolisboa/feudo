@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { annualizeDailyRate, dailyizeAnnualRate, InvalidRateError } from "./rates";
+import { InvalidPercentStringError } from "./parse";
+import {
+  annualizeDailyPercentToRatePpm,
+  annualizeDailyRate,
+  dailyizeAnnualRate,
+  InvalidRateError,
+} from "./rates";
 
 describe("annualizeDailyRate", () => {
   it("compounds a daily rate over 252 business days", () => {
@@ -35,6 +41,32 @@ describe("dailyizeAnnualRate", () => {
 
   it("throws InvalidRateError for a non-finite rate", () => {
     expect(() => dailyizeAnnualRate(Number.POSITIVE_INFINITY)).toThrow(InvalidRateError);
+  });
+});
+
+describe("annualizeDailyPercentToRatePpm", () => {
+  it("annualises the exact decimal string without rounding the daily rate to ppm first", () => {
+    expect(annualizeDailyPercentToRatePpm("0.053680")).toBe(144_808);
+  });
+
+  it("differs from rounding the daily rate to ppm before compounding", () => {
+    const fromExactString = annualizeDailyPercentToRatePpm("0.053680");
+    const fromRoundedPpm = annualizeDailyRate(537);
+    expect(fromExactString).not.toBe(fromRoundedPpm);
+    expect((fromExactString / 10_000).toFixed(2)).toBe("14.48");
+    expect((fromRoundedPpm / 10_000).toFixed(2)).toBe("14.49");
+  });
+
+  it("returns zero for a zero daily rate", () => {
+    expect(annualizeDailyPercentToRatePpm("0")).toBe(0);
+  });
+
+  it("throws InvalidPercentStringError for a malformed decimal string", () => {
+    expect(() => annualizeDailyPercentToRatePpm("not-a-number")).toThrow(InvalidPercentStringError);
+  });
+
+  it("throws InvalidRateError for a daily rate at or below -100%", () => {
+    expect(() => annualizeDailyPercentToRatePpm("-100")).toThrow(InvalidRateError);
   });
 });
 

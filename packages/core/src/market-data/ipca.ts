@@ -1,4 +1,4 @@
-import type { RatePpm } from "./rates";
+import { assertValidRate, type RatePpm } from "./rates";
 
 const PPM_SCALE = 1_000_000;
 const MONTHS_IN_A_YEAR = 12;
@@ -19,9 +19,14 @@ export function accumulate12MonthIpca(monthlyRatesPpm: readonly RatePpm[]): Rate
   if (monthlyRatesPpm.length !== MONTHS_IN_A_YEAR) {
     throw new InvalidMonthlyRatesCountError(monthlyRatesPpm.length);
   }
+  for (const ratePpm of monthlyRatesPpm) {
+    assertValidRate(ratePpm);
+  }
 
   const accumulatedFraction =
     monthlyRatesPpm.reduce((factor, ratePpm) => factor * (1 + ratePpm / PPM_SCALE), 1) - 1;
 
-  return Math.round(accumulatedFraction * PPM_SCALE);
+  const accumulatedRatePpm = Math.round(accumulatedFraction * PPM_SCALE);
+  assertValidRate(accumulatedRatePpm);
+  return accumulatedRatePpm;
 }

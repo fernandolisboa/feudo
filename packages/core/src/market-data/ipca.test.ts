@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { accumulate12MonthIpca, InvalidMonthlyRatesCountError } from "./ipca";
+import { InvalidRateError } from "./rates";
 
 describe("accumulate12MonthIpca", () => {
   it("compounds twelve equal monthly rates", () => {
@@ -29,6 +30,19 @@ describe("accumulate12MonthIpca", () => {
     expect(() => accumulate12MonthIpca(Array<number>(13).fill(0))).toThrow(
       InvalidMonthlyRatesCountError,
     );
+  });
+
+  it("throws InvalidRateError when a monthly rate is at or below -100%", () => {
+    const monthlyRatesPpm = [
+      -1_000_000, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400, 4_400,
+    ];
+    expect(() => accumulate12MonthIpca(monthlyRatesPpm)).toThrow(InvalidRateError);
+  });
+
+  it("throws InvalidRateError when a monthly rate is not finite", () => {
+    const monthlyRatesPpm = Array<number>(12).fill(4_400);
+    monthlyRatesPpm[0] = Number.NaN;
+    expect(() => accumulate12MonthIpca(monthlyRatesPpm)).toThrow(InvalidRateError);
   });
 });
 
