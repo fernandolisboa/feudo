@@ -5,6 +5,7 @@ import {
   annualizeDailyPercentToRatePpm,
   annualizeDailyRate,
   dailyizeAnnualRate,
+  InvalidDailyPercentError,
   InvalidRateError,
 } from "./rates";
 
@@ -65,9 +66,14 @@ describe("annualizeDailyPercentToRatePpm", () => {
     expect(() => annualizeDailyPercentToRatePpm("not-a-number")).toThrow(InvalidPercentStringError);
   });
 
-  it("throws InvalidRateError for a daily rate at or below -100%", () => {
-    expect(() => annualizeDailyPercentToRatePpm("-100")).toThrow(InvalidRateError);
-  });
+  it.each(["-201", "500"])(
+    "throws InvalidDailyPercentError for a daily percent of %s outside [-1, 1]",
+    (dailyPercentValue) => {
+      expect(() => annualizeDailyPercentToRatePpm(dailyPercentValue)).toThrow(
+        InvalidDailyPercentError,
+      );
+    },
+  );
 });
 
 describe("InvalidRateError", () => {

@@ -74,4 +74,25 @@ describe("getLatestIndicators ipca12Month (integration)", () => {
       expect(indicators.ipca12Month).toBeUndefined();
     });
   });
+
+  it("falls back to the stale 13522 row when it is out of date and 433 lacks twelve consecutive months", async () => {
+    await withTestDb(async (db) => {
+      await upsertMarketData(
+        db,
+        "433",
+        TWELVE_CONSECUTIVE_MONTHLY_OBSERVATIONS.slice(0, 11).map((observation, index) =>
+          index === 5 ? { ...observation, referenceDate: "2020-01-01" } : observation,
+        ),
+      );
+      await upsertMarketData(db, "13522", [{ referenceDate: "2025-07-01", value: "4.50" }]);
+
+      const indicators = await getLatestIndicators(db);
+
+      expect(indicators.ipca12Month).toEqual({
+        ratePpm: parsePercentToRatePpm("4.50"),
+        referenceDate: "2025-07-01",
+        source: "sgs",
+      });
+    });
+  });
 });

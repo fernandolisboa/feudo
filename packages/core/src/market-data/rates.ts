@@ -18,6 +18,21 @@ export class InvalidRateError extends Error {
   }
 }
 
+const DAILY_PERCENT_MIN = -1;
+const DAILY_PERCENT_MAX = 1;
+
+export class InvalidDailyPercentError extends Error {
+  readonly dailyPercentValue: string;
+
+  constructor(dailyPercentValue: string) {
+    super(
+      `Daily percent must be within [${String(DAILY_PERCENT_MIN)}, ${String(DAILY_PERCENT_MAX)}], received "${dailyPercentValue}"`,
+    );
+    this.name = "InvalidDailyPercentError";
+    this.dailyPercentValue = dailyPercentValue;
+  }
+}
+
 export function assertValidRate(ratePpm: RatePpm): void {
   if (!Number.isFinite(ratePpm) || ratePpm <= -PPM_SCALE) {
     throw new InvalidRateError(ratePpm);
@@ -48,7 +63,11 @@ export function dailyizeAnnualRate(annualRatePpm: RatePpm): RatePpm {
 // basis points, so this reads the exact decimal string and quantises only the annual result.
 export function annualizeDailyPercentToRatePpm(dailyPercentValue: string): RatePpm {
   parsePercentToRatePpm(dailyPercentValue);
-  const dailyFraction = Number(dailyPercentValue) / 100;
+  const dailyPercent = Number(dailyPercentValue);
+  if (dailyPercent < DAILY_PERCENT_MIN || dailyPercent > DAILY_PERCENT_MAX) {
+    throw new InvalidDailyPercentError(dailyPercentValue);
+  }
+  const dailyFraction = dailyPercent / 100;
   const annualFraction = Math.pow(1 + dailyFraction, BUSINESS_DAYS_PER_YEAR) - 1;
   const annualRatePpm = toRatePpm(annualFraction);
   assertValidRate(annualRatePpm);

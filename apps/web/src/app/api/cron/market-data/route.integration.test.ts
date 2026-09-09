@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { marketData } from "@/db/schema/market-data";
 import { withTestDb } from "@/db/test/harness";
-import { getLatestIndicators } from "@/lib/market-data/get-latest-indicators";
+import { getLatestIndicators } from "@/lib/market-data";
 
 import { GET } from "./route";
 
@@ -167,16 +167,19 @@ describe("GET /api/cron/market-data (integration)", () => {
       expect(indicators.cdiAnnual).toEqual({
         ratePpm: annualizeDailyPercentToRatePpm("0.053701"),
         referenceDate: "2026-09-03",
+        source: "computed",
       });
 
       expect(indicators.selicTarget).toEqual({
         ratePpm: parsePercentToRatePpm("15.00"),
         referenceDate: "2026-08-20",
+        source: "sgs",
       });
 
       expect(indicators.ipcaMonthly).toEqual({
         ratePpm: parsePercentToRatePpm("0.45"),
         referenceDate: "2026-08-01",
+        source: "sgs",
       });
 
       const expectedIpca12MonthPpm = accumulate12MonthIpca(

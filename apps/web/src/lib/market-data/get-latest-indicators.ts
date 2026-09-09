@@ -16,7 +16,7 @@ const MONTHS_IN_A_YEAR = 12;
 export interface Indicator {
   ratePpm: RatePpm;
   referenceDate: string;
-  source?: "sgs" | "computed";
+  source: "sgs" | "computed";
 }
 
 export interface LatestIndicators {
@@ -65,19 +65,25 @@ async function computeIpca12Month(db: Database): Promise<Indicator | undefined> 
     SgsSeriesCode.IpcaMonthly,
     MONTHS_IN_A_YEAR,
   );
-  if (lastTwelveMonthly.length !== MONTHS_IN_A_YEAR || !areConsecutiveMonths(lastTwelveMonthly)) {
-    return undefined;
+  if (lastTwelveMonthly.length === MONTHS_IN_A_YEAR && areConsecutiveMonths(lastTwelveMonthly)) {
+    const lastObservation = lastTwelveMonthly[lastTwelveMonthly.length - 1];
+    if (lastObservation) {
+      const ratePpm = accumulate12MonthIpca(
+        lastTwelveMonthly.map((observation) => parsePercentToRatePpm(observation.value)),
+      );
+      return { ratePpm, referenceDate: lastObservation.referenceDate, source: "computed" };
+    }
   }
 
-  const lastObservation = lastTwelveMonthly[lastTwelveMonthly.length - 1];
-  if (!lastObservation) {
-    return undefined;
+  if (ipca12MonthDirect) {
+    return {
+      ratePpm: parsePercentToRatePpm(ipca12MonthDirect.value),
+      referenceDate: ipca12MonthDirect.referenceDate,
+      source: "sgs",
+    };
   }
 
-  const ratePpm = accumulate12MonthIpca(
-    lastTwelveMonthly.map((observation) => parsePercentToRatePpm(observation.value)),
-  );
-  return { ratePpm, referenceDate: lastObservation.referenceDate, source: "computed" };
+  return undefined;
 }
 
 export async function getLatestIndicators(db: Database): Promise<LatestIndicators> {
@@ -93,18 +99,21 @@ export async function getLatestIndicators(db: Database): Promise<LatestIndicator
       ? {
           ratePpm: annualizeDailyPercentToRatePpm(cdiDaily.value),
           referenceDate: cdiDaily.referenceDate,
+          source: "computed",
         }
       : undefined,
     selicTarget: selicTarget
       ? {
           ratePpm: parsePercentToRatePpm(selicTarget.value),
           referenceDate: selicTarget.referenceDate,
+          source: "sgs",
         }
       : undefined,
     ipcaMonthly: ipcaMonthly
       ? {
           ratePpm: parsePercentToRatePpm(ipcaMonthly.value),
           referenceDate: ipcaMonthly.referenceDate,
+          source: "sgs",
         }
       : undefined,
     ipca12Month,
