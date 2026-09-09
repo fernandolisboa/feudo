@@ -267,6 +267,10 @@
       grid-template-areas: "nav content";
     }
 
+    .app-shell:has(.app-shell-nav[data-shell="sidebar"][data-collapsed="true"]) {
+      --shell-nav-width: 64px;
+    }
+
     .app-shell[data-shell="topnav"] {
       grid-template-columns: 1fr;
       grid-template-rows: auto 1fr;
@@ -291,10 +295,6 @@
       padding: 16px 12px;
     }
 
-    .app-shell-nav[data-shell="sidebar"][data-collapsed="true"] {
-      --shell-nav-width: 64px;
-    }
-
     .app-shell-nav[data-shell="sidebar"][data-collapsed="true"] .app-shell-nav-brand,
     .app-shell-nav[data-shell="sidebar"][data-collapsed="true"] .app-shell-nav-link span,
     .app-shell-nav[data-shell="sidebar"][data-collapsed="true"] .app-shell-household-slot {
@@ -311,6 +311,18 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+    }
+
+    .app-shell-nav-foot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .app-shell-nav[data-shell="sidebar"][data-collapsed="true"] .app-shell-nav-foot-row {
+      flex-direction: column;
+      justify-content: center;
     }
 
     .app-shell-nav[data-shell="topnav"] {

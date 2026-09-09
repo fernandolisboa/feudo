@@ -25,17 +25,23 @@ test("the app shell: sidebar (open, collapsed), topnav and mobile bottom tabs", 
     await expect(sidebar).toHaveAttribute("data-collapsed", "false");
     await expect(page.getByRole("link", { name: "Transações" })).toBeVisible();
     await expect(page.locator(".app-shell-tabbar")).toBeHidden();
+
+    const openBox = await sidebar.boundingBox();
+    expect(openBox?.width).toBe(224);
   });
 
   await test.step("sidebar collapses and the collapsed state survives a reload", async () => {
     await page.getByRole("button", { name: "Recolher menu" }).click();
     await expect(sidebar).toHaveAttribute("data-collapsed", "true");
 
+    const collapsedBox = await sidebar.boundingBox();
+    expect(collapsedBox?.width).toBe(64);
+
     await page.reload();
-    await expect(page.locator('nav.app-shell-nav[data-shell="sidebar"]')).toHaveAttribute(
-      "data-collapsed",
-      "true",
-    );
+    const reloadedSidebar = page.locator('nav.app-shell-nav[data-shell="sidebar"]');
+    await expect(reloadedSidebar).toHaveAttribute("data-collapsed", "true");
+    const reloadedBox = await reloadedSidebar.boundingBox();
+    expect(reloadedBox?.width).toBe(64);
   });
 
   await test.step("switching to the sala theme renders a topnav instead of a sidebar", async () => {

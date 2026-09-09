@@ -52,7 +52,7 @@ export function SidebarNav({
 
       <div className="app-shell-nav-foot">
         <div className="app-shell-household-slot">{householdSwitcher}</div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="app-shell-nav-foot-row">
           {userMenu}
           <Button
             type="button"
