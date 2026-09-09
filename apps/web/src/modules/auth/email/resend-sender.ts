@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import type { AuthEnv } from "../env";
 import type { EmailSender, SendEmailInput } from "./sender";
 
 export class MissingResendApiKeyError extends Error {
@@ -23,19 +24,26 @@ export class EmailSendError extends Error {
 }
 
 export class ResendEmailSender implements EmailSender {
-  async send(input: SendEmailInput): Promise<void> {
-    const apiKey = process.env.RESEND_API_KEY;
+  private readonly apiKey: string;
+  private readonly from: string;
+
+  constructor(env: AuthEnv = process.env) {
+    const apiKey = env.RESEND_API_KEY;
     if (!apiKey) {
       throw new MissingResendApiKeyError();
     }
-    const from = process.env.EMAIL_FROM;
+    const from = env.EMAIL_FROM;
     if (!from) {
       throw new MissingEmailFromError();
     }
+    this.apiKey = apiKey;
+    this.from = from;
+  }
 
-    const resend = new Resend(apiKey);
+  async send(input: SendEmailInput): Promise<void> {
+    const resend = new Resend(this.apiKey);
     const { error } = await resend.emails.send({
-      from,
+      from: this.from,
       to: input.to,
       subject: input.subject,
       text: input.text,

@@ -67,10 +67,15 @@ writes to a second table now, so a duplicate sign-up is a harmless generic `ok` 
 `EMAIL_PROVIDER` (`resend | fake`, default `resend`) selects the `EmailSender` implementation in
 one place (`apps/web/src/modules/auth/email/select.ts`):
 
-- `resend`: `ResendEmailSender` reads `RESEND_API_KEY`/`EMAIL_FROM` at send time and throws a typed
-  error if either is missing — never at build or import time, so a preview without those vars still
-  builds and boots; only sending an email fails, and `signUp` reports that failure as
-  `sign_up_failed` rather than a false `ok`.
+- `resend`: `getEmailSender` (`email/select.ts`) builds `ResendEmailSender` eagerly and its
+  constructor throws a typed error (`MissingResendApiKeyError` / `MissingEmailFromError`) if
+  `RESEND_API_KEY`/`EMAIL_FROM` is missing. `buildAuthOptions` calls `getEmailSender` once, outside
+  the `sendVerificationEmail` closure, specifically so that throw happens while `getAuth()` builds
+  its (cached) instance — the first request that touches auth — rather than inside
+  `sendVerificationEmail`: Better Auth runs that callback through `runInBackgroundOrAwait`, which
+  always logs a rejection as "Failed to run background task" and still reports the outer request
+  `ok`, so a throw from inside it can never surface as a failed sign-up. A misconfigured `resend`
+  provider now fails the very first request instead of silently accepting sign-ups it cannot verify.
 - `fake`: `FakeEmailSender` writes every message to the `fake_sent_emails` table
   (`apps/web/src/modules/auth/email/fake-email-repository.ts`) instead of an in-memory singleton.
   Vercel functions are separate processes, so a `globalThis` store would not be visible to the

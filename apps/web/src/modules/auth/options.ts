@@ -22,6 +22,11 @@ function readTermsVersion(body: unknown): string | undefined {
 
 export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.env) {
   const baseURL = readAuthBaseUrl(env);
+  // Built eagerly, not inside sendVerificationEmail below: Better Auth swallows
+  // that callback's rejection into a logged "background task" failure and still
+  // reports the request ok (docs/runbooks/auth.md), so a misconfigured provider
+  // must throw here, while buildAuthOptions runs, to actually fail the request.
+  const emailSender = getEmailSender(env);
 
   return {
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -52,7 +57,7 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       expiresIn: VERIFICATION_EXPIRES_IN_SECONDS,
       sendVerificationEmail: async ({ user, url }) => {
         const email = buildVerificationEmail(user.name, url);
-        await getEmailSender().send({ to: user.email, ...email });
+        await emailSender.send({ to: user.email, ...email });
       },
     },
     rateLimit: {
