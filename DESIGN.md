@@ -31,34 +31,35 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 
 ### Caderno (default)
 
-| token            | value                                                | use                                        |
-| ---------------- | ---------------------------------------------------- | ------------------------------------------ |
-| `--bg`           | `#f4efe6`                                            | page background                            |
-| `--surface`      | `#fbf8f2`                                            | sidebar, panels, inputs                    |
-| `--surface-2`    | `#ece5d8`                                            | selected nav, tags, skeletons              |
-| `--line`         | `#d9d0c2`                                            | section rules, borders                     |
-| `--line-soft`    | `#e6dfd3`                                            | table row rules, chart grid                |
-| `--ink`          | `#2a2622`                                            | primary text, primary button               |
-| `--muted`        | `#6f675d`                                            | secondary text, axis labels                |
-| `--accent`       | `#4f6f52`                                            | links, actions                             |
-| `--accent-hover` | `#3a5440`                                            |                                            |
-| `--accent-soft`  | `#e2ebe0`                                            | "conta da casa" tag background             |
-| `--chart-1`      | `#3d8756`                                            | income, category bars, progress            |
-| `--chart-2`      | `#6a63c9`                                            | spending series                            |
-| `--warning`      | `#7a5f18`                                            | uncategorized notice icon/text             |
-| `--danger`       | `#a33a2e`                                            | destructive actions, errors                |
-| `--font-display` | `"Source Serif 4", Georgia, serif`                   | headlines, section titles, money           |
-| `--font-body`    | `"Source Sans 3", "Segoe UI", system-ui, sans-serif` | everything else                            |
-| `--radius`       | `6px`                                                | controls, panels (tags 4px, avatars round) |
-| `--elevation`    | none                                                 | hairlines only                             |
-| `--density`      | body 14px, row 40px                                  |                                            |
+| token            | value                                                | use                                              |
+| ---------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| `--bg`           | `#f4efe6`                                            | page background                                  |
+| `--surface`      | `#fbf8f2`                                            | sidebar, panels, inputs                          |
+| `--surface-2`    | `#ece5d8`                                            | selected nav, tags, skeletons                    |
+| `--line`         | `#d9d0c2`                                            | section rules, borders                           |
+| `--line-soft`    | `#e6dfd3`                                            | table row rules, chart grid                      |
+| `--ink`          | `#2a2622`                                            | primary text, primary button                     |
+| `--muted`        | `#6f675d`                                            | secondary text, axis labels                      |
+| `--accent`       | `#4f6f52`                                            | links, actions                                   |
+| `--accent-hover` | `#3a5440`                                            |                                                  |
+| `--accent-soft`  | `#e2ebe0`                                            | "conta da casa" tag background                   |
+| `--chart-1`      | `#3d8756`                                            | income, category bars, progress                  |
+| `--chart-2`      | `#6a63c9`                                            | spending series                                  |
+| `--warning`      | `#7a5f18`                                            | uncategorized notice icon/text                   |
+| `--danger`       | `#a33a2e`                                            | destructive actions, errors                      |
+| `--font-display` | `"Source Serif 4", Georgia, serif`                   | headlines, section titles, money                 |
+| `--font-body`    | `"Source Sans 3", "Segoe UI", system-ui, sans-serif` | everything else                                  |
+| `--font-mono`    | unset (falls back to `--font-body`)                  | numerals in themes that want a monospaced figure |
+| `--radius`       | `6px`                                                | controls, panels (tags 4px, avatars round)       |
+| `--elevation`    | none                                                 | hairlines only                                   |
+| `--density`      | body 14px, row 40px                                  |                                                  |
 
 ### Painel
 
 `--bg #f3f4f6` · `--surface #ffffff` · `--surface-2 #eef4fc` · `--line #dde0e6` · `--line-soft
 #eceef2` · `--ink #16181d` · `--muted #5c6370` · `--accent #1f5fae` · `--accent-hover #174a8a` ·
 `--accent-soft #eef4fc` · `--chart-1 #2a78d6` · `--chart-2 #c96a2a` · `--warning #7a5f18` ·
-`--danger #b3261e` · display `"IBM Plex Sans"` · body `"IBM Plex Sans"` · numbers `"IBM Plex Mono"`
+`--danger #b3261e` · display `"IBM Plex Sans"` · body `"IBM Plex Sans"` · `--font-mono "IBM Plex Mono"` for numerals
 · radius 6px · elevation: 1px border cards · density: body 13px, row 36px.
 
 ### Sala

@@ -191,7 +191,8 @@ Canonical values live in `DESIGN.md`; this is the summary `/design` and `/design
   overline + serif headline + hairline sections; stat tiles, bar lists, 40px table rows.
 - Themes (per-user, `data-theme`, ADR-0010): `caderno` (default) · `painel` · `sala`. Tokens:
   `--bg --surface --surface-2 --line --line-soft --ink --muted --accent --accent-hover
---accent-soft --chart-1 --chart-2 --warning --danger --font-display --font-body --radius`.
+--accent-soft --chart-1 --chart-2 --warning --danger --font-display --font-body --font-mono
+--radius --elevation --density`.
 - Caderno: bg `#f4efe6`, surface `#fbf8f2`, ink `#2a2622`, muted `#6f675d`, accent `#4f6f52`,
   chart `#3d8756` / `#6a63c9`, Source Serif 4 + Source Sans 3, radius 6px, body 14px.
 - Type scale: 11 · 12 · 13 · body · 15 · 18 · 22 · 26 · 30 · 34; tabular numerals always.
