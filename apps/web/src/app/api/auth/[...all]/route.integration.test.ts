@@ -238,3 +238,21 @@ describe("POST /api/auth/update-user refuses consent fields", () => {
     });
   });
 });
+
+describe("POST /api/auth/update-user refuses the theme field (input: false)", () => {
+  it("refuses a theme in the update-user body, leaving the user row unchanged", async () => {
+    await withTestDb(async (db) => {
+      const email = "http-update-user-theme@example.com";
+      const sessionCookie = await signUpVerifyAndSignIn(db, email);
+      const [before] = await db.select().from(user).where(eq(user.email, email));
+
+      const response = await POST(updateUserRequest({ theme: "sala" }, sessionCookie));
+
+      expect(response.status).toBe(400);
+
+      const [after] = await db.select().from(user).where(eq(user.email, email));
+      expect(after).toEqual(before);
+      expect(after?.theme).toBe("caderno");
+    });
+  });
+});
