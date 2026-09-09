@@ -1,17 +1,40 @@
 import { NextResponse } from "next/server";
-import { fakeEmailSender } from "@/modules/auth/email/fake-sender";
+import { getDb } from "@/db/client";
+import { tokensMatch } from "@/lib/timing-safe-token";
+import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
 import { readEmailProvider } from "@/modules/auth/env";
 
-export function GET(request: Request): NextResponse {
-  if (readEmailProvider() !== "fake") {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+function isEligibleEnvironment(): boolean {
+  return process.env.VERCEL_ENV !== "production" && readEmailProvider() === "fake";
+}
+
+function isAuthorized(authorizationHeader: string | null): boolean {
+  const token = process.env.TEST_ONLY_TOKEN;
+  if (!token || !authorizationHeader) {
+    return false;
+  }
+  return tokensMatch(`Bearer ${token}`, authorizationHeader);
+}
+
+const notFound = (): NextResponse => NextResponse.json({ error: "not_found" }, { status: 404 });
+
+export async function GET(request: Request): Promise<NextResponse> {
+  if (!isEligibleEnvironment()) {
+    return notFound();
+  }
+
+  if (!isAuthorized(request.headers.get("authorization"))) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const to = new URL(request.url).searchParams.get("to");
-  const message = to ? fakeEmailSender.lastTo(to) : fakeEmailSender.last();
+  if (!to) {
+    return notFound();
+  }
 
+  const message = await findLastFakeSentEmail(getDb(), to);
   if (!message) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+    return notFound();
   }
 
   return NextResponse.json(message);
