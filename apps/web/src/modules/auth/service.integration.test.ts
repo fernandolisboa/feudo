@@ -9,22 +9,11 @@ import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { TERMS_VERSION } from "./terms";
 import { resendVerification, signIn, signUp } from "./service";
+import { extractTokenFromEmail } from "./test/extract-token-from-email";
 
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
 process.env.EMAIL_PROVIDER = "fake";
-
-function extractVerificationToken(emailText: string): string {
-  const match = /https?:\/\/\S+/.exec(emailText);
-  if (!match) {
-    throw new Error("verification email did not contain a link");
-  }
-  const token = new URL(match[0]).searchParams.get("token");
-  if (!token) {
-    throw new Error("verification link did not contain a token");
-  }
-  return token;
-}
 
 async function lastEmailTextFor(email: string): Promise<string> {
   const sentEmail = await findLastFakeSentEmail(getDb(), email);
@@ -58,7 +47,7 @@ describe("sign-up, verification and sign-in", () => {
       expect(signUpOutcome.status).toBe("ok");
       if (signUpOutcome.status !== "ok") return;
 
-      const token = extractVerificationToken(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastEmailTextFor(email));
       await verifyEmailWithToken(token);
 
       const signInOutcome = await signIn({ email, password: "correct-horse" }, new Headers());
@@ -95,7 +84,7 @@ describe("sign-up, verification and sign-in", () => {
       );
       expect(signUpOutcome.status).toBe("ok");
 
-      const token = extractVerificationToken(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastEmailTextFor(email));
 
       await verifyEmailWithToken(token);
       const secondAttempt = await verifyEmailWithToken(token);

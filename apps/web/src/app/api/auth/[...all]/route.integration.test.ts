@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
 import { withTestDb } from "@/db/test/harness";
+import type { Database } from "@/db/client";
 import { user } from "@/db/schema/auth.ts";
+import { getAuth } from "@/modules/auth/auth";
 import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
 import { TERMS_VERSION } from "@/modules/auth/terms";
+import { extractTokenFromEmail } from "@/modules/auth/test/extract-token-from-email";
 
 import { POST } from "./route";
 
@@ -22,6 +25,61 @@ function signUpRequest(body: Record<string, unknown>): Request {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+function signInRequest(body: Record<string, unknown>): Request {
+  return new Request("http://localhost:3000/api/auth/sign-in/email", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function updateUserRequest(body: Record<string, unknown>, cookieHeader: string): Request {
+  return new Request("http://localhost:3000/api/auth/update-user", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: cookieHeader },
+    body: JSON.stringify(body),
+  });
+}
+
+function sessionCookieFrom(response: Response): string {
+  const setCookieValues = response.headers.getSetCookie();
+  const sessionCookie = setCookieValues.find((value) =>
+    value.startsWith("better-auth.session_token="),
+  );
+  if (!sessionCookie) {
+    throw new Error("sign-in response did not set a session cookie");
+  }
+  return sessionCookie.split(";", 1)[0] as string;
+}
+
+async function signUpVerifyAndSignIn(db: Database, email: string): Promise<string> {
+  const signUpResponse = await POST(
+    signUpRequest({
+      name: "Direct Post",
+      email,
+      password: "correct-horse",
+      termsVersion: TERMS_VERSION,
+      termsAcceptedAt: new Date().toISOString(),
+    }),
+  );
+  if (!signUpResponse.ok) {
+    throw new Error("sign-up failed while preparing an authenticated session");
+  }
+
+  const sentEmail = await findLastFakeSentEmail(db, email);
+  if (!sentEmail) {
+    throw new Error(`no email was sent to ${email}`);
+  }
+  const token = extractTokenFromEmail(sentEmail.text);
+  await getAuth().api.verifyEmail({ query: { token } });
+
+  const signInResponse = await POST(signInRequest({ email, password: "correct-horse" }));
+  if (!signInResponse.ok) {
+    throw new Error("sign-in failed while preparing an authenticated session");
+  }
+  return sessionCookieFrom(signInResponse);
 }
 
 describe("POST /api/auth/sign-up/email enforces policy at the HTTP layer", () => {
@@ -146,6 +204,37 @@ describe("POST /api/auth/sign-up/email enforces policy at the HTTP layer", () =>
 
       const [row] = await db.select().from(user).where(eq(user.email, email));
       expect(row?.termsAcceptedAt).toBeInstanceOf(Date);
+    });
+  });
+});
+
+describe("POST /api/auth/update-user refuses consent fields", () => {
+  it("refuses a termsVersion in the update-user body, leaving the user row unchanged", async () => {
+    await withTestDb(async (db) => {
+      const email = "http-update-user-terms-version@example.com";
+      const sessionCookie = await signUpVerifyAndSignIn(db, email);
+      const [before] = await db.select().from(user).where(eq(user.email, email));
+
+      const response = await POST(updateUserRequest({ termsVersion: "v99" }, sessionCookie));
+
+      expect(response.status).toBe(400);
+
+      const [after] = await db.select().from(user).where(eq(user.email, email));
+      expect(after).toEqual(before);
+    });
+  });
+
+  it("accepts a plain name update", async () => {
+    await withTestDb(async (db) => {
+      const email = "http-update-user-name@example.com";
+      const sessionCookie = await signUpVerifyAndSignIn(db, email);
+
+      const response = await POST(updateUserRequest({ name: "Novo nome" }, sessionCookie));
+
+      expect(response.ok).toBe(true);
+
+      const [after] = await db.select().from(user).where(eq(user.email, email));
+      expect(after?.name).toBe("Novo nome");
     });
   });
 });
