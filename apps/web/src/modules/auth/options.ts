@@ -206,6 +206,14 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             }
             return Promise.resolve();
           },
+          // Mirrors beforeCreateOrganization: Feudo never uses logo or
+          // metadata on organization, on create or update (data minimization).
+          beforeUpdateOrganization: ({ organization }) => {
+            if (organization.logo || organization.metadata) {
+              throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
+            }
+            return Promise.resolve();
+          },
           // Safety net for any organization created outside
           // households.createHousehold (e.g. a direct call to the raw
           // endpoint): guarantees every household has a settings row, so no

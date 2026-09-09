@@ -56,6 +56,31 @@ describe("organization plugin hooks (integration)", () => {
     });
   });
 
+  it("refuses to update an organization with a logo", async () => {
+    await withTestDb(async (db) => {
+      const headers = await signUpVerifiedUser(db, {
+        name: "Update Logo Caller",
+        email: "update-logo-caller@example.com",
+        password: "correct-horse",
+      });
+
+      const organization = await getAuth().api.createOrganization({
+        headers,
+        body: { name: "Casa", slug: crypto.randomUUID() },
+      });
+
+      await expect(
+        getAuth().api.updateOrganization({
+          headers,
+          body: {
+            organizationId: organization.id,
+            data: { logo: "https://example.com/x.png" },
+          },
+        }),
+      ).rejects.toThrow(APIError);
+    });
+  });
+
   it("refuses to promote a member to owner through the generic role-update endpoint", async () => {
     await withTestDb(async (db) => {
       const ownerHeaders = await signUpVerifiedUser(db, {
