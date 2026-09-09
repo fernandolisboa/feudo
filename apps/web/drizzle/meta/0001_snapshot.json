@@ -1,0 +1,65 @@
+{
+  "id": "9b89205a-8434-4b00-9bfd-a6bb903588b5",
+  "prevId": "054e851b-f6ee-4744-bbb0-cc0789c55013",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.market_data": {
+      "name": "market_data",
+      "schema": "",
+      "columns": {
+        "series_code": {
+          "name": "series_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference_date": {
+          "name": "reference_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "market_data_series_code_reference_date_pk": {
+          "name": "market_data_series_code_reference_date_pk",
+          "columns": [
+            "series_code",
+            "reference_date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
