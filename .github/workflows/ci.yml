@@ -18,15 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -63,3 +63,64 @@ jobs:
           fi
           echo "$CHANGED"
           npx --yes impeccable detect $CHANGED
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: ci
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check preview database secret
+        id: check
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL_PREVIEW secret is not set; skipping the integration job until the owner adds it."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Migrate the shared preview branch
+        if: steps.check.outputs.ready == 'true'
+        run: pnpm --filter @feudo/web db:migrate
+
+      - name: Reset preview data
+        if: steps.check.outputs.ready == 'true'
+        run: pnpm --filter @feudo/web db:reset
+
+      - name: Integration tests
+        if: steps.check.outputs.ready == 'true'
+        run: pnpm test:integration
+
+  reset-preview:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Reset the preview branch from main
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: node apps/web/scripts/reset-neon-preview.mjs
