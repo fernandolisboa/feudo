@@ -1,6 +1,13 @@
 const NEON_API_BASE = "https://console.neon.tech/api/v2";
 const PREVIEW_BRANCH_NAME = "preview";
 const PARENT_BRANCH_NAME = "main";
+const TERMINAL_OPERATION_STATUSES = new Set(["finished", "failed", "cancelled", "skipped"]);
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 120000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function missingSecrets(apiKey, projectId) {
   const missing = [];
@@ -27,12 +34,74 @@ async function neonRequest(apiKey, path, init) {
   return response.json();
 }
 
-async function findBranchByName(apiKey, projectId, name) {
-  const { branches } = await neonRequest(
+function assertBranchListShape(payload) {
+  if (!payload || !Array.isArray(payload.branches)) {
+    throw new Error("Unexpected response shape from the Neon branches list endpoint.");
+  }
+  for (const branch of payload.branches) {
+    if (typeof branch?.id !== "string" || typeof branch?.name !== "string") {
+      throw new Error("Unexpected branch shape in the Neon API response.");
+    }
+  }
+  return payload.branches;
+}
+
+function assertOperationsShape(payload) {
+  if (!payload || !Array.isArray(payload.operations)) {
+    throw new Error("Unexpected response shape from the Neon restore endpoint.");
+  }
+  for (const operation of payload.operations) {
+    if (typeof operation?.id !== "string") {
+      throw new Error("Unexpected operation shape in the Neon API response.");
+    }
+  }
+  return payload.operations;
+}
+
+function assertOperationShape(payload) {
+  const operation = payload?.operation;
+  if (!operation || typeof operation.status !== "string") {
+    throw new Error("Unexpected response shape from the Neon operation endpoint.");
+  }
+  return operation;
+}
+
+async function findBranchesByName(apiKey, projectId, name) {
+  const payload = await neonRequest(
     apiKey,
     `/projects/${projectId}/branches?search=${encodeURIComponent(name)}`,
   );
-  return branches.find((branch) => branch.name === name);
+  return assertBranchListShape(payload).filter((branch) => branch.name === name);
+}
+
+async function requireSingleBranch(apiKey, projectId, name) {
+  const branches = await findBranchesByName(apiKey, projectId, name);
+  if (branches.length === 0) {
+    throw new Error(`Branch "${name}" was not found; it must already exist.`);
+  }
+  if (branches.length > 1) {
+    throw new Error(`Found ${branches.length} branches named "${name}"; expected exactly one.`);
+  }
+  return branches[0];
+}
+
+async function waitForOperation(apiKey, projectId, operationId) {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  for (;;) {
+    const payload = await neonRequest(apiKey, `/projects/${projectId}/operations/${operationId}`);
+    const operation = assertOperationShape(payload);
+
+    if (operation.status === "finished") {
+      return;
+    }
+    if (TERMINAL_OPERATION_STATUSES.has(operation.status)) {
+      throw new Error(`Neon operation "${operationId}" ended with status "${operation.status}".`);
+    }
+    if (Date.now() > deadline) {
+      throw new Error(`Timed out waiting for Neon operation "${operationId}" to finish.`);
+    }
+    await sleep(POLL_INTERVAL_MS);
+  }
 }
 
 async function main() {
@@ -45,30 +114,24 @@ async function main() {
     return;
   }
 
-  const parentBranch = await findBranchByName(apiKey, projectId, PARENT_BRANCH_NAME);
-  if (!parentBranch) {
-    throw new Error(`Parent branch "${PARENT_BRANCH_NAME}" not found.`);
-  }
+  const parentBranch = await requireSingleBranch(apiKey, projectId, PARENT_BRANCH_NAME);
+  const previewBranch = await requireSingleBranch(apiKey, projectId, PREVIEW_BRANCH_NAME);
 
-  const previewBranch = await findBranchByName(apiKey, projectId, PREVIEW_BRANCH_NAME);
-
-  if (previewBranch) {
-    await neonRequest(apiKey, `/projects/${projectId}/branches/${previewBranch.id}/restore`, {
+  const restorePayload = await neonRequest(
+    apiKey,
+    `/projects/${projectId}/branches/${previewBranch.id}/restore`,
+    {
       method: "POST",
       body: JSON.stringify({ source_branch_id: parentBranch.id }),
-    });
-    console.log(`Reset branch "${PREVIEW_BRANCH_NAME}" from "${PARENT_BRANCH_NAME}".`);
-    return;
+    },
+  );
+  const operations = assertOperationsShape(restorePayload);
+
+  for (const operation of operations) {
+    await waitForOperation(apiKey, projectId, operation.id);
   }
 
-  await neonRequest(apiKey, `/projects/${projectId}/branches`, {
-    method: "POST",
-    body: JSON.stringify({
-      branch: { parent_id: parentBranch.id, name: PREVIEW_BRANCH_NAME },
-      endpoints: [{ type: "read_write" }],
-    }),
-  });
-  console.log(`Created branch "${PREVIEW_BRANCH_NAME}" from "${PARENT_BRANCH_NAME}".`);
+  console.log(`Reset branch "${PREVIEW_BRANCH_NAME}" from "${PARENT_BRANCH_NAME}".`);
 }
 
 main().catch((error) => {

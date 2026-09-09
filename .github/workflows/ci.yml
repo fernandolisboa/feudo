@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -18,15 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -67,17 +70,21 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     needs: ci
+    concurrency:
+      group: preview-db
+      cancel-in-progress: false
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+      DATABASE_RESET_ALLOWED: preview
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -89,7 +96,7 @@ jobs:
         id: check
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "DATABASE_URL_PREVIEW secret is not set; skipping the integration job until the owner adds it."
+            echo "::warning::DATABASE_URL_PREVIEW secret is not set; skipping the integration job until the owner adds it."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -109,18 +116,36 @@ jobs:
 
   reset-preview:
     runs-on: ubuntu-latest
+    needs: integration
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: preview-db
+      cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+          cache: pnpm
 
-      - name: Reset the preview branch from main
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore the preview branch from main
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: node apps/web/scripts/reset-neon-preview.mjs
+
+      - name: Reset preview data after restore
+        if: ${{ secrets.DATABASE_URL_PREVIEW != '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+          DATABASE_RESET_ALLOWED: preview
+        run: pnpm --filter @feudo/web db:reset
