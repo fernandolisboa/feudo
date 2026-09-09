@@ -1,6 +1,6 @@
 import { APIError } from "better-auth/api";
 
-import { getAuth } from "@/modules/auth";
+import { getAuth, type CurrentSession } from "@/modules/auth";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/db/client";
@@ -25,14 +25,18 @@ async function deleteOrganization(householdId: string, requestHeaders: Headers):
 
 export async function createHousehold(
   input: CreateHouseholdFormInput,
+  session: CurrentSession | null,
   db: Database,
   requestHeaders: Headers,
 ): Promise<CreateHouseholdOutcome> {
-  const currentSession = await getAuth().api.getSession({ headers: requestHeaders });
-  if (!currentSession) {
+  if (!session) {
     return { status: "unauthenticated" };
   }
-  if (currentSession.session.activeOrganizationId) {
+  // householdId comes from getCurrentSession's membership-backed
+  // resolution, not the raw session.activeOrganizationId: Better Auth
+  // leaves that field empty on every fresh sign-in, so guarding on it
+  // directly would let a returning owner create a second household.
+  if (session.householdId) {
     return { status: "already_has_household" };
   }
 

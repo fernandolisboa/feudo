@@ -36,6 +36,14 @@ async function signInAgain(email: string, password: string): Promise<Headers> {
   return new Headers({ cookie });
 }
 
+// Mirrors createHouseholdAction: resolve the CurrentSession (membership
+// re-validated, not the raw activeOrganizationId hint) through the same
+// headers before calling createHousehold.
+async function sessionFor(headers: Headers) {
+  currentHeaders.value = headers;
+  return getCurrentSession();
+}
+
 describe("getCurrentSession active-household resolution (integration)", () => {
   it("resolves a returning user's existing household on a fresh sign-in", async () => {
     await withTestDb(async (db) => {
@@ -49,6 +57,7 @@ describe("getCurrentSession active-household resolution (integration)", () => {
 
       const created = await createHousehold(
         { name: "Casa", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(firstSessionHeaders),
         db,
         firstSessionHeaders,
       );
@@ -60,6 +69,42 @@ describe("getCurrentSession active-household resolution (integration)", () => {
 
       const session = await getCurrentSession();
       expect(session?.householdId).toBe(created.householdId);
+    });
+  });
+
+  it("refuses a second household on a fresh sign-in whose raw activeOrganizationId hint is still empty", async () => {
+    await withTestDb(async (db) => {
+      const email = "returning-fresh@example.com";
+      const password = "correct-horse";
+      const firstSessionHeaders = await signUpVerifiedUser(db, {
+        name: "Returning Fresh",
+        email,
+        password,
+      });
+
+      const created = await createHousehold(
+        { name: "Casa", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(firstSessionHeaders),
+        db,
+        firstSessionHeaders,
+      );
+      expect(created.status).toBe("ok");
+
+      const secondSessionHeaders = await signInAgain(email, password);
+
+      // A fresh sign-in's session row has no activeOrganizationId yet
+      // (Better Auth does not populate it on its own); guarding on that raw
+      // field instead of the membership-resolved CurrentSession would let
+      // this second call through. createHouseholdAction always resolves the
+      // session through getCurrentSession() first, as sessionFor does here,
+      // before calling createHousehold.
+      const secondAttempt = await createHousehold(
+        { name: "Segunda casa", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(secondSessionHeaders),
+        db,
+        secondSessionHeaders,
+      );
+      expect(secondAttempt.status).toBe("already_has_household");
     });
   });
 });
@@ -74,6 +119,7 @@ describe("removing a member invalidates their stale active household (integratio
       });
       const created = await createHousehold(
         { name: "Casa", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(ownerHeaders),
         db,
         ownerHeaders,
       );

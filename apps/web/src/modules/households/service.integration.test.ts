@@ -1,10 +1,15 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
+
+const currentHeaders = vi.hoisted(() => ({ value: new Headers() }));
+vi.mock("next/headers", () => ({
+  headers: () => Promise.resolve(currentHeaders.value),
+}));
 
 import { withTestDb } from "@/db/test/harness";
 import { member } from "@/db/schema/auth.ts";
 import { householdSettings } from "@/db/schema/households.ts";
-import { getAuth } from "@/modules/auth";
+import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
 import { signUpVerifiedUser } from "@/modules/auth/test/signUpVerifiedUser";
 
 import { createHousehold, listHouseholds, switchHousehold } from "./service";
@@ -15,11 +20,20 @@ process.env.EMAIL_PROVIDER = "fake";
 
 beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
+  currentHeaders.value = new Headers();
 });
 
 async function activeHouseholdId(headers: Headers): Promise<string | null> {
   const session = await getAuth().api.getSession({ headers });
   return session?.session.activeOrganizationId ?? null;
+}
+
+// Mirrors createHouseholdAction: resolve the CurrentSession (membership
+// re-validated, not the raw activeOrganizationId hint) through the same
+// headers before calling createHousehold, rather than a bare Headers.
+async function sessionFor(headers: Headers): Promise<CurrentSession | null> {
+  currentHeaders.value = headers;
+  return getCurrentSession();
 }
 
 // Simulates the membership a future invite-accept flow (#11) will create:
@@ -52,6 +66,7 @@ describe("createHousehold (integration)", () => {
 
       const outcome = await createHousehold(
         { name: "Casa da Ada", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(headers),
         db,
         headers,
       );
@@ -80,6 +95,7 @@ describe("createHousehold (integration)", () => {
 
       const outcome = await createHousehold(
         { name: "Casa do Beto", timeZone: "America/Recife", reserveMultiple: 9 },
+        await sessionFor(headers),
         db,
         headers,
       );
@@ -98,6 +114,7 @@ describe("createHousehold (integration)", () => {
     await withTestDb(async (db) => {
       const outcome = await createHousehold(
         { name: "No session", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        null,
         db,
         new Headers(),
       );
@@ -115,6 +132,7 @@ describe("createHousehold (integration)", () => {
 
       const first = await createHousehold(
         { name: "Casa da Helo", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(headers),
         db,
         headers,
       );
@@ -122,6 +140,7 @@ describe("createHousehold (integration)", () => {
 
       const second = await createHousehold(
         { name: "Segunda casa da Helo", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(headers),
         db,
         headers,
       );
@@ -146,11 +165,13 @@ describe("listHouseholds and switchHousehold (integration)", () => {
 
       await createHousehold(
         { name: "Casa da Carla", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(carlaHeaders),
         db,
         carlaHeaders,
       );
       await createHousehold(
         { name: "Casa do David", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(davidHeaders),
         db,
         davidHeaders,
       );
@@ -171,6 +192,7 @@ describe("listHouseholds and switchHousehold (integration)", () => {
 
       const first = await createHousehold(
         { name: "Casa 1", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(headers),
         db,
         headers,
       );
@@ -206,6 +228,7 @@ describe("listHouseholds and switchHousehold (integration)", () => {
 
       const outcome = await createHousehold(
         { name: "Casa do Fabio", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(ownerHeaders),
         db,
         ownerHeaders,
       );
@@ -214,6 +237,7 @@ describe("listHouseholds and switchHousehold (integration)", () => {
       }
       const outsiderHousehold = await createHousehold(
         { name: "Casa da Gilda", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        await sessionFor(outsiderHeaders),
         db,
         outsiderHeaders,
       );
