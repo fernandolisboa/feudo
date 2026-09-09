@@ -4,3 +4,10 @@ export class MissingDatabaseUrlError extends Error {
     this.name = "MissingDatabaseUrlError";
   }
 }
+
+export class DatabaseResetNotAllowedError extends Error {
+  constructor(reason: string) {
+    super(`Database reset refused: ${reason}`);
+    this.name = "DatabaseResetNotAllowedError";
+  }
+}

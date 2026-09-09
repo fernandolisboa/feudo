@@ -1,27 +1,29 @@
-import { neon } from "@neondatabase/serverless";
+import { getDb } from "../src/db/client.ts";
+import { DatabaseResetNotAllowedError } from "../src/db/errors.ts";
+import { resetDatabase } from "../src/db/reset.ts";
 
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
+    if (process.env.CI) {
+      console.error("DATABASE_URL is not set; refusing to continue under CI.");
+      process.exit(1);
+    }
     console.log("DATABASE_URL is not set; skipping database reset.");
     return;
   }
 
-  const sql = neon(url);
-  const tables = await sql`select tablename from pg_tables where schemaname = 'public'`;
-
-  if (tables.length === 0) {
-    console.log("No tables to reset.");
-    return;
+  const db = getDb();
+  try {
+    const tableCount = await resetDatabase(db);
+    console.log(`Reset ${tableCount} table(s) in the public schema.`);
+  } finally {
+    await db.$client.end();
   }
-
-  const tableList = tables.map((row) => `"${row.tablename}"`).join(", ");
-  await sql.query(`truncate table ${tableList} restart identity cascade`);
-  console.log(`Reset ${tables.length} table(s) in the public schema.`);
 }
 
 main().catch((error) => {
   console.error("Database reset failed.");
-  console.error(error instanceof Error ? error.message : "Unknown error.");
+  console.error(error instanceof DatabaseResetNotAllowedError ? error.message : "Unknown error.");
   process.exit(1);
 });
