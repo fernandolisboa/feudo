@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
 
 import { withTestDb } from "@/db/test/harness";
 import { rateLimit } from "@/db/schema/auth";
@@ -71,17 +70,18 @@ describe("rate limiting on the flows the UI drives through the auth handler", ()
           { name: "Rate Limited", email, password: "correct-horse", termsAccepted: true },
           new Headers(),
         );
-      const rateLimitKey = "no-trusted-ip|/sign-up/email";
+      // withTestDb truncates every table first and this test only ever hits
+      // /sign-up/email, so every row the DB-backed limiter writes here keys
+      // off that one path — the exact key string (IP prefix + path) is
+      // better-auth's own implementation detail, not something to pin.
+      const readRateLimitRows = () => db.select().from(rateLimit);
 
       const first = await attempt();
       expect(first.status).toBe("ok");
 
-      const [rowAfterFirst] = await db
-        .select()
-        .from(rateLimit)
-        .where(eq(rateLimit.key, rateLimitKey));
-      expect(rowAfterFirst).toBeDefined();
-      expect(rowAfterFirst?.count).toBe(1);
+      const rowsAfterFirst = await readRateLimitRows();
+      expect(rowsAfterFirst).toHaveLength(1);
+      expect(rowsAfterFirst[0]?.count).toBe(1);
 
       await attempt();
       await attempt();
@@ -94,10 +94,7 @@ describe("rate limiting on the flows the UI drives through the auth handler", ()
       const afterWindow = await attempt();
       expect(afterWindow.status).toBe("ok");
 
-      const rowsAfterWindow = await db
-        .select()
-        .from(rateLimit)
-        .where(eq(rateLimit.key, rateLimitKey));
+      const rowsAfterWindow = await readRateLimitRows();
       expect(rowsAfterWindow).toHaveLength(1);
       expect(rowsAfterWindow[0]?.count).toBe(1);
     });
