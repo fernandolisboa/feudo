@@ -123,7 +123,7 @@ Confirm with the owner before creating any paid resource.
 - **Property-based**: `fast-check` on money math, reserve target and bank scoring.
 - **Isolation**: for every domain table, a test proving a session from household A cannot read,
   write or trigger jobs for household B. Mandatory, blocking.
-- **Integration**: Route Handlers + Drizzle against the PR's Neon preview branch.
+- **Integration**: Route Handlers + Drizzle against the shared `preview` branch.
 - **E2E**: Playwright against the Vercel preview for the critical paths: registration, email
   verification, login, household invite and join, bank connection against the in-repo fake
   `DataProvider` (Meu Pluggy has no sandbox; the real provider gets a manual smoke test), ledger
@@ -217,7 +217,9 @@ numbers follow Brazilian conventions.
 - Full `/security-audit` (repo-wide) after any ticket touching auth, tenancy or data access, before
   `REGISTRATION_MODE=open`, and monthly as a floor.
 - Product uncertainty → ask the owner. Technical uncertainty → one-paragraph ADR draft, then ask.
-- Secrets: the owner pastes them into Vercel env. Never store them in the repo or in memory.
+- Secrets: the owner pastes app secrets into Vercel env. CI-only secrets (Neon API access, the
+  preview database URL) live in GitHub Actions secrets, set via `gh secret set`. Never store either
+  in the repo or in memory.
 
 ## Agent skills
 
