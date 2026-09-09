@@ -25,3 +25,4 @@ Ranking "where to keep the emergency reserve" has to be explainable to a househo
 
 - The `reserve` module depends on the `institutions` reference dataset (ADR-0006) for conglomerate and FGC participation, and on the SGS market data for CDI and IPCA; it never depends on `banking-intel`.
 - Every rejection by the hard filter is a first-class output, so the screen and the AI interpretation can state it.
+- `getLatestIndicators()` surfaces the Selic **target** rate (series 432), already an annual figure; whether Tesouro Selic's ranking needs the daily Selic series (11) instead or in addition is undecided and left to #22.
