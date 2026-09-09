@@ -50,7 +50,10 @@ Two `organizationHooks` in `auth/options.ts` back this up by clearing the DB-sto
 directly (bypassing `getCurrentSession`'s re-validation — Better Auth's own `getFullOrganization`,
 for one) is not further behind than one write: `afterRemoveMember` nulls it for the removed user's
 sessions pointed at that household, `afterDeleteOrganization` nulls it for every session pointed at
-the deleted household.
+the deleted household. `/organization/leave` runs no `organizationHooks`, so a user who leaves a
+household keeps a stale `activeOrganizationId` hint on their other sessions until the next
+`getCurrentSession()` re-validation on each of them; #11 owns the leave flow and can revisit this
+gap when it lands.
 
 `requireHouseholdSession()` (`households/require-household-session.ts`) wraps
 `getCurrentSession()` + `resolveAppRoute` and redirects to `/entrar` or `/comecar` itself; call it
