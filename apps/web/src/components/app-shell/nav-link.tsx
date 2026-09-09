@@ -22,7 +22,11 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
       <Tooltip>
         <TooltipTrigger
           render={
-            <span className="app-shell-nav-link app-shell-nav-link-disabled" aria-disabled="true" />
+            <span
+              className="app-shell-nav-link app-shell-nav-link-disabled"
+              aria-disabled="true"
+              aria-label={showLabel ? undefined : item.label}
+            />
           }
         >
           <Icon className="size-4" aria-hidden="true" />
@@ -37,6 +41,7 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
     <Link
       href={item.href}
       aria-current={isActive ? "page" : undefined}
+      aria-label={showLabel ? undefined : item.label}
       className={cn("app-shell-nav-link", isActive && "app-shell-nav-link-active")}
     >
       <Icon className="size-4" aria-hidden="true" />
