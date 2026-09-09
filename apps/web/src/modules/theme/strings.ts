@@ -17,6 +17,7 @@ const en = {
   userMenu: {
     preferences: "Preferences",
     signOut: "Sign out",
+    signOutError: "Could not sign you out. Try again.",
   },
   placeholder: {
     overline: "Coming soon",
@@ -58,6 +59,7 @@ const ptBR = {
   userMenu: {
     preferences: "Preferências",
     signOut: "Sair",
+    signOutError: "Não foi possível sair. Tente novamente.",
   },
   placeholder: {
     overline: "Em breve",
