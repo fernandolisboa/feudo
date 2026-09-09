@@ -1,7 +1,13 @@
 import { headers } from "next/headers";
 import { getAuth } from "./auth";
 
-export async function getCurrentSession() {
+export type CurrentSession = { userId: string; name: string; email: string };
+
+export async function getCurrentSession(): Promise<CurrentSession | null> {
   const requestHeaders = await headers();
-  return getAuth().api.getSession({ headers: requestHeaders });
+  const session = await getAuth().api.getSession({ headers: requestHeaders });
+  if (!session) {
+    return null;
+  }
+  return { userId: session.user.id, name: session.user.name, email: session.user.email };
 }

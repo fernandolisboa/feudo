@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "./action-state";
-import { authStrings } from "./strings";
+import { t } from "./strings";
 import { resendVerification, signIn, signOut, signUp } from "./service";
 import { resendVerificationFormSchema, signInFormSchema, signUpFormSchema } from "./validation";
 
@@ -12,7 +12,7 @@ export async function signUpAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const errors = authStrings.ptBR.errors;
+  const errors = t.errors;
 
   const parsed = signUpFormSchema.safeParse({
     name: formData.get("name"),
@@ -37,6 +37,8 @@ export async function signUpAction(
       return { status: "error", message: errors.registrationClosed };
     case "invite_required":
       return { status: "error", message: errors.inviteRequired };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
     case "sign_up_failed":
       return { status: "error", message: errors.signUpFailed };
   }
@@ -46,7 +48,7 @@ export async function signInAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const errors = authStrings.ptBR.errors;
+  const errors = t.errors;
 
   const parsed = signInFormSchema.safeParse({
     email: formData.get("email"),
@@ -67,6 +69,10 @@ export async function signInAction(
       return { status: "error", message: errors.invalidCredentials };
     case "email_not_verified":
       return { status: "error", message: errors.emailNotVerified };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
+    case "failed":
+      return { status: "error", message: errors.invalidCredentials };
   }
 }
 
@@ -74,7 +80,7 @@ export async function resendVerificationAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const errors = authStrings.ptBR.errors;
+  const errors = t.errors;
 
   const parsed = resendVerificationFormSchema.safeParse({
     email: formData.get("email"),
@@ -84,13 +90,17 @@ export async function resendVerificationAction(
     return { status: "error", message: errors.invalidInput };
   }
 
-  const outcome = await resendVerification(parsed.data.email);
+  const requestHeaders = await headers();
+  const outcome = await resendVerification(parsed.data.email, requestHeaders);
 
-  if (outcome.status === "failed") {
-    return { status: "error", message: errors.resendFailed };
+  switch (outcome.status) {
+    case "ok":
+      return { status: "success", message: t.verifyEmail.resent };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
+    case "failed":
+      return { status: "error", message: errors.resendFailed };
   }
-
-  return { status: "success", message: authStrings.ptBR.verifyEmail.resent };
 }
 
 export async function signOutAction(): Promise<void> {

@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { withTestDb } from "@/db/test/harness";
 import { user } from "@/db/schema/auth.ts";
-import { eq } from "drizzle-orm";
 
 import { getAuth } from "./auth";
-import { fakeEmailSender } from "./email/fake-sender";
-import { listTermsAcceptancesForUser } from "./terms-repository";
+import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { TERMS_VERSION } from "./terms";
 import { resendVerification, signIn, signUp } from "./service";
 
@@ -27,8 +26,8 @@ function extractVerificationToken(emailText: string): string {
   return token;
 }
 
-function lastEmailTextFor(email: string): string {
-  const sentEmail = fakeEmailSender.lastTo(email);
+async function lastEmailTextFor(email: string): Promise<string> {
+  const sentEmail = await findLastFakeSentEmail(getDb(), email);
   if (!sentEmail) {
     throw new Error(`no email was sent to ${email}`);
   }
@@ -44,13 +43,12 @@ async function verifyEmailWithToken(token: string): Promise<{ status: boolean }>
 }
 
 beforeEach(() => {
-  fakeEmailSender.reset();
   process.env.REGISTRATION_MODE = "open";
 });
 
 describe("sign-up, verification and sign-in", () => {
   it("registers, verifies and signs in successfully", async () => {
-    await withTestDb(async () => {
+    await withTestDb(async (db) => {
       const email = "nova@example.com";
 
       const signUpOutcome = await signUp(
@@ -60,15 +58,15 @@ describe("sign-up, verification and sign-in", () => {
       expect(signUpOutcome.status).toBe("ok");
       if (signUpOutcome.status !== "ok") return;
 
-      const token = extractVerificationToken(lastEmailTextFor(email));
+      const token = extractVerificationToken(await lastEmailTextFor(email));
       await verifyEmailWithToken(token);
 
       const signInOutcome = await signIn({ email, password: "correct-horse" }, new Headers());
       expect(signInOutcome.status).toBe("ok");
 
-      const acceptances = await listTermsAcceptancesForUser(getDb(), signUpOutcome.userId);
-      expect(acceptances).toHaveLength(1);
-      expect(acceptances[0]?.version).toBe(TERMS_VERSION);
+      const [row] = await db.select().from(user).where(eq(user.id, signUpOutcome.userId));
+      expect(row?.termsVersion).toBe(TERMS_VERSION);
+      expect(row?.termsAcceptedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -97,7 +95,7 @@ describe("sign-up, verification and sign-in", () => {
       );
       expect(signUpOutcome.status).toBe("ok");
 
-      const token = extractVerificationToken(lastEmailTextFor(email));
+      const token = extractVerificationToken(await lastEmailTextFor(email));
 
       await verifyEmailWithToken(token);
       const secondAttempt = await verifyEmailWithToken(token);
@@ -156,7 +154,7 @@ describe("sign-up, verification and sign-in", () => {
 
       const rows = await db.select().from(user).where(eq(user.email, email));
       expect(rows).toHaveLength(0);
-      expect(fakeEmailSender.lastTo(email)).toBeUndefined();
+      expect(await findLastFakeSentEmail(db, email)).toBeUndefined();
     });
   });
 
@@ -176,8 +174,8 @@ describe("sign-up, verification and sign-in", () => {
     });
   });
 
-  it("records a terms acceptance row with the current version on sign-up", async () => {
-    await withTestDb(async () => {
+  it("records the terms version and timestamp on the user row created at sign-up", async () => {
+    await withTestDb(async (db) => {
       const email = "terms@example.com";
       const outcome = await signUp(
         { name: "Terms Recorded", email, password: "correct-horse", termsAccepted: true },
@@ -186,25 +184,43 @@ describe("sign-up, verification and sign-in", () => {
       expect(outcome.status).toBe("ok");
       if (outcome.status !== "ok") return;
 
-      const acceptances = await listTermsAcceptancesForUser(getDb(), outcome.userId);
-      expect(acceptances).toEqual([
-        expect.objectContaining({ userId: outcome.userId, version: TERMS_VERSION }),
-      ]);
+      const [row] = await db.select().from(user).where(eq(user.id, outcome.userId));
+      expect(row).toMatchObject({ termsVersion: TERMS_VERSION });
+    });
+  });
+
+  it("returns the same generic outcome on a duplicate sign-up, creating exactly one user row and no 500", async () => {
+    await withTestDb(async (db) => {
+      const email = "duplicate@example.com";
+
+      const first = await signUp(
+        { name: "First", email, password: "correct-horse", termsAccepted: true },
+        new Headers(),
+      );
+      const second = await signUp(
+        { name: "Second", email, password: "another-password", termsAccepted: true },
+        new Headers(),
+      );
+
+      expect(first.status).toBe("ok");
+      expect(second.status).toBe("ok");
+
+      const rows = await db.select().from(user).where(eq(user.email, email));
+      expect(rows).toHaveLength(1);
     });
   });
 
   it("resends the verification email through the fake sender", async () => {
-    await withTestDb(async () => {
+    await withTestDb(async (db) => {
       const email = "resend@example.com";
       await signUp(
         { name: "Resend Case", email, password: "correct-horse", termsAccepted: true },
         new Headers(),
       );
-      fakeEmailSender.reset();
 
-      const outcome = await resendVerification(email);
+      const outcome = await resendVerification(email, new Headers());
       expect(outcome.status).toBe("ok");
-      expect(fakeEmailSender.lastTo(email)).toBeDefined();
+      expect(await findLastFakeSentEmail(db, email)).toBeDefined();
     });
   });
 });
