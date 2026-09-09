@@ -65,6 +65,13 @@ function readEmail(body: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function logMagicLinkSendFailure(error: unknown): void {
+  console.error(
+    "magic-link email send failed",
+    error instanceof Error ? error.name : "UnknownError",
+  );
+}
+
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
 
 async function deleteOtherPasswordResetTokens(db: Database, userId: string): Promise<void> {
@@ -290,7 +297,15 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             url,
             describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
           );
-          await emailSender.send({ to: email, ...magicLinkEmail });
+          try {
+            await emailSender.send({ to: email, ...magicLinkEmail });
+          } catch (error) {
+            // A provider failure for a known address must not surface as a
+            // fast, non-`APIError` 500 — that would skip the timing-floor
+            // after-hook and let a caller tell known and unknown addresses
+            // apart by status code alone.
+            logMagicLinkSendFailure(error);
+          }
         },
       }),
       nextCookies(),

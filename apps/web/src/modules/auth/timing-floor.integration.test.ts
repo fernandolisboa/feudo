@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { withTestDb } from "@/db/test/harness";
 
 import { getAuth } from "./auth";
+import { fakeEmailSender } from "./email/fake-sender";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";
 import { getDb } from "@/db/client";
@@ -14,6 +15,10 @@ process.env.EMAIL_PROVIDER = "fake";
 
 beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const TIMING_FLOOR_LOWER_BOUND_MS = 450;
@@ -78,6 +83,19 @@ describe("timing floor on the raw Better Auth handler", () => {
     });
   });
 
+  it("still takes at least the floor when /request-password-reset gets a malformed email (400)", async () => {
+    await withTestDb(async () => {
+      const start = Date.now();
+      const response = await callAuthHandler("/request-password-reset", {
+        email: "not-an-email",
+        redirectTo: "/redefinir-senha",
+      });
+      const elapsed = Date.now() - start;
+      expect(response.status).toBe(400);
+      expect(elapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+    });
+  });
+
   it("takes at least the floor for /sign-in/magic-link, known and unknown email", async () => {
     await withTestDb(async () => {
       const knownEmail = "timing-handler-known-magic-link@example.com";
@@ -102,6 +120,26 @@ describe("timing floor on the raw Better Auth handler", () => {
       const unknownElapsed = Date.now() - unknownStart;
       expect(unknownResponse.ok).toBe(true);
       expect(unknownElapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+    });
+  });
+
+  it("still floors and returns 200 for a known email when the email provider fails to send the magic link", async () => {
+    await withTestDb(async () => {
+      const knownEmail = "timing-handler-provider-failure-magic-link@example.com";
+      await createVerifiedUser(knownEmail, "correct-horse");
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const start = Date.now();
+      const response = await callAuthHandler("/sign-in/magic-link", {
+        email: knownEmail,
+        callbackURL: "/",
+        errorCallbackURL: "/entrar/link-magico",
+      });
+      const elapsed = Date.now() - start;
+
+      expect(response.status).toBe(200);
+      expect(elapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+      expect(await findLastFakeSentEmail(getDb(), knownEmail)).toBeUndefined();
     });
   });
 });
