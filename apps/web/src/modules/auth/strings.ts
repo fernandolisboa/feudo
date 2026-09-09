@@ -18,6 +18,34 @@ const en = {
     submit: "Sign in",
     noAccount: "Not signed up yet?",
     signUpLink: "Sign up",
+    magicLinkLink: "Sign in with an email link",
+    forgotPasswordLink: "Forgot your password?",
+  },
+  magicLink: {
+    title: "Sign in with an email link",
+    subtitle: "We'll send a single-use link to your email.",
+    emailLabel: "Email",
+    submit: "Send link",
+    sent: "If this email has a sign-up, we sent a link to sign in.",
+    invalidOrExpired: "This link is invalid or has expired. Request a new one.",
+    requestNewLink: "Request a new link",
+    backToSignIn: "Back to sign in",
+  },
+  forgotPassword: {
+    title: "Reset your password",
+    subtitle: "We'll send a link to reset your password.",
+    emailLabel: "Email",
+    submit: "Send link",
+    sent: "If this email has a sign-up, we sent a link to reset the password.",
+    backToSignIn: "Back to sign in",
+  },
+  resetPassword: {
+    title: "Choose a new password",
+    subtitle: "Enter a new password for your sign-up.",
+    passwordLabel: "New password",
+    submit: "Save new password",
+    invalidOrExpired: "This link is invalid or has expired. Request a new one.",
+    requestNewLink: "Request a new link",
   },
   verifyEmail: {
     title: "Confirm your sign-up",
@@ -38,6 +66,16 @@ const en = {
     text: "Hello, {name}. Confirm your email to start using Feudo: {url}",
     html: '<p>Hello, {name}.</p><p>Confirm your email to start using Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
+  magicLinkEmail: {
+    subject: "Your sign-in link for Feudo",
+    text: "Use this link to sign in to Feudo: {url}\n\nThe link expires in 5 minutes and works once.",
+    html: '<p>Use this link to sign in to Feudo:</p><p><a href="{url}">{url}</a></p><p>The link expires in 5 minutes and works once.</p>',
+  },
+  resetPasswordEmail: {
+    subject: "Reset your password at Feudo",
+    text: "Hello, {name}. Use this link to set a new password: {url}\n\nThe link expires in 1 hour and works once. If you didn't request this, ignore this email.",
+    html: '<p>Hello, {name}.</p><p>Use this link to set a new password:</p><p><a href="{url}">{url}</a></p><p>The link expires in 1 hour and works once. If you didn\'t request this, ignore this email.</p>',
+  },
   errors: {
     invalidInput: "Check the information you entered and try again.",
     termsRequired: "You must accept the terms of use and the privacy policy.",
@@ -48,6 +86,9 @@ const en = {
     emailNotVerified: "Confirm your email before signing in.",
     resendFailed: "We couldn't resend the email. Try again.",
     rateLimited: "Too many attempts. Try again shortly.",
+    magicLinkFailed: "We couldn't send the sign-in link. Try again.",
+    resetRequestFailed: "We couldn't send the reset link. Try again.",
+    resetFailed: "We couldn't reset your password. Try again.",
   },
 };
 
@@ -71,6 +112,34 @@ const ptBR = {
     submit: "Entrar",
     noAccount: "Ainda não tem cadastro?",
     signUpLink: "Criar cadastro",
+    magicLinkLink: "Entrar com link por e-mail",
+    forgotPasswordLink: "Esqueci minha senha",
+  },
+  magicLink: {
+    title: "Entrar com link por e-mail",
+    subtitle: "Enviaremos um link de uso único para o seu e-mail.",
+    emailLabel: "E-mail",
+    submit: "Enviar link",
+    sent: "Se este e-mail tiver cadastro, enviamos um link para entrar.",
+    invalidOrExpired: "Este link é inválido ou expirou. Peça um novo link.",
+    requestNewLink: "Pedir novo link",
+    backToSignIn: "Voltar para entrar",
+  },
+  forgotPassword: {
+    title: "Redefinir sua senha",
+    subtitle: "Enviaremos um link para redefinir sua senha.",
+    emailLabel: "E-mail",
+    submit: "Enviar link",
+    sent: "Se este e-mail tiver cadastro, enviamos um link para redefinir a senha.",
+    backToSignIn: "Voltar para entrar",
+  },
+  resetPassword: {
+    title: "Escolha uma nova senha",
+    subtitle: "Informe uma nova senha para o seu cadastro.",
+    passwordLabel: "Nova senha",
+    submit: "Salvar nova senha",
+    invalidOrExpired: "Este link é inválido ou expirou. Peça um novo link.",
+    requestNewLink: "Pedir novo link",
   },
   verifyEmail: {
     title: "Confirme seu cadastro",
@@ -91,6 +160,16 @@ const ptBR = {
     text: "Olá, {name}. Confirme seu e-mail para começar a usar o Feudo: {url}",
     html: '<p>Olá, {name}.</p><p>Confirme seu e-mail para começar a usar o Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
+  magicLinkEmail: {
+    subject: "Seu link para entrar no Feudo",
+    text: "Use este link para entrar no Feudo: {url}\n\nO link expira em 5 minutos e funciona uma única vez.",
+    html: '<p>Use este link para entrar no Feudo:</p><p><a href="{url}">{url}</a></p><p>O link expira em 5 minutos e funciona uma única vez.</p>',
+  },
+  resetPasswordEmail: {
+    subject: "Redefina sua senha no Feudo",
+    text: "Olá, {name}. Use este link para definir uma nova senha: {url}\n\nO link expira em 1 hora e funciona uma única vez. Se você não pediu isso, ignore este e-mail.",
+    html: '<p>Olá, {name}.</p><p>Use este link para definir uma nova senha:</p><p><a href="{url}">{url}</a></p><p>O link expira em 1 hora e funciona uma única vez. Se você não pediu isso, ignore este e-mail.</p>',
+  },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
     termsRequired: "Você precisa aceitar os termos de uso e a política de privacidade.",
@@ -101,6 +180,9 @@ const ptBR = {
     emailNotVerified: "Confirme seu e-mail antes de entrar.",
     resendFailed: "Não foi possível reenviar o e-mail. Tente novamente.",
     rateLimited: "Muitas tentativas. Tente novamente em instantes.",
+    magicLinkFailed: "Não foi possível enviar o link de entrada. Tente novamente.",
+    resetRequestFailed: "Não foi possível enviar o link de redefinição. Tente novamente.",
+    resetFailed: "Não foi possível redefinir sua senha. Tente novamente.",
   },
 } satisfies typeof en;
 

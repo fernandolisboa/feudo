@@ -5,8 +5,23 @@ import { redirect } from "next/navigation";
 
 import type { ActionState } from "./action-state";
 import { t } from "./strings";
-import { resendVerification, signIn, signOut, signUp } from "./service";
-import { resendVerificationFormSchema, signInFormSchema, signUpFormSchema } from "./validation";
+import {
+  requestMagicLink,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
+  signIn,
+  signOut,
+  signUp,
+} from "./service";
+import {
+  magicLinkFormSchema,
+  requestPasswordResetFormSchema,
+  resendVerificationFormSchema,
+  resetPasswordFormSchema,
+  signInFormSchema,
+  signUpFormSchema,
+} from "./validation";
 
 export async function signUpAction(
   _prevState: ActionState,
@@ -107,4 +122,88 @@ export async function signOutAction(): Promise<void> {
   const requestHeaders = await headers();
   await signOut(requestHeaders);
   redirect("/entrar");
+}
+
+export async function requestMagicLinkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const errors = t.errors;
+
+  const parsed = magicLinkFormSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: errors.invalidInput };
+  }
+
+  const requestHeaders = await headers();
+  const outcome = await requestMagicLink(parsed.data.email, requestHeaders);
+
+  switch (outcome.status) {
+    case "ok":
+      return { status: "success", message: t.magicLink.sent };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
+    case "failed":
+      return { status: "error", message: errors.magicLinkFailed };
+  }
+}
+
+export async function requestPasswordResetAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const errors = t.errors;
+
+  const parsed = requestPasswordResetFormSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: errors.invalidInput };
+  }
+
+  const requestHeaders = await headers();
+  const outcome = await requestPasswordReset(parsed.data.email, requestHeaders);
+
+  switch (outcome.status) {
+    case "ok":
+      return { status: "success", message: t.forgotPassword.sent };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
+    case "failed":
+      return { status: "error", message: errors.resetRequestFailed };
+  }
+}
+
+export async function resetPasswordAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const errors = t.errors;
+
+  const parsed = resetPasswordFormSchema.safeParse({
+    token: formData.get("token"),
+    newPassword: formData.get("newPassword"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: errors.invalidInput };
+  }
+
+  const requestHeaders = await headers();
+  const outcome = await resetPassword(parsed.data, requestHeaders);
+
+  switch (outcome.status) {
+    case "ok":
+      redirect("/entrar");
+    case "invalid_token":
+      return { status: "error", message: t.resetPassword.invalidOrExpired };
+    case "rate_limited":
+      return { status: "error", message: errors.rateLimited };
+    case "failed":
+      return { status: "error", message: errors.resetFailed };
+  }
 }

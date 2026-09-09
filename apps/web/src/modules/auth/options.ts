@@ -2,9 +2,12 @@ import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { magicLink } from "better-auth/plugins";
 import { evaluateRegistrationMode } from "@feudo/core";
 
 import type { Database } from "@/db/client";
+import { buildMagicLinkEmail } from "./email/magic-link-email";
+import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
@@ -36,6 +39,11 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        const email = buildResetPasswordEmail(user.name, url);
+        await emailSender.send({ to: user.email, ...email });
+      },
     },
     user: {
       additionalFields: {
@@ -64,6 +72,15 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     rateLimit: {
       enabled: true,
       storage: "database",
+      // Magic-link sign-in and the reset-password submission fall outside
+      // Better Auth's own default special rules (magic link defaults to
+      // 60s/5 via the plugin; reset submission isn't listed at all), so we
+      // align them with the 10s/3 strictness the sign-in family already gets.
+      customRules: {
+        "/sign-in/magic-link": { window: 10, max: 3 },
+        "/magic-link/verify": { window: 10, max: 3 },
+        "/reset-password": { window: 10, max: 3 },
+      },
     },
     hooks: {
       // eslint-disable-next-line @typescript-eslint/require-await -- Better Auth's middleware type requires an async handler even though this hook never awaits.
@@ -91,6 +108,18 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         }
       }),
     },
-    plugins: [nextCookies()],
+    plugins: [
+      magicLink({
+        // Sign-up policy (REGISTRATION_MODE, terms acceptance) is enforced
+        // only on /sign-up/email's hooks.before; letting magic link mint new
+        // accounts would bypass both. It only ever signs in an existing user.
+        disableSignUp: true,
+        sendMagicLink: async ({ email, url }) => {
+          const magicLinkEmail = buildMagicLinkEmail(url);
+          await emailSender.send({ to: email, ...magicLinkEmail });
+        },
+      }),
+      nextCookies(),
+    ],
   } satisfies BetterAuthOptions;
 }

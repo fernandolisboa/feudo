@@ -202,3 +202,92 @@ export async function resendVerification(
 export async function signOut(requestHeaders: Headers): Promise<void> {
   await callAuthHandler("/sign-out", {}, requestHeaders);
 }
+
+export type MagicLinkRequestOutcome =
+  { status: "ok" } | { status: "rate_limited" } | { status: "failed" };
+
+export async function requestMagicLink(
+  email: string,
+  requestHeaders: Headers,
+): Promise<MagicLinkRequestOutcome> {
+  const response = await callAuthHandler(
+    "/sign-in/magic-link",
+    { email, callbackURL: "/", errorCallbackURL: "/entrar/link-magico" },
+    requestHeaders,
+  );
+
+  if (!response) {
+    return { status: "failed" };
+  }
+
+  if (response.status === 429) {
+    return { status: "rate_limited" };
+  }
+
+  if (!response.ok) {
+    return { status: "failed" };
+  }
+
+  return { status: "ok" };
+}
+
+export type PasswordResetRequestOutcome =
+  { status: "ok" } | { status: "rate_limited" } | { status: "failed" };
+
+export async function requestPasswordReset(
+  email: string,
+  requestHeaders: Headers,
+): Promise<PasswordResetRequestOutcome> {
+  const response = await callAuthHandler(
+    "/request-password-reset",
+    { email, redirectTo: "/redefinir-senha" },
+    requestHeaders,
+  );
+
+  if (!response) {
+    return { status: "failed" };
+  }
+
+  if (response.status === 429) {
+    return { status: "rate_limited" };
+  }
+
+  if (!response.ok) {
+    return { status: "failed" };
+  }
+
+  return { status: "ok" };
+}
+
+export type ResetPasswordInput = { token: string; newPassword: string };
+
+export type ResetPasswordOutcome =
+  | { status: "ok" }
+  | { status: "invalid_token" }
+  | { status: "rate_limited" }
+  | { status: "failed" };
+
+export async function resetPassword(
+  input: ResetPasswordInput,
+  requestHeaders: Headers,
+): Promise<ResetPasswordOutcome> {
+  const response = await callAuthHandler("/reset-password", input, requestHeaders);
+
+  if (!response) {
+    return { status: "failed" };
+  }
+
+  if (response.status === 429) {
+    return { status: "rate_limited" };
+  }
+
+  if (!response.ok) {
+    const body = await readJson<{ code?: string }>(response);
+    if (body?.code === "INVALID_TOKEN") {
+      return { status: "invalid_token" };
+    }
+    return { status: "failed" };
+  }
+
+  return { status: "ok" };
+}
