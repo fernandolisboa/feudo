@@ -4,9 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDb } from "@/db/client";
-import { getCurrentSession } from "@/modules/auth";
+import { getCurrentSession, type ActionState } from "@/modules/auth";
 
-import { type ActionState } from "./action-state";
 import { createHousehold, switchHousehold } from "./service";
 import { t } from "./strings";
 import { createHouseholdFormSchema, switchHouseholdFormSchema } from "./validation";

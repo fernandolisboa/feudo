@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { initialActionState } from "../action-state";
+import { initialActionState } from "@/modules/auth";
+
 import { createHouseholdAction } from "../actions";
 import { t } from "../strings";
 import {
