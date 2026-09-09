@@ -27,10 +27,10 @@ Feudo needs multi-tenant identity from day one (strangers register, invite partn
 
 Every domain table is scoped in one of two ways, and each table declares which:
 
-| scope     | tables (initial)                                                          | key            | who can reach it                                            |
-| --------- | ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
-| user      | bank connection, provider credentials                                     | `user_id`      | only the owning user, in any of their households            |
-| household | account assignment, transactions, categorization, reserve marks, analyses | `household_id` | every member of that household, through scoped repositories |
+| scope     | tables (initial)                                                                                              | key            | who can reach it                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| user      | bank connection, provider credentials                                                                         | `user_id`      | only the owning user, in any of their households            |
+| household | account assignment (investment positions are accounts), transactions, categorization, reserve marks, analyses | `household_id` | every member of that household, through scoped repositories |
 
 Bank connections belong to the user who authorized them, never to a household. Each synced account is assigned to exactly one household at a time (default: the user's active household at connection time) and can be moved by its owning user; an account whose household was deleted becomes unassigned and is visible only to its owner until reassigned. Synced transactions are stored once per account and carry the account's current `household_id` so repositories can scope them; moving an account rewrites that column for the account and its transactions in one database transaction.
 

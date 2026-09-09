@@ -9,7 +9,7 @@ Language models are unreliable at arithmetic and eager to recommend, while a hou
 
 ## Contract
 
-**Input**: a structured, Zod-validated object built by the `analysis` module from deterministic outputs (for example: monthly income, spending by kind, savings rate, average fixed cost, reserve target and coverage, per-position net real yield, bank comparison scores). Each input carries a label the model can cite. No raw transactions, no free-text bank descriptions, no personal identifiers.
+**Input**: a structured, Zod-validated object built by the `analysis` module from deterministic outputs (for example: monthly income, spending by kind, savings rate, average fixed cost, reserve target and coverage, per-position net real yield, bank comparison scores) together with the reference constants those numbers rest on (the income-tax regressive table with its brackets and day thresholds, the FGC limit). Each input carries a label the model can cite. No raw transactions, no free-text bank descriptions, no personal identifiers.
 
 **Model and persona**: `@anthropic-ai/sdk`, Sonnet by default, Opus only for the monthly deep analysis. The persona is a conservative analyst who states trade-offs explicitly (liquidity × yield × risk), cites the input labels it relied on, and may not recommend a product or institution without stating the counter-argument.
 

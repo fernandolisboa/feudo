@@ -17,7 +17,11 @@ OFX/CSV import is a backlog secondary source for institutions where a partner's 
 
 ## Provider interface
 
-The `sync` module talks to a `DataProvider` with four operations: list accounts, list transactions since a date, list investment positions, refresh a connection. Every payload crossing that boundary is validated with Zod and normalized into Feudo's own account, transaction and position shapes before anything else touches it; provider ids are kept only to deduplicate on the next sync. Pluggy's own category, counterpart document and investment rate fields feed the normalizer; nothing downstream knows the provider's field names.
+The `sync` module talks to a `DataProvider` with four operations: list accounts, list transactions since a date, list investment positions, refresh a connection. Every payload crossing that boundary is validated with Zod and normalized into two shapes, Feudo's own account and transaction, before anything else touches it; investment positions are accounts of type `investment`, not a third shape. Provider ids are kept only to deduplicate on the next sync. Pluggy's own category, counterpart document and investment rate fields feed the normalizer; nothing downstream knows the provider's field names.
+
+**Normalized shapes.** Account: provider id, institution id, type (`checking | savings | credit_card | investment`), subtype or product type (for example CDB, LCI, LCA, poupança, Tesouro Selic, savings box), name, balance (integer centavos plus currency), holder document as a keyed hash (ADR-0008), and for investment types: rate, rate type (`percentage of CDI | fixed annual | inflation-linked | other`), due date, acquisition date (nullable, when the provider exposes one). Transaction: provider id, account id, date, amount, currency, description, provider category, type, counterpart type, counterpart document as a keyed hash (nullable).
+
+Bank connections, provider credentials and synced accounts are owned by the `sync` module, which exposes assignment of an account to a household as a single operation; `households`, `ledger` and `reserve` never write these tables.
 
 Sync runs automatically once a day and can be triggered manually up to three times per day per household, through Vercel Cron hitting bearer-protected route handlers, with no queue. The unit of work is the bank connection (user-owned); the daily job iterates connections, and a manual trigger from a household refreshes the connections whose accounts are assigned to it, counting against that household's quota.
 
@@ -32,4 +36,5 @@ Sync runs automatically once a day and can be triggered manually up to three tim
 
 - The wizard must be honest with the user: they are handing Feudo a secret that can read all their accounts, and they can revoke it at Pluggy or delete it in Feudo at any time.
 - End-to-end tests run against an in-repo fake `DataProvider` with Pluggy-shaped fixtures; Meu Pluggy has no sandbox, so the real provider is exercised by a manual smoke test on the owner's own credentials.
-- CLAUDE.md's stack section (Connect widget, "MeuPluggy only for local development", billing per item) is superseded by this ADR and should be updated by the orchestrator.
+- A manual refresh triggered by household A refreshes every connection with an account in A, so other households sharing one of those connections get fresh data without spending their own quota. Accepted.
+- CLAUDE.md's stack section (Connect widget, "MeuPluggy only for local development", billing per item) was aligned with this ADR in the same PR.

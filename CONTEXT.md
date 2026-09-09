@@ -103,7 +103,7 @@ _Avoid_: emergency fund goal, safety net
 How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12.
 
 **Reserve position**:
-An account or investment the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
+An account, including an investment position, that the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
 _Avoid_: reserve account, emergency fund holding
 
 **Net real yield**:
