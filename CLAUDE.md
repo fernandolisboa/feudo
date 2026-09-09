@@ -86,8 +86,9 @@ Confirm with the owner before creating any paid resource.
    before any bank connection; data minimization; provider credentials encrypted at rest; account
    data export and deletion flows; audit log of access to financial data. These ship before
    registration opens beyond the first household.
-4. **Deep modules, thin interfaces**: `auth`, `households`, `sync`, `ledger`, `reserve`,
-   `banking-intel`, `analysis`. Each exposes a small entry point; implementation stays private.
+4. **Deep modules, thin interfaces**: `auth`, `households`, `sync`, `market-data`, `ledger`,
+   `reserve`, `banking-intel`, `analysis`. Each exposes a small entry point; implementation stays
+   private.
 5. **Domain docs are the source of truth**: `CONTEXT.md`, `UBIQUITOUS_LANGUAGE.md`, `docs/adr/`.
    Update them as decisions crystallize, not after.
 6. **Validation at the edges**: Zod schemas on every external input (Pluggy payloads, SGS
