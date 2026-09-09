@@ -8,3 +8,4 @@ dist
 *.tsbuildinfo
 apps/web/public/sw.js
 .playwright-mcp
+.claude/worktrees/
