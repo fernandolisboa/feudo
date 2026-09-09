@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { initialActionState } from "../action-state";
+import { initialActionState } from "@/lib/action-state";
 import { signInAction } from "../actions";
 import { t } from "../strings";
 

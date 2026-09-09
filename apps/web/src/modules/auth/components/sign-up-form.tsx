@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { initialActionState } from "../action-state";
+import { initialActionState } from "@/lib/action-state";
 import { signUpAction } from "../actions";
 import { t } from "../strings";
 

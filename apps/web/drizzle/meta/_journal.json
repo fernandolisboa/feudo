@@ -26,8 +26,22 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1788971442648,
-      "tag": "0003_user_theme_preference",
+      "when": 1788971666814,
+      "tag": "0003_household_organization",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788971689577,
+      "tag": "0004_household_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788975412837,
+      "tag": "0005_single_owner_index",
       "breakpoints": true
     }
   ]

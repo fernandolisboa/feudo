@@ -52,5 +52,9 @@ export async function signUpVerifyAndSignIn(
   await page.getByLabel("Senha").fill(options.password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
+  await expect(page).toHaveURL(/\/comecar$/);
+  await page.getByLabel("Nome da casa").fill(`Casa de ${options.name}`);
+  await page.getByRole("button", { name: "Criar casa" }).click();
+
   await expect(page).toHaveURL(/\/$/);
 }

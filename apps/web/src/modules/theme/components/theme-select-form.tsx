@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { initialActionState } from "@/modules/auth/action-state";
+import { initialActionState } from "@/lib/action-state";
 
 import { updateThemeAction } from "../actions";
 import { t } from "../strings";

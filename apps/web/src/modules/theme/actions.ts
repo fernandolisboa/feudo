@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { ActionState } from "@/modules/auth/action-state";
+import type { ActionState } from "@/lib/action-state";
 
 import { updateTheme } from "./service";
 import { t } from "./strings";

@@ -9,10 +9,6 @@ const en = {
     collapseSidebar: "Collapse sidebar",
     expandSidebar: "Expand sidebar",
   },
-  householdSwitcher: {
-    placeholder: "Your household",
-    comingSoon: "Available once households ship",
-  },
   userMenu: {
     preferences: "Preferences",
     signOut: "Sign out",
@@ -49,10 +45,6 @@ const ptBR = {
     comingSoon: "Em breve",
     collapseSidebar: "Recolher menu",
     expandSidebar: "Expandir menu",
-  },
-  householdSwitcher: {
-    placeholder: "Sua casa",
-    comingSoon: "Disponível quando as casas chegarem",
   },
   userMenu: {
     preferences: "Preferências",

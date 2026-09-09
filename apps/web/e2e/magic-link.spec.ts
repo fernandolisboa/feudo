@@ -65,8 +65,9 @@ test("sign in with a magic link after signing up with a password", async ({
   const magicLink = await lastEmailLink(request, baseURL, email);
   await page.goto(magicLink);
 
-  await expect(page).toHaveURL(/\/$/);
-  await expect(
-    page.getByRole("heading", { name: "Olá, Playwright Magic Link User." }),
-  ).toBeVisible();
+  // A freshly signed-up user has no household yet, so the session lands on
+  // onboarding (docs/adr for household creation), not the dashboard; that
+  // flow is covered end to end by registration.spec.ts.
+  await expect(page).toHaveURL(/\/comecar$/);
+  await expect(page.getByRole("heading", { name: "Crie sua casa" })).toBeVisible();
 });
