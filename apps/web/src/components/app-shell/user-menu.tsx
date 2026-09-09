@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, Settings, User } from "lucide-react";
+import { Settings, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOutAction } from "@/modules/auth";
 import { t } from "@/modules/theme";
+
+import { SignOutMenuItem } from "./sign-out-menu-item";
 
 export function UserMenu({ name, email }: { name: string; email: string }) {
   return (
@@ -30,15 +31,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
           {t.userMenu.preferences}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <form action={signOutAction} className="contents">
-          <DropdownMenuItem
-            render={<button type="submit" className="w-full" />}
-            variant="destructive"
-          >
-            <LogOut className="size-4" />
-            {t.userMenu.signOut}
-          </DropdownMenuItem>
-        </form>
+        <SignOutMenuItem />
       </DropdownMenuContent>
     </DropdownMenu>
   );
