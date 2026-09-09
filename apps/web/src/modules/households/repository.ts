@@ -32,6 +32,9 @@ export function createHouseholdSettingsRepository(scope: HouseholdScope) {
     },
 
     async update(db: Database, patch: Partial<HouseholdSettings>): Promise<void> {
+      if (Object.keys(patch).length === 0) {
+        return;
+      }
       await db
         .update(householdSettings)
         .set(patch)
@@ -41,3 +44,10 @@ export function createHouseholdSettingsRepository(scope: HouseholdScope) {
 }
 
 export type HouseholdSettingsRepository = ReturnType<typeof createHouseholdSettingsRepository>;
+
+export async function getHouseholdSettings(
+  scope: HouseholdScope,
+  db: Database,
+): Promise<HouseholdSettings | undefined> {
+  return createHouseholdSettingsRepository(scope).get(db);
+}

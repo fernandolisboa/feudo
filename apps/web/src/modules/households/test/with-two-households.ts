@@ -3,7 +3,7 @@ import { withTestDb } from "@/db/test/harness";
 
 import type { Database } from "@/db/client";
 import { createHouseholdSettingsRepository, type HouseholdSettings } from "../repository";
-import { householdScope, type HouseholdScope } from "../scope";
+import { scopeForNewHousehold, type HouseholdScope } from "../scope";
 
 export type SeededHousehold = { id: string; scope: HouseholdScope; settings: HouseholdSettings };
 
@@ -21,7 +21,7 @@ async function seedHousehold(
   const id = crypto.randomUUID();
   await db.insert(organization).values({ id, name, slug: id, createdAt: new Date() });
 
-  const scope = householdScope({ householdId: id });
+  const scope = scopeForNewHousehold(id);
   await createHouseholdSettingsRepository(scope).create(db, settings);
 
   return { id, scope, settings };
