@@ -12,4 +12,5 @@ export async function resetSchemas(db: Database, env: ResetGuardEnv = process.en
   await db.execute(sql.raw(`drop schema if exists "${DRIZZLE_MIGRATIONS_SCHEMA}" cascade`));
   await db.execute(sql.raw(`drop schema if exists "public" cascade`));
   await db.execute(sql.raw(`create schema "public"`));
+  await db.execute(sql.raw(`grant usage, create on schema public to public`));
 }

@@ -24,6 +24,13 @@ async function main() {
 
 main().catch((error) => {
   console.error("Database reset failed.");
-  console.error(error instanceof DatabaseResetNotAllowedError ? error.message : "Unknown error.");
+  if (error instanceof DatabaseResetNotAllowedError) {
+    console.error(error.message);
+  } else {
+    console.error(error?.name ?? "Error");
+    if (error?.code) {
+      console.error(error.code);
+    }
+  }
   process.exit(1);
 });
