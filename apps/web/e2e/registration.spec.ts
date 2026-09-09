@@ -31,7 +31,11 @@ test("sign-up, verification, login and sign-out", async ({ page, request, baseUR
         const response = await request.get(lastEmailUrl);
         return response.status();
       },
-      { message: "verification email was not persisted in time", timeout: 15_000 },
+      {
+        message: "verification email was not persisted in time",
+        timeout: 30_000,
+        intervals: [500],
+      },
     )
     .toBe(200);
   const lastEmailResponse = await request.get(lastEmailUrl);

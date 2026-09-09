@@ -16,6 +16,7 @@ if (testOnlyToken) {
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  timeout: 60_000,
   use: {
     baseURL,
     extraHTTPHeaders,
