@@ -132,7 +132,7 @@ const ptBR = {
     backToSignIn: "Voltar para entrar",
   },
   resetPassword: {
-    title: "Escolha uma nova senha",
+    title: "Defina uma nova senha",
     subtitle: "Informe uma nova senha para o seu cadastro.",
     passwordLabel: "Nova senha",
     submit: "Salvar nova senha",
@@ -178,7 +178,7 @@ const ptBR = {
     emailNotVerified: "Confirme seu e-mail antes de entrar.",
     resendFailed: "Não foi possível reenviar o e-mail. Tente novamente.",
     rateLimited: "Muitas tentativas. Tente novamente em instantes.",
-    magicLinkFailed: "Não foi possível enviar o link de entrada. Tente novamente.",
+    magicLinkFailed: "Não foi possível enviar o link para entrar. Tente novamente.",
     resetRequestFailed: "Não foi possível enviar o link de redefinição. Tente novamente.",
     resetFailed: "Não foi possível redefinir sua senha. Tente novamente.",
   },
