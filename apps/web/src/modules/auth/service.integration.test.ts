@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { getDb } from "@/db/client";
+import { getDb, type Database } from "@/db/client";
 import { withTestDb } from "@/db/test/harness";
-import { user } from "@/db/schema/auth.ts";
+import { invitation, organization, user } from "@/db/schema/auth.ts";
 
 import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
@@ -45,6 +45,35 @@ async function verifyEmailWithToken(token: string): Promise<{ status: boolean }>
 beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
 });
+
+async function seedInvitation(db: Database, email: string, expiresAt: Date): Promise<void> {
+  const inviterId = crypto.randomUUID();
+  await db.insert(user).values({
+    id: inviterId,
+    name: "Inviter",
+    email: `inviter-${inviterId}@example.com`,
+    termsVersion: TERMS_VERSION,
+    termsAcceptedAt: new Date(),
+  });
+
+  const householdId = crypto.randomUUID();
+  await db.insert(organization).values({
+    id: householdId,
+    name: "Inviting household",
+    slug: householdId,
+    createdAt: new Date(),
+  });
+
+  await db.insert(invitation).values({
+    id: crypto.randomUUID(),
+    organizationId: householdId,
+    email,
+    role: "member",
+    status: "pending",
+    expiresAt,
+    inviterId,
+  });
+}
 
 describe("sign-up, verification and sign-in", () => {
   it("registers, verifies and signs in successfully", async () => {
@@ -158,7 +187,7 @@ describe("sign-up, verification and sign-in", () => {
     });
   });
 
-  it("refuses sign-up when REGISTRATION_MODE is invite, since invites do not exist yet", async () => {
+  it("refuses sign-up when REGISTRATION_MODE is invite and the email has no pending invitation", async () => {
     await withTestDb(async () => {
       process.env.REGISTRATION_MODE = "invite";
       const outcome = await signUp(
@@ -170,6 +199,36 @@ describe("sign-up, verification and sign-in", () => {
         },
         new Headers(),
       );
+      expect(outcome.status).toBe("invite_required");
+    });
+  });
+
+  it("allows sign-up when REGISTRATION_MODE is invite and the email holds a pending invitation", async () => {
+    await withTestDb(async (db) => {
+      process.env.REGISTRATION_MODE = "invite";
+      const email = "invited@example.com";
+      await seedInvitation(db, email, new Date(Date.now() + 24 * 60 * 60 * 1000));
+
+      const outcome = await signUp(
+        { name: "Invited User", email, password: "correct-horse", termsAccepted: true },
+        new Headers(),
+      );
+
+      expect(outcome.status).toBe("ok");
+    });
+  });
+
+  it("refuses sign-up when REGISTRATION_MODE is invite and the only invitation has expired", async () => {
+    await withTestDb(async (db) => {
+      process.env.REGISTRATION_MODE = "invite";
+      const email = "expired-invite@example.com";
+      await seedInvitation(db, email, new Date(Date.now() - 60 * 1000));
+
+      const outcome = await signUp(
+        { name: "Expired Invite", email, password: "correct-horse", termsAccepted: true },
+        new Headers(),
+      );
+
       expect(outcome.status).toBe("invite_required");
     });
   });

@@ -22,6 +22,20 @@
       "when": 1788963394051,
       "tag": "0002_auth_and_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788971666814,
+      "tag": "0003_household_organization",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788971689577,
+      "tag": "0004_household_settings",
+      "breakpoints": true
     }
   ]
 }

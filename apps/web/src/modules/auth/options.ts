@@ -2,15 +2,21 @@ import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { organization } from "better-auth/plugins";
 import { evaluateRegistrationMode } from "@feudo/core";
 
 import type { Database } from "@/db/client";
+// Imported from the households module's leaf file, not its entry point:
+// households/index.ts re-exports service.ts, which imports getAuth from this
+// module, so importing the entry point here would be a require cycle.
+import { hasPendingInvitation } from "@/modules/households/invitations";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
 import { TERMS_VERSION } from "./terms";
 
 const VERIFICATION_EXPIRES_IN_SECONDS = 60 * 60;
+const INVITATION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
 
 function readTermsVersion(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) {
@@ -28,6 +34,14 @@ function hasConsentField(body: unknown): boolean {
   }
   const keys = Object.keys(body);
   return CONSENT_FIELDS.some((field) => keys.includes(field));
+}
+
+function readEmail(body: unknown): string | undefined {
+  if (typeof body !== "object" || body === null) {
+    return undefined;
+  }
+  const value = (body as Record<string, unknown>).email;
+  return typeof value === "string" ? value : undefined;
 }
 
 export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.env) {
@@ -76,7 +90,6 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       storage: "database",
     },
     hooks: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- Better Auth's middleware type requires an async handler even though this hook never awaits.
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === "/update-user") {
           // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
@@ -91,7 +104,12 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           return;
         }
 
-        const registrationDecision = evaluateRegistrationMode(readRegistrationMode(env), false);
+        const mode = readRegistrationMode(env);
+        const email = readEmail(ctx.body);
+        const hasPendingInvite =
+          mode === "invite" && email !== undefined ? await hasPendingInvitation(db, email) : false;
+
+        const registrationDecision = evaluateRegistrationMode(mode, hasPendingInvite);
         if (!registrationDecision.allowed) {
           throw new APIError("FORBIDDEN", { message: registrationDecision.reason });
         }
@@ -110,6 +128,14 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         }
       }),
     },
-    plugins: [nextCookies()],
+    plugins: [
+      organization({
+        // 24h, overriding the plugin's 48h default (ADR-0001). Owner is the
+        // default creatorRole and owner/admin/member are the plugin's default
+        // roles, so no ac/roles override is needed to match household vocabulary.
+        invitationExpiresIn: INVITATION_EXPIRES_IN_SECONDS,
+      }),
+      nextCookies(),
+    ],
   } satisfies BetterAuthOptions;
 }

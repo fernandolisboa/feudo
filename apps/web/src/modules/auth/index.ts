@@ -10,4 +10,6 @@ export { findLastFakeSentEmail } from "./email/fake-email-repository";
 export { isFakeEmailProvider } from "./env";
 export type { CurrentSession } from "./session";
 export { getCurrentSession } from "./session";
+export type { SignInInput, SignInOutcome, SignUpInput, SignUpOutcome } from "./service";
+export { signIn, signUp } from "./service";
 export { t } from "./strings";
