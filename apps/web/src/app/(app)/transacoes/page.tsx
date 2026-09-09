@@ -5,7 +5,7 @@ export default function TransactionsPage() {
   return (
     <>
       <PageHeader overline={t.placeholder.overline} title={t.nav.transactions} />
-      <p className="text-muted-foreground text-sm">{t.placeholder.transactionsBody}</p>
+      <p className="font-heading text-foreground text-[18px]">{t.placeholder.transactionsBody}</p>
     </>
   );
 }

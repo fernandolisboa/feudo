@@ -210,11 +210,15 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-height: 36px;
     border-radius: var(--radius);
     padding: 8px 10px;
     font-size: 14px;
     color: var(--muted);
     white-space: nowrap;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
   }
 
   .app-shell-nav-link:hover {
@@ -325,5 +329,16 @@
       align-items: center;
       gap: 4px;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
