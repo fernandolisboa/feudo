@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { signOutAction } from "@/modules/auth/actions";
-import { getCurrentSession } from "@/modules/auth/session";
-import { authStrings } from "@/modules/auth/strings";
+import { signOutAction, getCurrentSession, t } from "@/modules/auth";
 
 export default async function Home() {
   const session = await getCurrentSession();
@@ -11,17 +9,15 @@ export default async function Home() {
     redirect("/entrar");
   }
 
-  const t = authStrings.ptBR.overview;
-
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-muted-foreground text-xs tracking-wide uppercase">{t.title}</p>
+      <p className="text-muted-foreground text-xs tracking-wide uppercase">{t.overview.title}</p>
       <h1 className="text-2xl font-semibold tracking-tight">
-        {t.greeting.replace("{name}", session.user.name)}
+        {t.overview.greeting.replace("{name}", session.name)}
       </h1>
       <form action={signOutAction}>
         <Button type="submit" variant="outline">
-          {t.signOut}
+          {t.overview.signOut}
         </Button>
       </form>
     </main>

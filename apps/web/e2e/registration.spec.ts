@@ -5,7 +5,7 @@ function uniqueEmail(): string {
   return `e2e-${suffix}@example.com`;
 }
 
-test("registration, verification and login", async ({ page, request, baseURL }) => {
+test("sign-up, verification, login and sign-out", async ({ page, request, baseURL }) => {
   if (!baseURL) {
     throw new Error("baseURL is not configured for this Playwright project");
   }
@@ -20,7 +20,7 @@ test("registration, verification and login", async ({ page, request, baseURL }) 
   await page
     .getByRole("checkbox", { name: "Aceito os termos de uso e a política de privacidade" })
     .check();
-  await page.getByRole("button", { name: "Criar conta" }).click();
+  await page.getByRole("button", { name: "Criar cadastro" }).click();
 
   await expect(page).toHaveURL(/\/verificar-email\?email=/);
 
@@ -44,4 +44,8 @@ test("registration, verification and login", async ({ page, request, baseURL }) 
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "Olá, Playwright User." })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sair" }).click();
+
+  await expect(page).toHaveURL(/\/entrar/);
 });

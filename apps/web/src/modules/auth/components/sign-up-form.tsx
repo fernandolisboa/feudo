@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { initialActionState } from "../action-state";
 import { signUpAction } from "../actions";
-import { authStrings } from "../strings";
-
-const t = authStrings.ptBR;
+import { t } from "../strings";
 
 export function SignUpForm() {
   const [state, formAction, isPending] = useActionState(signUpAction, initialActionState);

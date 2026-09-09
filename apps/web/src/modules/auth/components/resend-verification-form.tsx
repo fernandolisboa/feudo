@@ -6,9 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { initialActionState } from "../action-state";
 import { resendVerificationAction } from "../actions";
-import { authStrings } from "../strings";
-
-const t = authStrings.ptBR;
+import { t } from "../strings";
 
 export function ResendVerificationForm({ email }: { email: string }) {
   const [state, formAction, isPending] = useActionState(

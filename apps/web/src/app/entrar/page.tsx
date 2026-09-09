@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { AuthShell } from "@/modules/auth/components/auth-shell";
-import { SignInForm } from "@/modules/auth/components/sign-in-form";
-import { getCurrentSession } from "@/modules/auth/session";
-import { authStrings } from "@/modules/auth/strings";
+import { AuthShell, SignInForm, getCurrentSession, t } from "@/modules/auth";
 
 export default async function SignInPage() {
   const session = await getCurrentSession();
@@ -11,10 +8,8 @@ export default async function SignInPage() {
     redirect("/");
   }
 
-  const t = authStrings.ptBR.signIn;
-
   return (
-    <AuthShell title={t.title} subtitle={t.subtitle}>
+    <AuthShell title={t.signIn.title} subtitle={t.signIn.subtitle}>
       <SignInForm />
     </AuthShell>
   );
