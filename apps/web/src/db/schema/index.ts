@@ -1,2 +1,2 @@
 export * from "./auth.ts";
-export * from "./terms.ts";
+export * from "./fake-sent-emails.ts";

@@ -15,6 +15,13 @@
       "when": 1788957621262,
       "tag": "0001_auth_and_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789050000000,
+      "tag": "0002_policy_and_test_only",
+      "breakpoints": true
     }
   ]
 }
