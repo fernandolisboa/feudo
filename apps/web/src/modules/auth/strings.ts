@@ -76,7 +76,7 @@ const ptBR = {
     title: "Confirme seu cadastro",
     body: "Enviamos um link de confirmação para {email}. Clique no link para confirmar seu cadastro.",
     bodyMissingEmail:
-      "Não encontramos o e-mail deste cadastro. Volte para criar o cadastro ou tente entrar.",
+      "Não encontramos o e-mail para este cadastro. Comece novamente ou tente entrar.",
     resend: "Reenviar e-mail",
     resent: "Enviamos o e-mail novamente.",
     backToSignIn: "Voltar para entrar",
@@ -97,7 +97,7 @@ const ptBR = {
     registrationClosed: "O cadastro está fechado no momento.",
     inviteRequired: "O cadastro é somente por convite no momento.",
     signUpFailed: "Não foi possível concluir seu cadastro. Tente novamente.",
-    invalidCredentials: "E-mail ou senha incorretos.",
+    invalidCredentials: "E-mail ou senha incorretos. Tente novamente.",
     emailNotVerified: "Confirme seu e-mail antes de entrar.",
     resendFailed: "Não foi possível reenviar o e-mail. Tente novamente.",
     rateLimited: "Muitas tentativas. Tente novamente em instantes.",
