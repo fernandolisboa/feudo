@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 import { isCronRequestAuthorized } from "@/lib/cron-auth";
 
 export function GET(request: Request): NextResponse {

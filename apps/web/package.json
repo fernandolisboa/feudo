@@ -18,13 +18,15 @@
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
     "db:reset": "node scripts/reset-db.mjs",
-    "db:reset-schema": "node scripts/reset-schema.mjs"
+    "db:reset-schema": "node scripts/reset-schema.mjs",
+    "db:auth-schema": "npx @better-auth/cli generate --config src/modules/auth/auth.ts --output src/db/schema/auth.ts -y"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
     "@feudo/core": "workspace:*",
     "@neondatabase/serverless": "1.1.0",
     "@serwist/next": "9.5.12",
+    "better-auth": "1.7.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
@@ -32,6 +34,7 @@
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "resend": "6.26.0",
     "serwist": "9.5.12",
     "shadcn": "4.19.1",
     "tailwind-merge": "3.6.0",

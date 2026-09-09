@@ -105,3 +105,82 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
           DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
         run: pnpm test:integration
+
+  # Not yet a required check; promote once it has proven stable across a few PRs.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    # Vercel Preview deployments share the same `feudo-preview` database as the
+    # `integration` job's schema reset; without this, `integration` resetting
+    # the schema mid-run wipes the user e2e just signed up, and sign-in 401s
+    # with "User not found". Depending on `integration` sequences the reset
+    # before e2e's requests land instead of racing them.
+    needs: [ci, integration]
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 20
+    concurrency:
+      group: preview-db
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      deployments: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @feudo/web exec playwright install --with-deps chromium
+
+      - name: Wait for the Vercel preview deployment
+        id: preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          attempt=0
+          max_attempts=60
+          url=""
+          while [ "$attempt" -lt "$max_attempts" ]; do
+            deployments=$(gh api "repos/$REPO/deployments?sha=$SHA" 2>/dev/null || echo "[]")
+            deployment_id=$(echo "$deployments" | jq -r '[.[] | select(.environment=="Preview")] | sort_by(.created_at) | last | .id // empty')
+            if [ -n "$deployment_id" ]; then
+              statuses=$(gh api "repos/$REPO/deployments/$deployment_id/statuses" 2>/dev/null || echo "[]")
+              url=$(echo "$statuses" | jq -r '[.[] | select(.state=="success")] | sort_by(.created_at) | last | .environment_url // empty')
+              if [ -n "$url" ]; then
+                break
+              fi
+              failed=$(echo "$statuses" | jq -r '[.[] | select(.state=="failure" or .state=="error")] | length')
+              if [ "$failed" -gt 0 ]; then
+                echo "The Vercel deployment for this PR failed."
+                exit 1
+              fi
+            fi
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+          if [ -z "$url" ]; then
+            echo "Timed out waiting for the Vercel preview deployment to become ready."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Run Playwright e2e tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          TEST_ONLY_TOKEN: ${{ secrets.TEST_ONLY_TOKEN }}
+        run: pnpm --filter @feudo/web exec playwright test

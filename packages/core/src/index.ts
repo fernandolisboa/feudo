@@ -1,6 +1,13 @@
 export type { Money } from "./money/money";
 export { add, subtract, formatBRL, NonIntegerAmountError } from "./money/money";
 
+export type {
+  RegistrationMode,
+  RegistrationRefusalReason,
+  RegistrationDecision,
+} from "./auth/registration-policy";
+export { evaluateRegistrationMode } from "./auth/registration-policy";
+
 export type { RatePpm } from "./market-data/rates";
 export {
   annualizeDailyPercentToRatePpm,
