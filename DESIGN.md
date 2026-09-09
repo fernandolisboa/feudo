@@ -94,13 +94,16 @@ grow once on first paint (300ms). Respect `prefers-reduced-motion` (no growth an
 
 ## Component inventory
 
-shadcn/ui primitives (mandatory, restyled by tokens): Button, Input, Label, Select, Tabs
-(segmented control), Dialog, DropdownMenu (household switcher, row actions), Popover, Tooltip,
-Toast, Sheet (mobile menu), Table, Badge (tags), Progress, Skeleton, Form controls.
+shadcn/ui primitives (mandatory, restyled by tokens): Button, Input, Label, Select (household
+switcher, reserve multiple, time zone), Tabs (segmented control), Dialog, DropdownMenu (row
+actions), Popover, Tooltip, Toast, Sheet (mobile menu), Table, Badge (tags), Progress, Skeleton,
+Form controls.
 
 Domain components (custom): AppShell, PageHeader, StatTile, SectionHeader, BarList,
 MonthlyBars (two-series SVG, legend + last-month labels), AccountsTable, Notice, MonthSwitcher,
-StepRail (onboarding), ReserveCoverage (target, current, progress), PlacementRanking (ranked rows
+StepRail (onboarding; deferred until onboarding is more than the one-step household-creation form
+in #10 — today's `/comecar` is a single Card, not a rail), ReserveCoverage (target, current,
+progress), PlacementRanking (ranked rows
 with reasons, plus "também avaliados"), AnalystReading (analysis text, counter-argument, inputs
 used, model and prompt version).
 
