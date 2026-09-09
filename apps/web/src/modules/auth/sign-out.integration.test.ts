@@ -6,23 +6,12 @@ import { withTestDb } from "@/db/test/harness";
 import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { signOut, signUp } from "./service";
+import { extractTokenFromEmail } from "./test/extract-token-from-email";
 
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
 process.env.EMAIL_PROVIDER = "fake";
 process.env.REGISTRATION_MODE = "open";
-
-function extractVerificationToken(emailText: string): string {
-  const match = /https?:\/\/\S+/.exec(emailText);
-  if (!match) {
-    throw new Error("verification email did not contain a link");
-  }
-  const token = new URL(match[0]).searchParams.get("token");
-  if (!token) {
-    throw new Error("verification link did not contain a token");
-  }
-  return token;
-}
 
 function cookieHeaderFrom(headers: Headers): string {
   const pairs: string[] = [];
@@ -41,7 +30,7 @@ describe("signOut", () => {
       const password = "correct-horse";
 
       await signUp({ name: "Sign Out Case", email, password, termsAccepted: true }, new Headers());
-      const token = extractVerificationToken((await findLastFakeSentEmail(db, email))?.text ?? "");
+      const token = extractTokenFromEmail((await findLastFakeSentEmail(db, email))?.text ?? "");
       await getAuth().api.verifyEmail({ query: { token } });
 
       const { headers: signInHeaders } = await getAuth().api.signInEmail({
