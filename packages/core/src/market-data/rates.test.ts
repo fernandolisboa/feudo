@@ -25,6 +25,10 @@ describe("annualizeDailyRate", () => {
   it("throws InvalidRateError for a non-finite rate", () => {
     expect(() => annualizeDailyRate(Number.NaN)).toThrow(InvalidRateError);
   });
+
+  it("throws InvalidRateError for a non-integer rate", () => {
+    expect(() => annualizeDailyRate(536.8)).toThrow(InvalidRateError);
+  });
 });
 
 describe("dailyizeAnnualRate", () => {

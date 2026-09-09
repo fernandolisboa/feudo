@@ -34,7 +34,7 @@ export class InvalidDailyPercentError extends Error {
 }
 
 export function assertValidRate(ratePpm: RatePpm): void {
-  if (!Number.isFinite(ratePpm) || ratePpm <= -PPM_SCALE) {
+  if (!Number.isInteger(ratePpm) || ratePpm <= -PPM_SCALE) {
     throw new InvalidRateError(ratePpm);
   }
 }
