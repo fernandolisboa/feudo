@@ -147,4 +147,48 @@ describe("password reset", () => {
       expect(unknownOutcome).toEqual(knownOutcome);
     });
   });
+
+  it("takes at least the same floor time for a known and an unknown email, so response timing can't reveal which accounts exist", async () => {
+    await withTestDb(async () => {
+      const knownEmail = "timing-known-for-reset@example.com";
+      await createVerifiedUser(knownEmail, "correct-horse");
+
+      const knownStart = Date.now();
+      await requestPasswordReset(knownEmail, new Headers());
+      const knownElapsed = Date.now() - knownStart;
+
+      const unknownStart = Date.now();
+      await requestPasswordReset("timing-unknown-for-reset@example.com", new Headers());
+      const unknownElapsed = Date.now() - unknownStart;
+
+      expect(knownElapsed).toBeGreaterThanOrEqual(450);
+      expect(unknownElapsed).toBeGreaterThanOrEqual(450);
+    });
+  });
+
+  it("invalidates the user's other outstanding reset links once one of them is used", async () => {
+    await withTestDb(async () => {
+      const email = "reset-invalidates-others@example.com";
+      await createVerifiedUser(email, "old-password");
+
+      await requestPasswordReset(email, new Headers());
+      const firstToken = extractTokenFromEmail(await lastEmailTextFor(email));
+
+      await requestPasswordReset(email, new Headers());
+      const secondToken = extractTokenFromEmail(await lastEmailTextFor(email));
+      expect(secondToken).not.toBe(firstToken);
+
+      const resetOutcome = await resetPassword(
+        { token: secondToken, newPassword: "new-password" },
+        new Headers(),
+      );
+      expect(resetOutcome.status).toBe("ok");
+
+      const staleOutcome = await resetPassword(
+        { token: firstToken, newPassword: "another-password" },
+        new Headers(),
+      );
+      expect(staleOutcome.status).toBe("invalid_token");
+    });
+  });
 });

@@ -79,21 +79,53 @@ describe("magic link sign-in", () => {
     });
   });
 
-  it("never creates an account for an email with no sign-up (disableSignUp)", async () => {
+  it("never sends an email or creates an account for an address with no sign-up (disableSignUp)", async () => {
     await withTestDb(async (db) => {
       const email = "no-account@example.com";
 
       const requestOutcome = await requestMagicLink(email, new Headers());
       expect(requestOutcome.status).toBe("ok");
 
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
-
-      await expect(
-        getAuth().api.magicLinkVerify({ query: { token }, headers: new Headers() }),
-      ).rejects.toThrow();
+      // Better Auth's own endpoint still mints and stores a verification
+      // token before calling sendMagicLink, regardless of whether the
+      // address has an account; what must never happen is Feudo mailing a
+      // stranger, so the only externally observable proof is the absence of
+      // that email — there is no token left to hand to magicLinkVerify.
+      expect(await findLastFakeSentEmail(db, email)).toBeUndefined();
 
       const rows = await db.select().from(user).where(eq(user.email, email));
       expect(rows).toHaveLength(0);
+    });
+  });
+
+  it("promotes an unverified user's account access on a successful click and revokes their password", async () => {
+    await withTestDb(async () => {
+      const email = "unverified-magic-link@example.com";
+      const password = "correct-horse";
+
+      const signUpOutcome = await signUp(
+        { name: "Unverified Magic Link", email, password, termsAccepted: true },
+        new Headers(),
+      );
+      expect(signUpOutcome.status).toBe("ok");
+
+      const requestOutcome = await requestMagicLink(email, new Headers());
+      expect(requestOutcome.status).toBe("ok");
+      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+
+      const result = await getAuth().api.magicLinkVerify({
+        query: { token },
+        headers: new Headers(),
+      });
+      expect(result.user.email).toBe(email);
+      expect(result.user.emailVerified).toBe(true);
+
+      // revokeUnprovenAccountAccess (docs/runbooks/auth.md, "Magic link
+      // never signs up") deleted the credential account created at sign-up;
+      // the old password no longer works, and the sign-in UI always links
+      // to /esqueci-a-senha for exactly this recovery path.
+      const signInOutcome = await signIn({ email, password }, new Headers());
+      expect(signInOutcome.status).toBe("invalid_credentials");
     });
   });
 
