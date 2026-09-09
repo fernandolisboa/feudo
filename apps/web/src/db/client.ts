@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import ws from "ws";
 
 import { MissingDatabaseUrlError } from "./errors";
 import * as schema from "./schema";
@@ -18,6 +18,6 @@ export function getDb(): Database {
     throw new MissingDatabaseUrlError();
   }
 
-  cachedDb = drizzle({ client: neon(url), schema });
+  cachedDb = drizzle({ connection: url, ws, schema });
   return cachedDb;
 }
