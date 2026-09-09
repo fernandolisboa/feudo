@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
@@ -15,15 +15,28 @@ import { initialActionState } from "@/modules/auth/action-state";
 
 import { updateThemeAction } from "../actions";
 import { t } from "../strings";
-import { THEME_NAMES, type ThemeName } from "../tokens";
+import { isThemeName, THEME_NAMES, type ThemeName } from "../tokens";
 
 export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
   const [state, formAction] = useActionState(updateThemeAction, initialActionState);
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(currentTheme);
+
+  // Rolls back an optimistic selection the server rejected. Adjusted during
+  // render (React's "storing information from previous renders" pattern),
+  // not an effect, so the rollback lands in the same commit as the failure.
+  const [lastHandledState, setLastHandledState] = useState(state);
+  if (state !== lastHandledState) {
+    setLastHandledState(state);
+    if (state.status === "error") {
+      setSelectedTheme(currentTheme);
+    }
+  }
 
   function handleValueChange(value: string | null): void {
-    if (!value) {
+    if (!value || !isThemeName(value)) {
       return;
     }
+    setSelectedTheme(value);
     // Builds FormData from the value onValueChange hands us, rather than
     // reading a hidden form input and calling requestSubmit(): that input's
     // DOM value lags one React commit behind onValueChange, so
@@ -37,7 +50,7 @@ export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="theme">{t.preferences.themeLabel}</Label>
-        <Select defaultValue={currentTheme} onValueChange={handleValueChange}>
+        <Select value={selectedTheme} onValueChange={handleValueChange}>
           <SelectTrigger id="theme" className="w-56">
             <SelectValue />
           </SelectTrigger>
