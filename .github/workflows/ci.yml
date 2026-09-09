@@ -141,7 +141,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm --filter @feudo/web exec playwright install --with-deps chromium
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome*.sources
+          pnpm --filter @feudo/web exec playwright install --with-deps chromium
 
       - name: Wait for the Vercel preview deployment
         id: preview

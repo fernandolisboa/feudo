@@ -2,15 +2,24 @@ import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { magicLink } from "better-auth/plugins";
+import { and, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
 
 import type { Database } from "@/db/client";
+import { verification } from "@/db/schema/auth";
+import { buildMagicLinkEmail } from "./email/magic-link-email";
+import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
 import { TERMS_VERSION } from "./terms";
-
-const VERIFICATION_EXPIRES_IN_SECONDS = 60 * 60;
+import {
+  describeExpiryPtBR,
+  MAGIC_LINK_EXPIRES_IN_SECONDS,
+  RESET_PASSWORD_EXPIRES_IN_SECONDS,
+  VERIFICATION_EXPIRES_IN_SECONDS,
+} from "./token-expiry";
 
 function readTermsVersion(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) {
@@ -30,6 +39,19 @@ function hasConsentField(body: unknown): boolean {
   return CONSENT_FIELDS.some((field) => keys.includes(field));
 }
 
+const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
+
+async function deleteOtherPasswordResetTokens(db: Database, userId: string): Promise<void> {
+  await db
+    .delete(verification)
+    .where(
+      and(
+        eq(verification.value, userId),
+        like(verification.identifier, `${RESET_PASSWORD_VERIFICATION_PREFIX}%`),
+      ),
+    );
+}
+
 export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.env) {
   const baseURL = readAuthBaseUrl(env);
   // Built eagerly, not inside sendVerificationEmail below: Better Auth swallows
@@ -46,6 +68,22 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      revokeSessionsOnPasswordReset: true,
+      resetPasswordTokenExpiresIn: RESET_PASSWORD_EXPIRES_IN_SECONDS,
+      sendResetPassword: async ({ user, url }) => {
+        const email = buildResetPasswordEmail(
+          url,
+          describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
+        );
+        await emailSender.send({ to: user.email, ...email });
+      },
+      // The token just consumed to reach this callback is already gone
+      // (consumeVerificationValue deletes it); any other outstanding
+      // reset-password token for the same user is still live and would
+      // otherwise let a stale link set yet another password later.
+      onPasswordReset: async ({ user }) => {
+        await deleteOtherPasswordResetTokens(db, user.id);
+      },
     },
     user: {
       additionalFields: {
@@ -67,13 +105,28 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       autoSignInAfterVerification: false,
       expiresIn: VERIFICATION_EXPIRES_IN_SECONDS,
       sendVerificationEmail: async ({ user, url }) => {
-        const email = buildVerificationEmail(user.name, url);
+        const email = buildVerificationEmail(url);
         await emailSender.send({ to: user.email, ...email });
       },
     },
     rateLimit: {
       enabled: true,
       storage: "database",
+      // Magic-link sign-in and the reset-password submission fall outside
+      // Better Auth's own default special rules (magic link defaults to
+      // 60s/5 via the plugin; reset submission isn't listed at all), so we
+      // align the sign-in family's 10s/3 strictness on the ones a bot could
+      // spam. `/magic-link/verify` and `/reset-password/*` are the GET links
+      // an email client re-opens (link previews, double-clicks) and their
+      // tokens are single-use anyway, so they get a looser ceiling: a 429 on
+      // a GET a real user's browser navigates to would surface as raw JSON
+      // instead of the app's error page (no route handler intercepts it).
+      customRules: {
+        "/sign-in/magic-link": { window: 10, max: 3 },
+        "/magic-link/verify": { window: 10, max: 20 },
+        "/reset-password": { window: 10, max: 3 },
+        "/reset-password/*": { window: 10, max: 20 },
+      },
     },
     hooks: {
       // eslint-disable-next-line @typescript-eslint/require-await -- Better Auth's middleware type requires an async handler even though this hook never awaits.
@@ -110,6 +163,32 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         }
       }),
     },
-    plugins: [nextCookies()],
+    plugins: [
+      magicLink({
+        // Sign-up policy (REGISTRATION_MODE, terms acceptance) is enforced
+        // only on /sign-up/email's hooks.before; letting magic link mint new
+        // accounts would bypass both. It only ever signs in an existing user.
+        disableSignUp: true,
+        storeToken: "hashed",
+        expiresIn: MAGIC_LINK_EXPIRES_IN_SECONDS,
+        sendMagicLink: async ({ email, url }, ctx) => {
+          // Better Auth always mints and stores the token before calling
+          // this, regardless of whether the email exists; only the send
+          // itself is gated here, so requesting a link for a stranger's
+          // address never turns Feudo into an unauthenticated mailer for
+          // that inbox (quota, deliverability reputation).
+          const existing = await ctx?.context.internalAdapter.findUserByEmail(email);
+          if (!existing) {
+            return;
+          }
+          const magicLinkEmail = buildMagicLinkEmail(
+            url,
+            describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
+          );
+          await emailSender.send({ to: email, ...magicLinkEmail });
+        },
+      }),
+      nextCookies(),
+    ],
   } satisfies BetterAuthOptions;
 }

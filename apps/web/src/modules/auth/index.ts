@@ -1,9 +1,20 @@
 export type { ActionState } from "./action-state";
 export { initialActionState } from "./action-state";
-export { resendVerificationAction, signInAction, signOutAction, signUpAction } from "./actions";
+export {
+  requestMagicLinkAction,
+  requestPasswordResetAction,
+  resendVerificationAction,
+  resetPasswordAction,
+  signInAction,
+  signOutAction,
+  signUpAction,
+} from "./actions";
 export { getAuth } from "./auth";
 export { AuthShell } from "./components/auth-shell";
+export { ForgotPasswordForm } from "./components/forgot-password-form";
+export { MagicLinkForm } from "./components/magic-link-form";
 export { ResendVerificationForm } from "./components/resend-verification-form";
+export { ResetPasswordForm } from "./components/reset-password-form";
 export { SignInForm } from "./components/sign-in-form";
 export { SignUpForm } from "./components/sign-up-form";
 export { findLastFakeSentEmail } from "./email/fake-email-repository";
