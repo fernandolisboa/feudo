@@ -20,7 +20,7 @@
 
 ## Shell & Command Reliability
 1. **[2026-09-08] lint-staged runs Prettier on Markdown, which re-pads tables; exact-string replaces fail silently**
-   Do instead: anchor edits on line prefixes, always `assert` the match, run `pnpm exec prettier --write` afterwards; Bash `cd` persists across calls, so use absolute paths.
+   Do instead: anchor edits on line prefixes, always `assert` the match, run `pnpm exec prettier --write` afterwards; Bash `cd` persists across calls, so use absolute paths. Verify with `grep -c` before committing or posting a PR comment that claims a fix landed (2026-09-09: a partial apply shipped with a comment saying "all applied").
 2. **[2026-09-02] Pushes to `main` are blocked by ruleset 22097993 (PR + CI only); the gh token needed `workflow` scope**
    Do instead: work on branches and open PRs; the ruleset can only be toggled with the owner's explicit OK.
 3. **[2026-09-02] `npx impeccable skills install` fails with "invalid zip data" (fflate)**

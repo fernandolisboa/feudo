@@ -39,7 +39,9 @@ with reasoning, refreshed periodically.
 2. Ledger dashboard: balances, spending by category, monthly evolution, savings rate.
 3. Reserve view: target, current coverage, ranked placement options with trade-offs.
 
-Later: bank comparison view, monthly AI analysis, settings (members, data export, deletion).
+Later: bank comparison view, monthly AI analysis, settings (members, data export, deletion). The
+app shell reserves their destinations (Bancos, Casa) from the start; they stay disabled until their
+tickets land.
 
 ## Principles that shape the product
 
