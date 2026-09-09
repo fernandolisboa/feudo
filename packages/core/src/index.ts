@@ -7,6 +7,3 @@ export type {
   RegistrationDecision,
 } from "./auth/registration-policy";
 export { evaluateRegistrationMode } from "./auth/registration-policy";
-
-export type { TermsDecision } from "./auth/terms-policy";
-export { evaluateTermsAcceptance } from "./auth/terms-policy";
