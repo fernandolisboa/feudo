@@ -10,7 +10,8 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center px-4 py-12">
+    <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
+      <span className="text-lg font-semibold tracking-tight">Feudo</span>
       <div className="border-border bg-card w-full max-w-sm rounded-lg border p-6">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {subtitle ? <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p> : null}

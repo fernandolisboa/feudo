@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AuthShell, ResendVerificationForm, t } from "@/modules/auth";
 
 export default async function VerifyEmailPage({
@@ -9,12 +11,23 @@ export default async function VerifyEmailPage({
 
   return (
     <AuthShell title={t.verifyEmail.title}>
-      <p className="text-sm">{t.verifyEmail.body.replace("{email}", email ?? "")}</p>
       {email ? (
-        <div className="mt-4">
-          <ResendVerificationForm email={email} />
-        </div>
-      ) : null}
+        <>
+          <p className="text-sm">{t.verifyEmail.body.replace("{email}", email)}</p>
+          <div className="mt-4">
+            <ResendVerificationForm email={email} />
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm">{t.verifyEmail.bodyMissingEmail}</p>
+          <p className="mt-4 text-sm">
+            <Link href="/entrar" className="text-foreground underline underline-offset-4">
+              {t.verifyEmail.backToSignIn}
+            </Link>
+          </p>
+        </>
+      )}
     </AuthShell>
   );
 }

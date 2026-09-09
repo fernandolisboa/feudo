@@ -45,9 +45,11 @@ export function SignUpForm() {
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <Checkbox id="termsAccepted" name="termsAccepted" />
-        <Label htmlFor="termsAccepted">{t.signUp.termsLabel}</Label>
+      <div className="flex items-start gap-2">
+        <Checkbox id="termsAccepted" name="termsAccepted" className="mt-0.5" />
+        <Label htmlFor="termsAccepted" className="text-sm leading-normal font-normal">
+          {t.signUp.termsLabel}
+        </Label>
       </div>
 
       <Button type="submit" disabled={isPending}>

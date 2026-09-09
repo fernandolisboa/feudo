@@ -22,8 +22,11 @@ const en = {
   verifyEmail: {
     title: "Confirm your sign-up",
     body: "We sent a confirmation link to {email}. Click the link to confirm your sign-up.",
+    bodyMissingEmail:
+      "We couldn't find the email for this sign-up attempt. Go back to sign up or try signing in.",
     resend: "Resend email",
     resent: "We sent the email again.",
+    backToSignIn: "Back to sign in",
   },
   overview: {
     title: "Overview",
@@ -36,7 +39,7 @@ const en = {
     html: '<p>Hello, {name}.</p><p>Confirm your email to start using Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
   errors: {
-    invalidInput: "Check the fields highlighted below.",
+    invalidInput: "Check the information you entered and try again.",
     termsRequired: "You must accept the terms of use and the privacy policy.",
     registrationClosed: "Registration is closed at the moment.",
     inviteRequired: "Registration is invite-only at the moment.",
@@ -72,8 +75,11 @@ const ptBR = {
   verifyEmail: {
     title: "Confirme seu cadastro",
     body: "Enviamos um link de confirmação para {email}. Clique no link para confirmar seu cadastro.",
+    bodyMissingEmail:
+      "Não encontramos o e-mail deste cadastro. Volte para criar o cadastro ou tente entrar.",
     resend: "Reenviar e-mail",
     resent: "Enviamos o e-mail novamente.",
+    backToSignIn: "Voltar para entrar",
   },
   overview: {
     title: "Visão geral",
@@ -86,7 +92,7 @@ const ptBR = {
     html: '<p>Olá, {name}.</p><p>Confirme seu e-mail para começar a usar o Feudo:</p><p><a href="{url}">{url}</a></p>',
   },
   errors: {
-    invalidInput: "Confira os campos destacados abaixo.",
+    invalidInput: "Confira os dados informados e tente novamente.",
     termsRequired: "Você precisa aceitar os termos de uso e a política de privacidade.",
     registrationClosed: "O cadastro está fechado no momento.",
     inviteRequired: "O cadastro é somente por convite no momento.",
