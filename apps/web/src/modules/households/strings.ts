@@ -213,7 +213,7 @@ const ptBR = {
     invitationCancelled: "Convite cancelado.",
     memberRemoved: "Membro removido da casa.",
     roleUpdated: "Papel atualizado.",
-    ownershipTransferred: "Responsabilidade pela casa transferida.",
+    ownershipTransferred: "Responsabilidade transferida.",
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",

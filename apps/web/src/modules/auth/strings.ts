@@ -205,7 +205,7 @@ const ptBR = {
     registrationClosed: "O cadastro está fechado no momento.",
     inviteRequired: "O cadastro é somente por convite no momento.",
     signUpFailed: "Não foi possível concluir seu cadastro. Tente novamente.",
-    invalidCredentials: "E-mail ou senha incorretos. Tente novamente.",
+    invalidCredentials: "E-mail ou senha incorretos.",
     emailNotVerified: "Confirme seu e-mail antes de entrar.",
     resendFailed: "Não foi possível reenviar o e-mail. Tente novamente.",
     rateLimited: "Muitas tentativas. Tente novamente em instantes.",
