@@ -14,9 +14,10 @@ shadows, one accent used sparingly, dense enough for a desktop that is open ever
 
 - **App shell**: a CSS grid with named areas (nav, header, content). The theme's `shell` field
   places the nav: `sidebar` (collapsible, 224px open with labels, 64px collapsed with icons only,
-  state remembered per user) or `topnav` (a horizontal bar under the header). Under 768px every
-  theme uses a bottom tab bar. Five destinations: Visão geral, Transações, Reserva, Bancos, Casa.
-  Household switcher at the nav foot (sidebar), in the bar (topnav) or in the mobile header.
+  state remembered per browser via a cookie) or `topnav` (a horizontal bar under the header).
+  Under 768px every theme uses a bottom tab bar. Five destinations: Visão geral, Transações,
+  Reserva, Bancos, Casa. Household switcher at the nav foot (sidebar), in the bar (topnav) or in
+  the mobile header.
 - **Page**: overline (section · period) + serif headline that states the month's fact in one
   sentence, actions on the right; then sections separated by hairlines with a serif section title
   and a right-aligned meta or action.
@@ -54,7 +55,8 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 | `--font-mono`    | unset (falls back to `--font-body`)                  | numerals in themes that want a monospaced figure |
 | `--radius`       | `6px`                                                | controls, panels (tags 4px, avatars round)       |
 | `--elevation`    | none                                                 | hairlines only                                   |
-| `--density`      | body 14px, row 40px                                  |                                                  |
+| `--density-body` | `14px`                                               | base body text size                              |
+| `--density-row`  | `40px`                                               | table row height                                 |
 | `shell`          | `sidebar`                                            | nav placement: `sidebar` or `topnav`             |
 
 ### Painel
@@ -141,7 +143,3 @@ categories.
 Every UI ticket ships with: `npx impeccable detect` clean, `/impeccable critique` by `ui-critic`
 with no blocking findings in the default theme, and the token contrast test green for all
 themes. `/impeccable audit` belongs to the owner.
-
-The registration/verification/login screens (ticket #7) and the magic-link/password-reset screens
-(ticket #8) ship on the shadcn scaffold theme, not yet wired to the Caderno tokens above; ticket #9
-(design system wiring) brings them onto `DESIGN.md`.

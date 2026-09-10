@@ -7,8 +7,11 @@ import {
   boolean,
   integer,
   index,
+  pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+export const themeEnum = pgEnum("theme", ["caderno", "painel", "sala"]);
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -18,6 +21,7 @@ export const user = pgTable("user", {
   image: text("image"),
   termsVersion: text("terms_version").notNull(),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }).notNull(),
+  theme: themeEnum("theme").notNull().default("caderno"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

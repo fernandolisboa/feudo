@@ -41,7 +41,10 @@ export function ForgotPasswordForm() {
       </Button>
 
       <p className="text-muted-foreground text-sm">
-        <Link href="/entrar" className="text-foreground underline underline-offset-4">
+        <Link
+          href="/entrar"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
           {t.forgotPassword.backToSignIn}
         </Link>
       </p>

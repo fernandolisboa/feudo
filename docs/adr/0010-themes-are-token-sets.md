@@ -13,3 +13,4 @@ The owner wants users to pick a look, and the three direction sketches from Phas
 - The Impeccable gate runs on the default theme; an automated contrast test covers every theme's text-on-surface and chart-on-background pairs, so no theme can ship below WCAG AA.
 - A theme may move the navigation (sidebar or top bar) and restyle any component through tokens (`--elevation`, `--radius`, density), but it cannot change component anatomy: the accounts list is one table component in every theme, the page headline is one component. Swapping a table for a card grid would be a new component decision, not a theme.
 - The AppShell is tested in both layouts plus the mobile bottom-tab variant.
+- `theme` writes `user.theme` directly (a scoped update by the session's own user id), a documented exception to ADR-0001's "only the `auth` and `households` modules touch Better Auth"; the column is a UI preference, not identity or tenancy, and carries no isolation risk.

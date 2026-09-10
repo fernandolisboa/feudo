@@ -5,7 +5,7 @@ import type { CurrentSession } from "@/modules/auth";
 import { NoActiveHouseholdError, householdScope } from "./scope";
 
 function fakeSession(householdId: string | null): CurrentSession {
-  return { userId: "user-1", name: "Ada", email: "ada@example.com", householdId };
+  return { userId: "user-1", name: "Ada", email: "ada@example.com", householdId, theme: "caderno" };
 }
 
 describe("householdScope", () => {

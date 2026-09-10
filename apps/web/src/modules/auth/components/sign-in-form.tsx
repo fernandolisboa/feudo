@@ -43,20 +43,29 @@ export function SignInForm() {
       </Button>
 
       <p className="text-muted-foreground text-sm">
-        <Link href="/entrar/link-magico" className="text-foreground underline underline-offset-4">
+        <Link
+          href="/entrar/link-magico"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
           {t.signIn.magicLinkLink}
         </Link>
       </p>
 
       <p className="text-muted-foreground text-sm">
-        <Link href="/esqueci-a-senha" className="text-foreground underline underline-offset-4">
+        <Link
+          href="/esqueci-a-senha"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
           {t.signIn.forgotPasswordLink}
         </Link>
       </p>
 
       <p className="text-muted-foreground text-sm">
         {t.signIn.noAccount}{" "}
-        <Link href="/registrar" className="text-foreground underline underline-offset-4">
+        <Link
+          href="/registrar"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
           {t.signIn.signUpLink}
         </Link>
       </p>
