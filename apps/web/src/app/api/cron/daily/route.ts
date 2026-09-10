@@ -7,24 +7,15 @@ import { pruneExpiredVerifications } from "@/modules/auth";
 import { pruneExpiredInvitations } from "@/modules/households";
 
 import type { Database } from "@/db/client";
-import type { RefreshSeriesResult } from "@/lib/market-data";
 
-type MarketDataStep = { ok: boolean; results: RefreshSeriesResult[] } | { error: string };
+export const maxDuration = 60;
+
+type MarketDataStep = Awaited<ReturnType<typeof refreshMarketData>> | { error: string };
 type PruneVerificationStep = { deleted: number } | { error: string };
-type PruneInvitationStep = { deleted: number } | { error: string };
+type PruneInvitationsStep = { deleted: number } | { error: string };
 
 function errorName(error: unknown): string {
   return error instanceof Error ? error.name : "UnknownError";
-}
-
-async function runMarketDataStep(db: Database): Promise<MarketDataStep> {
-  try {
-    const results = await refreshMarketData(db);
-    const everySeriesSkipped = results.every((result) => result.outcome === "skipped");
-    return { ok: !everySeriesSkipped, results };
-  } catch (error) {
-    return { error: errorName(error) };
-  }
 }
 
 async function runPruneVerificationStep(db: Database): Promise<PruneVerificationStep> {
@@ -36,10 +27,18 @@ async function runPruneVerificationStep(db: Database): Promise<PruneVerification
   }
 }
 
-async function runPruneInvitationStep(db: Database): Promise<PruneInvitationStep> {
+async function runPruneInvitationsStep(db: Database): Promise<PruneInvitationsStep> {
   try {
     const deleted = await pruneExpiredInvitations(db);
     return { deleted };
+  } catch (error) {
+    return { error: errorName(error) };
+  }
+}
+
+async function runMarketDataStep(db: Database): Promise<MarketDataStep> {
+  try {
+    return await refreshMarketData(db);
   } catch (error) {
     return { error: errorName(error) };
   }
@@ -51,16 +50,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const db = getDb();
-  const marketData = await runMarketDataStep(db);
   const pruneVerification = await runPruneVerificationStep(db);
-  const pruneInvitation = await runPruneInvitationStep(db);
+  const pruneInvitations = await runPruneInvitationsStep(db);
+  const marketData = await runMarketDataStep(db);
   const marketDataOk = "error" in marketData ? false : marketData.ok;
   const pruneVerificationOk = !("error" in pruneVerification);
-  const pruneInvitationOk = !("error" in pruneInvitation);
-  const ok = marketDataOk && pruneVerificationOk && pruneInvitationOk;
+  const pruneInvitationsOk = !("error" in pruneInvitations);
+  const ok = marketDataOk && pruneVerificationOk && pruneInvitationsOk;
 
   return NextResponse.json(
-    { ok, steps: { marketData, pruneVerification, pruneInvitation } },
+    { ok, steps: { pruneVerification, pruneInvitations, marketData } },
     { status: ok ? 200 : 500 },
   );
 }

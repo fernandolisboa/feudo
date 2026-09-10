@@ -1,4 +1,4 @@
-import { t } from "@/modules/theme";
+import { t } from "./strings";
 
 export type NavIconName = "overview" | "transactions" | "reserve" | "banks" | "household";
 

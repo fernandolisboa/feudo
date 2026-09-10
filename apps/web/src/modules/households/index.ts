@@ -1,5 +1,6 @@
-export { HouseholdSwitcher } from "./components/household-switcher";
+export { HouseholdSwitcherSelect } from "./components/household-switcher-select";
 export { OnboardingForm } from "./components/onboarding-form";
+export { getHouseholdSwitcherProps } from "./get-household-switcher-props";
 export { pruneExpiredInvitations } from "./invitation-prune";
 export type { HouseholdSettings } from "./repository";
 export { getHouseholdSettings } from "./repository";

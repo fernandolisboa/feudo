@@ -49,7 +49,7 @@ test("the app shell: sidebar (open, collapsed), topnav and mobile bottom tabs", 
 
   await test.step("switching to the sala theme renders a topnav instead of a sidebar", async () => {
     await page.goto("/preferencias");
-    await page.getByRole("combobox").click();
+    await page.getByRole("combobox", { name: "Tema" }).click();
     await page.getByRole("option", { name: "Sala" }).click();
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "sala");

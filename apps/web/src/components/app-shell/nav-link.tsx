@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { t } from "@/modules/theme";
 
 import { NAV_ICONS } from "./nav-icons";
 import type { NavItem } from "./nav-items";
+import { t } from "./strings";
 
 export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean }) {
   const pathname = usePathname();
@@ -24,6 +24,7 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
               className="app-shell-nav-link app-shell-nav-link-disabled"
               aria-disabled="true"
               aria-label={showLabel ? undefined : item.label}
+              tabIndex={0}
             />
           }
         >

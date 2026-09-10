@@ -11,9 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { t } from "@/modules/theme";
+import { SignOutMenuItem } from "@/modules/auth";
 
-import { SignOutMenuItem } from "./sign-out-menu-item";
+import { t } from "./strings";
 
 export function UserMenu({ name, email }: { name: string; email: string }) {
   return (
