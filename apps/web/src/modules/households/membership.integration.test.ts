@@ -113,6 +113,25 @@ async function ownerMemberId(db: Database, householdId: string): Promise<string>
   return row.id;
 }
 
+const SINGLE_OWNER_SQLSTATE = "23514";
+
+function sqlStateOf(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (typeof current === "object" && current !== null && "code" in current) {
+      const code = (current as { code?: unknown }).code;
+      if (typeof code === "string") {
+        return code;
+      }
+    }
+    if (typeof current !== "object" || current === null || !("cause" in current)) {
+      return undefined;
+    }
+    current = current.cause;
+  }
+  return undefined;
+}
+
 describe("inviteMember (integration)", () => {
   it("sends an invitation email and creates a pending invite", async () => {
     await withTestDb(async (db) => {
@@ -131,7 +150,7 @@ describe("inviteMember (integration)", () => {
       expect(sent).toBeDefined();
       expect(sent?.text).toContain("Casa");
 
-      const invites = await listPendingInvitations(session, db, owner.headers);
+      const invites = await listPendingInvitations(session, db);
       expect(invites).toHaveLength(1);
       expect(invites[0]).toMatchObject({ email: "friend@example.com", role: "member" });
     });
@@ -792,7 +811,7 @@ describe("expired invitations (integration)", () => {
       if (invited.status !== "ok") throw new Error("invite failed in test setup");
       await expireInvitation(db, invited.invitationId);
 
-      const invites = await listPendingInvitations(session, db, owner.headers);
+      const invites = await listPendingInvitations(session, db);
       expect(invites).toHaveLength(0);
     });
   });
@@ -868,12 +887,15 @@ describe("zero-owner race (integration)", () => {
 
       const removeAttempt = db
         .transaction(async (tx) => {
-          const [row] = await tx
-            .select({ role: member.role })
-            .from(member)
-            .where(eq(member.id, target.memberId));
-          expect(row?.role).toBe("admin");
-          markRoleChecked?.();
+          try {
+            const [row] = await tx
+              .select({ role: member.role })
+              .from(member)
+              .where(eq(member.id, target.memberId));
+            expect(row?.role).toBe("admin");
+          } finally {
+            markRoleChecked?.();
+          }
           await removeCanProceed;
           await tx.delete(member).where(eq(member.id, target.memberId));
         })
@@ -887,6 +909,7 @@ describe("zero-owner race (integration)", () => {
 
       const removeResult = await removeAttempt;
       expect(removeResult).toBeDefined();
+      expect(sqlStateOf(removeResult)).toBe(SINGLE_OWNER_SQLSTATE);
 
       const rows = await db
         .select({ userId: member.userId, role: member.role })
@@ -962,7 +985,7 @@ describe("invitation delivery failure (integration)", () => {
         .where(eq(invitation.id, invited.invitationId));
       expect(row?.deliveryFailedAt).not.toBeNull();
 
-      const invites = await listPendingInvitations(session, db, owner.headers);
+      const invites = await listPendingInvitations(session, db);
       expect(
         invites.find((entry) => entry.id === invited.invitationId)?.deliveryFailedAt,
       ).not.toBeNull();
@@ -1045,6 +1068,224 @@ describe("invitation delivery failure (integration)", () => {
         .from(invitation)
         .where(eq(invitation.id, invited.invitationId));
       expect(row?.deliveryFailedAt).not.toBeNull();
+    });
+  });
+});
+
+describe("resendInvitation ceiling and eligibility (integration)", () => {
+  it("refuses to resend an invitation that never failed to send", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-healthy-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+
+      const invited = await inviteMember(
+        { email: "resend-healthy-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("not_found");
+    });
+  });
+
+  it("refuses a resend within the minimum interval of the invitation's own last successful send", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-min-interval-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: "resend-min-interval-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      // Simulates a resend that landed moments ago: lastSentAt is only ever
+      // set by a successful send (auth/options.ts's sendInvitationEmail), so
+      // this seeds the state a real double-click would produce without
+      // depending on real wall-clock delay in the test.
+      await db
+        .update(invitation)
+        .set({ lastSentAt: new Date() })
+        .where(eq(invitation.id, invited.invitationId));
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("rate_limited");
+    });
+  });
+
+  it(
+    "still counts an invitation with an old createdAt toward the hourly ceiling once it has been resent",
+    { timeout: 60_000 },
+    async () => {
+      await withTestDb(async (db) => {
+        const owner = await createOwnerWithHousehold(
+          db,
+          "Owner",
+          "resend-ceiling-owner@example.com",
+          "Casa",
+        );
+        const session = await householdSessionFor(owner.headers);
+        vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+        const invited = await inviteMember(
+          { email: "resend-ceiling-invitee@example.com", role: "member" },
+          session,
+          db,
+          owner.headers,
+        );
+        expect(invited.status).toBe("ok");
+        if (invited.status !== "ok") return;
+
+        // Pushed outside the hourly window on createdAt alone: only a recent
+        // lastSentAt (set by the resend below) can keep this row counting
+        // toward recentInvitationCount's ceiling.
+        await db
+          .update(invitation)
+          .set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) })
+          .where(eq(invitation.id, invited.invitationId));
+
+        const resendOutcome = await resendInvitation(
+          invited.invitationId,
+          session,
+          db,
+          owner.headers,
+        );
+        expect(resendOutcome.status).toBe("ok");
+
+        // 19 more, cancelled immediately (Better Auth's own invitationLimit
+        // caps pending invitations per household, independent of this
+        // per-inviter hourly count) — combined with the aged-but-resent
+        // invitation above, that is 20 rows recentInvitationCount should
+        // count as recent; a 21st fails only if the aged row still counts.
+        for (let index = 0; index < 19; index += 1) {
+          const outcome = await inviteMember(
+            {
+              email: `resend-ceiling-${index.toString()}-${crypto.randomUUID()}@example.com`,
+              role: "member",
+            },
+            session,
+            db,
+            owner.headers,
+          );
+          expect(outcome.status).toBe("ok");
+          if (outcome.status === "ok") {
+            await cancelInvitation(outcome.invitationId, session, owner.headers);
+          }
+        }
+
+        const overflow = await inviteMember(
+          { email: `resend-ceiling-overflow-${crypto.randomUUID()}@example.com`, role: "member" },
+          session,
+          db,
+          owner.headers,
+        );
+        expect(overflow.status).toBe("rate_limited");
+      });
+    },
+  );
+
+  it("reports failed when the resend's own send attempt also fails", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-failed-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send")
+        .mockRejectedValueOnce(new Error("provider down"))
+        .mockRejectedValueOnce(new Error("provider still down"));
+
+      const invited = await inviteMember(
+        { email: "resend-failed-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("failed");
+
+      const [row] = await db
+        .select({ deliveryFailedAt: invitation.deliveryFailedAt })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.deliveryFailedAt).not.toBeNull();
+    });
+  });
+
+  it("refuses to resurrect a cancelled invitation through resend", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-cancelled-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: "resend-cancelled-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const cancelOutcome = await cancelInvitation(invited.invitationId, session, owner.headers);
+      expect(cancelOutcome.status).toBe("ok");
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("not_found");
+
+      const [row] = await db
+        .select({ status: invitation.status })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.status).toBe("canceled");
     });
   });
 });
