@@ -10,6 +10,7 @@ import { householdSettings, session as sessionTable } from "@/db/schema";
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
+import { buildInvitationEmail } from "./email/invitation-email";
 import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
@@ -20,12 +21,12 @@ import { TERMS_VERSION } from "./terms";
 import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
 import {
   describeExpiryPtBR,
+  INVITATION_EXPIRES_IN_SECONDS,
   MAGIC_LINK_EXPIRES_IN_SECONDS,
   RESET_PASSWORD_EXPIRES_IN_SECONDS,
   VERIFICATION_EXPIRES_IN_SECONDS,
 } from "./token-expiry";
 
-const INVITATION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
 // A household is a small pool of people, not an org chart: 20 households per
 // user is already generous headroom and keeps a compromised account from
 // spraying orgs.
@@ -220,6 +221,16 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         // roles, so no ac/roles override is needed to match household vocabulary.
         invitationExpiresIn: INVITATION_EXPIRES_IN_SECONDS,
         organizationLimit: ORGANIZATION_LIMIT,
+        sendInvitationEmail: async ({ id, email, role, organization, inviter }) => {
+          const invitationEmail = buildInvitationEmail(
+            `${baseURL}/convite/${id}`,
+            organization.name,
+            inviter.user.name,
+            role,
+            describeExpiryPtBR(INVITATION_EXPIRES_IN_SECONDS),
+          );
+          await emailSender.send({ to: email, ...invitationEmail });
+        },
         organizationHooks: {
           beforeCreateOrganization: ({ organization }) => {
             if (organization.logo || organization.metadata) {
@@ -251,14 +262,25 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
               .onConflictDoNothing();
           },
           // Owner never transfers through this generic endpoint (ADR-0001):
-          // that needs a dedicated transfer action, not yet built (#11), that
-          // promotes and demotes in one transaction. The partial unique index
-          // on member (organization_id) where role = 'owner' is the
+          // ownership only moves through households.transferOwnership, a
+          // dedicated action that promotes and demotes in one database
+          // transaction, bypassing this hook entirely. The partial unique
+          // index on member (organization_id) where role = 'owner' is the
           // second, DB-level line of defense.
           beforeUpdateMemberRole: ({ newRole }) => {
             const roles = Array.isArray(newRole) ? newRole : [newRole];
             if (roles.includes(OWNER_ROLE)) {
               throw new APIError("FORBIDDEN", { message: "owner_role_not_transferable" });
+            }
+            return Promise.resolve();
+          },
+          // Mirrors beforeUpdateMemberRole: nobody is ever invited as owner
+          // (ADR-0001) — a household always has exactly one, established at
+          // creation and moved only through households.transferOwnership.
+          beforeCreateInvitation: ({ invitation }) => {
+            const roles = invitation.role.split(",").map((role) => role.trim());
+            if (roles.includes(OWNER_ROLE)) {
+              throw new APIError("FORBIDDEN", { message: "owner_role_not_invitable" });
             }
             return Promise.resolve();
           },

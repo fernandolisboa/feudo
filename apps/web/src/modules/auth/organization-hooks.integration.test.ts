@@ -114,6 +114,31 @@ describe("organization plugin hooks (integration)", () => {
     });
   });
 
+  it("refuses to invite someone as owner, even for the household's own owner", async () => {
+    await withTestDb(async (db) => {
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "owner-invite@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: crypto.randomUUID() },
+      });
+
+      await expect(
+        getAuth().api.createInvitation({
+          headers: ownerHeaders,
+          body: {
+            email: "future-owner@example.com",
+            role: "owner",
+            organizationId: organization.id,
+          },
+        }),
+      ).rejects.toThrow(APIError);
+    });
+  });
+
   it("keeps at most one owner row per organization at the database level", async () => {
     await withTestDb(async (db) => {
       const ownerHeaders = await signUpVerifiedUser(db, {

@@ -77,6 +77,11 @@ const en = {
     text: "Use this link to set a new password: {url}\n\nThe link expires in {expiresIn} and works once. If you didn't request this, ignore this email.",
     html: '<p>Use this link to set a new password:</p><p><a href="{url}">{url}</a></p><p>The link expires in {expiresIn} and works once. If you didn\'t request this, ignore this email.</p>',
   },
+  invitationEmail: {
+    subject: "{inviterName} invited you to {householdName} on Feudo",
+    text: "{inviterName} invited you to join {householdName} on Feudo as {role}.\n\nAccept the invite: {url}\n\nThe invite expires in {expiresIn}.",
+    html: '<p>{inviterName} invited you to join <strong>{householdName}</strong> on Feudo as {role}.</p><p><a href="{url}">Accept the invite</a></p><p>The invite expires in {expiresIn}.</p>',
+  },
   errors: {
     invalidInput: "Check the information you entered and try again.",
     termsRequired: "You must accept the terms of use and the privacy policy.",
@@ -171,6 +176,11 @@ const ptBR = {
     subject: "Redefina sua senha no Feudo",
     text: "Use este link para definir uma nova senha: {url}\n\nO link expira em {expiresIn} e funciona uma única vez. Se você não pediu isso, ignore este e-mail.",
     html: '<p>Use este link para definir uma nova senha:</p><p><a href="{url}">{url}</a></p><p>O link expira em {expiresIn} e funciona uma única vez. Se você não pediu isso, ignore este e-mail.</p>',
+  },
+  invitationEmail: {
+    subject: "{inviterName} convidou você para a {householdName} no Feudo",
+    text: "{inviterName} convidou você para entrar na casa {householdName} no Feudo como {role}.\n\nAceite o convite: {url}\n\nO convite expira em {expiresIn}.",
+    html: '<p>{inviterName} convidou você para entrar na casa <strong>{householdName}</strong> no Feudo como {role}.</p><p><a href="{url}">Aceitar convite</a></p><p>O convite expira em {expiresIn}.</p>',
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
