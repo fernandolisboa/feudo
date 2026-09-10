@@ -44,8 +44,11 @@ describe("GET /api/health (integration)", () => {
         throw new Error("drizzle.__drizzle_migrations is unexpectedly empty");
       }
 
+      const deleted = await db.execute(
+        sql`delete from drizzle.__drizzle_migrations where id = ${lastRow.id}`,
+      );
+
       try {
-        await db.execute(sql`delete from drizzle.__drizzle_migrations where id = ${lastRow.id}`);
         resetHealthProbeCache();
 
         const response = await GET();
@@ -56,9 +59,13 @@ describe("GET /api/health (integration)", () => {
         expect(body.db).toBe(true);
         expect(body.migrations.status).toBe("behind");
       } finally {
-        await db.execute(
-          sql`insert into drizzle.__drizzle_migrations (id, hash, created_at) values (${lastRow.id}, ${lastRow.hash}, ${lastRow.created_at})`,
-        );
+        if (deleted.rowCount) {
+          await db.execute(
+            sql`insert into drizzle.__drizzle_migrations (id, hash, created_at)
+                values (${lastRow.id}, ${lastRow.hash}, ${lastRow.created_at})
+                on conflict (id) do nothing`,
+          );
+        }
         resetHealthProbeCache();
       }
     });
