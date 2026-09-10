@@ -117,17 +117,22 @@ way: a red check on the `main` branch's commit and run history — there is no s
 `main`) — never with a reset script, and only from the repo root:
 
 ```
-vercel env pull --environment=production
-export $(grep -v '^#' .env.production.local | xargs)
-pnpm --filter @feudo/web exec drizzle-kit migrate
-rm .env.production.local
+trap 'rm -f .env.production.local' EXIT
+vercel env pull --environment=production --yes .env.production.local
+grep '^DATABASE_URL=' .env.production.local
+# Eyeball the host printed above: it must be the `feudo` project's, e.g. ep-dry-wildflower-…,
+# never ep-late-flower-… (that is `feudo-preview`). Stop here if it looks wrong.
+DATABASE_URL=$(sed -n 's/^DATABASE_URL="\(.*\)"$/\1/p' .env.production.local) \
+  pnpm --filter @feudo/web exec drizzle-kit migrate
 ```
 
-`vercel env pull` requires being logged into the Vercel account that owns the project; it writes
-the production `DATABASE_URL` (and everything else in that environment) to
-`.env.production.local`, which is why the last step deletes it immediately afterward — it must
-never be committed or left on disk. Confirm `GET /api/health` reports `migrations.upToDate: true`
-once the command finishes.
+`vercel env pull --environment=production --yes <file>` requires being logged into the Vercel
+account that owns the project and writes exactly the file named on the command line — passing no
+file name pulls to `.env.local` instead, which this procedure does not read, so always name
+`.env.production.local` explicitly. The `trap` deletes that file on exit (success or failure) so it
+is never left on disk or committed; nothing is `export`ed into the shell's environment, only piped
+into the one `drizzle-kit migrate` invocation that needs it. Confirm `GET /api/health` reports
+`migrations.status: "up-to-date"` once the command finishes.
 
 ## The reset guard
 
