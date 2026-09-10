@@ -3,6 +3,7 @@ import { DatabaseResetNotAllowedError } from "./errors.ts";
 export interface ResetGuardEnv {
   DATABASE_URL?: string;
   DATABASE_RESET_ALLOWED_HOST?: string;
+  DATABASE_PRODUCTION_HOST?: string;
   VERCEL_ENV?: string;
   [key: string]: string | undefined;
 }
@@ -21,6 +22,10 @@ export function assertDatabaseResetAllowed(env: ResetGuardEnv): void {
     targetHost = new URL(env.DATABASE_URL ?? "").hostname;
   } catch {
     throw new DatabaseResetNotAllowedError("DATABASE_URL is not a valid URL");
+  }
+
+  if (env.DATABASE_PRODUCTION_HOST && targetHost === env.DATABASE_PRODUCTION_HOST) {
+    throw new DatabaseResetNotAllowedError("DATABASE_URL's host matches DATABASE_PRODUCTION_HOST");
   }
 
   if (targetHost !== env.DATABASE_RESET_ALLOWED_HOST) {
