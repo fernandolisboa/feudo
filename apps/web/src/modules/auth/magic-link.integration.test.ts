@@ -8,7 +8,9 @@ import { user } from "@/db/schema/auth.ts";
 import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";
+import { waitForLastFakeSentEmail } from "./test/wait-for-last-fake-sent-email";
 import { requestMagicLink, signIn, signUp } from "./service";
+import { t } from "./strings";
 
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
@@ -18,11 +20,17 @@ beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
 });
 
-async function lastEmailTextFor(email: string): Promise<string> {
-  const sentEmail = await findLastFakeSentEmail(getDb(), email);
-  if (!sentEmail) {
-    throw new Error(`no email was sent to ${email}`);
-  }
+async function lastVerificationEmailTextFor(email: string): Promise<string> {
+  const sentEmail = await waitForLastFakeSentEmail(getDb(), email, {
+    subject: t.verificationEmail.subject,
+  });
+  return sentEmail.text;
+}
+
+async function lastMagicLinkEmailTextFor(email: string): Promise<string> {
+  const sentEmail = await waitForLastFakeSentEmail(getDb(), email, {
+    subject: t.magicLinkEmail.subject,
+  });
   return sentEmail.text;
 }
 
@@ -35,7 +43,7 @@ async function createVerifiedUser(email: string, password: string): Promise<void
     throw new Error(`sign-up failed with status ${signUpOutcome.status}`);
   }
   await getAuth().api.verifyEmail({
-    query: { token: extractTokenFromEmail(await lastEmailTextFor(email)) },
+    query: { token: extractTokenFromEmail(await lastVerificationEmailTextFor(email)) },
   });
 }
 
@@ -48,7 +56,7 @@ describe("magic link sign-in", () => {
       const requestOutcome = await requestMagicLink(email, new Headers());
       expect(requestOutcome.status).toBe("ok");
 
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastMagicLinkEmailTextFor(email));
 
       const result = await getAuth().api.magicLinkVerify({
         query: { token },
@@ -65,7 +73,7 @@ describe("magic link sign-in", () => {
       await createVerifiedUser(email, "correct-horse");
 
       await requestMagicLink(email, new Headers());
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastMagicLinkEmailTextFor(email));
 
       const first = await getAuth().api.magicLinkVerify({
         query: { token },
@@ -111,7 +119,7 @@ describe("magic link sign-in", () => {
 
       const requestOutcome = await requestMagicLink(email, new Headers());
       expect(requestOutcome.status).toBe("ok");
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastMagicLinkEmailTextFor(email));
 
       const result = await getAuth().api.magicLinkVerify({
         query: { token },
@@ -170,7 +178,7 @@ describe("magic link sign-in", () => {
       await createVerifiedUser(email, password);
 
       await requestMagicLink(email, new Headers());
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastMagicLinkEmailTextFor(email));
       await getAuth().api.magicLinkVerify({ query: { token }, headers: new Headers() });
 
       const signInOutcome = await signIn({ email, password }, new Headers());
