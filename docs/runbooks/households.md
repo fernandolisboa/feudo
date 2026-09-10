@@ -1,17 +1,19 @@
 # Households runbook
 
 The `households` module (`apps/web/src/modules/households`) owns household creation, the active
-household on a session, switching between households and `household_settings` (name lives on
-Better Auth's `organization` row; time zone and reserve multiple live here, ADR-0001). Its public
-surface is `apps/web/src/modules/households/index.ts`, exporting only what has a real consumer
-today: the two components (`HouseholdSwitcher`, `OnboardingForm`), the routing helpers
-(`resolveAppRoute`, `resolveOnboardingRoute`, `requireHouseholdSession`), `t`, the scope types
-(`HouseholdScope`, `householdScope`, `NoActiveHouseholdError`) and a read-only settings accessor
-(`getHouseholdSettings`). `service.ts`, `repository.ts`, `actions.ts`, `validation.ts` and
-`scope.ts`'s `scopeForNewHousehold` are module-private; components import them by relative path,
-not through the barrel. The module depends on `auth` (`getAuth`, `CurrentSession`) one way only —
-`auth` never imports from `households` (see docs/runbooks/auth.md for how the invite-mode
-sign-up check stays inside `auth` for exactly this reason).
+household on a session, switching between households, invites, roles, removing/leaving members,
+ownership transfer and `household_settings` (name lives on Better Auth's `organization` row; time
+zone and reserve multiple live here, ADR-0001). Its public surface is
+`apps/web/src/modules/households/index.ts`, exporting only what has a real consumer today: the two
+components (`HouseholdSwitcher`, `OnboardingForm`), the routing helpers (`resolveAppRoute`,
+`resolveOnboardingRoute`, `requireHouseholdSession`), `t`, the scope types (`HouseholdScope`,
+`householdScope`, `NoActiveHouseholdError`), a read-only settings accessor
+(`getHouseholdSettings`) and the daily housekeeping entry point
+(`pruneExpiredInvitations`). `service.ts`, `membership.ts`, `repository.ts`, `actions.ts`,
+`validation.ts` and `scope.ts`'s `scopeForNewHousehold` are module-private; components import them
+by relative path, not through the barrel. The module depends on `auth` (`getAuth`,
+`CurrentSession`) one way only — `auth` never imports from `households` (see docs/runbooks/auth.md
+for how the invite-mode sign-up check stays inside `auth` for exactly this reason).
 
 ## Scoped repositories
 
@@ -50,10 +52,11 @@ Two `organizationHooks` in `auth/options.ts` back this up by clearing the DB-sto
 directly (bypassing `getCurrentSession`'s re-validation — Better Auth's own `getFullOrganization`,
 for one) is not further behind than one write: `afterRemoveMember` nulls it for the removed user's
 sessions pointed at that household, `afterDeleteOrganization` nulls it for every session pointed at
-the deleted household. `/organization/leave` runs no `organizationHooks`, so a user who leaves a
-household keeps a stale `activeOrganizationId` hint on their other sessions until the next
-`getCurrentSession()` re-validation on each of them; #11 owns the leave flow and can revisit this
-gap when it lands.
+the deleted household. `/organization/leave` runs no `organizationHooks`, so
+`households.leaveHousehold` (`membership.ts`) clears the same user's other sessions' stale
+`activeOrganizationId` itself, directly through Drizzle, right after a successful
+`getAuth().api.leaveOrganization` call, mirroring what `afterRemoveMember` does for a removed
+member.
 
 `requireHouseholdSession()` (`households/require-household-session.ts`) wraps
 `getCurrentSession()` + `resolveAppRoute` and redirects to `/entrar` or `/comecar` itself; call it
@@ -66,9 +69,9 @@ route keeps a layout above it, so each page checks for itself.
 ## Household creation
 
 `households.createHousehold` (`service.ts`) refuses outright when the session already has an
-active household (`already_has_household`) — creating a second household happens through a future
-invite-accept flow (#11) or an explicit switch, never implicitly by calling create again. On
-success it calls Better Auth's `createOrganization` with `keepCurrentActiveOrganization: true`
+active household (`already_has_household`) — landing in a second household happens through
+`households.acceptInvitation` (`membership.ts`) or an explicit switch, never implicitly by calling
+create again. On success it calls Better Auth's `createOrganization` with `keepCurrentActiveOrganization: true`
 (so the new household is not yet active), writes `household_settings` with the caller's input, and
 only then calls `setActiveOrganization` — in that order, so a household is never the active one
 while its settings are still missing or defaulted. If the settings write or the
@@ -86,10 +89,58 @@ Feudo never uses either field on `organization`.
 
 Better Auth's `organization` plugin allows several owners; Feudo does not (ADR-0001). Two lines of
 defense, both in `auth/options.ts` and `db/schema/auth.ts`: `organizationHooks.beforeUpdateMemberRole`
-rejects any role update to `owner` outright (ownership transfer needs a dedicated action, not yet
-built — #11), and a partial unique index, `member_single_owner_uidx` on
-`member (organization_id) where role = 'owner'`, makes a second owner row impossible at the
-database level even if that hook is ever bypassed.
+rejects any role update to `owner` outright and `organizationHooks.beforeCreateInvitation` rejects
+any invitation with role `owner` outright — ownership only ever moves through
+`households.transferOwnership` (`membership.ts`), which bypasses both endpoints and instead
+updates the two `member` rows directly through Drizzle inside one database transaction (demote the
+current owner to admin, then promote the target to owner — that order never leaves a moment with
+two owner rows for the partial unique index below to reject). The index itself,
+`member_single_owner_uidx` on `member (organization_id) where role = 'owner'`, makes a second
+owner row impossible at the database level even if either hook is ever bypassed.
+
+## Invites, roles, removing, leaving and ownership transfer
+
+`membership.ts` (module-private) wraps the `organization` plugin's invitation and member endpoints
+for the household vocabulary and adds two operations the plugin does not have (ownership transfer,
+and "the last member leaving deletes the household"):
+
+- **Invite** (`inviteMember`): owner or admin only (plugin's default `memberAc`/`adminAc`/`ownerAc`
+  permissions, unchanged); role is `admin` or `member` only, enforced by
+  `households/validation.ts`'s `inviteMemberFormSchema` at the edge and by
+  `beforeCreateInvitation` server-side. `organization({ sendInvitationEmail })` in `auth/options.ts`
+  sends the email through the same `EmailSender` as every other auth email
+  (`auth/email/invitation-email.ts`), linking to `/convite/:id`.
+- **Cancel** (`cancelInvitation`) and **list** (`listPendingInvitations`,
+  `listMyPendingInvitations`) read and write the plugin's own `invitation` table; every call is
+  scoped by the session's household (`session.householdId`) or, for `listMyPendingInvitations`
+  (onboarding's "Tenho um convite" panel), by the session's own email — never by a client-supplied
+  organization id.
+- **Accept** (`acceptInvitation`) takes a signed-in `CurrentSession`, not a `HouseholdSession`: a
+  user with no household yet is exactly who needs to call it. Better Auth verifies the invitation's
+  email matches the session's own email and sets the joined household active on that session.
+- **Remove** (`removeMember`): owner or admin only, never the owner (the plugin's own
+  `removeMember` endpoint already refuses removing the sole owner — Feudo always has exactly one —
+  and the household-A/household-B isolation the endpoint gives for free is exercised by
+  `membership.integration.test.ts`'s cross-household describe block).
+- **Change role** (`updateMemberRole`): owner or admin only, `admin` ↔ `member` only — the
+  single-owner enforcement above blocks any attempt to route through it to `owner`.
+- **Leave** (`leaveHousehold`): refuses an owner with other members present
+  (`owner_must_transfer_first`); an owner who is the household's only member instead deletes the
+  household (`getAuth().api.deleteOrganization`) rather than calling `leaveOrganization`, which the
+  plugin itself would refuse ("cannot leave as the only owner") even though it is the exact "last
+  member leaves" case product wants. A non-owner leaving calls `leaveOrganization` and then clears
+  the user's other sessions' stale `activeOrganizationId` itself (see "Active household resolution"
+  above).
+- **Transfer ownership** (`transferOwnership`): owner only, one database transaction, described
+  above.
+
+## Expired and cancelled invitations
+
+`households.pruneExpiredInvitations` (`invitation-prune.ts`, exported from the barrel) deletes
+every `invitation` row that is `status = 'canceled'` or `status = 'pending'` with `expires_at` in
+the past (ADR-0008); accepted and rejected rows are left alone. It runs as a third step of the
+shared housekeeping cron, `GET /api/cron/daily` (`apps/web/src/app/api/cron/daily/route.ts`), next
+to `refreshMarketData` and `pruneExpiredVerifications` — see "Cron jobs" in `docs/runbooks/auth.md`.
 
 ## Time zone validation
 
@@ -97,10 +148,3 @@ database level even if that hook is ever bypassed.
 `Intl.supportedValuesOf("timeZone")` (the runtime's own IANA database) rather than an
 `options`-heavy schema; `OnboardingForm` renders the same list as a shadcn `Select`, defaulting to
 `America/Sao_Paulo`.
-
-## Expired invitations
-
-Nothing purges expired `invitation` rows yet — `hasPendingInvitation` (`auth/invitations.ts`)
-already filters them out of every read by `expiresAt`, so they are inert, not a security gap. A
-cleanup job (or `ON DELETE` via a scheduled sweep) arrives with #11 alongside the rest of the
-invite-accept flow.

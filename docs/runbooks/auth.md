@@ -70,10 +70,11 @@ helper treats that as a no-op rather than failing the call.
   (`apps/web/src/modules/auth/invitations.ts`) checks Better Auth's own `invitation` table
   (organization plugin, ADR-0001) for a row with that email, `status = "pending"` and an unexpired
   `expiresAt`, case-insensitively. The `hooks.before` hook (`options.ts`) only runs this query when
-  `mode === "invite"`. **Creating an invitation is still ticket #11's job** — nothing in this repo
-  writes a row to the `invitation` table yet, so in practice `invite` still behaves like `closed`
-  until #11 ships the invite flow; the policy check itself is real, not a placeholder. Expired
-  pending-invite rows are not purged anywhere yet — that cleanup also arrives with #11.
+  `mode === "invite"`. Invitations are created by `households.inviteMember`
+  (`apps/web/src/modules/households/membership.ts`), which calls
+  `getAuth().api.createInvitation` — see `docs/runbooks/households.md` for the invite, accept,
+  role and ownership flows. Expired and cancelled pending-invite rows are purged by the daily
+  housekeeping job (`households.pruneExpiredInvitations`, a step of `GET /api/cron/daily`).
 - `open`: sign-up always allowed, subject to Better Auth's own validation and rate limits.
 
 ## Base URL and trusted origins
@@ -231,14 +232,15 @@ and the verification prune share a single route instead of one cron each.
 Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
 `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
 (`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
-runs each of its steps — the market-data refresh (`refreshMarketData`) and the expired-verification
-prune (`pruneExpiredVerifications`) — in its own try/catch, so one step failing never stops the
-other from running, and returns a per-step summary:
-`{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
+runs each of its steps — the market-data refresh (`refreshMarketData`), the expired-verification
+prune (`pruneExpiredVerifications`) and the expired/cancelled-invitation prune
+(`households.pruneExpiredInvitations`, ADR-0008) — in its own try/catch, so one step failing never
+stops the others from running, and returns a per-step summary:
+`{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error }, pruneInvitation: { deleted } | { error } } }`.
 The response is `200` when every step succeeded and `500` when any step errored or, for
-market-data, fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from
-ADR-0008) becomes a third step of this same route rather than a new cron entry, since the Hobby
-limit leaves no room for a third schedule.
+market-data, fetched nothing at all. Any further daily housekeeping task becomes a fourth step of
+this same route rather than a new cron entry, since the Hobby limit leaves no room for a third
+schedule.
 
 ## Magic link never signs up
 
