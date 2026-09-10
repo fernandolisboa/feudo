@@ -29,3 +29,28 @@ export type CreateHouseholdFormInput = z.infer<typeof createHouseholdFormSchema>
 export const switchHouseholdFormSchema = z.object({
   householdId: z.string().trim().min(1),
 });
+
+// Owner is excluded on purpose (ADR-0001): nobody is ever invited or
+// role-updated into it, only households.transferOwnership moves it.
+export const INVITABLE_ROLES = ["admin", "member"] as const;
+export type InvitableRole = (typeof INVITABLE_ROLES)[number];
+
+export const inviteMemberFormSchema = z.object({
+  email: z.string().trim().toLowerCase().min(1).max(255).pipe(z.email()),
+  role: z.enum(INVITABLE_ROLES),
+});
+export type InviteMemberFormInput = z.infer<typeof inviteMemberFormSchema>;
+
+export const invitationIdFormSchema = z.object({
+  invitationId: z.string().trim().min(1),
+});
+
+export const memberIdFormSchema = z.object({
+  memberId: z.string().trim().min(1),
+});
+
+export const updateMemberRoleFormSchema = z.object({
+  memberId: z.string().trim().min(1),
+  role: z.enum(INVITABLE_ROLES),
+});
+export type UpdateMemberRoleFormInput = z.infer<typeof updateMemberRoleFormSchema>;

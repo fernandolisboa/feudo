@@ -1,5 +1,6 @@
 export { HouseholdSwitcher } from "./components/household-switcher";
 export { OnboardingForm } from "./components/onboarding-form";
+export { pruneExpiredInvitations } from "./invitation-prune";
 export type { HouseholdSettings } from "./repository";
 export { getHouseholdSettings } from "./repository";
 export type { HouseholdSession } from "./require-household-session";
