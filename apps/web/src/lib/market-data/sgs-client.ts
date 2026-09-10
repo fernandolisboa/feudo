@@ -10,7 +10,7 @@ const SGS_FETCH_TIMEOUT_MS = 10_000;
 // malformed or malicious response can't force an unbounded parse/allocation.
 const MAX_OBSERVATIONS_PER_FETCH = 3_700;
 
-export interface SgsObservation {
+interface SgsObservation {
   referenceDate: string;
   value: string;
 }

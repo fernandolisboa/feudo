@@ -231,14 +231,34 @@ and the verification prune share a single route instead of one cron each.
 Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
 `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
 (`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
-runs each of its steps — the market-data refresh (`refreshMarketData`) and the expired-verification
-prune (`pruneExpiredVerifications`) — in its own try/catch, so one step failing never stops the
-other from running, and returns a per-step summary:
+runs each of its steps in its own try/catch, so one step failing never stops the other from
+running, and returns a per-step summary:
 `{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
-The response is `200` when every step succeeded and `500` when any step errored or, for
-market-data, fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from
-ADR-0008) becomes a third step of this same route rather than a new cron entry, since the Hobby
-limit leaves no room for a third schedule.
+The steps run in this order:
+
+1. The expired-verification prune (`pruneExpiredVerifications`) — one cheap `DELETE`.
+2. The market-data refresh (`refreshMarketData`) — up to five sequential SGS fetches, each with its
+   own 10 s timeout.
+
+The prune runs first deliberately: it is orders of magnitude cheaper than the market-data step, and
+running it after would let a slow or unreachable Bacen SGS starve it on every invocation. The
+response is `200` when every step succeeded and `500` when any step errored or, for market-data,
+fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from ADR-0008)
+becomes a step of this same route rather than a new cron entry, since the Hobby limit leaves no
+room for a third schedule. The invariant for ordering new steps: **cheap, always-must-run
+housekeeping first; slow network work last.** A step that is one cheap query and must run on every
+invocation (like the prune) goes before the market-data refresh; anything with a network round trip
+or that can legitimately be skipped goes after it, so a slow or unreachable upstream never starves
+the cheap, always-must-run work.
+
+`route.ts` exports `maxDuration = 60`. The market-data step makes up to five sequential SGS fetches,
+each with its own 10 s timeout, so the step alone can take up to ~50 s; add the prune's one cheap
+`DELETE` and 60 s leaves the invocation enough headroom without depending on Vercel's function
+timeout defaults, which vary by whether Fluid compute is enabled for the project: with Fluid
+compute, Hobby's default max duration is 300 s; without it, the default is 10 s (with 60 s as the
+Hobby ceiling for functions that opt in via `maxDuration`, same as the value set here). Whether this
+project's Vercel dashboard has Fluid compute on is not knowable from CI or the repo, so `maxDuration`
+is set explicitly instead of relying on the ambient default either way.
 
 ## Magic link never signs up
 
