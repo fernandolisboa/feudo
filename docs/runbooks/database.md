@@ -4,7 +4,8 @@ Feudo runs Postgres on Neon through the Vercel marketplace integration, with one
 environment:
 
 - **`feudo` (production)**: the only place production personal data lives. Vercel Production env
-  points at it. Never reset, never touched by CI.
+  points at it. Never reset by CI or by hand. The only CI job allowed near it is
+  `migrate-production` (see below), which only ever runs `drizzle-kit migrate`.
 - **`feudo-preview` (preview)**: a separate, free Neon project used by both Vercel Preview and
   Development env and by CI. It never receives a copy of production data — there is no restore
   step between the two projects — so it structurally cannot leak production personal data
@@ -34,6 +35,8 @@ and closes once E2E lands and needs its own predictable schema.
 | ----------------------------- | ----------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL_PREVIEW`        | GitHub Actions secret   | this repo                                      | CI `integration` job: resets the `feudo-preview` project's schema, migrates it, runs `pnpm test:integration`                 |
 | `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`) | CI `integration` job's reset and integration-test steps: must equal `new URL(DATABASE_URL).hostname`                         |
+| `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo                                      | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                  |
+| `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo (`vars.DATABASE_PRODUCTION_HOST`)    | CI `migrate-production` job's guard step; also the belt-and-braces refusal in `assertDatabaseResetAllowed`                   |
 | `DATABASE_URL`                | Vercel env              | Production, Preview, Development               | the app itself, read by `apps/web/src/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo` |
 
 Secrets are set once, in this repo, through the GitHub CLI — never pasted into a workflow file or
@@ -42,16 +45,23 @@ committed:
 ```
 gh secret set DATABASE_URL_PREVIEW
 gh variable set DATABASE_RESET_ALLOWED_HOST --body "<feudo-preview pooler hostname>"
+gh secret set DATABASE_URL_PRODUCTION
+gh variable set DATABASE_PRODUCTION_HOST --body "<feudo (production) pooler hostname>"
 ```
 
 `gh secret set` prompts for the value on stdin; nothing is echoed and nothing is written to the
-repo. `DATABASE_URL_PREVIEW` is the pooled connection string for the `feudo-preview` project, from
-the Neon console or `vercel env pull` once the project exists. Because
-`DATABASE_RESET_ALLOWED_HOST` is not a secret (it is a hostname, not a credential) it is a GitHub
-Actions **variable**, not a secret, and its value must equal that pooler host exactly.
+repo. `DATABASE_URL_PREVIEW` is the pooled connection string for the `feudo-preview` project, and
+`DATABASE_URL_PRODUCTION` is the pooled connection string for the `feudo` (production) project,
+both from the Neon console or `vercel env pull` once the project exists. Because
+`DATABASE_RESET_ALLOWED_HOST` and `DATABASE_PRODUCTION_HOST` are not secrets (they are hostnames,
+not credentials) they are GitHub Actions **variables**, not secrets, and each value must equal its
+project's pooler host exactly.
 
-If either is absent, the `integration` job's reset step fails loudly (drizzle/Postgres errors under
-`CI`, or `DatabaseResetNotAllowedError` from the guard) rather than skipping silently.
+If `DATABASE_URL_PREVIEW` or `DATABASE_RESET_ALLOWED_HOST` is absent, the `integration` job's
+reset step fails loudly (drizzle/Postgres errors under `CI`, or `DatabaseResetNotAllowedError` from
+the guard) rather than skipping silently. If `DATABASE_URL_PRODUCTION` or
+`DATABASE_PRODUCTION_HOST` is absent or mismatched, the `migrate-production` job's guard step fails
+the job before any migration runs (see "Production migrations" below).
 
 ## What the `integration` job does
 
@@ -74,15 +84,55 @@ two runs that share the one `feudo-preview` project never reset or migrate it at
 `DATABASE_URL` and `DATABASE_RESET_ALLOWED_HOST` are set per step, only on the steps that need
 them, not at job level.
 
+## Production migrations
+
+CI owns applying committed migrations to production. On every push to `main` (after `ci` and
+`integration` both succeed), the `migrate-production` job in `.github/workflows/ci.yml`:
+
+1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname and fails the job —
+   printing only `PASS` or `FAIL`, never the URL — unless it equals `vars.DATABASE_PRODUCTION_HOST`
+   exactly. This is what stops a mispointed or stale `DATABASE_URL_PRODUCTION` secret from
+   migrating the wrong database.
+2. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
+   `secrets.DATABASE_URL_PRODUCTION`. Nothing resets or drops anything — `db:reset` and
+   `db:reset-schema` never appear in this job, and `assertDatabaseResetAllowed` also refuses
+   outright whenever `DATABASE_URL`'s host matches `DATABASE_PRODUCTION_HOST` (see "The reset
+   guard" below), so even a copy-pasted step from the `integration` job would fail closed instead
+   of dropping the production schema.
+
+The job holds a `production-db` concurrency group (`cancel-in-progress: false`), separate from the
+preview project's `preview-db` group, so two pushes to `main` in quick succession migrate
+production one at a time instead of racing. Failure is visible the normal GitHub Actions way: a
+red check on the `main` branch's commit and run history — there is no separate alerting yet.
+
+**By hand, in an emergency only** (CI down, or a migration needs to land before the next push to
+`main`) — never with a reset script, and only from the repo root:
+
+```
+vercel env pull --environment=production
+export $(grep -v '^#' .env.production.local | xargs)
+pnpm --filter @feudo/web exec drizzle-kit migrate
+rm .env.production.local
+```
+
+`vercel env pull` requires being logged into the Vercel account that owns the project; it writes
+the production `DATABASE_URL` (and everything else in that environment) to
+`.env.production.local`, which is why the last step deletes it immediately afterward — it must
+never be committed or left on disk. Confirm `GET /api/health` reports `migrations.upToDate: true`
+once the command finishes.
+
 ## The reset guard
 
 `assertDatabaseResetAllowed` (`apps/web/src/db/reset-guard.ts`) runs before any reset query and:
 
 - refuses unconditionally when `VERCEL_ENV=production`;
-- otherwise requires `DATABASE_RESET_ALLOWED_HOST` to be set and to equal
-  `new URL(DATABASE_URL).hostname` exactly — the guard is bound to the specific database it is
-  allowed to touch, not to an environment label, so a stale or copy-pasted `DATABASE_URL` pointing
-  at production or at a different project is refused even with the opt-in variable set.
+- requires `DATABASE_RESET_ALLOWED_HOST` to be set and to equal `new URL(DATABASE_URL).hostname`
+  exactly — the guard is bound to the specific database it is allowed to touch, not to an
+  environment label, so a stale or copy-pasted `DATABASE_URL` pointing at production or at a
+  different project is refused even with the opt-in variable set;
+- belt and braces: also refuses unconditionally whenever `DATABASE_PRODUCTION_HOST` is set and
+  equals `DATABASE_URL`'s host, even if `DATABASE_RESET_ALLOWED_HOST` was (wrongly) set to the same
+  value — the production host can never be a valid reset target, full stop.
 
 ## Resetting the preview project locally
 
@@ -126,11 +176,21 @@ been migrated.
 
 ## Health check
 
-`GET /api/health` runs `select 1` against `DATABASE_URL` and returns `{ ok: true, db: true }`, or
-status 503 with `{ ok: false, db: false }` if the database is unreachable. The result is memoized
-for 10 seconds per warm instance, since the endpoint is public and unauthenticated. It never
-returns the connection string or the underlying error. It stores nothing, so it has no entry in
-the ADR-0008 data map.
+`GET /api/health` runs `select 1` against `DATABASE_URL` and also compares
+`drizzle.__drizzle_migrations` against the committed journal
+(`apps/web/drizzle/meta/_journal.json`, bundled into the server build): it counts applied rows and
+compares the latest row's `created_at` against the journal's last entry's `when` — the two values
+`drizzle-kit migrate` always writes in lockstep, so an exact match is a reliable "nothing is
+missing" signal without needing to read the migration `.sql` files at runtime.
+
+The response is `{ ok, db, migrations: { applied, expected, upToDate } }`. `ok` is `true` only when
+`db` is reachable and `migrations.upToDate` is `true`; otherwise the route returns status 503. This
+is what would have caught the 2026-09-09 incident described in issue #49: connectivity alone (`db:
+true`) is not enough to call the deployment healthy.
+
+The result is memoized for 10 seconds per warm instance, since the endpoint is public and
+unauthenticated. It never returns the connection string or the underlying error. It stores nothing,
+so it has no entry in the ADR-0008 data map.
 
 ## WebSocket driver on Vercel
 
