@@ -45,7 +45,11 @@ export function MemberRowActions({
 
   const canToggleRole = canManage && !isOwnerRow && !isSelf;
   const canRemove = canManage && !isOwnerRow && !isSelf;
-  const canLeave = isSelf && !isOwnerRow;
+  // The owner can leave too, but only when they are also the household's
+  // last member: leaving then deletes the household (households.
+  // leaveHousehold) instead of requiring a transfer that has nobody left to
+  // transfer to.
+  const canLeave = isSelf && (!isOwnerRow || isLastMember);
   const canTransferTo = viewerRole === "owner" && !isSelf && !isOwnerRow;
 
   const hasAnyAction = canToggleRole || canRemove || canLeave || canTransferTo;

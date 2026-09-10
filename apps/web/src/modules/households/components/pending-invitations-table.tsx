@@ -13,12 +13,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { initialActionState } from "@/lib/action-state";
+import { formatShortDate } from "@/lib/format-date";
 
 import { cancelInvitationAction } from "../actions";
 import type { PendingInvitation } from "../membership";
 import { t } from "../strings";
-
-const DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
 function CancelInvitationButton({ invitationId }: { invitationId: string }) {
   const [state, formAction, isPending] = useActionState(cancelInvitationAction, initialActionState);
@@ -36,7 +35,13 @@ function CancelInvitationButton({ invitationId }: { invitationId: string }) {
   );
 }
 
-export function PendingInvitationsTable({ invitations }: { invitations: PendingInvitation[] }) {
+export function PendingInvitationsTable({
+  invitations,
+  timeZone,
+}: {
+  invitations: PendingInvitation[];
+  timeZone: string;
+}) {
   if (invitations.length === 0) {
     return <p className="font-heading text-sm">{t.casa.pendingInvitesEmpty}</p>;
   }
@@ -67,7 +72,7 @@ export function PendingInvitationsTable({ invitations }: { invitations: PendingI
               <Badge variant="outline">{t.casa.roles[invitation.role]}</Badge>
             </TableCell>
             <TableCell className="text-muted-foreground tabular-nums">
-              {DATE_FORMATTER.format(invitation.expiresAt)}
+              {formatShortDate(invitation.expiresAt, timeZone)}
             </TableCell>
             <TableCell className="text-right">
               <CancelInvitationButton invitationId={invitation.id} />

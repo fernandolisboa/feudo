@@ -7,12 +7,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatShortDate } from "@/lib/format-date";
 
 import type { HouseholdMember, HouseholdRole } from "../membership";
 import { MemberRowActions } from "./member-row-actions";
 import { t } from "../strings";
-
-const DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
 function roleLabel(role: HouseholdRole): string {
   return t.casa.roles[role];
@@ -22,10 +21,12 @@ export function MembersTable({
   members,
   currentUserId,
   viewerRole,
+  timeZone,
 }: {
   members: HouseholdMember[];
   currentUserId: string;
   viewerRole: HouseholdRole;
+  timeZone: string;
 }) {
   const isLastMember = members.length === 1;
 
@@ -61,7 +62,7 @@ export function MembersTable({
               </Badge>
             </TableCell>
             <TableCell className="text-muted-foreground tabular-nums">
-              {DATE_FORMATTER.format(member.joinedAt)}
+              {formatShortDate(member.joinedAt, timeZone)}
             </TableCell>
             <TableCell className="text-right">
               <MemberRowActions
