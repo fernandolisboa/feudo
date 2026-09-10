@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getDbStatus } from "./probe";
+import { getHealthStatus } from "./probe";
 
 export async function GET(): Promise<NextResponse> {
-  const ok = await getDbStatus();
-  return ok
-    ? NextResponse.json({ ok: true, db: true })
-    : NextResponse.json({ ok: false, db: false }, { status: 503 });
+  const { db, migrations } = await getHealthStatus();
+  const ok = db && migrations.upToDate;
+  return NextResponse.json({ ok, db, migrations }, { status: ok ? 200 : 503 });
 }

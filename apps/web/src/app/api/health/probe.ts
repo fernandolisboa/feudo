@@ -1,10 +1,20 @@
 import { sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
+import {
+  getExpectedMigrations,
+  getMigrationsStatus,
+  type MigrationsStatus,
+} from "@/db/migrations-status";
 
 const CACHE_TTL_MS = 10_000;
 
-let cachedProbe: { checkedAt: number; ok: boolean } | undefined;
+export interface HealthProbe {
+  db: boolean;
+  migrations: MigrationsStatus;
+}
+
+let cachedProbe: { checkedAt: number; result: HealthProbe } | undefined;
 
 async function probeDatabase(): Promise<boolean> {
   try {
@@ -16,15 +26,30 @@ async function probeDatabase(): Promise<boolean> {
   }
 }
 
-export async function getDbStatus(): Promise<boolean> {
+async function probeMigrations(): Promise<MigrationsStatus> {
+  try {
+    const db = getDb();
+    return await getMigrationsStatus(db);
+  } catch {
+    const expected = getExpectedMigrations();
+    return { applied: 0, expected: expected.count, upToDate: false };
+  }
+}
+
+async function probeHealth(): Promise<HealthProbe> {
+  const [db, migrations] = await Promise.all([probeDatabase(), probeMigrations()]);
+  return { db, migrations };
+}
+
+export async function getHealthStatus(): Promise<HealthProbe> {
   const now = Date.now();
   if (cachedProbe && now - cachedProbe.checkedAt < CACHE_TTL_MS) {
-    return cachedProbe.ok;
+    return cachedProbe.result;
   }
 
-  const ok = await probeDatabase();
-  cachedProbe = { checkedAt: now, ok };
-  return ok;
+  const result = await probeHealth();
+  cachedProbe = { checkedAt: now, result };
+  return result;
 }
 
 export function resetHealthProbeCache(): void {
