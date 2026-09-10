@@ -53,7 +53,7 @@ async function refreshDirectSeries(
   }
 }
 
-export interface RefreshMarketDataOutcome {
+interface RefreshMarketDataOutcome {
   ok: boolean;
   results: RefreshSeriesResult[];
 }
