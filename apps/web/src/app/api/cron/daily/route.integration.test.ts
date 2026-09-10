@@ -11,90 +11,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { marketData } from "@/db/schema/market-data";
 import { verification } from "@/db/schema/auth";
 import { withTestDb } from "@/db/test/harness";
-import { getLatestIndicators } from "@/lib/market-data";
+import * as marketDataModule from "@/lib/market-data";
+import {
+  CDI_DAILY_OBSERVATIONS,
+  IPCA_MONTHLY_OBSERVATIONS,
+  buildSgsFetchMock,
+} from "@/lib/market-data/test/sgs-fixtures";
+import * as authModule from "@/modules/auth";
 
 import { GET } from "./route";
 
 import type { Database } from "@/db/client";
 
+const { getLatestIndicators } = marketDataModule;
+
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 const ORIGINAL_FETCH = globalThis.fetch;
-
-const CDI_DAILY_OBSERVATIONS = [
-  { data: "01/09/2026", valor: "0.053680" },
-  { data: "02/09/2026", valor: "0.053910" },
-  { data: "03/09/2026", valor: "0.053701" },
-];
-
-const SELIC_TARGET_OBSERVATIONS = [{ data: "20/08/2026", valor: "15.00" }];
-
-const SELIC_DAILY_OBSERVATIONS = [{ data: "03/09/2026", valor: "0.056834" }];
-
-const IPCA_MONTHLY_OBSERVATIONS = [
-  { data: "01/09/2025", valor: "0.48" },
-  { data: "01/10/2025", valor: "0.44" },
-  { data: "01/11/2025", valor: "0.39" },
-  { data: "01/12/2025", valor: "0.52" },
-  { data: "01/01/2026", valor: "0.16" },
-  { data: "01/02/2026", valor: "0.83" },
-  { data: "01/03/2026", valor: "0.56" },
-  { data: "01/04/2026", valor: "0.43" },
-  { data: "01/05/2026", valor: "0.26" },
-  { data: "01/06/2026", valor: "0.24" },
-  { data: "01/07/2026", valor: "0.30" },
-  { data: "01/08/2026", valor: "0.45" },
-];
-
-const IPCA_12M_OBSERVATIONS = [{ data: "01/08/2026", valor: "4.86" }];
-
-const SGS_URLS_BY_SERIES: Record<string, string> = {
-  "12": "bcdata.sgs.12/",
-  "432": "bcdata.sgs.432/",
-  "11": "bcdata.sgs.11/",
-  "433": "bcdata.sgs.433/",
-  "13522": "bcdata.sgs.13522/",
-};
-
-const SUCCESS_FIXTURES_BY_SERIES: Record<string, unknown> = {
-  "12": CDI_DAILY_OBSERVATIONS,
-  "432": SELIC_TARGET_OBSERVATIONS,
-  "11": SELIC_DAILY_OBSERVATIONS,
-  "433": IPCA_MONTHLY_OBSERVATIONS,
-  "13522": IPCA_12M_OBSERVATIONS,
-};
-
-interface FetchMockOptions {
-  ipca12MonthFetchFails?: boolean;
-  everySeriesFails?: boolean;
-}
-
-function buildFetchMock(options: FetchMockOptions = {}): typeof fetch {
-  const mock = vi.fn((url: string) => {
-    const matchedSeriesCode = Object.entries(SGS_URLS_BY_SERIES).find(([, fragment]) =>
-      url.includes(fragment),
-    )?.[0];
-    if (!matchedSeriesCode) {
-      throw new Error(`Unexpected URL in test fetch mock: ${url}`);
-    }
-
-    if (options.everySeriesFails) {
-      return Promise.reject(new Error("network down"));
-    }
-    if (options.ipca12MonthFetchFails && matchedSeriesCode === "13522") {
-      return Promise.resolve(jsonResponse({ message: "not found" }, 404));
-    }
-
-    return Promise.resolve(jsonResponse(SUCCESS_FIXTURES_BY_SERIES[matchedSeriesCode]));
-  });
-  return mock as unknown as typeof fetch;
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
 
 async function countMarketDataRows(db: Database, seriesCode: string): Promise<number> {
   const rows = await db.select().from(marketData).where(eq(marketData.seriesCode, seriesCode));
@@ -123,7 +55,7 @@ describe("GET /api/cron/daily (integration)", () => {
 
   it("runs the market-data refresh and the verification prune in the same request, reporting both steps", async () => {
     await withTestDb(async (db) => {
-      globalThis.fetch = buildFetchMock({ ipca12MonthFetchFails: true });
+      globalThis.fetch = buildSgsFetchMock({ notFoundSeriesCodes: ["13522"] });
 
       const expiredId = randomUUID();
       const validId = randomUUID();
@@ -186,7 +118,7 @@ describe("GET /api/cron/daily (integration)", () => {
 
   it("returns ok: false with a 500 status when the market-data step could not fetch any series, while still pruning expired verification rows", async () => {
     await withTestDb(async (db) => {
-      globalThis.fetch = buildFetchMock({ everySeriesFails: true });
+      globalThis.fetch = buildSgsFetchMock({ everySeriesFails: true });
 
       const expiredId = randomUUID();
       await db.insert(verification).values({
@@ -214,7 +146,7 @@ describe("GET /api/cron/daily (integration)", () => {
 
   it("returns 401 when the bearer token is missing, without running either step", async () => {
     await withTestDb(async (db) => {
-      globalThis.fetch = buildFetchMock();
+      globalThis.fetch = buildSgsFetchMock();
 
       const expiredId = randomUUID();
       await db.insert(verification).values({
@@ -235,7 +167,7 @@ describe("GET /api/cron/daily (integration)", () => {
 
   it("prunes only expired verification rows, leaving unexpired ones untouched", async () => {
     await withTestDb(async (db) => {
-      globalThis.fetch = buildFetchMock();
+      globalThis.fetch = buildSgsFetchMock();
 
       const expiredId = randomUUID();
       const validId = randomUUID();
@@ -266,6 +198,49 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const survivor = await db.select().from(verification).where(eq(verification.id, validId));
       expect(survivor).toHaveLength(1);
+    });
+  });
+
+  it("runs the verification prune before the market-data refresh, so a Bacen outage cannot starve it", async () => {
+    await withTestDb(async () => {
+      globalThis.fetch = buildSgsFetchMock();
+      const callOrder: string[] = [];
+      const actualPrune = authModule.pruneExpiredVerifications;
+      const actualRefresh = marketDataModule.refreshMarketData;
+      vi.spyOn(authModule, "pruneExpiredVerifications").mockImplementation(async (...args) => {
+        callOrder.push("pruneVerification");
+        return actualPrune(...args);
+      });
+      vi.spyOn(marketDataModule, "refreshMarketData").mockImplementation(async (...args) => {
+        callOrder.push("marketData");
+        return actualRefresh(...args);
+      });
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(200);
+      expect(callOrder).toEqual(["pruneVerification", "marketData"]);
+    });
+  });
+
+  it("keeps running the market-data refresh and still returns 500 when the prune step throws", async () => {
+    await withTestDb(async () => {
+      globalThis.fetch = buildSgsFetchMock();
+      vi.spyOn(authModule, "pruneExpiredVerifications").mockRejectedValue(
+        new Error("connection reset"),
+      );
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(500);
+      const body = (await response.json()) as {
+        ok: boolean;
+        steps: {
+          marketData: { ok: boolean };
+          pruneVerification: { error: string };
+        };
+      };
+      expect(body.ok).toBe(false);
+      expect(body.steps.marketData.ok).toBe(true);
+      expect(body.steps.pruneVerification).toEqual({ error: "Error" });
     });
   });
 });

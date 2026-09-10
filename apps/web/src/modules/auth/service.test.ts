@@ -2,16 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const handlerMock = vi.fn();
 const signOutMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock("./auth", () => ({
-  getAuth: () => ({ handler: handlerMock, api: { signOut: signOutMock } }),
+  getAuth: () => ({
+    handler: handlerMock,
+    api: { signOut: signOutMock, getSession: getSessionMock },
+  }),
 }));
 
-const { resendVerification, signIn, signUp } = await import("./service");
+const { resendVerification, signIn, signOut, signUp } = await import("./service");
 
 beforeEach(() => {
   handlerMock.mockReset();
   signOutMock.mockReset();
+  getSessionMock.mockReset();
+  getSessionMock.mockResolvedValue(null);
   process.env.REGISTRATION_MODE = "open";
   process.env.BETTER_AUTH_URL = "http://localhost:3000";
 });
@@ -104,5 +110,67 @@ describe("service boundary error handling", () => {
     );
 
     expect(outcome).toEqual({ status: "terms_not_accepted" });
+  });
+
+  it("signOut returns failed and logs only the error name when the handler rejects", async () => {
+    handlerMock.mockRejectedValueOnce(new Error("boom"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), "Error");
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("signOut returns failed when the handler responds with a non-ok status", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("signOut returns ok when the handler responds ok and no session resolves afterwards", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce(null);
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "ok" });
+  });
+
+  it("signOut returns failed when the handler responds ok but a session still resolves (deleteSession failed silently)", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce({
+      session: { id: "s1" },
+      user: { id: "u1" },
+    });
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("signOut returns failed when the post-sign-out session re-check rejects", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockRejectedValueOnce(new Error("db unavailable"));
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("signOut re-checks the session with disableRefresh so it cannot re-issue the cleared cookie", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce(null);
+    const requestHeaders = new Headers();
+
+    await signOut(requestHeaders);
+
+    expect(getSessionMock).toHaveBeenCalledWith({
+      headers: requestHeaders,
+      query: { disableRefresh: true },
+    });
   });
 });

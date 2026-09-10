@@ -14,6 +14,7 @@ export { MagicLinkForm } from "./components/magic-link-form";
 export { ResendVerificationForm } from "./components/resend-verification-form";
 export { ResetPasswordFlow } from "./components/reset-password-flow";
 export { SignInForm } from "./components/sign-in-form";
+export { SignOutMenuItem } from "./components/sign-out-menu-item";
 export { SignUpForm } from "./components/sign-up-form";
 export { findLastFakeSentEmail } from "./email/fake-email-repository";
 export { isFakeEmailProvider } from "./env";

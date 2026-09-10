@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contrastRatio, InvalidHexColorError } from "./contrast";
+import { contrastRatio, InvalidHexColorError } from "./contrast-ratio";
 
 describe("contrastRatio", () => {
   it("returns 21 for black on white", () => {

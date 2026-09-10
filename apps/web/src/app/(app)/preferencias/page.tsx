@@ -1,14 +1,9 @@
-import { redirect } from "next/navigation";
-
 import { PageHeader } from "@/components/page-header";
-import { getCurrentSession } from "@/modules/auth";
+import { requireHouseholdSession } from "@/modules/households";
 import { resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
 
 export default async function PreferencesPage() {
-  const session = await getCurrentSession();
-  if (!session) {
-    redirect("/entrar");
-  }
+  const session = await requireHouseholdSession();
 
   return (
     <>

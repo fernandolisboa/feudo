@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { contrastRatio } from "@feudo/core";
 import { describe, expect, it } from "vitest";
 
+import { contrastRatio } from "./contrast-ratio";
 import { parseDataShellValues, parseThemeCssBlocks } from "./css-theme-tokens";
 import { shellLayoutFor, THEME_NAMES } from "./tokens";
 

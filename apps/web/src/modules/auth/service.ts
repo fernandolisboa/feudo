@@ -211,8 +211,31 @@ export async function resendVerification(
   );
 }
 
-export async function signOut(requestHeaders: Headers): Promise<void> {
-  await callAuthHandler("/sign-out", {}, requestHeaders);
+export type SignOutOutcome = SimpleOutcome<"ok" | "failed">;
+
+// Better Auth's /sign-out handler returns 200 even when deleteSession fails
+// (it only logs), so a 2xx alone over-promises. Re-checking the session with
+// the request's original headers confirms the cookie the client still holds
+// no longer resolves before this reports success.
+export async function signOut(requestHeaders: Headers): Promise<SignOutOutcome> {
+  const response = await callAuthHandler("/sign-out", {}, requestHeaders);
+  if (!response || !response.ok) {
+    return { status: "failed" };
+  }
+
+  try {
+    const session = await getAuth().api.getSession({
+      headers: requestHeaders,
+      query: { disableRefresh: true },
+    });
+    if (session) {
+      return { status: "failed" };
+    }
+  } catch {
+    return { status: "failed" };
+  }
+
+  return { status: "ok" };
 }
 
 export async function requestMagicLink(

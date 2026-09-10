@@ -86,7 +86,9 @@ export function ResetPasswordFlow({ token }: { token?: string }) {
 
   return (
     <>
-      <p className="text-sm">{message}</p>
+      <p className="text-sm" aria-live="polite">
+        {message}
+      </p>
       <p className="mt-4 text-sm">
         <Link
           href="/esqueci-a-senha"
