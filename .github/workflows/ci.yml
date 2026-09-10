@@ -138,14 +138,15 @@ jobs:
           DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
         run: |
           node -e '
-            const expected = process.env.DATABASE_PRODUCTION_HOST;
+            const normalise = (host) => host.toLowerCase().replace(/\.$/, "").replace(/^([^.]+)-pooler(\.|$)/, "$1$2");
             let actual;
             try {
-              actual = new URL(process.env.DATABASE_URL ?? "").hostname;
+              actual = normalise(new URL(process.env.DATABASE_URL ?? "").hostname);
             } catch {
               console.error("FAIL");
               process.exit(1);
             }
+            const expected = process.env.DATABASE_PRODUCTION_HOST ? normalise(process.env.DATABASE_PRODUCTION_HOST) : "";
             if (!expected || actual !== expected) {
               console.error("FAIL");
               process.exit(1);
