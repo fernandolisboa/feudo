@@ -118,9 +118,12 @@ export const member = pgTable(
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
     index("member_userId_idx").on(table.userId),
-    // Single-owner enforcement (ADR-0001), second line of defense behind
-    // organizationHooks.beforeUpdateMemberRole: at most one 'owner' row per
-    // organization, at the database level.
+    // Single-owner enforcement (ADR-0001), second of three lines of defense
+    // behind organizationHooks.beforeUpdateMemberRole: at most one 'owner'
+    // row per organization, at the database level. Only catches a *second*
+    // owner row, never a *zero*-owner state — the third line, a deferred
+    // constraint trigger (member_single_owner_trigger,
+    // drizzle/0007_single_owner_trigger.sql), closes that gap.
     uniqueIndex("member_single_owner_uidx")
       .on(table.organizationId)
       .where(sql`${table.role} = 'owner'`),
@@ -149,6 +152,12 @@ export const invitation = pgTable(
     // row succeeds, including a resend (households.resendInvitation). Not a
     // Better Auth column: Feudo's own state on top of its schema.
     deliveryFailedAt: timestamp("delivery_failed_at", { withTimezone: true }),
+    // Set by sendInvitationEmail on every send that actually calls the
+    // provider — initial and resend alike, success or failure — never on a
+    // row it didn't touch. households.resendInvitation's own minimum-interval
+    // guard and the per-inviter hourly ceiling both read this column instead
+    // of createdAt, which a resend never advances.
+    lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
   },
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),
