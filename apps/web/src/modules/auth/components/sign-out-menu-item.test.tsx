@@ -2,7 +2,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DropdownMenu, DropdownMenuContent } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { t } from "../strings";
 
 const signOutActionMock = vi.hoisted(() => vi.fn());
@@ -16,20 +20,24 @@ afterEach(() => {
   signOutActionMock.mockReset();
 });
 
-function renderOpenMenu() {
-  return render(
-    <DropdownMenu open modal={false}>
+async function renderOpenMenu() {
+  render(
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
       <DropdownMenuContent>
         <SignOutMenuItem />
       </DropdownMenuContent>
     </DropdownMenu>,
   );
+
+  fireEvent.click(screen.getByText("Menu"));
+  await screen.findByText(t.userMenu.signOut);
 }
 
 describe("SignOutMenuItem", () => {
   it("shows the failure alert and keeps the menu open when signOutAction resolves an error", async () => {
     signOutActionMock.mockResolvedValue({ status: "error", message: t.errors.signOutFailed });
-    renderOpenMenu();
+    await renderOpenMenu();
 
     fireEvent.click(screen.getByText(t.userMenu.signOut));
 
@@ -50,7 +58,7 @@ describe("SignOutMenuItem", () => {
       reported.push(event.error);
     };
     window.addEventListener("error", onError);
-    renderOpenMenu();
+    await renderOpenMenu();
 
     fireEvent.click(screen.getByText(t.userMenu.signOut));
 
