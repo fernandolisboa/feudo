@@ -5,9 +5,10 @@ import { getDb } from "@/db/client";
 import { withTestDb } from "@/db/test/harness";
 
 import { getAuth } from "./auth";
-import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";
+import { waitForLastFakeSentEmail } from "./test/wait-for-last-fake-sent-email";
 import { requestPasswordReset, resetPassword, signIn, signUp } from "./service";
+import { t } from "./strings";
 
 function cookieHeaderFrom(headers: Headers): string {
   const pairs: string[] = [];
@@ -27,12 +28,39 @@ beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
 });
 
-async function lastEmailTextFor(email: string): Promise<string> {
-  const sentEmail = await findLastFakeSentEmail(getDb(), email);
-  if (!sentEmail) {
-    throw new Error(`no email was sent to ${email}`);
-  }
+async function lastVerificationEmailTextFor(email: string): Promise<string> {
+  const sentEmail = await waitForLastFakeSentEmail(getDb(), email, {
+    subject: t.verificationEmail.subject,
+  });
   return sentEmail.text;
+}
+
+async function lastResetPasswordEmailTextFor(email: string): Promise<string> {
+  const sentEmail = await waitForLastFakeSentEmail(getDb(), email, {
+    subject: t.resetPasswordEmail.subject,
+  });
+  return sentEmail.text;
+}
+
+const RESET_TOKEN_CHANGE_TIMEOUT_MS = 3000;
+const RESET_TOKEN_CHANGE_POLL_INTERVAL_MS = 25;
+
+// A second reset request re-uses the same subject as the first, so waiting
+// on subject alone would happily return the first send's still-fresh row
+// before the second insert lands. Polling until the token itself changes is
+// what actually proves the second send arrived, not just that some email did.
+async function waitForNewResetPasswordToken(email: string, previousToken: string): Promise<string> {
+  const deadline = Date.now() + RESET_TOKEN_CHANGE_TIMEOUT_MS;
+  for (;;) {
+    const token = extractTokenFromEmail(await lastResetPasswordEmailTextFor(email));
+    if (token !== previousToken) {
+      return token;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`timed out waiting for a new reset-password token for ${email}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, RESET_TOKEN_CHANGE_POLL_INTERVAL_MS));
+  }
 }
 
 async function createVerifiedUser(email: string, password: string): Promise<void> {
@@ -44,7 +72,7 @@ async function createVerifiedUser(email: string, password: string): Promise<void
     throw new Error(`sign-up failed with status ${signUpOutcome.status}`);
   }
   await getAuth().api.verifyEmail({
-    query: { token: extractTokenFromEmail(await lastEmailTextFor(email)) },
+    query: { token: extractTokenFromEmail(await lastVerificationEmailTextFor(email)) },
   });
 }
 
@@ -57,7 +85,7 @@ describe("password reset", () => {
       const requestOutcome = await requestPasswordReset(email, new Headers());
       expect(requestOutcome.status).toBe("ok");
 
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastResetPasswordEmailTextFor(email));
 
       const resetOutcome = await resetPassword(
         { token, newPassword: "new-password" },
@@ -79,7 +107,7 @@ describe("password reset", () => {
       await createVerifiedUser(email, "old-password");
 
       await requestPasswordReset(email, new Headers());
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastResetPasswordEmailTextFor(email));
 
       const first = await resetPassword({ token, newPassword: "new-password-1" }, new Headers());
       expect(first.status).toBe("ok");
@@ -118,7 +146,7 @@ describe("password reset", () => {
       expect(sessionBeforeReset).not.toBeNull();
 
       await requestPasswordReset(email, new Headers());
-      const token = extractTokenFromEmail(await lastEmailTextFor(email));
+      const token = extractTokenFromEmail(await lastResetPasswordEmailTextFor(email));
       const resetOutcome = await resetPassword(
         { token, newPassword: "new-password" },
         new Headers(),
@@ -172,10 +200,10 @@ describe("password reset", () => {
       await createVerifiedUser(email, "old-password");
 
       await requestPasswordReset(email, new Headers());
-      const firstToken = extractTokenFromEmail(await lastEmailTextFor(email));
+      const firstToken = extractTokenFromEmail(await lastResetPasswordEmailTextFor(email));
 
       await requestPasswordReset(email, new Headers());
-      const secondToken = extractTokenFromEmail(await lastEmailTextFor(email));
+      const secondToken = await waitForNewResetPasswordToken(email, firstToken);
       expect(secondToken).not.toBe(firstToken);
 
       const resetOutcome = await resetPassword(

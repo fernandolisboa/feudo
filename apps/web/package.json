@@ -26,6 +26,7 @@
     "@feudo/core": "workspace:*",
     "@neondatabase/serverless": "1.1.0",
     "@serwist/next": "9.5.12",
+    "@vercel/functions": "3.9.5",
     "better-auth": "1.7.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
