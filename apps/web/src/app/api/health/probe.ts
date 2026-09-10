@@ -8,6 +8,7 @@ import {
 } from "@/db/migrations-status";
 
 const CACHE_TTL_MS = 10_000;
+const PROBE_TIMEOUT_MS = 5_000;
 
 interface HealthProbe {
   db: boolean;
@@ -41,6 +42,33 @@ async function probeHealth(): Promise<HealthProbe> {
   return { db, migrations: { status } };
 }
 
+function timedOutProbe(): HealthProbe {
+  return { db: false, migrations: { status: unknownMigrationsStatus() } };
+}
+
+function createDeadline(ms: number): { promise: Promise<HealthProbe>; cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const promise = new Promise<HealthProbe>((resolve) => {
+    timer = setTimeout(() => {
+      resolve(timedOutProbe());
+    }, ms);
+  });
+
+  return {
+    promise,
+    cancel: () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    },
+  };
+}
+
+function probeHealthWithDeadline(): Promise<HealthProbe> {
+  const { promise: deadline, cancel } = createDeadline(PROBE_TIMEOUT_MS);
+  return Promise.race([probeHealth(), deadline]).finally(cancel);
+}
+
 export async function getHealthStatus(): Promise<HealthProbe> {
   const now = Date.now();
   if (cachedProbe && now - cachedProbe.checkedAt < CACHE_TTL_MS) {
@@ -48,7 +76,7 @@ export async function getHealthStatus(): Promise<HealthProbe> {
   }
 
   if (!inFlightProbe) {
-    inFlightProbe = probeHealth()
+    inFlightProbe = probeHealthWithDeadline()
       .then((result) => {
         cachedProbe = { checkedAt: Date.now(), result };
         return result;
