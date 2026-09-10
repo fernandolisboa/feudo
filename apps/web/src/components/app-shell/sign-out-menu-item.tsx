@@ -4,22 +4,13 @@ import { useState, useTransition } from "react";
 import { LogOut } from "lucide-react";
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { isRedirectSignal } from "@/lib/is-redirect-signal";
 // Direct file import, not the auth module's index: this file is bundled for
 // the client, and the auth index also re-exports getCurrentSession, which
 // reaches "next/headers". signOutAction is itself a "use server" export,
 // safe to import directly either way.
 import { signOutAction } from "@/modules/auth/actions";
 import { t } from "@/modules/theme";
-
-function isRedirectSignal(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "digest" in error &&
-    typeof error.digest === "string" &&
-    error.digest.startsWith("NEXT_REDIRECT")
-  );
-}
 
 export function SignOutMenuItem() {
   const [failed, setFailed] = useState(false);

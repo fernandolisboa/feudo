@@ -1,6 +1,10 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/modules/auth";
+import { OnboardingInvitesPanel } from "@/modules/households/components/onboarding-invites-panel";
+import { listMyPendingInvitations } from "@/modules/households/membership";
 import { OnboardingForm, resolveOnboardingRoute, t } from "@/modules/households";
 
 export default async function OnboardingPage() {
@@ -9,6 +13,9 @@ export default async function OnboardingPage() {
   if (redirectTarget) {
     redirect(redirectTarget);
   }
+
+  const requestHeaders = await headers();
+  const invitations = await listMyPendingInvitations(requestHeaders);
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
@@ -19,7 +26,18 @@ export default async function OnboardingPage() {
         <h1 className="text-xl font-semibold tracking-tight">{t.onboarding.title}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t.onboarding.subtitle}</p>
         <div className="mt-6">
-          <OnboardingForm />
+          <Tabs defaultValue="create">
+            <TabsList className="mb-4 w-full">
+              <TabsTrigger value="create">{t.onboarding.tabCreate}</TabsTrigger>
+              <TabsTrigger value="invite">{t.onboarding.tabInvite}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="create">
+              <OnboardingForm />
+            </TabsContent>
+            <TabsContent value="invite">
+              <OnboardingInvitesPanel invitations={invitations} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </main>
