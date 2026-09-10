@@ -343,6 +343,45 @@ entirely. A rate-limited request never reaches the floor at all — Better Auth'
 limiter runs in `onRequest`, ahead of `dispatchAuthEndpoint` (and therefore ahead of both hooks), so
 a 429 short-circuits before `hooks.before` ever records a start time.
 
+The floor only equalizes the two branches while the real work (minting the token, sending the
+email) stays under it. Without a background-task handler configured, Better Auth's
+`runInBackgroundOrAwait` (`sendResetPassword`, `sendVerificationEmail`) awaits the send inline, so a
+provider whose p95 sits above 500ms still lets a script separate known addresses from unknown ones
+by averaging a few samples — the floor pads the fast branch up, but never caps the slow one. `options.ts`
+sets `advanced.backgroundTasks.handler` to `scheduleBackgroundTask`
+(`apps/web/src/modules/auth/background-tasks.ts`), which wraps `waitUntil` from `@vercel/functions`:
+Better Auth then calls the handler instead of awaiting, so the endpoint returns as soon as the
+`hooks.after` floor elapses, regardless of how long the provider takes. `runInBackgroundOrAwait`
+already attaches its own `.catch` that logs "Failed to run background task" before calling the
+handler, so a failed reset-password or verification send is logged and never surfaces to the caller
+— the response already left with the generic "ok" body the enumeration protection requires.
+
+`sendMagicLink` (the `magicLink` plugin) is not routed through `runInBackgroundOrAwait` — the plugin
+awaits it directly (`better-auth/dist/plugins/magic-link/index.mjs`) — so `options.ts` schedules the
+send itself, through the exact same handler, via `ctx.context.runInBackground` (the promise Better
+Auth exposes on every endpoint context, built from the same `advanced.backgroundTasks.handler`).
+The send is wrapped in its own `.catch(logMagicLinkSendFailure)` before being handed to
+`runInBackground`, since that call — unlike `runInBackgroundOrAwait` — does not log for us; a failed
+send there logs `error.name` only, the same shape `logMagicLinkSendFailure` used before this change,
+and is likewise never surfaced to the caller.
+
+`waitUntil` is no-op-safe outside a Vercel request context: `getContext()` returns `{}` when the
+platform hasn't set its request-scoped global, so `.waitUntil?.(promise)` short-circuits without
+throwing — a promise runs from the moment it's constructed, not from the moment something waits on
+it, so the send still completes locally and in tests; `waitUntil` just has nothing to extend the
+function's lifetime with. `scheduleBackgroundTask`'s own `try`/`catch` around the `waitUntil` call is
+defense in depth against a future version that throws, not a path the current implementation takes
+— every caller still attaches its own `.catch` to the task promise first, so a synchronous throw
+from `waitUntil` never turns into an unhandled rejection either way.
+
+This same `handler` also runs the organization plugin's own `sendInvitationEmail`, since it too goes
+through `runInBackgroundOrAwait` — households.inviteMember now returns without waiting on the send.
+Invite emails aren't behind a timing floor (accepting an invite is an authenticated, household-scoped
+action, not an enumeration-sensitive one), so this is a side benefit rather than something this
+ticket set out to fix; a failed invite send is logged the same generic way and, like the other paths
+here, never surfaced to the caller — #59 tracks giving the inviting household visibility into a
+failed invite delivery specifically, which this ticket does not add.
+
 `/sign-in/magic-link` and `/reset-password` (the POST that submits the new password) get a tight
 `rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the magic-link plugin's own
 default is looser (60s / 5), and `/reset-password` submission — unlike `/request-password-reset` —

@@ -147,4 +147,81 @@ describe("timing floor on the raw Better Auth handler", () => {
       expect(emailAfterRequest?.subject).not.toBe(t.magicLinkEmail.subject);
     });
   });
+
+  // A provider slower than the floor must never leak into the response: the
+  // send now runs off the response path (advanced.backgroundTasks.handler,
+  // options.ts), so a known address should take no longer than an unknown
+  // one even when SLOW_SEND_MS comfortably exceeds the floor.
+  const SLOW_SEND_MS = 900;
+  const TIMING_FLOOR_UPPER_BOUND_MS = TIMING_FLOOR_LOWER_BOUND_MS + 200;
+
+  async function sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  it("keeps /request-password-reset within the floor bound for known and unknown email when the provider is slower than the floor", async () => {
+    await withTestDb(async () => {
+      const knownEmail = "timing-slow-provider-known-reset@example.com";
+      await createVerifiedUser(knownEmail, "correct-horse");
+      vi.spyOn(fakeEmailSender, "send").mockImplementation(async () => {
+        await sleep(SLOW_SEND_MS);
+      });
+
+      const knownStart = Date.now();
+      const knownResponse = await callAuthHandler("/request-password-reset", {
+        email: knownEmail,
+        redirectTo: "/redefinir-senha",
+      });
+      const knownElapsed = Date.now() - knownStart;
+      expect(knownResponse.ok).toBe(true);
+      expect(knownElapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+      expect(knownElapsed).toBeLessThan(TIMING_FLOOR_UPPER_BOUND_MS);
+
+      const unknownStart = Date.now();
+      const unknownResponse = await callAuthHandler("/request-password-reset", {
+        email: "timing-slow-provider-unknown-reset@example.com",
+        redirectTo: "/redefinir-senha",
+      });
+      const unknownElapsed = Date.now() - unknownStart;
+      expect(unknownResponse.ok).toBe(true);
+      expect(unknownElapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+      expect(unknownElapsed).toBeLessThan(TIMING_FLOOR_UPPER_BOUND_MS);
+
+      await sleep(SLOW_SEND_MS);
+    });
+  });
+
+  it("keeps /sign-in/magic-link within the floor bound for known and unknown email when the provider is slower than the floor", async () => {
+    await withTestDb(async () => {
+      const knownEmail = "timing-slow-provider-known-magic-link@example.com";
+      await createVerifiedUser(knownEmail, "correct-horse");
+      vi.spyOn(fakeEmailSender, "send").mockImplementation(async () => {
+        await sleep(SLOW_SEND_MS);
+      });
+
+      const knownStart = Date.now();
+      const knownResponse = await callAuthHandler("/sign-in/magic-link", {
+        email: knownEmail,
+        callbackURL: "/",
+        errorCallbackURL: "/entrar/link-magico",
+      });
+      const knownElapsed = Date.now() - knownStart;
+      expect(knownResponse.ok).toBe(true);
+      expect(knownElapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+      expect(knownElapsed).toBeLessThan(TIMING_FLOOR_UPPER_BOUND_MS);
+
+      const unknownStart = Date.now();
+      const unknownResponse = await callAuthHandler("/sign-in/magic-link", {
+        email: "timing-slow-provider-unknown-magic-link@example.com",
+        callbackURL: "/",
+        errorCallbackURL: "/entrar/link-magico",
+      });
+      const unknownElapsed = Date.now() - unknownStart;
+      expect(unknownResponse.ok).toBe(true);
+      expect(unknownElapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
+      expect(unknownElapsed).toBeLessThan(TIMING_FLOOR_UPPER_BOUND_MS);
+
+      await sleep(SLOW_SEND_MS);
+    });
+  });
 });

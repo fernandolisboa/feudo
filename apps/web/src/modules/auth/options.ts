@@ -10,6 +10,7 @@ import { householdSettings, member, session as sessionTable } from "@/db/schema"
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
+import { scheduleBackgroundTask } from "./background-tasks";
 import { clearActiveHouseholdOnSessions } from "./clear-active-household";
 import { buildInvitationEmail } from "./email/invitation-email";
 import { buildMagicLinkEmail } from "./email/magic-link-email";
@@ -117,6 +118,19 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     secret: env.BETTER_AUTH_SECRET,
     baseURL,
     trustedOrigins: [baseURL],
+    // Scheduling the send here rather than awaiting it inline is what lets
+    // runInBackgroundOrAwait (sendResetPassword, sendVerificationEmail) return
+    // the response before the provider call finishes, so a slow provider can
+    // no longer separate a known address from an unknown one by response time
+    // (docs/runbooks/auth.md, "Timing floor"). sendMagicLink below reuses the
+    // exact same handler through ctx.context.runInBackground, since the
+    // magic-link plugin awaits that callback directly rather than routing it
+    // through runInBackgroundOrAwait.
+    advanced: {
+      backgroundTasks: {
+        handler: scheduleBackgroundTask,
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -388,15 +402,20 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             url,
             describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
           );
-          try {
-            await emailSender.send({ to: email, ...magicLinkEmail });
-          } catch (error) {
-            // A provider failure for a known address must not surface as a
-            // fast, non-`APIError` 500 — that would skip the timing-floor
-            // after-hook and let a caller tell known and unknown addresses
-            // apart by status code alone.
-            logMagicLinkSendFailure(error);
-          }
+          // This plugin awaits sendMagicLink directly rather than routing it
+          // through runInBackgroundOrAwait (docs/runbooks/auth.md), so
+          // awaiting the send here would block a known address's response on
+          // the provider — exactly the gap this ticket closes. Scheduling it
+          // through the same background handler configured above
+          // (advanced.backgroundTasks.handler) keeps the known and unknown
+          // branches equally fast; the .catch keeps the failure logged
+          // instead of becoming an unhandled rejection, since
+          // ctx.context.runInBackground (unlike runInBackgroundOrAwait) does
+          // not log for us.
+          const sendPromise = emailSender
+            .send({ to: email, ...magicLinkEmail })
+            .catch(logMagicLinkSendFailure);
+          ctx?.context.runInBackground(sendPromise);
         },
       }),
       nextCookies(),
