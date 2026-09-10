@@ -29,4 +29,12 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath("/")).toBeNull();
     expect(sanitizeNextPath("/casa")).toBeNull();
   });
+
+  it("rejects percent-encoded and query/fragment variants of an open redirect or traversal", () => {
+    expect(sanitizeNextPath("%2F%2Fevil.com")).toBeNull();
+    expect(sanitizeNextPath("/convite/abc%2F..%2Fx")).toBeNull();
+    expect(sanitizeNextPath("%252Fconvite%252Fx")).toBeNull();
+    expect(sanitizeNextPath("/convite/abc?x=1")).toBeNull();
+    expect(sanitizeNextPath("/convite/abc#f")).toBeNull();
+  });
 });
