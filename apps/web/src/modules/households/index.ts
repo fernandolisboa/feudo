@@ -7,8 +7,6 @@ export { OnboardingInvitesPanel } from "./components/onboarding-invites-panel";
 export { PendingInvitationsTable } from "./components/pending-invitations-table";
 export { getHouseholdSwitcherProps } from "./get-household-switcher-props";
 export { pruneExpiredInvitations } from "./invitation-prune";
-export type { HouseholdRole, InvitationForUser, PendingInvitation } from "./membership";
-export type { CasaPageProps } from "./page-props";
 export { getCasaPageProps, getInvitationPreview, getOnboardingInvites } from "./page-props";
 export type { HouseholdSettings } from "./repository";
 export { getHouseholdSettings } from "./repository";

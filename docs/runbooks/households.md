@@ -16,10 +16,11 @@ zone and reserve multiple live here, ADR-0001). Its public surface is
   itself).
 - Routing and session helpers: `resolveAppRoute`, `resolveOnboardingRoute`,
   `requireHouseholdSession`, `getHouseholdSwitcherProps`.
-- `t`, the scope types (`HouseholdScope`, `householdScope`, `NoActiveHouseholdError`), the role and
-  invitation types consumers actually annotate with (`HouseholdRole`, `PendingInvitation`,
-  `InvitationForUser`), a read-only settings accessor (`getHouseholdSettings`) and the daily
-  housekeeping entry point (`pruneExpiredInvitations`).
+- `t`, the scope types (`HouseholdScope`, `householdScope`, `NoActiveHouseholdError`), a read-only
+  settings accessor (`getHouseholdSettings`) and the daily housekeeping entry point
+  (`pruneExpiredInvitations`). The role and invitation types (`HouseholdRole`, `PendingInvitation`,
+  `InvitationForUser`, `CasaPageProps`) stay off the barrel: every consumer is inside this module
+  and imports them by relative path straight from `membership.ts`/`page-props.ts`.
 
 Every `(app)`/`comecar`/`convite` route imports only from this barrel, never by relative path into
 the module's internals. `service.ts`, `membership.ts`, `repository.ts`, `actions.ts`,
