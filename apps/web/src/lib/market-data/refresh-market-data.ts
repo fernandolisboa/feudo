@@ -23,7 +23,7 @@ const DIRECTLY_FETCHED_SERIES_CODES = [
   SgsSeriesCode.Ipca12MonthAccumulated,
 ] as const;
 
-export type RefreshOutcome = "fetched" | "skipped";
+type RefreshOutcome = "fetched" | "skipped";
 
 export interface RefreshSeriesResult {
   seriesCode: SgsSeriesCode;
@@ -53,10 +53,15 @@ async function refreshDirectSeries(
   }
 }
 
+interface RefreshMarketDataOutcome {
+  ok: boolean;
+  results: RefreshSeriesResult[];
+}
+
 export async function refreshMarketData(
   db: Database,
   options: { now?: Date; fetchImpl?: typeof fetch } = {},
-): Promise<RefreshSeriesResult[]> {
+): Promise<RefreshMarketDataOutcome> {
   const now = options.now ?? new Date();
   const fetchImpl = options.fetchImpl ?? fetch;
 
@@ -65,5 +70,6 @@ export async function refreshMarketData(
     results.push(await refreshDirectSeries(db, seriesCode, now, fetchImpl));
   }
 
-  return results;
+  const everySeriesSkipped = results.every((result) => result.outcome === "skipped");
+  return { ok: !everySeriesSkipped, results };
 }
