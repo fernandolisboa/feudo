@@ -8,6 +8,7 @@ import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";
 import { getDb } from "@/db/client";
 import { signUp } from "./service";
+import { t } from "./strings";
 
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
@@ -127,6 +128,7 @@ describe("timing floor on the raw Better Auth handler", () => {
     await withTestDb(async () => {
       const knownEmail = "timing-handler-provider-failure-magic-link@example.com";
       await createVerifiedUser(knownEmail, "correct-horse");
+      const emailBeforeRequest = await findLastFakeSentEmail(getDb(), knownEmail);
       vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
 
       const start = Date.now();
@@ -139,7 +141,10 @@ describe("timing floor on the raw Better Auth handler", () => {
 
       expect(response.status).toBe(200);
       expect(elapsed).toBeGreaterThanOrEqual(TIMING_FLOOR_LOWER_BOUND_MS);
-      expect(await findLastFakeSentEmail(getDb(), knownEmail)).toBeUndefined();
+
+      const emailAfterRequest = await findLastFakeSentEmail(getDb(), knownEmail);
+      expect(emailAfterRequest).toEqual(emailBeforeRequest);
+      expect(emailAfterRequest?.subject).not.toBe(t.magicLinkEmail.subject);
     });
   });
 });
