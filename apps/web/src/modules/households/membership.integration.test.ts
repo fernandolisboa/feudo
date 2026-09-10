@@ -1012,6 +1012,14 @@ describe("invitation delivery failure (integration)", () => {
       expect(invited.status).toBe("ok");
       if (invited.status !== "ok") return;
 
+      // The initial send's own failure already set lastSentAt; push it
+      // outside the minimum interval so this resend reaches the provider
+      // instead of short-circuiting on rate_limited.
+      await db
+        .update(invitation)
+        .set({ lastSentAt: new Date(Date.now() - 2 * 60 * 1000) })
+        .where(eq(invitation.id, invited.invitationId));
+
       const resendOutcome = await resendInvitation(
         invited.invitationId,
         session,
@@ -1166,10 +1174,16 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
 
         // Pushed outside the hourly window on createdAt alone: only a recent
         // lastSentAt (set by the resend below) can keep this row counting
-        // toward recentInvitationCount's ceiling.
+        // toward recentInvitationCount's ceiling. lastSentAt is also pushed
+        // outside the 60s minimum interval (the initial send's own failure
+        // already set it) so the resend below reaches the provider instead
+        // of short-circuiting on rate_limited.
         await db
           .update(invitation)
-          .set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) })
+          .set({
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            lastSentAt: new Date(Date.now() - 2 * 60 * 1000),
+          })
           .where(eq(invitation.id, invited.invitationId));
 
         const resendOutcome = await resendInvitation(
