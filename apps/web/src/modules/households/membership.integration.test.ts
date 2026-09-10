@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
 const currentHeaders = vi.hoisted(() => ({ value: new Headers() }));
 vi.mock("next/headers", () => ({
@@ -7,7 +7,13 @@ vi.mock("next/headers", () => ({
 }));
 
 import { withTestDb } from "@/db/test/harness";
-import { invitation, member, organization, session as sessionTable } from "@/db/schema";
+import {
+  fakeSentEmails,
+  invitation,
+  member,
+  organization,
+  session as sessionTable,
+} from "@/db/schema";
 import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
 import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
 import { fakeEmailSender } from "@/modules/auth/email/fake-sender";
@@ -1469,6 +1475,69 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
         .from(invitation)
         .where(eq(invitation.id, invited.invitationId));
       expect(row?.status).toBe("canceled");
+    });
+  });
+
+  it("refuses to resend an invitation whose own row has expired since the failed delivery", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-expired-target-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const inviteeEmail = "resend-expired-target-invitee@example.com";
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: inviteeEmail, role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const [emailsBefore] = await db
+        .select({ total: count() })
+        .from(fakeSentEmails)
+        .where(eq(fakeSentEmails.to, inviteeEmail));
+
+      // Simulates a "Reenviar convite" click landing just after the row's
+      // own expiry: delivery_failed_at is still set from the original
+      // failed send and status is still 'pending' (nothing flips it to
+      // 'expired' outside the daily prune), but expires_at has passed.
+      // lastSentAt is also pushed outside the minimum interval (the
+      // initial send's own failure already set it) so the eligibility
+      // select is what stops this resend, not the rate limit.
+      await db
+        .update(invitation)
+        .set({
+          expiresAt: new Date(Date.now() - 60_000),
+          lastSentAt: new Date(Date.now() - 2 * 60 * 1000),
+        })
+        .where(eq(invitation.id, invited.invitationId));
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("not_found");
+
+      const [emailsAfter] = await db
+        .select({ total: count() })
+        .from(fakeSentEmails)
+        .where(eq(fakeSentEmails.to, inviteeEmail));
+      expect(emailsAfter?.total).toBe(emailsBefore?.total ?? 0);
+
+      const invitationRowsForEmail = await db
+        .select({ id: invitation.id })
+        .from(invitation)
+        .where(eq(invitation.email, inviteeEmail));
+      expect(invitationRowsForEmail).toHaveLength(1);
     });
   });
 });

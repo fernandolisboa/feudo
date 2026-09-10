@@ -202,11 +202,15 @@ export type ResendInvitationOutcome = SimpleOutcome<
 // resend an invitation that already exists — never mint a new one under a
 // different identity — and is subject to the same per-inviter hourly ceiling
 // as a fresh invite (recentInvitationCount above), plus its own minimum
-// interval (RESEND_MIN_INTERVAL_MS). Eligibility (status = 'pending' and
-// deliveryFailedAt set) is required in the scoped select itself, not just
-// checked in code, and re-checked immediately before the Better Auth call:
-// a concurrent cancel of the same invitation between the two reads must
-// refuse the resend (not_found), never resurrect a cancelled invite.
+// interval (RESEND_MIN_INTERVAL_MS). Eligibility (status = 'pending',
+// deliveryFailedAt set and expiresAt in the future) is required in the
+// scoped select itself, not just checked in code, and re-checked
+// immediately before the Better Auth call: a concurrent cancel of the same
+// invitation between the two reads must refuse the resend (not_found),
+// never resurrect a cancelled invite. The expiresAt check also matters on
+// the first read: an already-expired row is invisible to Better Auth's own
+// findPendingInvitation, so without it createInvitation would take the
+// create branch and mint a second, unrelated invitation instead of erroring.
 export async function resendInvitation(
   invitationId: string,
   session: HouseholdSession | null,
@@ -230,6 +234,7 @@ export async function resendInvitation(
         eq(invitationTable.organizationId, session.householdId),
         eq(invitationTable.status, "pending"),
         isNotNull(invitationTable.deliveryFailedAt),
+        gt(invitationTable.expiresAt, new Date()),
       ),
     )
     .limit(1);
