@@ -130,16 +130,25 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       // instead: our callback returns as soon as it hands the send off,
       // without ever awaiting the provider call itself.
       sendResetPassword: ({ user, url }) => {
-        const email = buildResetPasswordEmail(
-          url,
-          describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
-        );
-        const sendPromise = emailSender
-          .send({ to: user.email, ...email })
-          .catch((error: unknown) => {
-            logAuthEmailSendFailure("reset-password", error);
-          });
-        scheduleBackgroundTask(sendPromise);
+        // buildResetPasswordEmail runs before the send is scheduled, so a
+        // throw here (e.g. a malformed url) must not escape as a synchronous
+        // exception: that would short-circuit runInBackgroundOrAwait with a
+        // fast 500 before the `after` hook's waitForTimingFloor ever runs,
+        // reopening the timing side-channel this ticket closes.
+        try {
+          const email = buildResetPasswordEmail(
+            url,
+            describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
+          );
+          const sendPromise = emailSender
+            .send({ to: user.email, ...email })
+            .catch((error: unknown) => {
+              logAuthEmailSendFailure("reset-password", error);
+            });
+          scheduleBackgroundTask(sendPromise);
+        } catch (error) {
+          logAuthEmailSendFailure("reset-password", error);
+        }
         return Promise.resolve();
       },
       // The token just consumed to reach this callback is already gone
@@ -397,23 +406,32 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           if (!existing) {
             return;
           }
-          const magicLinkEmail = buildMagicLinkEmail(
-            url,
-            describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
-          );
-          // This plugin awaits sendMagicLink directly (it never routes
-          // through runInBackgroundOrAwait), so awaiting the send here would
-          // block a known address's response on the provider — exactly the
-          // gap this ticket closes. Scheduling it instead keeps the known
-          // and unknown branches equally fast; the .catch keeps the failure
-          // logged instead of becoming an unhandled rejection, since
-          // scheduleBackgroundTask does not log for us.
-          const sendPromise = emailSender
-            .send({ to: email, ...magicLinkEmail })
-            .catch((error: unknown) => {
-              logAuthEmailSendFailure("magic-link", error);
-            });
-          scheduleBackgroundTask(sendPromise);
+          // buildMagicLinkEmail runs before the send is scheduled; a throw
+          // here must stay inside this async function's own rejection path
+          // (it already is, since sendMagicLink is async) rather than ever
+          // becoming a synchronous exception, so it cannot short-circuit the
+          // known branch ahead of the unknown one's fast return above.
+          try {
+            const magicLinkEmail = buildMagicLinkEmail(
+              url,
+              describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
+            );
+            // This plugin awaits sendMagicLink directly (it never routes
+            // through runInBackgroundOrAwait), so awaiting the send here would
+            // block a known address's response on the provider — exactly the
+            // gap this ticket closes. Scheduling it instead keeps the known
+            // and unknown branches equally fast; the .catch keeps the failure
+            // logged instead of becoming an unhandled rejection, since
+            // scheduleBackgroundTask does not log for us.
+            const sendPromise = emailSender
+              .send({ to: email, ...magicLinkEmail })
+              .catch((error: unknown) => {
+                logAuthEmailSendFailure("magic-link", error);
+              });
+            scheduleBackgroundTask(sendPromise);
+          } catch (error) {
+            logAuthEmailSendFailure("magic-link", error);
+          }
         },
       }),
       nextCookies(),
