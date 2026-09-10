@@ -142,6 +142,13 @@ export const invitation = pgTable(
     inviterId: text("inviter_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Set by organization({ sendInvitationEmail }) in auth/options.ts when the
+    // provider send throws (the invitation row itself is already committed by
+    // then — Better Auth's own createInvitation route creates it before
+    // calling sendInvitationEmail); cleared the next time a send from this
+    // row succeeds, including a resend (households.resendInvitation). Not a
+    // Better Auth column: Feudo's own state on top of its schema.
+    deliveryFailedAt: timestamp("delivery_failed_at", { withTimezone: true }),
   },
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),

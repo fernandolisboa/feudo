@@ -39,7 +39,7 @@ export async function getCasaPageProps(session: HouseholdSession): Promise<CasaP
   const viewerRole = viewer?.role ?? "member";
   const canManage = viewerRole === "owner" || viewerRole === "admin";
 
-  const invitations = canManage ? await listPendingInvitations(session, requestHeaders) : [];
+  const invitations = canManage ? await listPendingInvitations(session, db, requestHeaders) : [];
   const settings = await getHouseholdSettings(householdScope(session), db);
 
   return {

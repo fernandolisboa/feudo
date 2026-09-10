@@ -1,12 +1,17 @@
 import type { BetterAuthOptions } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
 import { and, count, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
 
-import { householdSettings, member, session as sessionTable } from "@/db/schema";
+import {
+  householdSettings,
+  invitation as invitationTable,
+  member,
+  session as sessionTable,
+} from "@/db/schema";
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
@@ -40,6 +45,7 @@ const ORGANIZATION_LIMIT = 20;
 const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
 const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = 6;
 const OWNER_ROLE = "owner";
+const MEMBER_ROLE = "member";
 // Mirrors households/validation.ts's/auth/validation.ts's own 120-char
 // bound at the edge (Zod) — this is the server-side floor for a raw call
 // that skips the app's forms entirely.
@@ -76,6 +82,14 @@ function hasConsentField(body: unknown): boolean {
   return CONSENT_FIELDS.some((field) => keys.includes(field));
 }
 
+function readQueryOrganizationId(query: unknown): string | undefined {
+  if (typeof query !== "object" || query === null) {
+    return undefined;
+  }
+  const value = (query as Record<string, unknown>).organizationId;
+  return typeof value === "string" ? value : undefined;
+}
+
 function readEmail(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) {
     return undefined;
@@ -87,6 +101,13 @@ function readEmail(body: unknown): string | undefined {
 function logMagicLinkSendFailure(error: unknown): void {
   console.error(
     "magic-link email send failed",
+    error instanceof Error ? error.name : "UnknownError",
+  );
+}
+
+function logInvitationSendFailure(error: unknown): void {
+  console.error(
+    "invitation email send failed",
     error instanceof Error ? error.name : "UnknownError",
   );
 }
@@ -198,6 +219,42 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       before: createAuthMiddleware(async (ctx) => {
         markTimingFloorRequestStart(ctx.path, ctx.context);
 
+        if (ctx.path === "/organization/list-invitations") {
+          // The raw endpoint only checks membership, not role (Better Auth
+          // 1.7.3's crud-invites.mjs) — a pending invitee's email is
+          // otherwise readable by any plain member, not just the people who
+          // sent or can manage invites. No organizationHooks entry point
+          // exists for this endpoint, so this is enforced the same way
+          // /update-user and /sign-up/email are above: a path-matched branch
+          // in the global before hook. listMembers (households.ts) stays
+          // open to every member on purpose — only invitee emails are
+          // restricted here.
+          const rawSession = (await getSessionFromCtx(ctx)) as {
+            session: { activeOrganizationId?: string | null };
+            user: { id: string };
+          } | null;
+          if (!rawSession) {
+            return;
+          }
+          const organizationId =
+            readQueryOrganizationId(ctx.query) ??
+            rawSession.session.activeOrganizationId ??
+            undefined;
+          if (!organizationId) {
+            return;
+          }
+          const [callerMembership] = await db
+            .select({ role: member.role })
+            .from(member)
+            .where(
+              and(eq(member.organizationId, organizationId), eq(member.userId, rawSession.user.id)),
+            );
+          if (callerMembership?.role === MEMBER_ROLE) {
+            throw new APIError("FORBIDDEN", { message: "owner_or_admin_required" });
+          }
+          return;
+        }
+
         if (ctx.path === "/update-user") {
           // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
           // signed-in session must never be able to rewrite its own consent record.
@@ -264,7 +321,25 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             role,
             expiresIn: describeExpiryPtBR(INVITATION_EXPIRES_IN_SECONDS),
           });
-          await emailSender.send({ to: email, ...invitationEmail });
+          // The invitation row is already committed by the time this runs
+          // (createInvitation's route creates it, then calls this) and
+          // Better Auth's runInBackgroundOrAwait only logs a rejection here
+          // without failing the request — a provider failure must be
+          // recorded on the row itself, or /casa's pending-invitations table
+          // would show a normal-looking invite the recipient never got.
+          try {
+            await emailSender.send({ to: email, ...invitationEmail });
+            await db
+              .update(invitationTable)
+              .set({ deliveryFailedAt: null })
+              .where(eq(invitationTable.id, id));
+          } catch (error) {
+            logInvitationSendFailure(error);
+            await db
+              .update(invitationTable)
+              .set({ deliveryFailedAt: new Date() })
+              .where(eq(invitationTable.id, id));
+          }
         },
         organizationHooks: {
           beforeCreateOrganization: ({ organization }) => {

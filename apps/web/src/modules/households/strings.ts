@@ -75,7 +75,9 @@ const en = {
       leave: "Leave household",
       transferTo: "Transfer responsibility to {name}",
       cancelInvite: "Cancel invite",
+      resendInvite: "Resend",
     },
+    deliveryFailed: "Email not sent",
     removeDialog: {
       title: "Remove {name} from the household?",
       description: "{name} loses access to this household's financial data immediately.",
@@ -198,7 +200,9 @@ const ptBR = {
       leave: "Sair da casa",
       transferTo: "Transferir responsabilidade para {name}",
       cancelInvite: "Cancelar convite",
+      resendInvite: "Reenviar",
     },
+    deliveryFailed: "E-mail não enviado",
     removeDialog: {
       title: "Remover {name} da casa?",
       description: "{name} perde acesso aos dados financeiros desta casa imediatamente.",

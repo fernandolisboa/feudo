@@ -14,6 +14,7 @@ import {
   inviteMember,
   leaveHousehold,
   removeMember,
+  resendInvitation,
   transferOwnership,
   updateMemberRole,
 } from "./membership";
@@ -140,6 +141,43 @@ export async function cancelInvitationAction(
       return { status: "error", message: t.errors.invitationNotFound };
     case "failed":
       return { status: "error", message: t.errors.cancelInvitationFailed };
+  }
+}
+
+export async function resendInvitationAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = invitationIdFormSchema.safeParse({
+    invitationId: formData.get("invitationId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+
+  const requestHeaders = await headers();
+  const session = await requireHouseholdSession();
+  const outcome = await resendInvitation(
+    parsed.data.invitationId,
+    session,
+    getDb(),
+    requestHeaders,
+  );
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/casa");
+      return { status: "success", message: t.casa.inviteSent };
+    case "unauthenticated":
+      return { status: "error", message: t.errors.unauthenticated };
+    case "not_allowed":
+      return { status: "error", message: t.errors.notAllowed };
+    case "not_found":
+      return { status: "error", message: t.errors.invitationNotFound };
+    case "rate_limited":
+      return { status: "error", message: t.errors.inviteRateLimited };
+    case "failed":
+      return { status: "error", message: t.errors.inviteFailed };
   }
 }
 

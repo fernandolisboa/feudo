@@ -51,10 +51,12 @@ export type PendingInvitation = {
   email: string;
   role: InvitableRole;
   expiresAt: Date;
+  deliveryFailedAt: Date | null;
 };
 
 export async function listPendingInvitations(
   session: HouseholdSession,
+  db: Database,
   requestHeaders: Headers,
 ): Promise<PendingInvitation[]> {
   const invitations = await getAuth().api.listInvitations({
@@ -62,14 +64,29 @@ export async function listPendingInvitations(
     query: { organizationId: session.householdId },
   });
   const now = new Date();
-  return invitations
-    .filter((invitation) => invitation.status === "pending" && invitation.expiresAt > now)
-    .map((invitation) => ({
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role as InvitableRole,
-      expiresAt: invitation.expiresAt,
-    }));
+  const pending = invitations.filter(
+    (invitation) => invitation.status === "pending" && invitation.expiresAt > now,
+  );
+  if (pending.length === 0) {
+    return [];
+  }
+  // listInvitations (Better Auth's own endpoint) doesn't return Feudo's own
+  // deliveryFailedAt column, so it's read straight from the table, scoped to
+  // this same household's invitations.
+  const deliveryState = await db
+    .select({ id: invitationTable.id, deliveryFailedAt: invitationTable.deliveryFailedAt })
+    .from(invitationTable)
+    .where(eq(invitationTable.organizationId, session.householdId));
+  const deliveryFailedById = new Map(
+    deliveryState.map((row) => [row.id, row.deliveryFailedAt] as const),
+  );
+  return pending.map((invitation) => ({
+    id: invitation.id,
+    email: invitation.email,
+    role: invitation.role as InvitableRole,
+    expiresAt: invitation.expiresAt,
+    deliveryFailedAt: deliveryFailedById.get(invitation.id) ?? null,
+  }));
 }
 
 export type InvitationForUser = {
@@ -154,6 +171,73 @@ export async function inviteMember(
     if (code === "USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION") {
       return { status: "already_invited" };
     }
+    if (
+      code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION" ||
+      code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USER_WITH_THIS_ROLE"
+    ) {
+      return { status: "not_allowed" };
+    }
+    return { status: "failed" };
+  }
+}
+
+export type ResendInvitationOutcome = SimpleOutcome<
+  "ok" | "unauthenticated" | "not_allowed" | "not_found" | "rate_limited" | "failed"
+>;
+
+// Used by PendingInvitationsTable's "Reenviar" action, offered when an
+// invitation's deliveryFailedAt is set: reuses the pending row's own email
+// and role instead of taking them from the caller, so this can only ever
+// resend an invitation that already exists — never mint a new one under a
+// different identity — and is subject to the same per-inviter hourly ceiling
+// as a fresh invite (recentInvitationCount above).
+export async function resendInvitation(
+  invitationId: string,
+  session: HouseholdSession | null,
+  db: Database,
+  requestHeaders: Headers,
+): Promise<ResendInvitationOutcome> {
+  if (!session) {
+    return { status: "unauthenticated" };
+  }
+
+  const rows = await db
+    .select({
+      email: invitationTable.email,
+      role: invitationTable.role,
+      status: invitationTable.status,
+    })
+    .from(invitationTable)
+    .where(
+      and(
+        eq(invitationTable.id, invitationId),
+        eq(invitationTable.organizationId, session.householdId),
+      ),
+    )
+    .limit(1);
+  const existing = rows[0];
+  if (!existing || existing.status !== "pending" || !existing.role) {
+    return { status: "not_found" };
+  }
+
+  const recentCount = await recentInvitationCount(db, session.userId);
+  if (recentCount >= INVITE_HOURLY_LIMIT) {
+    return { status: "rate_limited" };
+  }
+
+  try {
+    await getAuth().api.createInvitation({
+      headers: requestHeaders,
+      body: {
+        email: existing.email,
+        role: existing.role as InvitableRole,
+        organizationId: session.householdId,
+        resend: true,
+      },
+    });
+    return { status: "ok" };
+  } catch (error) {
+    const code = apiErrorCode(error);
     if (
       code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION" ||
       code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USER_WITH_THIS_ROLE"
