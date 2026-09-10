@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { HouseholdSwitcher } from "@/modules/households";
+import { getHouseholdSwitcherProps, HouseholdSwitcherSelect } from "@/modules/households";
 import type { ShellLayout } from "@/modules/theme";
 
 import { MobileHeader } from "./mobile-header";
@@ -10,21 +10,24 @@ import { SidebarNav } from "./sidebar-nav";
 import { TopNav } from "./top-nav";
 import { UserMenu } from "./user-menu";
 
-export function AppShell({
+export async function AppShell({
   shell,
   sidebarCollapsed,
   userName,
   userEmail,
+  householdId,
   children,
 }: {
   shell: ShellLayout;
   sidebarCollapsed: boolean;
   userName: string;
   userEmail: string;
+  householdId: string;
   children: ReactNode;
 }) {
   const userMenu = <UserMenu name={userName} email={userEmail} />;
-  const householdSwitcher = <HouseholdSwitcher />;
+  const switcherProps = await getHouseholdSwitcherProps(householdId);
+  const householdSwitcher = switcherProps ? <HouseholdSwitcherSelect {...switcherProps} /> : null;
 
   return (
     <div className="app-shell" data-shell={shell}>
