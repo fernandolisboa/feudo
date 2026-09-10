@@ -187,29 +187,17 @@ function mapSimpleResponse(response: Response | undefined): RequestEmailFlowOutc
 
 // Shared by every flow that only ever emails a single-use link (resend
 // verification, request magic link, request password reset): same request
-// shape, same three-way outcome mapping. `minimumMs`, when set, pads the
-// call to a constant floor so a caller cannot tell "email exists, sending
-// took real time" apart from "email doesn't exist, nothing was sent" by
-// timing the response; it never pads a rate-limited response, since that
-// signal is already uniform across known and unknown addresses.
+// shape, same three-way outcome mapping. The timing floor that equalizes a
+// known and an unknown email's response time lives in the Better Auth
+// `hooks.after` (options.ts, timing-floor.ts), not here, so it also covers a
+// direct HTTP call to /api/auth/* that skips this wrapper entirely.
 async function requestEmailFlow(
   path: string,
   body: unknown,
   requestHeaders: Headers,
-  options: { minimumMs?: number } = {},
 ): Promise<RequestEmailFlowOutcome> {
-  const start = options.minimumMs !== undefined ? Date.now() : undefined;
   const response = await callAuthHandler(path, body, requestHeaders);
-  const outcome = mapSimpleResponse(response);
-
-  if (start !== undefined && outcome.status !== "rate_limited") {
-    const remaining = (options.minimumMs as number) - (Date.now() - start);
-    if (remaining > 0) {
-      await new Promise((resolve) => setTimeout(resolve, remaining));
-    }
-  }
-
-  return outcome;
+  return mapSimpleResponse(response);
 }
 
 export async function resendVerification(
@@ -238,12 +226,6 @@ export async function requestMagicLink(
   );
 }
 
-// Better Auth's own /send-verification-email pads unknown-user lookups to a
-// 500ms floor for the same reason (a fast local check versus a slow email
-// send would otherwise leak which addresses have an account);
-// /request-password-reset has no such floor built in, so we add one here.
-const REQUEST_PASSWORD_RESET_MINIMUM_MS = 500;
-
 export async function requestPasswordReset(
   email: string,
   requestHeaders: Headers,
@@ -252,7 +234,6 @@ export async function requestPasswordReset(
     "/request-password-reset",
     { email, redirectTo: "/redefinir-senha" },
     requestHeaders,
-    { minimumMs: REQUEST_PASSWORD_RESET_MINIMUM_MS },
   );
 }
 

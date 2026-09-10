@@ -217,6 +217,29 @@ window, since it would only be re-testing the library's own configuration option
 Magic-link tokens are stored `storeToken: "hashed"` (Better Auth's own default is `"plain"`): the
 `verification` row holds a hash, not the token a phishing read of the database could replay.
 
+Every request for a magic link or a password reset writes a `verification` row, including for an
+address with no sign-up (`disableSignUp`/enumeration protection above), and Better Auth never prunes
+expired ones itself. `pruneExpiredVerifications` (`apps/web/src/modules/auth/verification-prune.ts`,
+exported from the module barrel) deletes every `verification` row with `expires_at` in the past,
+using the driver's `rowCount` rather than `.returning()` since the route only needs a count. It runs
+as one step of the shared housekeeping cron, `GET /api/cron/daily`
+(`apps/web/src/app/api/cron/daily/route.ts`) — see "Cron jobs" below for why the market-data refresh
+and the verification prune share a single route instead of one cron each.
+
+## Cron jobs
+
+Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
+`GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
+(`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
+runs each of its steps — the market-data refresh (`refreshMarketData`) and the expired-verification
+prune (`pruneExpiredVerifications`) — in its own try/catch, so one step failing never stops the
+other from running, and returns a per-step summary:
+`{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
+The response is `200` when every step succeeded and `500` when any step errored or, for
+market-data, fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from
+ADR-0008) becomes a third step of this same route rather than a new cron entry, since the Hobby
+limit leaves no room for a third schedule.
+
 ## Magic link never signs up
 
 `magicLink({ disableSignUp: true, ... })` in `options.ts` is deliberate: `REGISTRATION_MODE` and
@@ -250,11 +273,7 @@ route the reset email through the same `EmailSender` as everything else and revo
 the account the moment the new password is set (Better Auth 1.7.3's own `/reset-password` handler,
 not Feudo code). `/request-password-reset` already returns the same generic message for a known and
 an unknown email (Better Auth's own enumeration protection, simulating the verification-token
-lookup either way); `requestPasswordReset` (`service.ts`) additionally pads every call to a 500ms
-floor (`REQUEST_PASSWORD_RESET_MINIMUM_MS`), because Better Auth's own protection only equalizes
-the _work_ done for a known vs. unknown address, not the _time_ it takes — sending a real email is
-slower than the unknown-address branch's dummy lookup, and an observer timing the response could
-otherwise use that gap the same way it could use a differing status code.
+lookup either way).
 `emailAndPassword.onPasswordReset` deletes every other outstanding `reset-password:*` verification
 row for that user directly (there is no `internalAdapter` method to look rows up by value, only by
 exact identifier), so a second unused reset link from an earlier request can't set the password
@@ -271,6 +290,35 @@ a "request a new link" message instead of a broken form. `ResetPasswordForm` str
 the address bar on mount (`history.replaceState`) once it has captured the token as component
 state, since the query string is otherwise a standing exposure (browser history, a shared device, a
 referrer header on any link the user clicks from that page).
+
+`ResetPasswordFlow` (`components/reset-password-flow.tsx`) wraps `ResetPasswordForm` and decides
+which of three states to render — `resolveResetPasswordFlowState`
+(`reset-password-flow-state.ts`), a pure function unit-tested on its own — form, "link removed from
+the address bar", or "invalid or expired". A token in the URL always means "form"; without one, the
+distinguishing signal is a `sessionStorage` flag (`feudo:reset-password-in-progress`) set the moment
+a token was last captured on this browser tab. If that flag is set, the page was reloaded after
+`ResetPasswordForm` already stripped the token from the address bar — a normal, expected state, not
+an expired link — and the copy says so instead of claiming the link expired. Reading `sessionStorage`
+only happens client-side, through `useSyncExternalStore` with a server snapshot of `false`, so the
+server-rendered and first client-rendered HTML always agree (no token in the URL renders "invalid"
+until the post-hydration read can tell the two cases apart).
+
+## Timing floor
+
+Every response Better Auth equalizes for content and status between a known and an unknown email
+address (`/request-password-reset`, `/sign-in/magic-link`) still differs in how long the two
+branches take — sending a real email is slower than the unknown-address branch's dummy lookup — so a
+caller timing the response could tell them apart even though the body can't. `timing-floor.ts` pads
+every such request to a 500ms floor, enforced once, centrally, in Better Auth's own
+`hooks.before`/`hooks.after` (`options.ts`) rather than in `service.ts`: `hooks.before` records a
+start time in a `WeakMap` keyed by the request's `AuthContext` (`ctx.context`, which Better Auth's
+dispatch pipeline keeps stable across a single request's before/after hooks), and `hooks.after`
+waits out the remainder before the response leaves the handler. Because the floor lives in the hook
+pipeline, it applies to both `service.ts`'s calls through `getAuth().handler()` and to a direct HTTP
+call to `/api/auth/request-password-reset` or `/api/auth/sign-in/magic-link` that skips `service.ts`
+entirely. A rate-limited request never reaches the floor at all — Better Auth's router-level rate
+limiter runs in `onRequest`, ahead of `dispatchAuthEndpoint` (and therefore ahead of both hooks), so
+a 429 short-circuits before `hooks.before` ever records a start time.
 
 `/sign-in/magic-link` and `/reset-password` (the POST that submits the new password) get a tight
 `rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the magic-link plugin's own

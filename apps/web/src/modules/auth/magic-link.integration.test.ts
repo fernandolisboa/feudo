@@ -145,6 +145,24 @@ describe("magic link sign-in", () => {
     });
   });
 
+  it("takes at least the same floor time for a known and an unknown email, so response timing can't reveal which accounts exist", async () => {
+    await withTestDb(async () => {
+      const knownEmail = "timing-known-for-magic-link@example.com";
+      await createVerifiedUser(knownEmail, "correct-horse");
+
+      const knownStart = Date.now();
+      await requestMagicLink(knownEmail, new Headers());
+      const knownElapsed = Date.now() - knownStart;
+
+      const unknownStart = Date.now();
+      await requestMagicLink("timing-unknown-for-magic-link@example.com", new Headers());
+      const unknownElapsed = Date.now() - unknownStart;
+
+      expect(knownElapsed).toBeGreaterThanOrEqual(450);
+      expect(unknownElapsed).toBeGreaterThanOrEqual(450);
+    });
+  });
+
   it("still lets the same user sign in with their password after using a magic link", async () => {
     await withTestDb(async () => {
       const email = "magic-link-then-password@example.com";

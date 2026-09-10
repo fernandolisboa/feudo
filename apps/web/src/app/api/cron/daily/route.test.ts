@@ -4,7 +4,7 @@ import { GET } from "./route";
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 
-describe("GET /api/cron/market-data", () => {
+describe("GET /api/cron/daily", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
   });
@@ -14,7 +14,7 @@ describe("GET /api/cron/market-data", () => {
   });
 
   it("returns 401 when no bearer token is provided", async () => {
-    const response = await GET(new Request("https://example.com/api/cron/market-data"));
+    const response = await GET(new Request("https://example.com/api/cron/daily"));
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ ok: false });
@@ -22,7 +22,7 @@ describe("GET /api/cron/market-data", () => {
 
   it("returns 401 when the bearer token does not match", async () => {
     const response = await GET(
-      new Request("https://example.com/api/cron/market-data", {
+      new Request("https://example.com/api/cron/daily", {
         headers: { authorization: "Bearer wrong-secret" },
       }),
     );

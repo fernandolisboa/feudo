@@ -6,7 +6,7 @@
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/market-data",
+      "path": "/api/cron/daily",
       "schedule": "0 7 * * *"
     }
   ]

@@ -17,6 +17,7 @@ import { getEmailSender } from "./email/select";
 import { readAuthBaseUrl, readRegistrationMode } from "./env";
 import { hasPendingInvitation } from "./invitations";
 import { TERMS_VERSION } from "./terms";
+import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
 import {
   describeExpiryPtBR,
   MAGIC_LINK_EXPIRES_IN_SECONDS,
@@ -62,6 +63,13 @@ function readEmail(body: unknown): string | undefined {
   }
   const value = (body as Record<string, unknown>).email;
   return typeof value === "string" ? value : undefined;
+}
+
+function logMagicLinkSendFailure(error: unknown): void {
+  console.error(
+    "magic-link email send failed",
+    error instanceof Error ? error.name : "UnknownError",
+  );
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
@@ -163,6 +171,8 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        markTimingFloorRequestStart(ctx.path, ctx.context);
+
         if (ctx.path === "/update-user") {
           // Consent fields are input:true/write-once at sign-up (docs/adr/0008); a
           // signed-in session must never be able to rewrite its own consent record.
@@ -198,6 +208,9 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         if (ctx.body && typeof ctx.body === "object") {
           delete (ctx.body as Record<string, unknown>).termsAcceptedAt;
         }
+      }),
+      after: createAuthMiddleware(async (ctx) => {
+        await waitForTimingFloor(ctx.path, ctx.context);
       }),
     },
     plugins: [
@@ -292,7 +305,15 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             url,
             describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
           );
-          await emailSender.send({ to: email, ...magicLinkEmail });
+          try {
+            await emailSender.send({ to: email, ...magicLinkEmail });
+          } catch (error) {
+            // A provider failure for a known address must not surface as a
+            // fast, non-`APIError` 500 — that would skip the timing-floor
+            // after-hook and let a caller tell known and unknown addresses
+            // apart by status code alone.
+            logMagicLinkSendFailure(error);
+          }
         },
       }),
       nextCookies(),
