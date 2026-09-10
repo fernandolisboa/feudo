@@ -1,50 +1,90 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { evaluateMigrationsStatus, getExpectedMigrations } from "./migrations-status";
+import type { Database } from "./client.ts";
+import {
+  evaluateMigrationsStatus,
+  getExpectedMigrations,
+  getMigrationsStatus,
+} from "./migrations-status";
 
 describe("evaluateMigrationsStatus", () => {
-  it("reports up to date when applied count and latest timestamp match the journal", () => {
+  it("reports up-to-date when applied timestamps match the journal exactly", () => {
     const status = evaluateMigrationsStatus(
-      { count: 3, latestCreatedAt: 1_700_000_000_000 },
-      { count: 3, latestWhen: 1_700_000_000_000 },
+      [1_700_000_000_000, 1_700_000_001_000],
+      [1_700_000_000_000, 1_700_000_001_000],
     );
 
-    expect(status).toEqual({ applied: 3, expected: 3, upToDate: true });
+    expect(status).toBe("up-to-date");
   });
 
-  it("reports behind when the applied count is lower than the journal's", () => {
-    const status = evaluateMigrationsStatus(
-      { count: 2, latestCreatedAt: 1_600_000_000_000 },
-      { count: 3, latestWhen: 1_700_000_000_000 },
-    );
-
-    expect(status).toEqual({ applied: 2, expected: 3, upToDate: false });
+  it("reports up-to-date when nothing is expected and nothing is applied", () => {
+    expect(evaluateMigrationsStatus([], [])).toBe("up-to-date");
   });
 
-  it("reports behind when the counts match but the latest timestamp differs", () => {
+  it("reports behind when a journal timestamp is missing from the applied rows", () => {
     const status = evaluateMigrationsStatus(
-      { count: 3, latestCreatedAt: 1_600_000_000_000 },
-      { count: 3, latestWhen: 1_700_000_000_000 },
+      [1_700_000_000_000],
+      [1_700_000_000_000, 1_700_000_001_000],
     );
 
-    expect(status).toEqual({ applied: 3, expected: 3, upToDate: false });
+    expect(status).toBe("behind");
   });
 
-  it("reports up to date when no migrations are expected and none are applied", () => {
+  it("reports ahead when the applied rows include a timestamp absent from the journal", () => {
     const status = evaluateMigrationsStatus(
-      { count: 0, latestCreatedAt: null },
-      { count: 0, latestWhen: null },
+      [1_700_000_000_000, 1_700_000_002_000],
+      [1_700_000_000_000, 1_700_000_001_000],
     );
 
-    expect(status).toEqual({ applied: 0, expected: 0, upToDate: true });
+    expect(status).toBe("ahead");
+  });
+
+  it("reports ahead, not behind, when a historical row was replaced with a different timestamp", () => {
+    const status = evaluateMigrationsStatus([1_650_000_000_000], [1_700_000_000_000]);
+
+    expect(status).toBe("ahead");
+  });
+
+  it("reports ahead when counts match but one applied timestamp is not in the journal, even though another journal timestamp is also missing", () => {
+    const status = evaluateMigrationsStatus(
+      [1_700_000_000_000, 1_650_000_000_000],
+      [1_700_000_000_000, 1_700_000_001_000],
+    );
+
+    expect(status).toBe("ahead");
+  });
+
+  it("defaults to comparing against the committed journal when no expected list is given", () => {
+    const expected = getExpectedMigrations();
+
+    expect(evaluateMigrationsStatus(expected)).toBe("up-to-date");
   });
 });
 
 describe("getExpectedMigrations", () => {
-  it("reads the committed journal's entry count and last entry's timestamp", () => {
+  it("reads the committed journal's entries as a list of `when` timestamps", () => {
     const expected = getExpectedMigrations();
 
-    expect(expected.count).toBeGreaterThan(0);
-    expect(expected.latestWhen).toBeTypeOf("number");
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.every((value) => typeof value === "number")).toBe(true);
+  });
+});
+
+describe("getMigrationsStatus", () => {
+  it("reports unknown and logs only the error name when the query fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = {
+      execute: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error("secret detail"), { name: "NeonDbError" })),
+    } as unknown as Database;
+
+    const status = await getMigrationsStatus(db);
+
+    expect(status).toBe("unknown");
+    expect(consoleError).toHaveBeenCalledWith("NeonDbError");
+    expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining("secret detail"));
+
+    consoleError.mockRestore();
   });
 });
