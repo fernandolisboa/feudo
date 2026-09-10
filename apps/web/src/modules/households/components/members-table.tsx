@@ -52,7 +52,7 @@ export function MembersTable({
       </TableHeader>
       <TableBody>
         {members.map((member) => (
-          <TableRow key={member.id} className="h-10">
+          <TableRow key={member.id} className="h-[var(--density-row)]">
             <TableCell className="font-medium">{member.name}</TableCell>
             <TableCell className="text-muted-foreground">{member.email}</TableCell>
             <TableCell>

@@ -53,7 +53,7 @@ function InvitationRow({ invitation }: { invitation: InvitationForUser }) {
 
 export function OnboardingInvitesPanel({ invitations }: { invitations: InvitationForUser[] }) {
   if (invitations.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t.invitesTab.empty}</p>;
+    return <p className="font-heading text-sm">{t.invitesTab.empty}</p>;
   }
 
   return (

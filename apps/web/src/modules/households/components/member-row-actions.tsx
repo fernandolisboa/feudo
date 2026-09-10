@@ -34,7 +34,10 @@ export function MemberRowActions({
   isLastMember: boolean;
 }) {
   const [openDialog, setOpenDialog] = useState<DialogKind>(null);
-  const [roleState, roleFormAction] = useActionState(updateMemberRoleAction, initialActionState);
+  const [roleState, roleFormAction, isRoleUpdatePending] = useActionState(
+    updateMemberRoleAction,
+    initialActionState,
+  );
 
   const isSelf = member.userId === currentUserId;
   const isOwnerRow = member.role === "owner";
@@ -63,7 +66,13 @@ export function MemberRowActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="ghost" size="icon" aria-label={t.casa.table.actions} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t.casa.table.actions}
+              disabled={isRoleUpdatePending}
+            />
           }
         >
           <MoreHorizontal className="size-4" />
@@ -71,6 +80,7 @@ export function MemberRowActions({
         <DropdownMenuContent align="end">
           {canToggleRole && member.role === "member" ? (
             <DropdownMenuItem
+              disabled={isRoleUpdatePending}
               onClick={() => {
                 handleRoleToggle("admin");
               }}
@@ -80,6 +90,7 @@ export function MemberRowActions({
           ) : null}
           {canToggleRole && member.role === "admin" ? (
             <DropdownMenuItem
+              disabled={isRoleUpdatePending}
               onClick={() => {
                 handleRoleToggle("member");
               }}

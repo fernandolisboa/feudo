@@ -26,7 +26,7 @@ function CancelInvitationButton({ invitationId }: { invitationId: string }) {
   return (
     <form action={formAction} className="flex flex-col items-end gap-1">
       <input type="hidden" name="invitationId" value={invitationId} />
-      <Button type="submit" variant="ghost" size="sm" disabled={isPending}>
+      <Button type="submit" variant="ghost" disabled={isPending}>
         {t.casa.rowActions.cancelInvite}
       </Button>
       {state.status === "error" ? (
@@ -38,7 +38,7 @@ function CancelInvitationButton({ invitationId }: { invitationId: string }) {
 
 export function PendingInvitationsTable({ invitations }: { invitations: PendingInvitation[] }) {
   if (invitations.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t.casa.pendingInvitesEmpty}</p>;
+    return <p className="font-heading text-sm">{t.casa.pendingInvitesEmpty}</p>;
   }
 
   return (
@@ -61,7 +61,7 @@ export function PendingInvitationsTable({ invitations }: { invitations: PendingI
       </TableHeader>
       <TableBody>
         {invitations.map((invitation) => (
-          <TableRow key={invitation.id} className="h-10">
+          <TableRow key={invitation.id} className="h-[var(--density-row)]">
             <TableCell className="text-muted-foreground">{invitation.email}</TableCell>
             <TableCell>
               <Badge variant="outline">{t.casa.roles[invitation.role]}</Badge>
