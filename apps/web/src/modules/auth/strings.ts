@@ -60,6 +60,8 @@ const en = {
   overview: {
     title: "Overview",
     greeting: "Hello, {name}.",
+  },
+  userMenu: {
     signOut: "Sign out",
   },
   verificationEmail: {
@@ -90,6 +92,7 @@ const en = {
     magicLinkFailed: "We couldn't send the sign-in link. Try again.",
     resetRequestFailed: "We couldn't send the reset link. Try again.",
     resetFailed: "We couldn't reset your password. Try again.",
+    signOutFailed: "We couldn't sign you out. Try again.",
   },
 };
 
@@ -155,6 +158,8 @@ const ptBR = {
   overview: {
     title: "Visão geral",
     greeting: "Olá, {name}.",
+  },
+  userMenu: {
     signOut: "Sair",
   },
   verificationEmail: {
@@ -185,6 +190,7 @@ const ptBR = {
     magicLinkFailed: "Não foi possível enviar o link para entrar. Tente novamente.",
     resetRequestFailed: "Não foi possível enviar o link de redefinição. Tente novamente.",
     resetFailed: "Não foi possível redefinir sua senha. Tente novamente.",
+    signOutFailed: "Não foi possível sair. Tente novamente.",
   },
 } satisfies typeof en;
 

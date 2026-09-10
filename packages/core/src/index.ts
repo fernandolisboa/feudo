@@ -16,5 +16,3 @@ export {
 } from "./market-data/rates";
 export { accumulate12MonthIpca, InvalidMonthlyRatesCountError } from "./market-data/ipca";
 export { parsePercentToRatePpm, InvalidPercentStringError } from "./market-data/parse";
-
-export { contrastRatio, InvalidHexColorError } from "./theme/contrast";

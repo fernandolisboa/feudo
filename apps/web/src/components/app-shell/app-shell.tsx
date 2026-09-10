@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { HouseholdSwitcher } from "@/modules/households";
 import type { ShellLayout } from "@/modules/theme";
 
 import { MobileHeader } from "./mobile-header";
@@ -15,16 +14,17 @@ export function AppShell({
   sidebarCollapsed,
   userName,
   userEmail,
+  householdSwitcher,
   children,
 }: {
   shell: ShellLayout;
   sidebarCollapsed: boolean;
   userName: string;
   userEmail: string;
+  householdSwitcher: ReactNode;
   children: ReactNode;
 }) {
   const userMenu = <UserMenu name={userName} email={userEmail} />;
-  const householdSwitcher = <HouseholdSwitcher />;
 
   return (
     <div className="app-shell" data-shell={shell}>

@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 import { LogOut } from "lucide-react";
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-// Direct file import, not the auth module's index: this file is bundled for
+// Direct file imports, not the auth module's index: this file is bundled for
 // the client, and the auth index also re-exports getCurrentSession, which
 // reaches "next/headers". signOutAction is itself a "use server" export,
 // safe to import directly either way.
-import { signOutAction } from "@/modules/auth/actions";
-import { t } from "@/modules/theme";
+import { signOutAction } from "../actions";
+import { t } from "../strings";
 
 function isRedirectSignal(error: unknown): boolean {
   return (
@@ -29,7 +29,10 @@ export function SignOutMenuItem() {
     setFailed(false);
     startTransition(async () => {
       try {
-        await signOutAction();
+        const result = await signOutAction();
+        if (result.status === "error") {
+          setFailed(true);
+        }
       } catch (error) {
         if (isRedirectSignal(error)) {
           throw error;
@@ -41,13 +44,18 @@ export function SignOutMenuItem() {
 
   return (
     <>
-      <DropdownMenuItem variant="destructive" onClick={handleSignOut} disabled={isPending}>
+      <DropdownMenuItem
+        variant="destructive"
+        onClick={handleSignOut}
+        disabled={isPending}
+        closeOnClick={false}
+      >
         <LogOut className="size-4" />
         {t.userMenu.signOut}
       </DropdownMenuItem>
       {failed ? (
-        <p role="alert" className="text-destructive px-2 py-1.5 text-xs">
-          {t.userMenu.signOutError}
+        <p role="alert" className="text-destructive px-1.5 py-1 text-xs">
+          {t.errors.signOutFailed}
         </p>
       ) : null}
     </>
