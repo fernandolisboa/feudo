@@ -33,26 +33,27 @@ describe("scheduleBackgroundTask", () => {
     expect(settled).toBe(true);
   });
 
-  it("does not throw and does not block the caller when waitUntil itself throws", () => {
+  it("falls back to task.catch instead of throwing when waitUntil itself throws", async () => {
     waitUntilMock.mockImplementation(() => {
       throw new Error("waitUntil unavailable");
     });
-    const task = Promise.resolve();
+    let settled = false;
+    const task = new Promise<void>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("task failed"));
+      }, 0);
+    }).finally(() => {
+      settled = true;
+    });
+    const catchSpy = vi.spyOn(task, "catch");
 
     expect(() => {
       scheduleBackgroundTask(task);
     }).not.toThrow();
-  });
+    expect(catchSpy).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
 
-  it("never surfaces an unhandled rejection when waitUntil throws and the task rejects", async () => {
-    waitUntilMock.mockImplementation(() => {
-      throw new Error("waitUntil unavailable");
-    });
-    const task = Promise.reject(new Error("task failed"));
-
-    expect(() => {
-      scheduleBackgroundTask(task);
-    }).not.toThrow();
-    await expect(task.catch(() => "caught")).resolves.toBe("caught");
+    await task.catch(() => undefined);
+    expect(settled).toBe(true);
   });
 });
