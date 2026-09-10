@@ -570,46 +570,52 @@ describe("cross-household isolation (integration)", () => {
 });
 
 describe("inviteMember rate limiting (integration)", () => {
-  it("refuses the 21st invite from the same inviter within an hour", async () => {
-    await withTestDb(async (db) => {
-      const owner = await createOwnerWithHousehold(
-        db,
-        "Owner",
-        "invite-limit-owner@example.com",
-        "Casa",
-      );
-      const session = await householdSessionFor(owner.headers);
+  // 20 invite+cancel round trips against a real, remote Postgres project
+  // comfortably outrun the suite's 20s default (vitest.integration.config.mts).
+  it(
+    "refuses the 21st invite from the same inviter within an hour",
+    { timeout: 60_000 },
+    async () => {
+      await withTestDb(async (db) => {
+        const owner = await createOwnerWithHousehold(
+          db,
+          "Owner",
+          "invite-limit-owner@example.com",
+          "Casa",
+        );
+        const session = await householdSessionFor(owner.headers);
 
-      // Cancelled immediately after creation, not left pending: Better
-      // Auth's own invitationLimit (organization({ invitationLimit: 10 }))
-      // caps pending invitations per household, independent of this test's
-      // own per-inviter, any-status hourly count (recentInvitationCount in
-      // membership.ts) — leaving all 20 pending would hit that cap first.
-      for (let index = 0; index < 20; index += 1) {
+        // Cancelled immediately after creation, not left pending: Better
+        // Auth's own invitationLimit (organization({ invitationLimit: 10 }))
+        // caps pending invitations per household, independent of this test's
+        // own per-inviter, any-status hourly count (recentInvitationCount in
+        // membership.ts) — leaving all 20 pending would hit that cap first.
+        for (let index = 0; index < 20; index += 1) {
+          const outcome = await inviteMember(
+            {
+              email: `invitee-${index.toString()}-${crypto.randomUUID()}@example.com`,
+              role: "member",
+            },
+            session,
+            db,
+            owner.headers,
+          );
+          expect(outcome.status).toBe("ok");
+          if (outcome.status === "ok") {
+            await cancelInvitation(outcome.invitationId, session, owner.headers);
+          }
+        }
+
         const outcome = await inviteMember(
-          {
-            email: `invitee-${index.toString()}-${crypto.randomUUID()}@example.com`,
-            role: "member",
-          },
+          { email: `invitee-overflow-${crypto.randomUUID()}@example.com`, role: "member" },
           session,
           db,
           owner.headers,
         );
-        expect(outcome.status).toBe("ok");
-        if (outcome.status === "ok") {
-          await cancelInvitation(outcome.invitationId, session, owner.headers);
-        }
-      }
-
-      const outcome = await inviteMember(
-        { email: `invitee-overflow-${crypto.randomUUID()}@example.com`, role: "member" },
-        session,
-        db,
-        owner.headers,
-      );
-      expect(outcome.status).toBe("rate_limited");
-    });
-  });
+        expect(outcome.status).toBe("rate_limited");
+      });
+    },
+  );
 });
 
 describe("transferOwnership race guard (integration)", () => {
