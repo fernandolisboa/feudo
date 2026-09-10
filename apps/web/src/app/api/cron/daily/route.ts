@@ -7,6 +7,8 @@ import { pruneExpiredVerifications } from "@/modules/auth";
 
 import type { Database } from "@/db/client";
 
+export const maxDuration = 60;
+
 type MarketDataStep = Awaited<ReturnType<typeof refreshMarketData>> | { error: string };
 type PruneVerificationStep = { deleted: number } | { error: string };
 

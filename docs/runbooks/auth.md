@@ -245,8 +245,20 @@ running it after would let a slow or unreachable Bacen SGS starve it on every in
 response is `200` when every step succeeded and `500` when any step errored or, for market-data,
 fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from ADR-0008)
 becomes a step of this same route rather than a new cron entry, since the Hobby limit leaves no
-room for a third schedule; new steps that are not one cheap query should run after the market-data
-refresh, not before it, to keep the prune's execution time predictable.
+room for a third schedule. The invariant for ordering new steps: **cheap, always-must-run
+housekeeping first; slow network work last.** A step that is one cheap query and must run on every
+invocation (like the prune) goes before the market-data refresh; anything with a network round trip
+or that can legitimately be skipped goes after it, so a slow or unreachable upstream never starves
+the cheap, always-must-run work.
+
+`route.ts` exports `maxDuration = 60`. The market-data step makes up to five sequential SGS fetches,
+each with its own 10 s timeout, so the step alone can take up to ~50 s; add the prune's one cheap
+`DELETE` and 60 s leaves the invocation enough headroom without depending on Vercel's function
+timeout defaults, which vary by whether Fluid compute is enabled for the project: with Fluid
+compute, Hobby's default max duration is 300 s; without it, the default is 10 s (with 60 s as the
+Hobby ceiling for functions that opt in via `maxDuration`, same as the value set here). Whether this
+project's Vercel dashboard has Fluid compute on is not knowable from CI or the repo, so `maxDuration`
+is set explicitly instead of relying on the ambient default either way.
 
 ## Magic link never signs up
 
