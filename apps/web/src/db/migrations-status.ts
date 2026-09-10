@@ -13,11 +13,11 @@ interface JournalEntry {
 const journalEntries = journal.entries as JournalEntry[];
 const expectedWhen = journalEntries.map((entry) => entry.when);
 
-export function getExpectedMigrations(): number[] {
+export function getExpectedMigrations(): readonly number[] {
   return expectedWhen;
 }
 
-function toMultiset(values: number[]): Map<number, number> {
+function toMultiset(values: readonly number[]): Map<number, number> {
   const counts = new Map<number, number>();
   for (const value of values) {
     counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -35,8 +35,8 @@ function hasSurplus(left: Map<number, number>, right: Map<number, number>): bool
 }
 
 export function evaluateMigrationsStatus(
-  appliedCreatedAt: number[],
-  expected: number[] = expectedWhen,
+  appliedCreatedAt: readonly number[],
+  expected: readonly number[] = expectedWhen,
 ): MigrationsStatus {
   const appliedCounts = toMultiset(appliedCreatedAt);
   const expectedCounts = toMultiset(expected);
@@ -59,6 +59,18 @@ interface MigrationRow {
   [key: string]: unknown;
 }
 
+const RELATION_DOES_NOT_EXIST = "42P01";
+
+interface PostgresError {
+  code: string;
+}
+
+function hasSqlState(error: unknown): error is PostgresError {
+  return (
+    typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+  );
+}
+
 export async function getMigrationsStatus(db: Database): Promise<MigrationsStatus> {
   try {
     const { rows } = await db.execute<MigrationRow>(
@@ -72,6 +84,9 @@ export async function getMigrationsStatus(db: Database): Promise<MigrationsStatu
     return status;
   } catch (error) {
     console.error(error instanceof Error ? error.name : "UnknownError");
+    if (hasSqlState(error) && error.code === RELATION_DOES_NOT_EXIST) {
+      return "behind";
+    }
     return unknownMigrationsStatus();
   }
 }
