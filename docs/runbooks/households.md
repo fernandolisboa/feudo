@@ -4,16 +4,30 @@ The `households` module (`apps/web/src/modules/households`) owns household creat
 household on a session, switching between households, invites, roles, removing/leaving members,
 ownership transfer and `household_settings` (name lives on Better Auth's `organization` row; time
 zone and reserve multiple live here, ADR-0001). Its public surface is
-`apps/web/src/modules/households/index.ts`, exporting only what has a real consumer today: the two
-components (`HouseholdSwitcher`, `OnboardingForm`), the routing helpers (`resolveAppRoute`,
-`resolveOnboardingRoute`, `requireHouseholdSession`), `t`, the scope types (`HouseholdScope`,
-`householdScope`, `NoActiveHouseholdError`), a read-only settings accessor
-(`getHouseholdSettings`) and the daily housekeeping entry point
-(`pruneExpiredInvitations`). `service.ts`, `membership.ts`, `repository.ts`, `actions.ts`,
-`validation.ts` and `scope.ts`'s `scopeForNewHousehold` are module-private; components import them
-by relative path, not through the barrel. The module depends on `auth` (`getAuth`,
-`CurrentSession`) one way only — `auth` never imports from `households` (see docs/runbooks/auth.md
-for how the invite-mode sign-up check stays inside `auth` for exactly this reason).
+`apps/web/src/modules/households/index.ts`, exporting only what has a real consumer today:
+
+- Components: `HouseholdSwitcherSelect`, `OnboardingForm`, `OnboardingInvitesPanel`,
+  `InviteMemberDialog`, `MembersTable`, `PendingInvitationsTable`, `AcceptInvitationButton`.
+- Page-level data assembly (`page-props.ts`): `getCasaPageProps` (members, viewer role, whether
+  the viewer can manage the household, pending invitations and the household's time zone, all in
+  one call for `/casa`), `getOnboardingInvites` (`/comecar`'s "Tenho um convite" tab) and
+  `getInvitationPreview` (`/convite/[id]`, wrapping `membership.ts`'s own function of the same name
+  with the request headers and database connection a Server Component page never threads through
+  itself).
+- Routing and session helpers: `resolveAppRoute`, `resolveOnboardingRoute`,
+  `requireHouseholdSession`, `getHouseholdSwitcherProps`.
+- `t`, the scope types (`HouseholdScope`, `householdScope`, `NoActiveHouseholdError`), the role and
+  invitation types consumers actually annotate with (`HouseholdRole`, `PendingInvitation`,
+  `InvitationForUser`), a read-only settings accessor (`getHouseholdSettings`) and the daily
+  housekeeping entry point (`pruneExpiredInvitations`).
+
+Every `(app)`/`comecar`/`convite` route imports only from this barrel, never by relative path into
+the module's internals. `service.ts`, `membership.ts`, `repository.ts`, `actions.ts`,
+`validation.ts` and `scope.ts`'s `scopeForNewHousehold` are module-private; only this module's own
+components and `page-props.ts` import them by relative path. The module depends on `auth`
+(`getAuth`, `CurrentSession`) one way only — `auth` never imports from `households` (see
+docs/runbooks/auth.md for how the invite-mode sign-up check stays inside `auth` for exactly this
+reason).
 
 ## Scoped repositories
 
@@ -90,13 +104,23 @@ Feudo never uses either field on `organization`.
 Better Auth's `organization` plugin allows several owners; Feudo does not (ADR-0001). Two lines of
 defense, both in `auth/options.ts` and `db/schema/auth.ts`: `organizationHooks.beforeUpdateMemberRole`
 rejects any role update to `owner` outright and `organizationHooks.beforeCreateInvitation` rejects
-any invitation with role `owner` outright — ownership only ever moves through
-`households.transferOwnership` (`membership.ts`), which bypasses both endpoints and instead
-updates the two `member` rows directly through Drizzle inside one database transaction (demote the
-current owner to admin, then promote the target to owner — that order never leaves a moment with
-two owner rows for the partial unique index below to reject). The index itself,
+any invitation with role `owner` outright (and any invitation carrying more than one role — an
+array or a comma-joined string — since `membership.ts` stores and reads back a single role per
+member) — ownership only ever moves through `households.transferOwnership` (`membership.ts`),
+which bypasses both endpoints and instead updates the two `member` rows directly through Drizzle,
+inside one database transaction that locks every member row of the household with
+`select … for update` before re-reading the current owner and the target from that locked read (not
+from a read taken before the transaction started): a concurrent removal or leave of the target
+between the original check and the write can only ever complete before or after this transaction,
+never in the middle of it, so it is re-observed as "member not found" rather than silently leaving
+the household ownerless. Both updates assert exactly one row changed (`returning(...).length === 1`)
+and roll back otherwise. Demote runs before promote — that order never leaves a moment with two
+owner rows for the partial unique index below to reject. The index itself,
 `member_single_owner_uidx` on `member (organization_id) where role = 'owner'`, makes a second
 owner row impossible at the database level even if either hook is ever bypassed.
+`households.leaveHousehold`'s own last-member check for an owner locks the same member rows the
+same way before counting them, so a concurrent join can never slip in between the count and the
+household delete that follows it.
 
 ## Invites, roles, removing, leaving and ownership transfer
 
@@ -109,15 +133,32 @@ and "the last member leaving deletes the household"):
   `households/validation.ts`'s `inviteMemberFormSchema` at the edge and by
   `beforeCreateInvitation` server-side. `organization({ sendInvitationEmail })` in `auth/options.ts`
   sends the email through the same `EmailSender` as every other auth email
-  (`auth/email/invitation-email.ts`), linking to `/convite/:id`.
+  (`auth/email/invitation-email.ts`), linking to `/convite/:id`. Rate-limited two ways:
+  `auth.api.createInvitation` never traverses Better Auth's own limiter (`auth.api.*` calls skip
+  `onRequest`, see docs/runbooks/auth.md), so `inviteMember` counts the inviter's own `invitation`
+  rows created in the last hour and refuses above 20 (`rate_limited`) before ever calling the
+  plugin; a raw call to `POST /organization/invite-member` additionally gets its own
+  `rateLimit.customRules` entry (`auth/options.ts`, 60s/5) since that path does go through Better
+  Auth's own limiter. `organization({ invitationLimit: 10 })` caps pending invitations per
+  household on top of both.
 - **Cancel** (`cancelInvitation`) and **list** (`listPendingInvitations`,
   `listMyPendingInvitations`) read and write the plugin's own `invitation` table; every call is
   scoped by the session's household (`session.householdId`) or, for `listMyPendingInvitations`
   (onboarding's "Tenho um convite" panel), by the session's own email — never by a client-supplied
-  organization id.
+  organization id. Both listing functions filter to `status = 'pending'` and `expires_at` in the
+  future, independently of the daily prune below. `beforeCancelInvitation` (`auth/options.ts`)
+  refuses to cancel an invitation that already moved past "pending" (accepted or rejected), so
+  `cancelInvitation` reports `not_found` instead of silently overwriting a settled invitation's
+  status to "canceled".
 - **Accept** (`acceptInvitation`) takes a signed-in `CurrentSession`, not a `HouseholdSession`: a
   user with no household yet is exactly who needs to call it. Better Auth verifies the invitation's
-  email matches the session's own email and sets the joined household active on that session.
+  email matches the session's own email, that it is still pending and unexpired, and sets the
+  joined household active on that session. **Preview** (`getInvitationPreview`, wrapped by
+  `page-props.ts` for `/convite/[id]`) shows the same result even after the inviter themselves has
+  left the household in the meantime (`INVITER_IS_NO_LONGER_A_MEMBER_OF_THE_ORGANIZATION`): the
+  invitation's own validity was already confirmed before that check runs, and `acceptInvitation`
+  never re-checks the inviter's membership, so the preview reads the household name and role
+  directly instead of reporting a false "not found".
 - **Remove** (`removeMember`): owner or admin only, never the owner (the plugin's own
   `removeMember` endpoint already refuses removing the sole owner — Feudo always has exactly one —
   and the household-A/household-B isolation the endpoint gives for free is exercised by
@@ -128,9 +169,12 @@ and "the last member leaving deletes the household"):
   (`owner_must_transfer_first`); an owner who is the household's only member instead deletes the
   household (`getAuth().api.deleteOrganization`) rather than calling `leaveOrganization`, which the
   plugin itself would refuse ("cannot leave as the only owner") even though it is the exact "last
-  member leaves" case product wants. A non-owner leaving calls `leaveOrganization` and then clears
-  the user's other sessions' stale `activeOrganizationId` itself (see "Active household resolution"
-  above).
+  member leaves" case product wants. `MemberRowActions` (`components/member-row-actions.tsx`)
+  reaches this path from the UI too: the leave action is offered to the owner precisely when they
+  are also the household's only member (`isSelf && (!isOwnerRow || isLastMember)`), and
+  `LeaveHouseholdDialog` shows the "this deletes the household" copy in that case. A non-owner
+  leaving calls `leaveOrganization` and then clears the user's other sessions' stale
+  `activeOrganizationId` itself (see "Active household resolution" above).
 - **Transfer ownership** (`transferOwnership`): owner only, one database transaction, described
   above.
 
@@ -148,3 +192,10 @@ to `refreshMarketData` and `pruneExpiredVerifications` — see "Cron jobs" in `d
 `Intl.supportedValuesOf("timeZone")` (the runtime's own IANA database) rather than an
 `options`-heavy schema; `OnboardingForm` renders the same list as a shadcn `Select`, defaulting to
 `America/Sao_Paulo`.
+
+`getCasaPageProps` reads the household's own `timeZone` from `household_settings` and hands it to
+both `MembersTable` and `PendingInvitationsTable`, which format the "since"/"expires" columns with
+`lib/format-date.ts`'s `formatShortDate(date, timeZone)` (`Intl.DateTimeFormat("pt-BR", {
+dateStyle: "short", timeZone })`) instead of the server's own UTC — Vercel's server clock and a
+household's `America/Sao_Paulo` default disagree by a whole calendar day around midnight otherwise,
+and formatting without an explicit time zone risks a client/server hydration mismatch besides.

@@ -1,8 +1,8 @@
 import { APIError } from "better-auth/api";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 
-import { getAuth, type CurrentSession } from "@/modules/auth";
-import { member, session as sessionTable } from "@/db/schema";
+import { clearActiveHouseholdOnSessions, getAuth, type CurrentSession } from "@/modules/auth";
+import { invitation as invitationTable, member, organization } from "@/db/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/db/client";
@@ -61,8 +61,9 @@ export async function listPendingInvitations(
     headers: requestHeaders,
     query: { organizationId: session.householdId },
   });
+  const now = new Date();
   return invitations
-    .filter((invitation) => invitation.status === "pending")
+    .filter((invitation) => invitation.status === "pending" && invitation.expiresAt > now)
     .map((invitation) => ({
       id: invitation.id,
       email: invitation.email,
@@ -96,18 +97,48 @@ export async function listMyPendingInvitations(
     }));
 }
 
+// A household is a small pool of people, not a mailing list: 20 invites in
+// an hour is already generous headroom for onboarding a real household and
+// keeps a compromised session from spraying invitation emails.
+const INVITE_HOURLY_LIMIT = 20;
+
+async function recentInvitationCount(db: Database, inviterId: string): Promise<number> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const [row] = await db
+    .select({ total: count() })
+    .from(invitationTable)
+    .where(
+      and(eq(invitationTable.inviterId, inviterId), gt(invitationTable.createdAt, oneHourAgo)),
+    );
+  return row?.total ?? 0;
+}
+
 export type InviteMemberOutcome = Outcome<
   { invitationId: string },
-  "unauthenticated" | "not_allowed" | "already_a_member" | "already_invited" | "failed"
+  | "unauthenticated"
+  | "not_allowed"
+  | "already_a_member"
+  | "already_invited"
+  | "rate_limited"
+  | "failed"
 >;
 
 export async function inviteMember(
   input: InviteMemberFormInput,
   session: HouseholdSession | null,
+  db: Database,
   requestHeaders: Headers,
 ): Promise<InviteMemberOutcome> {
   if (!session) {
     return { status: "unauthenticated" };
+  }
+  // Better Auth's own invitationLimit only counts pending invitations for
+  // the household, and auth.api.* calls never traverse the rate limiter's
+  // onRequest hook (docs/runbooks/auth.md) — a resend or a cancel-then-
+  // reinvite loop can otherwise mint unlimited emails from one session.
+  const recentCount = await recentInvitationCount(db, session.userId);
+  if (recentCount >= INVITE_HOURLY_LIMIT) {
+    return { status: "rate_limited" };
   }
   try {
     const invitation = await getAuth().api.createInvitation({
@@ -160,6 +191,13 @@ export async function cancelInvitation(
     if (code === "YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION") {
       return { status: "not_allowed" };
     }
+    // organizationHooks.beforeCancelInvitation (auth/options.ts) rejects a
+    // cancel on an invitation that is no longer pending (already accepted
+    // or rejected) — the caller sees the same "no longer exists" outcome as
+    // a truly missing id, instead of a false "ok" that overwrote its status.
+    if (error instanceof APIError && error.message === "invitation_not_pending") {
+      return { status: "not_found" };
+    }
     return { status: "failed" };
   }
 }
@@ -204,6 +242,23 @@ export type InvitationPreviewOutcome = Outcome<
   "unauthenticated" | "not_found" | "wrong_email" | "failed"
 >;
 
+async function invitationPreviewFromDb(
+  db: Database,
+  invitationId: string,
+): Promise<InvitationPreview | undefined> {
+  const rows = await db
+    .select({ role: invitationTable.role, householdName: organization.name })
+    .from(invitationTable)
+    .innerJoin(organization, eq(invitationTable.organizationId, organization.id))
+    .where(eq(invitationTable.id, invitationId))
+    .limit(1);
+  const row = rows[0];
+  if (!row?.role) {
+    return undefined;
+  }
+  return { householdName: row.householdName, role: row.role as InvitableRole };
+}
+
 // Used by /convite/[id]: shows what a signed-in recipient is about to join
 // before they confirm, without exposing anything to a stranger who guesses
 // another recipient's invite id (getInvitation itself checks the session's
@@ -211,6 +266,7 @@ export type InvitationPreviewOutcome = Outcome<
 export async function getInvitationPreview(
   invitationId: string,
   session: CurrentSession | null,
+  db: Database,
   requestHeaders: Headers,
 ): Promise<InvitationPreviewOutcome> {
   if (!session) {
@@ -230,6 +286,17 @@ export async function getInvitationPreview(
     const code = apiErrorCode(error);
     if (code === "YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION") {
       return { status: "wrong_email" };
+    }
+    if (code === "INVITER_IS_NO_LONGER_A_MEMBER_OF_THE_ORGANIZATION") {
+      // getInvitation already matched the session's email against the
+      // invitation's and confirmed it is pending and unexpired before this
+      // check ran — only the inviter's own membership is stale, and
+      // acceptInvitation never re-checks it, so the invite is still good.
+      const preview = await invitationPreviewFromDb(db, invitationId);
+      if (preview) {
+        return { status: "ok", ...preview };
+      }
+      return { status: "not_found" };
     }
     if (error instanceof APIError && error.status === "BAD_REQUEST") {
       return { status: "not_found" };
@@ -297,9 +364,6 @@ export async function updateMemberRole(
     if (code === "MEMBER_NOT_FOUND") {
       return { status: "not_found" };
     }
-    if (error instanceof APIError && error.message === "owner_role_not_transferable") {
-      return { status: "not_allowed" };
-    }
     return { status: "failed" };
   }
 }
@@ -317,6 +381,10 @@ async function activeMemberRow(
   return rows[0];
 }
 
+class TransferNotAllowedError extends Error {}
+class TransferMemberNotFoundError extends Error {}
+class TransferAlreadyOwnerError extends Error {}
+
 export type TransferOwnershipOutcome = SimpleOutcome<
   "ok" | "unauthenticated" | "not_allowed" | "member_not_found" | "already_owner" | "failed"
 >;
@@ -324,7 +392,13 @@ export type TransferOwnershipOutcome = SimpleOutcome<
 // Ownership never moves through the generic role-update endpoint
 // (organizationHooks.beforeUpdateMemberRole rejects any "owner" role
 // unconditionally) — this promotes and demotes in one database transaction
-// instead (ADR-0001), reading both member rows through Drizzle directly.
+// instead (ADR-0001). The whole read-then-write runs inside the transaction,
+// with `for update` locking every member row of the household, so a
+// concurrent removal or leave of the target between the read and the write
+// can never leave the household with zero owners: the lock makes that
+// concurrent change wait until this transaction commits or rolls back, and
+// the membership rows are re-read from inside the lock, not trusted from
+// before it.
 export async function transferOwnership(
   newOwnerMemberId: string,
   session: HouseholdSession | null,
@@ -334,33 +408,60 @@ export async function transferOwnership(
     return { status: "unauthenticated" };
   }
 
-  const currentOwner = await activeMemberRow(db, session.householdId, session.userId);
-  if (!currentOwner || currentOwner.role !== "owner") {
-    return { status: "not_allowed" };
-  }
-  if (currentOwner.id === newOwnerMemberId) {
-    return { status: "already_owner" };
-  }
-
-  const targetRows = await db
-    .select({ id: member.id, organizationId: member.organizationId })
-    .from(member)
-    .where(eq(member.id, newOwnerMemberId))
-    .limit(1);
-  const target = targetRows[0];
-  if (!target || target.organizationId !== session.householdId) {
-    return { status: "member_not_found" };
-  }
-
   try {
     await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ id: member.id, userId: member.userId, role: member.role })
+        .from(member)
+        .where(eq(member.organizationId, session.householdId))
+        .for("update");
+
+      const currentOwner = rows.find(
+        (row) => row.userId === session.userId && row.role === "owner",
+      );
+      if (!currentOwner) {
+        throw new TransferNotAllowedError();
+      }
+
+      const target = rows.find((row) => row.id === newOwnerMemberId);
+      if (!target) {
+        throw new TransferMemberNotFoundError();
+      }
+      if (target.id === currentOwner.id) {
+        throw new TransferAlreadyOwnerError();
+      }
+
       // Demote first: the partial unique index on member (organization_id)
       // where role = 'owner' rejects a moment with two owner rows, but a
       // moment with zero is never checked, so this order never trips it.
-      await tx.update(member).set({ role: "admin" }).where(eq(member.id, currentOwner.id));
-      await tx.update(member).set({ role: "owner" }).where(eq(member.id, target.id));
+      const demoted = await tx
+        .update(member)
+        .set({ role: "admin" })
+        .where(eq(member.id, currentOwner.id))
+        .returning({ id: member.id });
+      if (demoted.length !== 1) {
+        throw new Error("transfer_ownership_demote_failed");
+      }
+
+      const promoted = await tx
+        .update(member)
+        .set({ role: "owner" })
+        .where(eq(member.id, target.id))
+        .returning({ id: member.id });
+      if (promoted.length !== 1) {
+        throw new Error("transfer_ownership_promote_failed");
+      }
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof TransferNotAllowedError) {
+      return { status: "not_allowed" };
+    }
+    if (error instanceof TransferMemberNotFoundError) {
+      return { status: "member_not_found" };
+    }
+    if (error instanceof TransferAlreadyOwnerError) {
+      return { status: "already_owner" };
+    }
     return { status: "failed" };
   }
 
@@ -387,11 +488,19 @@ export async function leaveHousehold(
   }
 
   if (requester.role === "owner") {
-    const [row] = await db
-      .select({ total: count() })
-      .from(member)
-      .where(eq(member.organizationId, session.householdId));
-    if ((row?.total ?? 0) > 1) {
+    // Locks every member row of the household for the length of the count,
+    // the same way transferOwnership does, so a concurrent join can never
+    // slip in between this check and the delete below and be silently
+    // erased along with the household it just joined.
+    const isSoleMember = await db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ id: member.id })
+        .from(member)
+        .where(eq(member.organizationId, session.householdId))
+        .for("update");
+      return rows.length === 1;
+    });
+    if (!isSoleMember) {
       return { status: "owner_must_transfer_first" };
     }
     try {
@@ -419,15 +528,7 @@ export async function leaveHousehold(
   // activeOrganizationId. Clear the same user's other sessions too, mirroring
   // afterRemoveMember in auth/options.ts, instead of waiting for each of
   // their next getCurrentSession() re-validation to self-correct.
-  await db
-    .update(sessionTable)
-    .set({ activeOrganizationId: null })
-    .where(
-      and(
-        eq(sessionTable.userId, session.userId),
-        eq(sessionTable.activeOrganizationId, session.householdId),
-      ),
-    );
+  await clearActiveHouseholdOnSessions(db, session.userId, session.householdId);
 
   return { status: "ok", householdDeleted: false };
 }

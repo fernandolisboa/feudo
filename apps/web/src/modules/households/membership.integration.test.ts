@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const currentHeaders = vi.hoisted(() => ({ value: new Headers() }));
 vi.mock("next/headers", () => ({
@@ -16,6 +16,7 @@ import type { Database } from "@/db/client";
 import {
   acceptInvitation,
   cancelInvitation,
+  getInvitationPreview,
   inviteMember,
   leaveHousehold,
   listMembers,
@@ -99,7 +100,7 @@ async function ownerMemberId(db: Database, householdId: string): Promise<string>
   const [row] = await db
     .select({ id: member.id })
     .from(member)
-    .where(eq(member.organizationId, householdId));
+    .where(and(eq(member.organizationId, householdId), eq(member.role, "owner")));
   if (!row) {
     throw new Error("owner member row not found in test setup");
   }
@@ -115,6 +116,7 @@ describe("inviteMember (integration)", () => {
       const outcome = await inviteMember(
         { email: "friend@example.com", role: "member" },
         session,
+        db,
         owner.headers,
       );
       expect(outcome.status).toBe("ok");
@@ -147,6 +149,7 @@ describe("inviteMember (integration)", () => {
       const outcome = await inviteMember(
         { email: existingSession.user.email, role: "admin" },
         session,
+        db,
         owner.headers,
       );
       expect(outcome.status).toBe("already_a_member");
@@ -158,10 +161,11 @@ describe("inviteMember (integration)", () => {
       const owner = await createOwnerWithHousehold(db, "Owner", "dup-invite@example.com", "Casa");
       const session = await householdSessionFor(owner.headers);
 
-      await inviteMember({ email: "dup@example.com", role: "member" }, session, owner.headers);
+      await inviteMember({ email: "dup@example.com", role: "member" }, session, db, owner.headers);
       const second = await inviteMember(
         { email: "dup@example.com", role: "member" },
         session,
+        db,
         owner.headers,
       );
       expect(second.status).toBe("already_invited");
@@ -182,6 +186,7 @@ describe("inviteMember (integration)", () => {
       const outcome = await inviteMember(
         { email: "someone@example.com", role: "member" },
         memberSession,
+        db,
         plainMember.headers,
       );
       expect(outcome.status).toBe("not_allowed");
@@ -197,6 +202,7 @@ describe("cancelInvitation (integration)", () => {
       const invited = await inviteMember(
         { email: "cancel-me@example.com", role: "member" },
         session,
+        db,
         owner.headers,
       );
       if (invited.status !== "ok") throw new Error("invite failed in test setup");
@@ -221,6 +227,7 @@ describe("acceptInvitation (integration)", () => {
       const invited = await inviteMember(
         { email: "invitee@example.com", role: "admin" },
         ownerSession,
+        db,
         owner.headers,
       );
       if (invited.status !== "ok") throw new Error("invite failed in test setup");
@@ -258,6 +265,7 @@ describe("acceptInvitation (integration)", () => {
       const invited = await inviteMember(
         { email: "correct@example.com", role: "member" },
         ownerSession,
+        db,
         owner.headers,
       );
       if (invited.status !== "ok") throw new Error("invite failed in test setup");
@@ -290,6 +298,7 @@ describe("acceptInvitation (integration)", () => {
       await inviteMember(
         { email: "future-member@example.com", role: "member" },
         ownerSession,
+        db,
         owner.headers,
       );
 
@@ -517,6 +526,7 @@ describe("cross-household isolation (integration)", () => {
       const invitedInB = await inviteMember(
         { email: "target-in-b@example.com", role: "member" },
         sessionBOwner,
+        db,
         householdB.headers,
       );
       if (invitedInB.status !== "ok") throw new Error("invite failed in test setup");
@@ -555,6 +565,253 @@ describe("cross-household isolation (integration)", () => {
         .from(member)
         .where(eq(member.id, memberOfB.memberId));
       expect(memberRow?.role).toBe("member");
+    });
+  });
+});
+
+describe("inviteMember rate limiting (integration)", () => {
+  it("refuses the 21st invite from the same inviter within an hour", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "invite-limit-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+
+      for (let index = 0; index < 20; index += 1) {
+        const outcome = await inviteMember(
+          {
+            email: `invitee-${index.toString()}-${crypto.randomUUID()}@example.com`,
+            role: "member",
+          },
+          session,
+          db,
+          owner.headers,
+        );
+        expect(outcome.status).toBe("ok");
+      }
+
+      const outcome = await inviteMember(
+        { email: `invitee-overflow-${crypto.randomUUID()}@example.com`, role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(outcome.status).toBe("rate_limited");
+    });
+  });
+});
+
+describe("transferOwnership race guard (integration)", () => {
+  it("refuses the transfer, leaving exactly one owner, when the target is removed first", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "transfer-race-owner@example.com",
+        "Casa",
+      );
+      const target = await addMemberDirect(db, owner.householdId, "admin");
+      const ownerSession = await householdSessionFor(owner.headers);
+
+      await removeMember(target.memberId, ownerSession, owner.headers);
+
+      const outcome = await transferOwnership(target.memberId, ownerSession, db);
+      expect(outcome.status).toBe("member_not_found");
+
+      const rows = await db
+        .select({ userId: member.userId, role: member.role })
+        .from(member)
+        .where(eq(member.organizationId, owner.householdId));
+      const owners = rows.filter((row) => row.role === "owner");
+      expect(owners).toHaveLength(1);
+      expect(owners[0]?.userId).toBe(owner.userId);
+    });
+  });
+});
+
+describe("cancelInvitation after acceptance (integration)", () => {
+  it("reports the invitation as no longer cancellable instead of overwriting its status", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "cancel-after-accept@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const invited = await inviteMember(
+        { email: "already-accepted@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      if (invited.status !== "ok") throw new Error("invite failed in test setup");
+
+      const inviteeHeaders = await signUpVerifiedUser(db, {
+        name: "Already Accepted",
+        email: "already-accepted@example.com",
+        password: "correct-horse",
+      });
+      const inviteeSession = await sessionFor(inviteeHeaders);
+      const acceptOutcome = await acceptInvitation(
+        invited.invitationId,
+        inviteeSession,
+        inviteeHeaders,
+      );
+      expect(acceptOutcome.status).toBe("ok");
+
+      const cancelOutcome = await cancelInvitation(invited.invitationId, session, owner.headers);
+      expect(cancelOutcome.status).toBe("not_found");
+
+      const [row] = await db
+        .select({ status: invitation.status })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.status).toBe("accepted");
+    });
+  });
+});
+
+describe("expired invitations (integration)", () => {
+  async function expireInvitation(db: Database, invitationId: string): Promise<void> {
+    await db
+      .update(invitation)
+      .set({ expiresAt: new Date(Date.now() - 60_000) })
+      .where(eq(invitation.id, invitationId));
+  }
+
+  it("refuses to accept an expired invitation independently of the daily prune", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "expired-accept-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const invited = await inviteMember(
+        { email: "expired-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      if (invited.status !== "ok") throw new Error("invite failed in test setup");
+      await expireInvitation(db, invited.invitationId);
+
+      const inviteeHeaders = await signUpVerifiedUser(db, {
+        name: "Expired Invitee",
+        email: "expired-invitee@example.com",
+        password: "correct-horse",
+      });
+      const inviteeSession = await sessionFor(inviteeHeaders);
+
+      const outcome = await acceptInvitation(invited.invitationId, inviteeSession, inviteeHeaders);
+      expect(outcome.status).toBe("not_found");
+    });
+  });
+
+  it("refuses to preview an expired invitation independently of the daily prune", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "expired-preview-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const invited = await inviteMember(
+        { email: "expired-preview-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      if (invited.status !== "ok") throw new Error("invite failed in test setup");
+      await expireInvitation(db, invited.invitationId);
+
+      const inviteeHeaders = await signUpVerifiedUser(db, {
+        name: "Expired Preview Invitee",
+        email: "expired-preview-invitee@example.com",
+        password: "correct-horse",
+      });
+      const inviteeSession = await sessionFor(inviteeHeaders);
+
+      const outcome = await getInvitationPreview(
+        invited.invitationId,
+        inviteeSession,
+        db,
+        inviteeHeaders,
+      );
+      expect(outcome.status).toBe("not_found");
+    });
+  });
+
+  it("excludes an expired invitation from the household's pending list", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "expired-list-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const invited = await inviteMember(
+        { email: "expired-list-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      if (invited.status !== "ok") throw new Error("invite failed in test setup");
+      await expireInvitation(db, invited.invitationId);
+
+      const invites = await listPendingInvitations(session, owner.headers);
+      expect(invites).toHaveLength(0);
+    });
+  });
+});
+
+describe("getInvitationPreview when the inviter has left (integration)", () => {
+  it("still renders the household name and role for a valid, unexpired invite", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "inviter-left-owner@example.com",
+        "Casa",
+      );
+      const admin = await addMemberDirect(db, owner.householdId, "admin");
+      const adminSession = await householdSessionFor(admin.headers);
+      const invited = await inviteMember(
+        { email: "inviter-left-invitee@example.com", role: "member" },
+        adminSession,
+        db,
+        admin.headers,
+      );
+      if (invited.status !== "ok") throw new Error("invite failed in test setup");
+
+      const ownerSession = await householdSessionFor(owner.headers);
+      const removeOutcome = await removeMember(admin.memberId, ownerSession, owner.headers);
+      expect(removeOutcome.status).toBe("ok");
+
+      const inviteeHeaders = await signUpVerifiedUser(db, {
+        name: "Inviter Left Invitee",
+        email: "inviter-left-invitee@example.com",
+        password: "correct-horse",
+      });
+      const inviteeSession = await sessionFor(inviteeHeaders);
+
+      const outcome = await getInvitationPreview(
+        invited.invitationId,
+        inviteeSession,
+        db,
+        inviteeHeaders,
+      );
+      expect(outcome.status).toBe("ok");
+      if (outcome.status !== "ok") return;
+      expect(outcome.householdName).toBe("Casa");
+      expect(outcome.role).toBe("member");
     });
   });
 });

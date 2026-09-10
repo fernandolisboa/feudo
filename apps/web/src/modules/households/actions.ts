@@ -92,7 +92,7 @@ export async function inviteMemberAction(
 
   const requestHeaders = await headers();
   const session = await requireHouseholdSession();
-  const outcome = await inviteMember(parsed.data, session, requestHeaders);
+  const outcome = await inviteMember(parsed.data, session, getDb(), requestHeaders);
 
   switch (outcome.status) {
     case "ok":
@@ -106,6 +106,8 @@ export async function inviteMemberAction(
       return { status: "error", message: t.errors.alreadyAMember };
     case "already_invited":
       return { status: "error", message: t.errors.alreadyInvited };
+    case "rate_limited":
+      return { status: "error", message: t.errors.inviteRateLimited };
     case "failed":
       return { status: "error", message: t.errors.inviteFailed };
   }
