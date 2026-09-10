@@ -1,3 +1,13 @@
+import { t as authT } from "@/modules/auth/strings";
+
+// auth/strings.ts is a plain data module with no imports of its own, safe to
+// pull into strings.ts even though "use client" components read it too —
+// unlike @/modules/auth's barrel, which re-exports Server Actions and
+// getAuth() and would drag server-only code into the client bundle.
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const en = {
   onboarding: {
     overline: "Step 2 of 2",
@@ -178,8 +188,8 @@ const ptBR = {
     },
     roles: {
       owner: "Responsável",
-      admin: "Administrador",
-      member: "Membro",
+      admin: capitalize(authT.roleLabels.admin),
+      member: capitalize(authT.roleLabels.member),
     },
     rowActions: {
       makeAdmin: "Tornar administrador",
