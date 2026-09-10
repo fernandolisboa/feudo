@@ -618,8 +618,14 @@ describe("inviteMember rate limiting (integration)", () => {
   );
 });
 
-describe("transferOwnership race guard (integration)", () => {
-  it("refuses the transfer, leaving exactly one owner, when the target is removed first", async () => {
+describe("transferOwnership regression (integration)", () => {
+  it("refuses the transfer, leaving exactly one owner, when the target was already removed", async () => {
+    // This runs removeMember() to completion before calling transferOwnership(),
+    // so it is a plain sequential regression check, not a race: it would pass
+    // even without the `for update` lock inside transferOwnership's own
+    // transaction, which is what actually guards against a target removed
+    // mid-transfer. A real interleaving test needs two overlapping
+    // transactions and isn't done here.
     await withTestDb(async (db) => {
       const owner = await createOwnerWithHousehold(
         db,

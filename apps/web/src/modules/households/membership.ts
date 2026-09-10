@@ -488,10 +488,15 @@ export async function leaveHousehold(
   }
 
   if (requester.role === "owner") {
-    // Locks every member row of the household for the length of the count,
-    // the same way transferOwnership does, so a concurrent join can never
-    // slip in between this check and the delete below and be silently
-    // erased along with the household it just joined.
+    // This count is a fast-path UX check, not a guard: the row lock it
+    // takes is released as soon as the inner transaction commits, and
+    // `for update` blocks concurrent updates/deletes of those rows, never a
+    // concurrent insert, so a member can still join between this count and
+    // the deleteOrganization call below. The actual guard against erasing a
+    // household that gained a member in that window is
+    // beforeDeleteOrganization (auth/options.ts), which re-counts inside
+    // the delete itself and rejects with household_has_other_members —
+    // mapped to owner_must_transfer_first below.
     const isSoleMember = await db.transaction(async (tx) => {
       const rows = await tx
         .select({ id: member.id })
@@ -508,7 +513,10 @@ export async function leaveHousehold(
         headers: requestHeaders,
         body: { organizationId: session.householdId },
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof APIError && error.message === "household_has_other_members") {
+        return { status: "owner_must_transfer_first" };
+      }
       return { status: "failed" };
     }
     return { status: "ok", householdDeleted: true };
