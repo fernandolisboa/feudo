@@ -88,7 +88,7 @@ test("invite, accept by a second user, switch household and transfer ownership",
   await inviteeRow.getByRole("button", { name: "Ações" }).click();
 
   const transferMenuItem = page.getByRole("menuitem", {
-    name: `Transferir posse para ${invitee.name}`,
+    name: `Transferir responsabilidade para ${invitee.name}`,
   });
   await expect(transferMenuItem).toBeVisible();
   await transferMenuItem.click();

@@ -18,6 +18,8 @@
 | Admin                                       | administrador                                  |                                                                              |
 | Member                                      | membro                                         |                                                                              |
 | Active household                            | casa atual                                     |                                                                              |
+| Role                                        | papel                                          |                                                                              |
+| Transfer ownership                          | transferir a responsabilidade                  | "Transferir responsabilidade" — never "posse"                                |
 | Invite                                      | convite                                        |                                                                              |
 | Bank connection                             | conexão bancária                               | "conectar banco"                                                             |
 | Data provider                               | provedor de dados                              | "Meu Pluggy" when naming it                                                  |

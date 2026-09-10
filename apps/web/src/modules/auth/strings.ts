@@ -80,9 +80,17 @@ const en = {
     html: '<p>Use this link to set a new password:</p><p><a href="{url}">{url}</a></p><p>The link expires in {expiresIn} and works once. If you didn\'t request this, ignore this email.</p>',
   },
   invitationEmail: {
-    subject: "{inviterName} invited you to {householdName} on Feudo",
+    subject: "{inviterName} invited you to the {householdName} household on Feudo",
     text: "{inviterName} invited you to join {householdName} on Feudo as {role}.\n\nAccept the invite: {url}\n\nThe invite expires in {expiresIn}.",
     html: '<p>{inviterName} invited you to join <strong>{householdName}</strong> on Feudo as {role}.</p><p><a href="{url}">Accept the invite</a></p><p>The invite expires in {expiresIn}.</p>',
+  },
+  // Only admin and member ever reach an invitation email — options.ts's
+  // beforeCreateInvitation hook rejects "owner" before either the invitation
+  // or this email can be built for it (households never invites an owner,
+  // ADR-0001), so this has no "owner" entry to keep in sync.
+  roleLabels: {
+    admin: "admin",
+    member: "member",
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
@@ -183,9 +191,13 @@ const ptBR = {
     html: '<p>Use este link para definir uma nova senha:</p><p><a href="{url}">{url}</a></p><p>O link expira em {expiresIn} e funciona uma única vez. Se você não pediu isso, ignore este e-mail.</p>',
   },
   invitationEmail: {
-    subject: "{inviterName} convidou você para a {householdName} no Feudo",
+    subject: "{inviterName} convidou você para a casa {householdName} no Feudo",
     text: "{inviterName} convidou você para entrar na casa {householdName} no Feudo como {role}.\n\nAceite o convite: {url}\n\nO convite expira em {expiresIn}.",
     html: '<p>{inviterName} convidou você para entrar na casa <strong>{householdName}</strong> no Feudo como {role}.</p><p><a href="{url}">Aceitar convite</a></p><p>O convite expira em {expiresIn}.</p>',
+  },
+  roleLabels: {
+    admin: "administrador",
+    member: "membro",
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
