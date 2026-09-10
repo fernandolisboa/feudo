@@ -210,6 +210,25 @@ share one in-flight probe instead of each issuing their own queries, since the e
 and unauthenticated. It never returns the connection string or the underlying error. It stores
 nothing, so it has no entry in the ADR-0008 data map.
 
+Because Vercel deploys `main` independently of `migrate-production` finishing, expect
+`migrations.status: "behind"` (503) from a fresh deployment of `main` until the `migrate-production`
+job for that same commit turns green — that gap is normal, not an incident. A 503 that persists
+after `migrate-production` is green, or a `migrations.status: "ahead"`, is the incident.
+
+**Recovery from `migrations.status: "ahead"`**: this means `drizzle.__drizzle_migrations` has a row
+whose `created_at` is not in the committed journal — most often a migration applied from a branch
+that was later reverted or renumbered, or a manually-inserted row. `drizzle-kit migrate` will not
+re-apply anything in this state, so pushing more migrations does not fix it. Diagnose by hand
+against production (see the emergency `vercel env pull` procedure above for extracting
+`DATABASE_URL` without exporting it): compare `select id, hash, created_at from
+drizzle.__drizzle_migrations order by created_at` against `apps/web/drizzle/meta/_journal.json`'s
+`entries`, identify the row(s) with no matching `when`, and either delete the stray row (if the
+schema change it represents was already reverted or is superseded by a later committed migration)
+or commit a new migration whose journal entry's `when` matches the stray `created_at` (if the
+schema change is real and should be kept). Never run `db:reset` or `db:reset-schema` against
+production to "fix" this — both refuse outright (see "The reset guard" below) and neither is the
+right tool for a database holding real household data.
+
 ## WebSocket driver on Vercel
 
 `apps/web/src/db/client.ts` connects with `drizzle-orm/neon-serverless` and no `ws` option: Node 24
