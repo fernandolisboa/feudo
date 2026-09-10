@@ -85,11 +85,8 @@ function readEmail(body: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function logMagicLinkSendFailure(error: unknown): void {
-  console.error(
-    "magic-link email send failed",
-    error instanceof Error ? error.name : "UnknownError",
-  );
+function logAuthEmailSendFailure(email: "reset-password" | "magic-link", error: unknown): void {
+  console.error(`${email} email send failed`, error instanceof Error ? error.name : "UnknownError");
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
@@ -118,30 +115,32 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
     secret: env.BETTER_AUTH_SECRET,
     baseURL,
     trustedOrigins: [baseURL],
-    // Scheduling the send here rather than awaiting it inline is what lets
-    // runInBackgroundOrAwait (sendResetPassword, sendVerificationEmail) return
-    // the response before the provider call finishes, so a slow provider can
-    // no longer separate a known address from an unknown one by response time
-    // (docs/runbooks/auth.md, "Timing floor"). sendMagicLink below reuses the
-    // exact same handler through ctx.context.runInBackground, since the
-    // magic-link plugin awaits that callback directly rather than routing it
-    // through runInBackgroundOrAwait.
-    advanced: {
-      backgroundTasks: {
-        handler: scheduleBackgroundTask,
-      },
-    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
       resetPasswordTokenExpiresIn: RESET_PASSWORD_EXPIRES_IN_SECONDS,
-      sendResetPassword: async ({ user, url }) => {
+      // Better Auth calls this through runInBackgroundOrAwait, which would
+      // await it inline unless advanced.backgroundTasks.handler is set
+      // instance-wide — but that option also covers sendVerificationEmail
+      // (sign-up, resend, unverified sign-in), which isn't behind the
+      // timing floor and has nothing to gain from racing its own response.
+      // Scheduling the send ourselves, scoped to just this callback, is what
+      // lets runInBackgroundOrAwait's own `await` resolve immediately
+      // instead: our callback returns as soon as it hands the send off,
+      // without ever awaiting the provider call itself.
+      sendResetPassword: ({ user, url }) => {
         const email = buildResetPasswordEmail(
           url,
           describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
         );
-        await emailSender.send({ to: user.email, ...email });
+        const sendPromise = emailSender
+          .send({ to: user.email, ...email })
+          .catch((error: unknown) => {
+            logAuthEmailSendFailure("reset-password", error);
+          });
+        scheduleBackgroundTask(sendPromise);
+        return Promise.resolve();
       },
       // The token just consumed to reach this callback is already gone
       // (consumeVerificationValue deletes it); any other outstanding
@@ -402,20 +401,19 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             url,
             describeExpiryPtBR(MAGIC_LINK_EXPIRES_IN_SECONDS),
           );
-          // This plugin awaits sendMagicLink directly rather than routing it
-          // through runInBackgroundOrAwait (docs/runbooks/auth.md), so
-          // awaiting the send here would block a known address's response on
-          // the provider — exactly the gap this ticket closes. Scheduling it
-          // through the same background handler configured above
-          // (advanced.backgroundTasks.handler) keeps the known and unknown
-          // branches equally fast; the .catch keeps the failure logged
-          // instead of becoming an unhandled rejection, since
-          // ctx.context.runInBackground (unlike runInBackgroundOrAwait) does
-          // not log for us.
+          // This plugin awaits sendMagicLink directly (it never routes
+          // through runInBackgroundOrAwait), so awaiting the send here would
+          // block a known address's response on the provider — exactly the
+          // gap this ticket closes. Scheduling it instead keeps the known
+          // and unknown branches equally fast; the .catch keeps the failure
+          // logged instead of becoming an unhandled rejection, since
+          // scheduleBackgroundTask does not log for us.
           const sendPromise = emailSender
             .send({ to: email, ...magicLinkEmail })
-            .catch(logMagicLinkSendFailure);
-          ctx?.context.runInBackground(sendPromise);
+            .catch((error: unknown) => {
+              logAuthEmailSendFailure("magic-link", error);
+            });
+          scheduleBackgroundTask(sendPromise);
         },
       }),
       nextCookies(),
