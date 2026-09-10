@@ -68,6 +68,14 @@ async function fillAndAwaitNavigation(
       await expect(page).toHaveURL(urlPattern, { timeout: 5_000 });
       return;
     } catch (error) {
+      // A submit that actually succeeded but navigated after the 5s window
+      // (e.g. a 429 the server retried into a slow success) already reached
+      // the target URL — resubmitting from a freshly reloaded start page
+      // would silently lose that success and fight the real navigation
+      // instead of confirming it.
+      if (urlPattern.test(page.url())) {
+        return;
+      }
       if (attempt === SIGN_UP_OR_IN_RETRY_ATTEMPTS - 1) {
         throw error;
       }
