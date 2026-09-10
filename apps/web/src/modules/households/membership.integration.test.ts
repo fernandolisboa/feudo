@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 
 const currentHeaders = vi.hoisted(() => ({ value: new Headers() }));
@@ -10,6 +10,7 @@ import { withTestDb } from "@/db/test/harness";
 import { invitation, member, organization, session as sessionTable } from "@/db/schema";
 import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
 import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
+import { fakeEmailSender } from "@/modules/auth/email/fake-sender";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
 import type { Database } from "@/db/client";
@@ -23,6 +24,7 @@ import {
   listMyPendingInvitations,
   listPendingInvitations,
   removeMember,
+  resendInvitation,
   transferOwnership,
   updateMemberRole,
 } from "./membership";
@@ -36,6 +38,10 @@ process.env.EMAIL_PROVIDER = "fake";
 beforeEach(() => {
   process.env.REGISTRATION_MODE = "open";
   currentHeaders.value = new Headers();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 async function sessionFor(headers: Headers): Promise<CurrentSession | null> {
@@ -125,7 +131,7 @@ describe("inviteMember (integration)", () => {
       expect(sent).toBeDefined();
       expect(sent?.text).toContain("Casa");
 
-      const invites = await listPendingInvitations(session, owner.headers);
+      const invites = await listPendingInvitations(session, db, owner.headers);
       expect(invites).toHaveLength(1);
       expect(invites[0]).toMatchObject({ email: "friend@example.com", role: "member" });
     });
@@ -786,7 +792,7 @@ describe("expired invitations (integration)", () => {
       if (invited.status !== "ok") throw new Error("invite failed in test setup");
       await expireInvitation(db, invited.invitationId);
 
-      const invites = await listPendingInvitations(session, owner.headers);
+      const invites = await listPendingInvitations(session, db, owner.headers);
       expect(invites).toHaveLength(0);
     });
   });
@@ -832,6 +838,213 @@ describe("getInvitationPreview when the inviter has left (integration)", () => {
       if (outcome.status !== "ok") return;
       expect(outcome.householdName).toBe("Casa");
       expect(outcome.role).toBe("member");
+    });
+  });
+});
+
+describe("zero-owner race (integration)", () => {
+  // Reproduces the race described in ADR-0001/docs/runbooks/households.md:
+  // Better Auth's /organization/remove-member reads the target's role with a
+  // plain SELECT (no lock) and only takes a row lock on the DELETE that
+  // follows. This drives the same shape by hand against the member table —
+  // a plain read, a pause, then a delete — while transferOwnership runs and
+  // commits in between, so the delete lands on the row that is now the
+  // household's sole owner. member_single_owner_trigger (0007) is the only
+  // thing standing between that delete and a household with zero owners.
+  it("rolls back a delete that would remove the household's only owner mid-transfer", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(db, "Owner", "race-owner@example.com", "Casa");
+      const target = await addMemberDirect(db, owner.householdId, "admin");
+      const ownerSession = await householdSessionFor(owner.headers);
+
+      let releaseRemove: (() => void) | undefined;
+      const removeCanProceed = new Promise<void>((resolve) => {
+        releaseRemove = resolve;
+      });
+      let markRoleChecked: (() => void) | undefined;
+      const roleChecked = new Promise<void>((resolve) => {
+        markRoleChecked = resolve;
+      });
+
+      const removeAttempt = db
+        .transaction(async (tx) => {
+          const [row] = await tx
+            .select({ role: member.role })
+            .from(member)
+            .where(eq(member.id, target.memberId));
+          expect(row?.role).toBe("admin");
+          markRoleChecked?.();
+          await removeCanProceed;
+          await tx.delete(member).where(eq(member.id, target.memberId));
+        })
+        .then(() => undefined)
+        .catch((error: unknown) => error);
+
+      await roleChecked;
+      const transferOutcome = await transferOwnership(target.memberId, ownerSession, db);
+      expect(transferOutcome.status).toBe("ok");
+      releaseRemove?.();
+
+      const removeResult = await removeAttempt;
+      expect(removeResult).toBeDefined();
+
+      const rows = await db
+        .select({ userId: member.userId, role: member.role })
+        .from(member)
+        .where(eq(member.organizationId, owner.householdId));
+      const owners = rows.filter((row) => row.role === "owner");
+      expect(owners).toHaveLength(1);
+      expect(owners[0]?.userId).toBe(target.userId);
+    });
+  });
+
+  it("still transfers, leaves, removes and deletes the last-member household sequentially", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "race-sequential-owner@example.com",
+        "Casa",
+      );
+      const admin = await addMemberDirect(db, owner.householdId, "admin");
+      const plainMember = await addMemberDirect(db, owner.householdId, "member");
+      const ownerSession = await householdSessionFor(owner.headers);
+
+      const transferOutcome = await transferOwnership(admin.memberId, ownerSession, db);
+      expect(transferOutcome.status).toBe("ok");
+
+      const newOwnerSession = await householdSessionFor(admin.headers);
+      const removeOutcome = await removeMember(
+        plainMember.memberId,
+        newOwnerSession,
+        admin.headers,
+      );
+      expect(removeOutcome.status).toBe("ok");
+
+      const formerOwnerSession = await householdSessionFor(owner.headers);
+      const leaveOutcome = await leaveHousehold(formerOwnerSession, db, owner.headers);
+      expect(leaveOutcome.status).toBe("ok");
+      if (leaveOutcome.status !== "ok") return;
+      expect(leaveOutcome.householdDeleted).toBe(false);
+
+      const lastLeaveOutcome = await leaveHousehold(newOwnerSession, db, admin.headers);
+      expect(lastLeaveOutcome.status).toBe("ok");
+      if (lastLeaveOutcome.status !== "ok") return;
+      expect(lastLeaveOutcome.householdDeleted).toBe(true);
+    });
+  });
+});
+
+describe("invitation delivery failure (integration)", () => {
+  it("records a delivery failure when the invitation email fails to send", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "delivery-failure-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: "delivery-failure-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const [row] = await db
+        .select({ deliveryFailedAt: invitation.deliveryFailedAt })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.deliveryFailedAt).not.toBeNull();
+
+      const invites = await listPendingInvitations(session, db, owner.headers);
+      expect(
+        invites.find((entry) => entry.id === invited.invitationId)?.deliveryFailedAt,
+      ).not.toBeNull();
+    });
+  });
+
+  it("clears the delivery failure on a successful resend", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "delivery-resend-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: "delivery-resend-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("ok");
+
+      const [row] = await db
+        .select({ deliveryFailedAt: invitation.deliveryFailedAt })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.deliveryFailedAt).toBeNull();
+    });
+  });
+
+  it("refuses to let another household resend an invitation that isn't theirs", async () => {
+    await withTestDb(async (db) => {
+      const householdA = await createOwnerWithHousehold(
+        db,
+        "Owner A",
+        "delivery-isolation-a@example.com",
+        "Casa A",
+      );
+      const householdB = await createOwnerWithHousehold(
+        db,
+        "Owner B",
+        "delivery-isolation-b@example.com",
+        "Casa B",
+      );
+      const sessionA = await householdSessionFor(householdA.headers);
+      const sessionB = await householdSessionFor(householdB.headers);
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: "delivery-isolation-invitee@example.com", role: "member" },
+        sessionA,
+        db,
+        householdA.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const crossHouseholdResend = await resendInvitation(
+        invited.invitationId,
+        sessionB,
+        db,
+        householdB.headers,
+      );
+      expect(crossHouseholdResend.status).toBe("not_found");
+
+      const [row] = await db
+        .select({ deliveryFailedAt: invitation.deliveryFailedAt })
+        .from(invitation)
+        .where(eq(invitation.id, invited.invitationId));
+      expect(row?.deliveryFailedAt).not.toBeNull();
     });
   });
 });

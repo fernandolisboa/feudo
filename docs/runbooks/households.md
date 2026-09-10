@@ -123,6 +123,21 @@ owner row impossible at the database level even if either hook is ever bypassed.
 same way before counting them, so a concurrent join can never slip in between the count and the
 household delete that follows it.
 
+A third line of defense lives in Postgres itself: `member_single_owner_trigger`
+(`drizzle/0007_single_owner_trigger.sql`), a `DEFERRABLE INITIALLY DEFERRED` constraint trigger on
+`member` that asserts, at commit, that every organization with at least one member has exactly one
+owner. The partial unique index above only ever rejects a _second_ owner row; it never catches a
+_zero_-owner state, which is exactly what Better Auth's raw `/organization/leave` and
+`/organization/remove-member` endpoints can produce even with everything above in place: both read
+the target member's role with a plain, unlocked `SELECT` and only take a row lock on the `DELETE`
+that follows, so a concurrent `transferOwnership` that promotes that same member and commits in the
+gap between that read and that delete leaves the delete removing the household's new (and only)
+owner — `transferOwnership`'s own `for update` lock protects its own transaction, not a caller
+outside it. The trigger catches this at the database level regardless of which code path produced
+it, deferred to commit so a transaction that legitimately passes through a zero- or two-owner
+moment on its way to a valid final state (transferOwnership's demote-then-promote, for one) is
+judged only on that final state.
+
 ## Invites, roles, removing, leaving and ownership transfer
 
 `membership.ts` (module-private) wraps the `organization` plugin's invitation and member endpoints
@@ -141,7 +156,18 @@ and "the last member leaving deletes the household"):
   plugin; a raw call to `POST /organization/invite-member` additionally gets its own
   `rateLimit.customRules` entry (`auth/options.ts`, 60s/5) since that path does go through Better
   Auth's own limiter. `organization({ invitationLimit: 10 })` caps pending invitations per
-  household on top of both.
+  household on top of both. A send failure is not silently dropped: `sendInvitationEmail`
+  (`auth/options.ts`) wraps the `EmailSender` call in its own try/catch — Better Auth's
+  `runInBackgroundOrAwait` only logs a rejection here and still returns the already-created
+  invitation as success — and sets `invitation.delivery_failed_at` (nullable timestamp, added by
+  `0008_invitation_delivery_failed_at.sql`) on failure, clearing it the next time a send from that
+  same row succeeds. `PendingInvitationsTable` (`/casa`) shows "e-mail não enviado" on a row with
+  that column set, with a **Resend** action (`resendInvitationAction` →
+  `households.resendInvitation`) that looks up the invitation's own email and role from the
+  household-scoped row (never from client input — the resend can only ever resend an invitation
+  that already exists, never mint one under a different identity) and calls
+  `auth.api.createInvitation` with `resend: true`, subject to the same per-inviter hourly ceiling as
+  a fresh invite.
 - **Cancel** (`cancelInvitation`) and **list** (`listPendingInvitations`,
   `listMyPendingInvitations`) read and write the plugin's own `invitation` table; every call is
   scoped by the session's household (`session.householdId`) or, for `listMyPendingInvitations`
@@ -150,7 +176,15 @@ and "the last member leaving deletes the household"):
   future, independently of the daily prune below. `beforeCancelInvitation` (`auth/options.ts`)
   refuses to cancel an invitation that already moved past "pending" (accepted or rejected), so
   `cancelInvitation` reports `not_found` instead of silently overwriting a settled invitation's
-  status to "canceled".
+  status to "canceled". The raw `GET /organization/list-invitations` endpoint only checks that the
+  caller is _a_ member of the organization, not their role (Better Auth 1.7.3's
+  `crud-invites.mjs`), and no `organizationHooks` entry point exists for it — a plain member could
+  otherwise read every pending invitee's email through it. `auth/options.ts`'s global `hooks.before`
+  (the same mechanism that already guards `/update-user` and `/sign-up/email`) matches this path
+  specifically, resolves the caller's session with Better Auth's own `getSessionFromCtx`, looks up
+  their `member` row for the request's organization directly, and rejects with `FORBIDDEN` when
+  their role is `member`. `GET /organization/list-members` is deliberately left open to every
+  member: only invitee emails are restricted, not the household's own roster.
 - **Accept** (`acceptInvitation`) takes a signed-in `CurrentSession`, not a `HouseholdSession`: a
   user with no household yet is exactly who needs to call it. Better Auth verifies the invitation's
   email matches the session's own email, that it is still pending and unexpired, and sets the
