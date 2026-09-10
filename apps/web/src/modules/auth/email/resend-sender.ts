@@ -23,11 +23,43 @@ export class EmailSendError extends Error {
   }
 }
 
+export class EmailSendTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Resend did not respond within ${String(timeoutMs)}ms`);
+    this.name = "EmailSendTimeoutError";
+  }
+}
+
+// resend@6.26.0's emails.send takes no signal/timeout option (checked its own
+// .d.ts: CreateEmailRequestOptions is just query/headers/idempotency-key), so
+// a hung provider would otherwise run until the function's own maxDuration —
+// racing a timer here turns that into a named, logged failure instead.
+const SEND_TIMEOUT_MS = 10_000;
+
+// Clears its own timer once the race settles either way, so a fast send
+// never leaves a dangling timeout holding the function warm behind it.
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new EmailSendTimeoutError(ms));
+    }, ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 export class ResendEmailSender implements EmailSender {
   private readonly apiKey: string;
   private readonly from: string;
+  private readonly timeoutMs: number;
 
-  constructor(env: AuthEnv = process.env) {
+  constructor(env: AuthEnv = process.env, timeoutMs = SEND_TIMEOUT_MS) {
     const apiKey = env.RESEND_API_KEY;
     if (!apiKey) {
       throw new MissingResendApiKeyError();
@@ -38,17 +70,21 @@ export class ResendEmailSender implements EmailSender {
     }
     this.apiKey = apiKey;
     this.from = from;
+    this.timeoutMs = timeoutMs;
   }
 
   async send(input: SendEmailInput): Promise<void> {
     const resend = new Resend(this.apiKey);
-    const { error } = await resend.emails.send({
-      from: this.from,
-      to: input.to,
-      subject: input.subject,
-      text: input.text,
-      html: input.html,
-    });
+    const { error } = await withTimeout(
+      resend.emails.send({
+        from: this.from,
+        to: input.to,
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+      }),
+      this.timeoutMs,
+    );
 
     if (error) {
       throw new EmailSendError(error.message);
