@@ -59,6 +59,15 @@ async function fillAndAwaitNavigation(
   urlPattern: RegExp,
 ): Promise<void> {
   for (let attempt = 0; attempt < SIGN_UP_OR_IN_RETRY_ATTEMPTS; attempt += 1) {
+    // A submit that actually succeeded but navigated after the previous
+    // attempt's 5s window (e.g. a 429 the server retried into a slow
+    // success) already reached the target URL — checking here, before any
+    // goto/fill, catches that success even if it lands during the
+    // back-off. Reading page.url() is synchronous, so checking on the
+    // first attempt too costs nothing.
+    if (urlPattern.test(page.url())) {
+      return;
+    }
     if (attempt > 0) {
       await page.goto(startUrl);
     }
@@ -68,14 +77,6 @@ async function fillAndAwaitNavigation(
       await expect(page).toHaveURL(urlPattern, { timeout: 5_000 });
       return;
     } catch (error) {
-      // A submit that actually succeeded but navigated after the 5s window
-      // (e.g. a 429 the server retried into a slow success) already reached
-      // the target URL — resubmitting from a freshly reloaded start page
-      // would silently lose that success and fight the real navigation
-      // instead of confirming it.
-      if (urlPattern.test(page.url())) {
-        return;
-      }
       if (attempt === SIGN_UP_OR_IN_RETRY_ATTEMPTS - 1) {
         throw error;
       }
