@@ -89,10 +89,13 @@ them, not at job level.
 CI owns applying committed migrations to production. On every push to `main` (after `ci` and
 `integration` both succeed), the `migrate-production` job in `.github/workflows/ci.yml`:
 
-1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname and fails the job —
-   printing only `PASS` or `FAIL`, never the URL — unless it equals `vars.DATABASE_PRODUCTION_HOST`
-   exactly. This is what stops a mispointed or stale `DATABASE_URL_PRODUCTION` secret from
-   migrating the wrong database.
+1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname, normalises it
+   (lowercase, strip a trailing dot, strip a `-pooler` suffix from the first label — the same
+   normalisation `databaseHost()` in `apps/web/src/db/reset-guard.ts` applies) and fails the job —
+   printing only `PASS` or `FAIL`, never the URL — unless the normalised host equals the normalised
+   `vars.DATABASE_PRODUCTION_HOST`. This is what stops a mispointed or stale
+   `DATABASE_URL_PRODUCTION` secret, or a merely differently-cased or pooler/direct variant of the
+   same host, from migrating the wrong database.
 2. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
    `secrets.DATABASE_URL_PRODUCTION`. Nothing resets or drops anything — `db:reset` and
    `db:reset-schema` never appear in this job, and `assertDatabaseResetAllowed` also refuses
