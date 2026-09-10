@@ -9,9 +9,11 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { marketData } from "@/db/schema/market-data";
-import { verification } from "@/db/schema/auth";
+import { invitation, verification } from "@/db/schema/auth";
 import { withTestDb } from "@/db/test/harness";
 import { getLatestIndicators } from "@/lib/market-data";
+import { getAuth } from "@/modules/auth";
+import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
 import { GET } from "./route";
 
@@ -109,9 +111,14 @@ async function callCronRoute(): Promise<Response> {
   );
 }
 
+process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
+process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
+process.env.EMAIL_PROVIDER = "fake";
+
 describe("GET /api/cron/daily (integration)", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
+    process.env.REGISTRATION_MODE = "open";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
@@ -150,11 +157,13 @@ describe("GET /api/cron/daily (integration)", () => {
         steps: {
           marketData: { ok: boolean; results: unknown[] };
           pruneVerification: { deleted: number };
+          pruneInvitation: { deleted: number };
         };
       };
       expect(body.ok).toBe(true);
       expect(body.steps.marketData.ok).toBe(true);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneInvitation).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(CDI_DAILY_OBSERVATIONS.length);
       expect(await countMarketDataRows(db, "13522")).toBe(0);
@@ -200,11 +209,16 @@ describe("GET /api/cron/daily (integration)", () => {
       expect(response.status).toBe(500);
       const body = (await response.json()) as {
         ok: boolean;
-        steps: { marketData: { ok: boolean }; pruneVerification: { deleted: number } };
+        steps: {
+          marketData: { ok: boolean };
+          pruneVerification: { deleted: number };
+          pruneInvitation: { deleted: number };
+        };
       };
       expect(body.ok).toBe(false);
       expect(body.steps.marketData.ok).toBe(false);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneInvitation).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(0);
       const remainingVerification = await db.select().from(verification);
@@ -266,6 +280,66 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const survivor = await db.select().from(verification).where(eq(verification.id, validId));
       expect(survivor).toHaveLength(1);
+    });
+  });
+
+  it("prunes expired and cancelled invitations, leaving pending ones untouched", async () => {
+    await withTestDb(async (db) => {
+      globalThis.fetch = buildFetchMock();
+
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "prune-owner@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: randomUUID() },
+      });
+      const ownerSession = await getAuth().api.getSession({ headers: ownerHeaders });
+      if (!ownerSession) throw new Error("owner sign-in failed in test setup");
+
+      const expiredId = randomUUID();
+      const cancelledId = randomUUID();
+      const pendingId = randomUUID();
+      const now = new Date();
+      await db.insert(invitation).values([
+        {
+          id: expiredId,
+          organizationId: organization.id,
+          email: "expired-invite@example.com",
+          role: "member",
+          status: "pending",
+          expiresAt: new Date(now.getTime() - 60_000),
+          inviterId: ownerSession.user.id,
+        },
+        {
+          id: cancelledId,
+          organizationId: organization.id,
+          email: "cancelled-invite@example.com",
+          role: "member",
+          status: "canceled",
+          expiresAt: new Date(now.getTime() + 60_000),
+          inviterId: ownerSession.user.id,
+        },
+        {
+          id: pendingId,
+          organizationId: organization.id,
+          email: "pending-invite@example.com",
+          role: "member",
+          status: "pending",
+          expiresAt: new Date(now.getTime() + 60_000),
+          inviterId: ownerSession.user.id,
+        },
+      ]);
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { steps: { pruneInvitation: { deleted: number } } };
+      expect(body.steps.pruneInvitation).toEqual({ deleted: 2 });
+
+      const remaining = await db.select({ id: invitation.id }).from(invitation);
+      expect(remaining.map((row) => row.id)).toEqual([pendingId]);
     });
   });
 });

@@ -4,12 +4,14 @@ import { getDb } from "@/db/client";
 import { isCronRequestAuthorized } from "@/lib/cron-auth";
 import { refreshMarketData } from "@/lib/market-data";
 import { pruneExpiredVerifications } from "@/modules/auth";
+import { pruneExpiredInvitations } from "@/modules/households";
 
 import type { Database } from "@/db/client";
 import type { RefreshSeriesResult } from "@/lib/market-data";
 
 type MarketDataStep = { ok: boolean; results: RefreshSeriesResult[] } | { error: string };
 type PruneVerificationStep = { deleted: number } | { error: string };
+type PruneInvitationStep = { deleted: number } | { error: string };
 
 function errorName(error: unknown): string {
   return error instanceof Error ? error.name : "UnknownError";
@@ -34,6 +36,15 @@ async function runPruneVerificationStep(db: Database): Promise<PruneVerification
   }
 }
 
+async function runPruneInvitationStep(db: Database): Promise<PruneInvitationStep> {
+  try {
+    const deleted = await pruneExpiredInvitations(db);
+    return { deleted };
+  } catch (error) {
+    return { error: errorName(error) };
+  }
+}
+
 export async function GET(request: Request): Promise<NextResponse> {
   if (!isCronRequestAuthorized(request.headers.get("authorization"))) {
     return NextResponse.json({ ok: false }, { status: 401 });
@@ -42,12 +53,14 @@ export async function GET(request: Request): Promise<NextResponse> {
   const db = getDb();
   const marketData = await runMarketDataStep(db);
   const pruneVerification = await runPruneVerificationStep(db);
+  const pruneInvitation = await runPruneInvitationStep(db);
   const marketDataOk = "error" in marketData ? false : marketData.ok;
   const pruneVerificationOk = !("error" in pruneVerification);
-  const ok = marketDataOk && pruneVerificationOk;
+  const pruneInvitationOk = !("error" in pruneInvitation);
+  const ok = marketDataOk && pruneVerificationOk && pruneInvitationOk;
 
   return NextResponse.json(
-    { ok, steps: { marketData, pruneVerification } },
+    { ok, steps: { marketData, pruneVerification, pruneInvitation } },
     { status: ok ? 200 : 500 },
   );
 }
