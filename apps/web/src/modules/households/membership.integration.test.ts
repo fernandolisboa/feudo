@@ -1122,10 +1122,10 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
       expect(invited.status).toBe("ok");
       if (invited.status !== "ok") return;
 
-      // Simulates a resend that landed moments ago: lastSentAt is only ever
-      // set by a successful send (auth/options.ts's sendInvitationEmail), so
-      // this seeds the state a real double-click would produce without
-      // depending on real wall-clock delay in the test.
+      // Simulates a resend that landed moments ago: lastSentAt is set on
+      // every send attempt (auth/options.ts's sendInvitationEmail), success
+      // or failure, so this seeds the state a real double-click would
+      // produce without depending on real wall-clock delay in the test.
       await db
         .update(invitation)
         .set({ lastSentAt: new Date() })
@@ -1212,6 +1212,68 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
     },
   );
 
+  it(
+    "still counts an invitation with an old createdAt toward the hourly ceiling when only its send has failed",
+    { timeout: 60_000 },
+    async () => {
+      await withTestDb(async (db) => {
+        const owner = await createOwnerWithHousehold(
+          db,
+          "Owner",
+          "resend-ceiling-failed-owner@example.com",
+          "Casa",
+        );
+        const session = await householdSessionFor(owner.headers);
+        vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+        const invited = await inviteMember(
+          { email: "resend-ceiling-failed-invitee@example.com", role: "member" },
+          session,
+          db,
+          owner.headers,
+        );
+        expect(invited.status).toBe("ok");
+        if (invited.status !== "ok") return;
+
+        // Pushed outside the hourly window on createdAt alone, and never
+        // resent: only the initial send's own failure (which sets lastSentAt
+        // in sendInvitationEmail's catch branch, not just on success) can
+        // keep this row counting toward recentInvitationCount's ceiling.
+        await db
+          .update(invitation)
+          .set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) })
+          .where(eq(invitation.id, invited.invitationId));
+
+        for (let index = 0; index < 19; index += 1) {
+          const outcome = await inviteMember(
+            {
+              email: `resend-ceiling-failed-${index.toString()}-${crypto.randomUUID()}@example.com`,
+              role: "member",
+            },
+            session,
+            db,
+            owner.headers,
+          );
+          expect(outcome.status).toBe("ok");
+          if (outcome.status === "ok") {
+            await cancelInvitation(outcome.invitationId, session, owner.headers);
+          }
+        }
+
+        const overflow = await inviteMember(
+          {
+            email: `resend-ceiling-failed-overflow-${crypto.randomUUID()}@example.com`,
+            role: "member",
+          },
+          session,
+          db,
+          owner.headers,
+        );
+        expect(overflow.status).toBe("rate_limited");
+      });
+    },
+  );
+
   it("reports failed when the resend's own send attempt also fails", async () => {
     await withTestDb(async (db) => {
       const owner = await createOwnerWithHousehold(
@@ -1234,6 +1296,15 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
       expect(invited.status).toBe("ok");
       if (invited.status !== "ok") return;
 
+      // The initial send's own failure already set lastSentAt (every send
+      // attempt writes it, success or failure); push it outside the minimum
+      // interval so this resend reaches the provider for a genuine second
+      // failure instead of short-circuiting on rate_limited.
+      await db
+        .update(invitation)
+        .set({ lastSentAt: new Date(Date.now() - 2 * 60 * 1000) })
+        .where(eq(invitation.id, invited.invitationId));
+
       const resendOutcome = await resendInvitation(
         invited.invitationId,
         session,
@@ -1247,6 +1318,45 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
         .from(invitation)
         .where(eq(invitation.id, invited.invitationId));
       expect(row?.deliveryFailedAt).not.toBeNull();
+    });
+  });
+
+  it("refuses a resend within the minimum interval of a prior resend that itself failed", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-after-failed-resend-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      vi.spyOn(fakeEmailSender, "send")
+        .mockRejectedValueOnce(new Error("provider down"))
+        .mockRejectedValueOnce(new Error("provider still down"));
+
+      const invited = await inviteMember(
+        { email: "resend-after-failed-resend-invitee@example.com", role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      // The initial send's own failure already set lastSentAt; push it
+      // outside the minimum interval so the first resend below reaches the
+      // provider instead of short-circuiting on the interval it inherited
+      // from the failed invite.
+      await db
+        .update(invitation)
+        .set({ lastSentAt: new Date(Date.now() - 2 * 60 * 1000) })
+        .where(eq(invitation.id, invited.invitationId));
+
+      const firstResend = await resendInvitation(invited.invitationId, session, db, owner.headers);
+      expect(firstResend.status).toBe("failed");
+
+      const secondResend = await resendInvitation(invited.invitationId, session, db, owner.headers);
+      expect(secondResend.status).toBe("rate_limited");
     });
   });
 
