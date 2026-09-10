@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { parseSetCookieHeader } from "better-auth/cookies";
 
 import { withTestDb } from "@/db/test/harness";
+import { rateLimit } from "@/db/schema/auth";
 
 // signOutAction is a Server Action: it reaches next/headers and
 // next/navigation directly, which throw outside a real request. These stubs
@@ -77,14 +79,26 @@ describe("signOut", () => {
   });
 
   it("rate-limits repeated sign-out calls and signOutAction surfaces the error instead of redirecting", async () => {
-    await withTestDb(async () => {
+    await withTestDb(async (db) => {
       // /sign-out has no special or custom rate-limit rule (options.ts), so
       // it falls back to Better Auth's global default: 100 requests per
-      // 10-second window (create-context.mjs). Each call here has no session
-      // cookie, so the handler always no-ops and returns 2xx up to the limit.
-      for (let attempt = 0; attempt < 100; attempt++) {
-        await expect(signOutAction()).rejects.toThrow("NEXT_REDIRECT:/entrar");
+      // 10-second window (create-context.mjs). One warm-up call learns the
+      // key the DB-backed limiter uses (IP prefix + path, an implementation
+      // detail not worth pinning); seeding that row at the limit is
+      // equivalent to 100 rapid calls without the loop.
+      await expect(signOutAction()).rejects.toThrow("NEXT_REDIRECT:/entrar");
+
+      const rows = await db.select().from(rateLimit);
+      expect(rows).toHaveLength(1);
+      const key = rows[0]?.key;
+      if (!key) {
+        throw new Error("expected the warm-up call to seed a rate_limit row");
       }
+
+      await db
+        .update(rateLimit)
+        .set({ count: 100, lastRequest: Date.now() })
+        .where(eq(rateLimit.key, key));
 
       const limited = await signOutAction();
 
