@@ -42,7 +42,9 @@ Handlers.
   production stays on its own project; Vercel Preview/Development and CI share a separate free
   `feudo-preview` project, never a branch per deployment (Neon's free-tier branch limit has broken
   CI before). The integration's automatic preview branches stay off; CI drops and recreates the
-  preview project's schema and migrates it at the start of each run. Drizzle ORM + drizzle-kit
+  preview project's schema and migrates it at the start of each run. CI applies the committed
+  migrations to production on every push to `main` (`migrate-production`, GitHub Environment
+  `production`); nothing else touches the production project. Drizzle ORM + drizzle-kit
   migrations committed to the repo.
 - **Auth & tenancy**: Better Auth with its `organization` plugin (ADR-0001). Email + password with
   verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
