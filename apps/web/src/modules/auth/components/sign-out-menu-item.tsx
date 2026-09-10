@@ -30,7 +30,7 @@ export function SignOutMenuItem() {
     startTransition(async () => {
       try {
         const result = await signOutAction();
-        if (result?.status === "error") {
+        if (result.status === "error") {
           setFailed(true);
         }
       } catch (error) {
@@ -44,12 +44,17 @@ export function SignOutMenuItem() {
 
   return (
     <>
-      <DropdownMenuItem variant="destructive" onClick={handleSignOut} disabled={isPending}>
+      <DropdownMenuItem
+        variant="destructive"
+        onClick={handleSignOut}
+        disabled={isPending}
+        closeOnClick={false}
+      >
         <LogOut className="size-4" />
         {t.userMenu.signOut}
       </DropdownMenuItem>
       {failed ? (
-        <p role="alert" className="text-destructive px-2 py-1.5 text-xs">
+        <p role="alert" className="text-destructive px-1.5 py-1 text-xs">
           {t.errors.signOutFailed}
         </p>
       ) : null}
