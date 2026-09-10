@@ -1,22 +1,15 @@
-import { Button } from "@/components/ui/button";
-import { signOutAction, t } from "@/modules/auth";
-import { HouseholdSwitcher, requireHouseholdSession } from "@/modules/households";
+import { PageHeader } from "@/components/page-header";
+import { interpolate } from "@/lib/interpolate";
+import { t } from "@/modules/auth";
+import { requireHouseholdSession } from "@/modules/households";
 
 export default async function Home() {
   const session = await requireHouseholdSession();
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-muted-foreground text-xs tracking-wide uppercase">{t.overview.title}</p>
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {t.overview.greeting.replace("{name}", session.name)}
-      </h1>
-      <HouseholdSwitcher />
-      <form action={signOutAction}>
-        <Button type="submit" variant="outline">
-          {t.overview.signOut}
-        </Button>
-      </form>
-    </main>
+    <PageHeader
+      overline={t.overview.title}
+      title={interpolate(t.overview.greeting, "{name}", session.name)}
+    />
   );
 }

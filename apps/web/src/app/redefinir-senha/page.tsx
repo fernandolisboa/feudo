@@ -20,7 +20,10 @@ export default async function ResetPasswordPage({
         <>
           <p className="text-sm">{t.resetPassword.invalidOrExpired}</p>
           <p className="mt-4 text-sm">
-            <Link href="/esqueci-a-senha" className="text-foreground underline underline-offset-4">
+            <Link
+              href="/esqueci-a-senha"
+              className="text-brand hover:text-brand-hover underline underline-offset-4"
+            >
               {t.resetPassword.requestNewLink}
             </Link>
           </p>

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { cache } from "react";
 import { desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -12,7 +13,13 @@ export type CurrentSession = {
   name: string;
   email: string;
   householdId: string | null;
+  theme: string;
 };
+
+// The theme column's DB default guarantees a value once a user exists;
+// deciding which strings are valid theme names is modules/theme's job
+// (resolveTheme), not auth's — auth must not import theme at runtime.
+const RAW_THEME_FALLBACK = "caderno";
 
 // A session's activeOrganizationId is only ever a hint: it can be stale
 // (membership revoked or the household deleted since it was set) or absent
@@ -51,7 +58,11 @@ async function resolveHouseholdId(
   return fallbackHouseholdId;
 }
 
-export async function getCurrentSession(): Promise<CurrentSession | null> {
+// Wrapped in React's cache() so the root layout, the signed-in route group's
+// layout and a page can each call this once per request without three round
+// trips to the session store; outside a React render (e.g. these modules'
+// own tests) cache() is a no-op and every call runs fresh.
+export const getCurrentSession = cache(async (): Promise<CurrentSession | null> => {
   const requestHeaders = await headers();
   const session = await getAuth().api.getSession({ headers: requestHeaders });
   if (!session) {
@@ -70,5 +81,6 @@ export async function getCurrentSession(): Promise<CurrentSession | null> {
     name: session.user.name,
     email: session.user.email,
     householdId,
+    theme: session.user.theme ?? RAW_THEME_FALLBACK,
   };
-}
+});

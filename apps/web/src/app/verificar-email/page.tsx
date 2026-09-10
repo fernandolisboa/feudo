@@ -22,7 +22,10 @@ export default async function VerifyEmailPage({
         <>
           <p className="text-sm">{t.verifyEmail.bodyMissingEmail}</p>
           <p className="mt-4 text-sm">
-            <Link href="/entrar" className="text-foreground underline underline-offset-4">
+            <Link
+              href="/entrar"
+              className="text-brand hover:text-brand-hover underline underline-offset-4"
+            >
               {t.verifyEmail.backToSignIn}
             </Link>
           </p>

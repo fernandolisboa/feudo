@@ -64,7 +64,8 @@ test("sign-up, verification, login, onboarding and sign-out", async ({
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "Olá, Playwright User." })).toBeVisible();
 
-  await page.getByRole("button", { name: "Sair" }).click();
+  await page.getByRole("button", { name: "Playwright User" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
 
   await expect(page).toHaveURL(/\/entrar/);
 });

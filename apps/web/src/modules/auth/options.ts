@@ -123,6 +123,14 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           input: false,
           defaultValue: () => new Date(),
         },
+        theme: {
+          type: "string",
+          required: false,
+          input: false,
+          // Literal, not modules/theme's DEFAULT_THEME: auth must not
+          // import theme at runtime (modules/theme owns theme validity).
+          defaultValue: "caderno",
+        },
       },
     },
     emailVerification: {

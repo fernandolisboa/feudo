@@ -43,6 +43,13 @@
       "when": 1788975412837,
       "tag": "0005_single_owner_index",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788994896606,
+      "tag": "0006_user_theme_preference",
+      "breakpoints": true
     }
   ]
 }
