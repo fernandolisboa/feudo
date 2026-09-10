@@ -1,3 +1,13 @@
+import { t as authT } from "@/modules/auth/strings";
+
+// auth/strings.ts is a plain data module with no imports of its own, safe to
+// pull into strings.ts even though "use client" components read it too —
+// unlike @/modules/auth's barrel, which re-exports Server Actions and
+// getAuth() and would drag server-only code into the client bundle.
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const en = {
   onboarding: {
     overline: "Step 2 of 2",
@@ -9,9 +19,88 @@ const en = {
     reserveMultipleLabel: "Reserve multiple",
     reserveMultipleHelp: "How many months of fixed cost the emergency reserve should cover.",
     submit: "Create household",
+    tabCreate: "Create household",
+    tabInvite: "I have an invite",
+  },
+  invitesTab: {
+    title: "Your pending invites",
+    empty: "You have no pending invites.",
+    invitedAs: "As {role}",
+  },
+  inviteAcceptPage: {
+    title: "Household invite",
+    signedOutPrompt: "Sign in or create a sign-up with this invite's email to accept it.",
+    signInLink: "Sign in",
+    signUpLink: "Sign up",
+    description: "You were invited to the {householdName} household as {role}.",
+    accept: "Accept and join",
+    notFound: "This invite no longer exists.",
+    wrongEmail: "This invite is for a different email address. Sign in with that email instead.",
   },
   switcher: {
     label: "Household",
+  },
+  casa: {
+    overline: "Household",
+    title: "Members and invites",
+    membersSectionTitle: "Members",
+    inviteAction: "Invite",
+    inviteDialog: {
+      title: "Invite to the household",
+      description: "We'll send an email invite that expires in 24 hours.",
+      emailLabel: "Email",
+      roleLabel: "Role",
+      submit: "Send invite",
+      cancel: "Cancel",
+    },
+    pendingInvitesSectionTitle: "Pending invites",
+    pendingInvitesEmpty: "No pending invites.",
+    table: {
+      name: "Name",
+      email: "Email",
+      role: "Role",
+      joined: "Since",
+      expires: "Expires",
+      actions: "Actions",
+    },
+    roles: {
+      owner: "Owner",
+      admin: "Admin",
+      member: "Member",
+    },
+    rowActions: {
+      makeAdmin: "Make admin",
+      makeMember: "Make member",
+      remove: "Remove from household",
+      leave: "Leave household",
+      transferTo: "Transfer responsibility to {name}",
+      cancelInvite: "Cancel invite",
+    },
+    removeDialog: {
+      title: "Remove {name} from the household?",
+      description: "{name} loses access to this household's financial data immediately.",
+      confirm: "Remove",
+      cancel: "Cancel",
+    },
+    leaveDialog: {
+      title: "Leave the household?",
+      description: "You lose access to this household's financial data.",
+      lastMemberDescription:
+        "You are the last person in this household: leaving deletes it and everything in it.",
+      confirm: "Leave",
+      cancel: "Cancel",
+    },
+    transferDialog: {
+      title: "Transfer responsibility to {name}?",
+      description: "{name} becomes the owner and you become an admin.",
+      confirm: "Transfer",
+      cancel: "Cancel",
+    },
+    inviteSent: "Invite sent.",
+    invitationCancelled: "Invite cancelled.",
+    memberRemoved: "Member removed from the household.",
+    roleUpdated: "Role updated.",
+    ownershipTransferred: "Household responsibility transferred.",
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
@@ -20,6 +109,24 @@ const en = {
     alreadyHasHousehold: "You already have an active household.",
     switchFailed: "We couldn't switch households. Try again.",
     notAMember: "You are not a member of that household.",
+    notAllowed: "You don't have permission to do that.",
+    alreadyAMember: "This person is already a member of the household.",
+    alreadyInvited: "This person already has a pending invite.",
+    inviteFailed: "We couldn't send the invite. Try again.",
+    inviteRateLimited: "You've sent a lot of invites recently. Try again later.",
+    invitationNotFound: "This invite no longer exists.",
+    cancelInvitationFailed: "We couldn't cancel the invite. Try again.",
+    invitationWrongEmail: "This invite is for a different email address.",
+    emailNotVerified: "Confirm your email before accepting an invite.",
+    acceptInvitationFailed: "We couldn't accept the invite. Try again.",
+    cannotRemoveOwner: "The owner can't be removed. Transfer responsibility first.",
+    memberNotFound: "This member no longer exists.",
+    removeMemberFailed: "We couldn't remove this member. Try again.",
+    updateRoleFailed: "We couldn't update this member's role. Try again.",
+    ownerMustTransferFirst: "Transfer responsibility before leaving the household.",
+    leaveFailed: "We couldn't complete this action. Try again.",
+    alreadyOwner: "This person is already the owner.",
+    transferOwnershipFailed: "We couldn't transfer responsibility. Try again.",
   },
 };
 
@@ -35,9 +142,88 @@ const ptBR = {
     reserveMultipleLabel: "Meses de reserva",
     reserveMultipleHelp: "Quantos meses de custo fixo a reserva de emergência deve cobrir.",
     submit: "Criar casa",
+    tabCreate: "Criar casa",
+    tabInvite: "Tenho um convite",
+  },
+  invitesTab: {
+    title: "Seus convites pendentes",
+    empty: "Você não tem nenhum convite pendente.",
+    invitedAs: "Como {role}",
+  },
+  inviteAcceptPage: {
+    title: "Convite para a casa",
+    signedOutPrompt: "Entre ou crie um cadastro com o e-mail deste convite para aceitá-lo.",
+    signInLink: "Entrar",
+    signUpLink: "Criar cadastro",
+    description: "Você foi convidado para a casa {householdName} como {role}.",
+    accept: "Aceitar e entrar",
+    notFound: "Este convite não existe mais.",
+    wrongEmail: "Este convite é para outro e-mail. Entre com esse e-mail para aceitá-lo.",
   },
   switcher: {
     label: "Casa",
+  },
+  casa: {
+    overline: "Casa",
+    title: "Membros e convites",
+    membersSectionTitle: "Membros",
+    inviteAction: "Convidar",
+    inviteDialog: {
+      title: "Convidar para a casa",
+      description: "Enviaremos um convite por e-mail que expira em 24 horas.",
+      emailLabel: "E-mail",
+      roleLabel: "Papel",
+      submit: "Enviar convite",
+      cancel: "Cancelar",
+    },
+    pendingInvitesSectionTitle: "Convites pendentes",
+    pendingInvitesEmpty: "Nenhum convite pendente.",
+    table: {
+      name: "Nome",
+      email: "E-mail",
+      role: "Papel",
+      joined: "Desde",
+      expires: "Expira em",
+      actions: "Ações",
+    },
+    roles: {
+      owner: "Responsável",
+      admin: capitalize(authT.roleLabels.admin),
+      member: capitalize(authT.roleLabels.member),
+    },
+    rowActions: {
+      makeAdmin: "Tornar administrador",
+      makeMember: "Tornar membro",
+      remove: "Remover da casa",
+      leave: "Sair da casa",
+      transferTo: "Transferir responsabilidade para {name}",
+      cancelInvite: "Cancelar convite",
+    },
+    removeDialog: {
+      title: "Remover {name} da casa?",
+      description: "{name} perde acesso aos dados financeiros desta casa imediatamente.",
+      confirm: "Remover",
+      cancel: "Cancelar",
+    },
+    leaveDialog: {
+      title: "Sair da casa?",
+      description: "Você perde acesso aos dados financeiros desta casa.",
+      lastMemberDescription:
+        "Você é a última pessoa na casa: sair vai excluir a casa e tudo o que está nela.",
+      confirm: "Sair",
+      cancel: "Cancelar",
+    },
+    transferDialog: {
+      title: "Transferir responsabilidade para {name}?",
+      description: "{name} passa a ser o responsável e você vira administrador.",
+      confirm: "Transferir",
+      cancel: "Cancelar",
+    },
+    inviteSent: "Convite enviado.",
+    invitationCancelled: "Convite cancelado.",
+    memberRemoved: "Membro removido da casa.",
+    roleUpdated: "Papel atualizado.",
+    ownershipTransferred: "Responsabilidade transferida.",
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
@@ -46,6 +232,25 @@ const ptBR = {
     alreadyHasHousehold: "Você já tem uma casa ativa.",
     switchFailed: "Não foi possível trocar de casa. Tente novamente.",
     notAMember: "Você não é membro dessa casa.",
+    notAllowed: "Você não tem permissão para fazer isso.",
+    alreadyAMember: "Esta pessoa já é membro da casa.",
+    alreadyInvited: "Esta pessoa já tem um convite pendente.",
+    inviteFailed: "Não foi possível enviar o convite. Tente novamente.",
+    inviteRateLimited: "Você enviou muitos convites recentemente. Tente novamente mais tarde.",
+    invitationNotFound: "Este convite não existe mais.",
+    cancelInvitationFailed: "Não foi possível cancelar o convite. Tente novamente.",
+    invitationWrongEmail: "Este convite é para outro e-mail.",
+    emailNotVerified: "Confirme seu e-mail antes de aceitar um convite.",
+    acceptInvitationFailed: "Não foi possível aceitar o convite. Tente novamente.",
+    cannotRemoveOwner:
+      "O responsável não pode ser removido. Transfira a responsabilidade primeiro.",
+    memberNotFound: "Este membro não existe mais.",
+    removeMemberFailed: "Não foi possível remover este membro. Tente novamente.",
+    updateRoleFailed: "Não foi possível atualizar o papel deste membro. Tente novamente.",
+    ownerMustTransferFirst: "Transfira a responsabilidade pela casa antes de sair.",
+    leaveFailed: "Não foi possível concluir esta ação. Tente novamente.",
+    alreadyOwner: "Esta pessoa já é o responsável.",
+    transferOwnershipFailed: "Não foi possível transferir a responsabilidade. Tente novamente.",
   },
 } satisfies typeof en;
 

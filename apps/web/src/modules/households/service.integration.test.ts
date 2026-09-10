@@ -36,7 +36,7 @@ async function sessionFor(headers: Headers): Promise<CurrentSession | null> {
   return getCurrentSession();
 }
 
-// Simulates the membership a future invite-accept flow (#11) will create:
+// Simulates the membership households.acceptInvitation (membership.ts) creates:
 // a second household for a user who already has one active, without going
 // through households.createHousehold's idempotency guard.
 async function addHouseholdMembership(headers: Headers, name: string): Promise<string> {

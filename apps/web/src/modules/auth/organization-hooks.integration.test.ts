@@ -114,6 +114,88 @@ describe("organization plugin hooks (integration)", () => {
     });
   });
 
+  it("refuses to invite someone with more than one role", async () => {
+    await withTestDb(async (db) => {
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "owner-multi-role@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: crypto.randomUUID() },
+      });
+
+      await expect(
+        getAuth().api.createInvitation({
+          headers: ownerHeaders,
+          body: {
+            email: "multi-role@example.com",
+            role: ["admin", "member"],
+            organizationId: organization.id,
+          },
+        }),
+      ).rejects.toThrow(APIError);
+    });
+  });
+
+  it("refuses to invite someone as owner, even for the household's own owner", async () => {
+    await withTestDb(async (db) => {
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "owner-invite@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: crypto.randomUUID() },
+      });
+
+      await expect(
+        getAuth().api.createInvitation({
+          headers: ownerHeaders,
+          body: {
+            email: "future-owner@example.com",
+            role: "owner",
+            organizationId: organization.id,
+          },
+        }),
+      ).rejects.toThrow(APIError);
+    });
+  });
+
+  it("refuses to delete an organization that still has other members", async () => {
+    await withTestDb(async (db) => {
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "owner-delete-guard@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: crypto.randomUUID() },
+      });
+
+      const memberHeaders = await signUpVerifiedUser(db, {
+        name: "Member",
+        email: "member-delete-guard@example.com",
+        password: "correct-horse",
+      });
+      const memberSession = await getAuth().api.getSession({ headers: memberHeaders });
+      if (!memberSession) throw new Error("member sign-in failed in test setup");
+      await getAuth().api.addMember({
+        body: { userId: memberSession.user.id, organizationId: organization.id, role: "member" },
+      });
+
+      await expect(
+        getAuth().api.deleteOrganization({
+          headers: ownerHeaders,
+          body: { organizationId: organization.id },
+        }),
+      ).rejects.toThrow(APIError);
+    });
+  });
+
   it("keeps at most one owner row per organization at the database level", async () => {
     await withTestDb(async (db) => {
       const ownerHeaders = await signUpVerifiedUser(db, {

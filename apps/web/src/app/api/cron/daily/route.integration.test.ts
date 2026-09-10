@@ -9,7 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { marketData } from "@/db/schema/market-data";
-import { verification } from "@/db/schema/auth";
+import { invitation, verification } from "@/db/schema/auth";
 import { withTestDb } from "@/db/test/harness";
 import * as marketDataModule from "@/lib/market-data";
 import {
@@ -18,6 +18,9 @@ import {
   buildSgsFetchMock,
 } from "@/lib/market-data/test/sgs-fixtures";
 import * as authModule from "@/modules/auth";
+import { getAuth } from "@/modules/auth";
+import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
+import * as householdsModule from "@/modules/households";
 
 import { GET } from "./route";
 
@@ -41,9 +44,14 @@ async function callCronRoute(): Promise<Response> {
   );
 }
 
+process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
+process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
+process.env.EMAIL_PROVIDER = "fake";
+
 describe("GET /api/cron/daily (integration)", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
+    process.env.REGISTRATION_MODE = "open";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
@@ -82,11 +90,13 @@ describe("GET /api/cron/daily (integration)", () => {
         steps: {
           marketData: { ok: boolean; results: unknown[] };
           pruneVerification: { deleted: number };
+          pruneInvitations: { deleted: number };
         };
       };
       expect(body.ok).toBe(true);
       expect(body.steps.marketData.ok).toBe(true);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(CDI_DAILY_OBSERVATIONS.length);
       expect(await countMarketDataRows(db, "13522")).toBe(0);
@@ -132,11 +142,16 @@ describe("GET /api/cron/daily (integration)", () => {
       expect(response.status).toBe(500);
       const body = (await response.json()) as {
         ok: boolean;
-        steps: { marketData: { ok: boolean }; pruneVerification: { deleted: number } };
+        steps: {
+          marketData: { ok: boolean };
+          pruneVerification: { deleted: number };
+          pruneInvitations: { deleted: number };
+        };
       };
       expect(body.ok).toBe(false);
       expect(body.steps.marketData.ok).toBe(false);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(0);
       const remainingVerification = await db.select().from(verification);
@@ -201,15 +216,82 @@ describe("GET /api/cron/daily (integration)", () => {
     });
   });
 
-  it("runs the verification prune before the market-data refresh, so a Bacen outage cannot starve it", async () => {
+  it("prunes expired and cancelled invitations, leaving pending ones untouched", async () => {
+    await withTestDb(async (db) => {
+      globalThis.fetch = buildSgsFetchMock();
+
+      const ownerHeaders = await signUpVerifiedUser(db, {
+        name: "Owner",
+        email: "prune-owner@example.com",
+        password: "correct-horse",
+      });
+      const organization = await getAuth().api.createOrganization({
+        headers: ownerHeaders,
+        body: { name: "Casa", slug: randomUUID() },
+      });
+      const ownerSession = await getAuth().api.getSession({ headers: ownerHeaders });
+      if (!ownerSession) throw new Error("owner sign-in failed in test setup");
+
+      const expiredId = randomUUID();
+      const cancelledId = randomUUID();
+      const pendingId = randomUUID();
+      const now = new Date();
+      await db.insert(invitation).values([
+        {
+          id: expiredId,
+          organizationId: organization.id,
+          email: "expired-invite@example.com",
+          role: "member",
+          status: "pending",
+          expiresAt: new Date(now.getTime() - 60_000),
+          inviterId: ownerSession.user.id,
+        },
+        {
+          id: cancelledId,
+          organizationId: organization.id,
+          email: "cancelled-invite@example.com",
+          role: "member",
+          status: "canceled",
+          expiresAt: new Date(now.getTime() + 60_000),
+          inviterId: ownerSession.user.id,
+        },
+        {
+          id: pendingId,
+          organizationId: organization.id,
+          email: "pending-invite@example.com",
+          role: "member",
+          status: "pending",
+          expiresAt: new Date(now.getTime() + 60_000),
+          inviterId: ownerSession.user.id,
+        },
+      ]);
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        steps: { pruneInvitations: { deleted: number } };
+      };
+      expect(body.steps.pruneInvitations).toEqual({ deleted: 2 });
+
+      const remaining = await db.select({ id: invitation.id }).from(invitation);
+      expect(remaining.map((row) => row.id)).toEqual([pendingId]);
+    });
+  });
+
+  it("runs housekeeping before the market-data refresh, so a Bacen outage cannot starve it", async () => {
     await withTestDb(async () => {
       globalThis.fetch = buildSgsFetchMock();
       const callOrder: string[] = [];
-      const actualPrune = authModule.pruneExpiredVerifications;
+      const actualPruneVerification = authModule.pruneExpiredVerifications;
+      const actualPruneInvitations = householdsModule.pruneExpiredInvitations;
       const actualRefresh = marketDataModule.refreshMarketData;
       vi.spyOn(authModule, "pruneExpiredVerifications").mockImplementation(async (...args) => {
         callOrder.push("pruneVerification");
-        return actualPrune(...args);
+        return actualPruneVerification(...args);
+      });
+      vi.spyOn(householdsModule, "pruneExpiredInvitations").mockImplementation(async (...args) => {
+        callOrder.push("pruneInvitations");
+        return actualPruneInvitations(...args);
       });
       vi.spyOn(marketDataModule, "refreshMarketData").mockImplementation(async (...args) => {
         callOrder.push("marketData");
@@ -218,11 +300,11 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const response = await callCronRoute();
       expect(response.status).toBe(200);
-      expect(callOrder).toEqual(["pruneVerification", "marketData"]);
+      expect(callOrder).toEqual(["pruneVerification", "pruneInvitations", "marketData"]);
     });
   });
 
-  it("keeps running the market-data refresh and still returns 500 when the prune step throws", async () => {
+  it("keeps running the remaining steps and still returns 500 when the verification prune throws", async () => {
     await withTestDb(async () => {
       globalThis.fetch = buildSgsFetchMock();
       vi.spyOn(authModule, "pruneExpiredVerifications").mockRejectedValue(
@@ -236,11 +318,37 @@ describe("GET /api/cron/daily (integration)", () => {
         steps: {
           marketData: { ok: boolean };
           pruneVerification: { error: string };
+          pruneInvitations: { deleted: number };
         };
       };
       expect(body.ok).toBe(false);
       expect(body.steps.marketData.ok).toBe(true);
       expect(body.steps.pruneVerification).toEqual({ error: "Error" });
+      expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    });
+  });
+
+  it("keeps running the remaining steps and still returns 500 when the invitation prune throws", async () => {
+    await withTestDb(async () => {
+      globalThis.fetch = buildSgsFetchMock();
+      vi.spyOn(householdsModule, "pruneExpiredInvitations").mockRejectedValue(
+        new Error("connection reset"),
+      );
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(500);
+      const body = (await response.json()) as {
+        ok: boolean;
+        steps: {
+          marketData: { ok: boolean };
+          pruneVerification: { deleted: number };
+          pruneInvitations: { error: string };
+        };
+      };
+      expect(body.ok).toBe(false);
+      expect(body.steps.marketData.ok).toBe(true);
+      expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
+      expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
     });
   });
 });

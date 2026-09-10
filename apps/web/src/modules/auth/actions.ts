@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/action-state";
+import { sanitizeNextPathFromFormData } from "./next-redirect";
 import { t } from "./strings";
 import {
   requestMagicLink,
@@ -40,12 +41,18 @@ export async function signUpAction(
     return { status: "error", message: errors.invalidInput };
   }
 
+  const nextPath = sanitizeNextPathFromFormData(formData);
   const requestHeaders = await headers();
-  const outcome = await signUp(parsed.data, requestHeaders);
+  const outcome = await signUp(parsed.data, requestHeaders, nextPath);
 
   switch (outcome.status) {
-    case "ok":
-      redirect(`/verificar-email?email=${encodeURIComponent(parsed.data.email)}`);
+    case "ok": {
+      const verifyEmailQuery = new URLSearchParams({ email: parsed.data.email });
+      if (nextPath) {
+        verifyEmailQuery.set("next", nextPath);
+      }
+      redirect(`/verificar-email?${verifyEmailQuery.toString()}`);
+    }
     case "terms_not_accepted":
       return { status: "error", message: errors.termsRequired };
     case "registration_closed":
@@ -74,12 +81,13 @@ export async function signInAction(
     return { status: "error", message: errors.invalidInput };
   }
 
+  const nextPath = sanitizeNextPathFromFormData(formData);
   const requestHeaders = await headers();
   const outcome = await signIn(parsed.data, requestHeaders);
 
   switch (outcome.status) {
     case "ok":
-      redirect("/");
+      redirect(nextPath ?? "/");
     case "invalid_credentials":
       return { status: "error", message: errors.invalidCredentials };
     case "email_not_verified":
@@ -105,8 +113,9 @@ export async function resendVerificationAction(
     return { status: "error", message: errors.invalidInput };
   }
 
+  const nextPath = sanitizeNextPathFromFormData(formData);
   const requestHeaders = await headers();
-  const outcome = await resendVerification(parsed.data.email, requestHeaders);
+  const outcome = await resendVerification(parsed.data.email, requestHeaders, nextPath);
 
   switch (outcome.status) {
     case "ok":

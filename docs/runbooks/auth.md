@@ -70,10 +70,11 @@ helper treats that as a no-op rather than failing the call.
   (`apps/web/src/modules/auth/invitations.ts`) checks Better Auth's own `invitation` table
   (organization plugin, ADR-0001) for a row with that email, `status = "pending"` and an unexpired
   `expiresAt`, case-insensitively. The `hooks.before` hook (`options.ts`) only runs this query when
-  `mode === "invite"`. **Creating an invitation is still ticket #11's job** — nothing in this repo
-  writes a row to the `invitation` table yet, so in practice `invite` still behaves like `closed`
-  until #11 ships the invite flow; the policy check itself is real, not a placeholder. Expired
-  pending-invite rows are not purged anywhere yet — that cleanup also arrives with #11.
+  `mode === "invite"`. Invitations are created by `households.inviteMember`
+  (`apps/web/src/modules/households/membership.ts`), which calls
+  `getAuth().api.createInvitation` — see `docs/runbooks/households.md` for the invite, accept,
+  role and ownership flows. Expired and cancelled pending-invite rows are purged by the daily
+  housekeeping job (`households.pruneExpiredInvitations`, a step of `GET /api/cron/daily`).
 - `open`: sign-up always allowed, subject to Better Auth's own validation and rate limits.
 
 ## Base URL and trusted origins
@@ -231,29 +232,31 @@ and the verification prune share a single route instead of one cron each.
 Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
 `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
 (`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
-runs each of its steps in its own try/catch, so one step failing never stops the other from
+runs each of its steps in its own try/catch, so one step failing never stops the others from
 running, and returns a per-step summary:
-`{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
+`{ ok, steps: { pruneVerification: { deleted } | { error }, pruneInvitations: { deleted } | { error }, marketData: { ok, results } | { error } } }`.
 The steps run in this order:
 
 1. The expired-verification prune (`pruneExpiredVerifications`) — one cheap `DELETE`.
-2. The market-data refresh (`refreshMarketData`) — up to five sequential SGS fetches, each with its
+2. The expired/cancelled-invitation prune (`households.pruneExpiredInvitations`, ADR-0008) —
+   another cheap `DELETE`.
+3. The market-data refresh (`refreshMarketData`) — up to five sequential SGS fetches, each with its
    own 10 s timeout.
 
-The prune runs first deliberately: it is orders of magnitude cheaper than the market-data step, and
-running it after would let a slow or unreachable Bacen SGS starve it on every invocation. The
-response is `200` when every step succeeded and `500` when any step errored or, for market-data,
-fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from ADR-0008)
-becomes a step of this same route rather than a new cron entry, since the Hobby limit leaves no
-room for a third schedule. The invariant for ordering new steps: **cheap, always-must-run
-housekeeping first; slow network work last.** A step that is one cheap query and must run on every
-invocation (like the prune) goes before the market-data refresh; anything with a network round trip
-or that can legitimately be skipped goes after it, so a slow or unreachable upstream never starves
-the cheap, always-must-run work.
+The two prunes run first deliberately: each is orders of magnitude cheaper than the market-data
+step, and running them after it would let a slow or unreachable Bacen SGS starve them on every
+invocation. The response is `200` when every step succeeded and `500` when any step errored or, for
+market-data, fetched nothing at all. Any new daily housekeeping task becomes a step of this same
+route rather than a new cron entry, since the Hobby limit leaves no room for a third schedule. The
+invariant for ordering new steps: **cheap, always-must-run housekeeping first; slow network work
+last.** A step that is one cheap query and must run on every invocation (like the prunes) goes
+before the market-data refresh; anything with a network round trip or that can legitimately be
+skipped goes after it, so a slow or unreachable upstream never starves the cheap, always-must-run
+work.
 
 `route.ts` exports `maxDuration = 60`. The market-data step makes up to five sequential SGS fetches,
-each with its own 10 s timeout, so the step alone can take up to ~50 s; add the prune's one cheap
-`DELETE` and 60 s leaves the invocation enough headroom without depending on Vercel's function
+each with its own 10 s timeout, so the step alone can take up to ~50 s; add the two prunes' cheap
+`DELETE`s and 60 s leaves the invocation enough headroom without depending on Vercel's function
 timeout defaults, which vary by whether Fluid compute is enabled for the project: with Fluid
 compute, Hobby's default max duration is 300 s; without it, the default is 10 s (with 60 s as the
 Hobby ceiling for functions that opt in via `maxDuration`, same as the value set here). Whether this
@@ -353,9 +356,24 @@ already single-use, so a generous ceiling costs nothing.
 
 `verification-email.ts`, `magic-link-email.ts` and `reset-password-email.ts` all delegate to
 `renderEmail` (`email/render.ts`): it substitutes every `{placeholder}` from `strings.ts` into the
-text part verbatim and into the html part HTML-escaped. Verification and reset emails no longer
-interpolate the account holder's name. For verification that name is attacker-chosen: sign-up
-accepts any `name` alongside any email, so an attacker could land their own text in a stranger's
-inbox before that stranger ever proves they own the address. Reset email's `name` came from the DB
-instead, but the two templates now share the same minimal shape (link + expiry only), which is one
-fewer field to keep escaped and one fewer thing the recipient's name has to appear correct for.
+text part verbatim and into the html part HTML-escaped, using a function replacer (not a plain
+string one) so a name or household containing `$&`, `$'` or `` $` `` is inserted literally instead
+of being read by `String.prototype.replaceAll` as one of those special replacement patterns.
+Verification and reset emails no longer interpolate the account holder's name. For verification
+that name is attacker-chosen: sign-up accepts any `name` alongside any email, so an attacker could
+land their own text in a stranger's inbox before that stranger ever proves they own the address.
+Reset email's `name` came from the DB instead, but the two templates now share the same minimal
+shape (link + expiry only), which is one fewer field to keep escaped and one fewer thing the
+recipient's name has to appear correct for.
+
+## Post-sign-in redirect (`next`)
+
+`/entrar` and `/registrar` accept an optional `?next=` query parameter, validated by
+`sanitizeNextPath` (`next-redirect.ts`) against `^/convite/[A-Za-z0-9_-]+$` — the only destination
+that needs it today — and never a client-supplied absolute or protocol-relative URL (open
+redirect). `/convite/[id]`'s signed-out prompt builds its "Entrar"/"Criar cadastro" links with
+`next` set to its own path; both forms carry it through as a hidden field, `signInAction` redirects
+there on success instead of `/`, and `signUpAction` both appends it to the `/verificar-email`
+redirect and to the email verification link's own `callbackURL` (`/entrar?next=...`) so clicking
+that link also lands back on the invite. `ResendVerificationForm` carries the same `next` through a
+resend. A `next` that fails validation is treated as absent, never surfaced as an error.

@@ -21,5 +21,5 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { id: "reserve", label: t.nav.reserve, href: "/reserva", icon: "reserve", disabled: false },
   { id: "banks", label: t.nav.banks, href: "/bancos", icon: "banks", disabled: true },
-  { id: "household", label: t.nav.household, href: "/casa", icon: "household", disabled: true },
+  { id: "household", label: t.nav.household, href: "/casa", icon: "household", disabled: false },
 ];

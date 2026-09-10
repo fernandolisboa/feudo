@@ -10,6 +10,9 @@ test("the app shell: sidebar (open, collapsed), topnav and mobile bottom tabs", 
   if (!baseURL) {
     throw new Error("baseURL is not configured for this Playwright project");
   }
+  // Shares Better Auth's sign-up/sign-in rate-limit window with the other
+  // e2e files (support/auth.ts); give a collision's retry room to land.
+  test.slow();
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await signUpVerifyAndSignIn(page, request, baseURL, {

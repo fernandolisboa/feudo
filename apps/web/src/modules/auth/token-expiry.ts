@@ -4,6 +4,7 @@
 export const VERIFICATION_EXPIRES_IN_SECONDS = 60 * 60;
 export const MAGIC_LINK_EXPIRES_IN_SECONDS = 60 * 5;
 export const RESET_PASSWORD_EXPIRES_IN_SECONDS = 60 * 60;
+export const INVITATION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
 
 // `t` (strings.ts) always resolves to the ptBR copy today (no locale switch
 // yet), so only the phrase that copy needs exists here; add an `en` variant

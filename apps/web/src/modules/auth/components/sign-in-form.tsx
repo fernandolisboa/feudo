@@ -11,11 +11,12 @@ import { initialActionState } from "@/lib/action-state";
 import { signInAction } from "../actions";
 import { t } from "../strings";
 
-export function SignInForm() {
+export function SignInForm({ next }: { next?: string | null } = {}) {
   const [state, formAction, isPending] = useActionState(signInAction, initialActionState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       {state.status === "error" ? (
         <Alert variant="destructive">
           <AlertDescription>{state.message}</AlertDescription>
