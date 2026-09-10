@@ -31,13 +31,13 @@ and closes once E2E lands and needs its own predictable schema.
 
 ## Secrets and variables
 
-| name                          | kind                    | where                                          | used by                                                                                                                      |
-| ----------------------------- | ----------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL_PREVIEW`        | GitHub Actions secret   | this repo                                      | CI `integration` job: resets the `feudo-preview` project's schema, migrates it, runs `pnpm test:integration`                 |
-| `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`) | CI `integration` job's reset and integration-test steps: must equal `new URL(DATABASE_URL).hostname`                         |
-| `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo                                      | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                  |
-| `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo (`vars.DATABASE_PRODUCTION_HOST`)    | CI `migrate-production` job's guard step; also the belt-and-braces refusal in `assertDatabaseResetAllowed`                   |
-| `DATABASE_URL`                | Vercel env              | Production, Preview, Development               | the app itself, read by `apps/web/src/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo` |
+| name                          | kind                    | where                                                                                                          | used by                                                                                                                                                                                                                                                                                |
+| ----------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL_PREVIEW`        | GitHub Actions secret   | this repo                                                                                                      | CI `integration` job: resets the `feudo-preview` project's schema, migrates it, runs `pnpm test:integration`                                                                                                                                                                           |
+| `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`)                                                                 | CI `integration` job's reset and integration-test steps: must equal `new URL(DATABASE_URL).hostname`                                                                                                                                                                                   |
+| `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo, `production` environment only                                                                       | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                                                                                                                                                                            |
+| `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo, both at repo level (`vars.DATABASE_PRODUCTION_HOST`) and duplicated in the `production` environment | CI `migrate-production` job's guard step (reads the `production` environment copy); also the belt-and-braces refusal in `assertDatabaseResetAllowed` in the `integration` and `e2e` jobs' reset/migrate/test steps (read the repo-level copy, since those jobs have no `environment:`) |
+| `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                           |
 
 Secrets are set once, in this repo, through the GitHub CLI — never pasted into a workflow file or
 committed:
@@ -45,17 +45,24 @@ committed:
 ```
 gh secret set DATABASE_URL_PREVIEW
 gh variable set DATABASE_RESET_ALLOWED_HOST --body "<feudo-preview pooler hostname>"
-gh secret set DATABASE_URL_PRODUCTION
+gh secret set DATABASE_URL_PRODUCTION --env production
+gh variable set DATABASE_PRODUCTION_HOST --body "<feudo (production) pooler hostname>" --env production
 gh variable set DATABASE_PRODUCTION_HOST --body "<feudo (production) pooler hostname>"
 ```
 
 `gh secret set` prompts for the value on stdin; nothing is echoed and nothing is written to the
 repo. `DATABASE_URL_PREVIEW` is the pooled connection string for the `feudo-preview` project, and
 `DATABASE_URL_PRODUCTION` is the pooled connection string for the `feudo` (production) project,
-both from the Neon console or `vercel env pull` once the project exists. Because
-`DATABASE_RESET_ALLOWED_HOST` and `DATABASE_PRODUCTION_HOST` are not secrets (they are hostnames,
-not credentials) they are GitHub Actions **variables**, not secrets, and each value must equal its
-project's pooler host exactly.
+both from the Neon console or `vercel env pull` once the project exists. `--env production` scopes
+`DATABASE_URL_PRODUCTION` and one copy of `DATABASE_PRODUCTION_HOST` to the GitHub `production`
+environment, which only `migrate-production` runs under; the second, unscoped `gh variable set
+DATABASE_PRODUCTION_HOST` call is deliberate and not a duplicate to clean up — the `integration` and
+`e2e` jobs have no `environment:` and so can only read the repo-level copy for their belt-and-braces
+reset-guard check. Because `DATABASE_RESET_ALLOWED_HOST` and `DATABASE_PRODUCTION_HOST` are not
+secrets (they are hostnames, not credentials) they are GitHub Actions **variables**, not secrets.
+Each value must equal its project's pooler host once both sides are normalised the same way
+`databaseHost()` does (lowercased, trailing dot stripped, `-pooler` suffix stripped from the first
+label) — not necessarily byte-for-byte identical.
 
 If `DATABASE_URL_PREVIEW` or `DATABASE_RESET_ALLOWED_HOST` is absent, the `integration` job's
 reset step fails loudly (drizzle/Postgres errors under `CI`, or `DatabaseResetNotAllowedError` from
@@ -117,21 +124,27 @@ way: a red check on the `main` branch's commit and run history — there is no s
 `main`) — never with a reset script, and only from the repo root:
 
 ```
-trap 'rm -f .env.production.local' EXIT
-vercel env pull --environment=production --yes .env.production.local
-grep '^DATABASE_URL=' .env.production.local
-# Eyeball the host printed above: it must be the `feudo` project's, e.g. ep-dry-wildflower-…,
-# never ep-late-flower-… (that is `feudo-preview`). Stop here if it looks wrong.
-DATABASE_URL=$(sed -n 's/^DATABASE_URL="\(.*\)"$/\1/p' .env.production.local) \
-  pnpm --filter @feudo/web exec drizzle-kit migrate
+(
+  trap 'rm -f .env.production.local' EXIT
+  vercel env pull --environment=production --yes .env.production.local
+  sed -n 's/^DATABASE_URL=".*@\([^/:?]*\).*/\1/p' .env.production.local
+  # Eyeball the host printed above: it must be the `feudo` project's, e.g. ep-dry-wildflower-…,
+  # never ep-late-flower-… (that is `feudo-preview`). Stop here if it looks wrong.
+  DATABASE_URL=$(sed -n 's/^DATABASE_URL="\(.*\)"$/\1/p' .env.production.local) \
+    pnpm --filter @feudo/web exec drizzle-kit migrate
+)
 ```
 
 `vercel env pull --environment=production --yes <file>` requires being logged into the Vercel
 account that owns the project and writes exactly the file named on the command line — passing no
 file name pulls to `.env.local` instead, which this procedure does not read, so always name
-`.env.production.local` explicitly. The `trap` deletes that file on exit (success or failure) so it
-is never left on disk or committed; nothing is `export`ed into the shell's environment, only piped
-into the one `drizzle-kit migrate` invocation that needs it. Confirm `GET /api/health` reports
+`.env.production.local` explicitly. The whole block runs in a `( … )` subshell so the `trap` fires
+when the block ends, not only when the interactive shell itself exits, and the file is never left
+on disk or committed. The `sed` that eyeballs the host prints only the hostname, never the full
+connection string, so nothing with a credential in it ever reaches the terminal or a scrollback log;
+the second `sed` (used only inline in the `DATABASE_URL=…` assignment) is the one place the full
+string is extracted, and it is piped straight into the one `drizzle-kit migrate` invocation that
+needs it, never `export`ed into the shell's environment. Confirm `GET /api/health` reports
 `migrations.status: "up-to-date"` once the command finishes.
 
 ## The reset guard
@@ -139,13 +152,16 @@ into the one `drizzle-kit migrate` invocation that needs it. Confirm `GET /api/h
 `assertDatabaseResetAllowed` (`apps/web/src/db/reset-guard.ts`) runs before any reset query and:
 
 - refuses unconditionally when `VERCEL_ENV=production`;
-- requires `DATABASE_RESET_ALLOWED_HOST` to be set and to equal `new URL(DATABASE_URL).hostname`
-  exactly — the guard is bound to the specific database it is allowed to touch, not to an
-  environment label, so a stale or copy-pasted `DATABASE_URL` pointing at production or at a
-  different project is refused even with the opt-in variable set;
-- belt and braces: also refuses unconditionally whenever `DATABASE_PRODUCTION_HOST` is set and
-  equals `DATABASE_URL`'s host, even if `DATABASE_RESET_ALLOWED_HOST` was (wrongly) set to the same
-  value — the production host can never be a valid reset target, full stop.
+- requires `DATABASE_RESET_ALLOWED_HOST` to be set and, once both are normalised through
+  `databaseHost()` (lowercased, trailing dot stripped, `-pooler` suffix stripped from the first
+  label), to equal `new URL(DATABASE_URL).hostname` — the guard is bound to the specific database
+  it is allowed to touch, not to an environment label, so a stale or copy-pasted `DATABASE_URL`
+  pointing at production or at a different project is refused even with the opt-in variable set,
+  and a merely differently-cased or pooler/direct variant of the same host no longer slips past it;
+- belt and braces: also refuses unconditionally whenever `DATABASE_PRODUCTION_HOST` is set and,
+  after the same normalisation, equals `DATABASE_URL`'s host, even if `DATABASE_RESET_ALLOWED_HOST`
+  was (wrongly) set to the same value — the production host can never be a valid reset target, full
+  stop.
 
 ## Resetting the preview project locally
 
@@ -195,10 +211,13 @@ been migrated.
 always writes `created_at = journal.when` for every row it applies, so this is a reliable
 membership check without needing to read the migration `.sql` files at runtime. It reports one of
 four states: `up-to-date` (the two sets match exactly), `behind` (the database is missing rows the
-journal expects and has no extra ones), `ahead` (the database has at least one row the journal does
+journal expects and has no extra ones — this is also what a schema with no `drizzle` migrations
+table at all reports, SQLSTATE `42P01`, rather than `unknown`, since a never-migrated database is a
+normal, recoverable form of "behind"), `ahead` (the database has at least one row the journal does
 not — this wins over `behind` even if rows are also missing, since a `drizzle-kit migrate` run
 against a database in this state is a silent no-op and needs manual recovery, see below), or
-`unknown` (the query itself failed; logged server-side with `error.name` only, never the message).
+`unknown` (the query failed for any other reason, or did not finish within the probe's 5-second
+deadline; logged server-side with `error.name` only, never the message).
 
 The public response is `{ ok, db, migrations: { status } }` — no counts. `ok` is `true` only when
 `db` is reachable and `migrations.status` is `"up-to-date"`; otherwise the route returns status 503. Applied/expected counts are logged server-side only, at most once per probe, never returned to
@@ -207,13 +226,18 @@ connectivity alone (`db: true`) is not enough to call the deployment healthy.
 
 The result is memoized for 10 seconds per warm instance and concurrent callers during that window
 share one in-flight probe instead of each issuing their own queries, since the endpoint is public
-and unauthenticated. It never returns the connection string or the underlying error. It stores
-nothing, so it has no entry in the ADR-0008 data map.
+and unauthenticated. A probe that does not settle within 5 seconds (a hung connection, for example)
+resolves to `{ db: false, migrations: { status: "unknown" } }` instead of leaving the endpoint
+hanging; that result is cached the same as any other for the remainder of the 10-second window, not
+retried immediately, so a hang cannot make every concurrent request wait out its own 5-second
+deadline. It never returns the connection string or the underlying error. It stores nothing, so it
+has no entry in the ADR-0008 data map.
 
 Because Vercel deploys `main` independently of `migrate-production` finishing, expect
 `migrations.status: "behind"` (503) from a fresh deployment of `main` until the `migrate-production`
 job for that same commit turns green — that gap is normal, not an incident. A 503 that persists
-after `migrate-production` is green, or a `migrations.status: "ahead"`, is the incident.
+after `migrate-production` is green, a `migrations.status: "ahead"`, or a `migrations.status:
+"unknown"` that does not clear on its own within a probe cycle or two, is the incident.
 
 **Recovery from `migrations.status: "ahead"`**: this means `drizzle.__drizzle_migrations` has a row
 whose `created_at` is not in the committed journal — most often a migration applied from a branch
