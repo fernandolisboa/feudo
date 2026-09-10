@@ -1078,6 +1078,65 @@ describe("invitation delivery failure (integration)", () => {
       expect(row?.deliveryFailedAt).not.toBeNull();
     });
   });
+
+  it("ignores an expired stray row for the same email and leaves it untouched", async () => {
+    await withTestDb(async (db) => {
+      const owner = await createOwnerWithHousehold(
+        db,
+        "Owner",
+        "resend-expired-stray-owner@example.com",
+        "Casa",
+      );
+      const session = await householdSessionFor(owner.headers);
+      const inviteeEmail = "resend-expired-stray-invitee@example.com";
+      vi.spyOn(fakeEmailSender, "send").mockRejectedValueOnce(new Error("provider down"));
+
+      const invited = await inviteMember(
+        { email: inviteeEmail, role: "member" },
+        session,
+        db,
+        owner.headers,
+      );
+      expect(invited.status).toBe("ok");
+      if (invited.status !== "ok") return;
+
+      const expiredInvitationId = crypto.randomUUID();
+      await db.insert(invitation).values({
+        id: expiredInvitationId,
+        organizationId: owner.householdId,
+        email: inviteeEmail,
+        role: "member",
+        status: "pending",
+        expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+        createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+        inviterId: owner.userId,
+      });
+
+      // The initial send's own failure already set lastSentAt on the
+      // target row; push it outside the minimum interval so this resend
+      // reaches the stray-row lookup instead of short-circuiting on
+      // rate_limited.
+      await db
+        .update(invitation)
+        .set({ lastSentAt: new Date(Date.now() - 2 * 60 * 1000) })
+        .where(eq(invitation.id, invited.invitationId));
+
+      const resendOutcome = await resendInvitation(
+        invited.invitationId,
+        session,
+        db,
+        owner.headers,
+      );
+      expect(resendOutcome.status).toBe("ok");
+
+      const [expiredRow] = await db
+        .select({ status: invitation.status, expiresAt: invitation.expiresAt })
+        .from(invitation)
+        .where(eq(invitation.id, expiredInvitationId));
+      expect(expiredRow?.status).toBe("pending");
+      expect(expiredRow?.expiresAt.getTime()).toBeLessThan(Date.now());
+    });
+  });
 });
 
 describe("resendInvitation ceiling and eligibility (integration)", () => {

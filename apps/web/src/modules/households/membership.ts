@@ -292,17 +292,23 @@ export async function resendInvitation(
         eq(invitationTable.email, existing.email),
         eq(invitationTable.status, "pending"),
         ne(invitationTable.id, invitationId),
+        gt(invitationTable.expiresAt, new Date()),
       ),
     );
   if (strayRows.length > 0) {
-    await Promise.all(
-      strayRows.map((row) =>
-        getAuth().api.cancelInvitation({
-          headers: requestHeaders,
-          body: { invitationId: row.id },
-        }),
-      ),
-    );
+    try {
+      await Promise.all(
+        strayRows.map((row) =>
+          getAuth().api.cancelInvitation({
+            headers: requestHeaders,
+            body: { invitationId: row.id },
+          }),
+        ),
+      );
+    } catch {
+      // A stray row was accepted or cancelled concurrently; either way it no
+      // longer collides with this resend, so fall through to not_found below.
+    }
     return { status: "not_found" };
   }
 
