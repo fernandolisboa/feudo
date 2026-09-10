@@ -60,15 +60,45 @@ interface MigrationRow {
 }
 
 const RELATION_DOES_NOT_EXIST = "42P01";
+const MAX_CAUSE_CHAIN_DEPTH = 5;
 
-interface PostgresError {
-  code: string;
+function hasStringCode(value: unknown): value is { code: string } {
+  return (
+    typeof value === "object" && value !== null && "code" in value && typeof value.code === "string"
+  );
 }
 
-function hasSqlState(error: unknown): error is PostgresError {
-  return (
-    typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
-  );
+function hasCause(value: unknown): value is { cause: unknown } {
+  return typeof value === "object" && value !== null && "cause" in value;
+}
+
+function findSqlState(error: unknown): string | undefined {
+  let current = error;
+  for (let depth = 0; depth < MAX_CAUSE_CHAIN_DEPTH; depth += 1) {
+    if (hasStringCode(current)) {
+      return current.code;
+    }
+    if (!hasCause(current)) {
+      return undefined;
+    }
+    current = current.cause;
+  }
+  return undefined;
+}
+
+function innermostErrorName(error: unknown): string {
+  let name = "UnknownError";
+  let current = error;
+  for (let depth = 0; depth < MAX_CAUSE_CHAIN_DEPTH; depth += 1) {
+    if (current instanceof Error) {
+      name = current.name;
+    }
+    if (!hasCause(current)) {
+      return name;
+    }
+    current = current.cause;
+  }
+  return name;
 }
 
 export async function getMigrationsStatus(db: Database): Promise<MigrationsStatus> {
@@ -83,8 +113,8 @@ export async function getMigrationsStatus(db: Database): Promise<MigrationsStatu
     );
     return status;
   } catch (error) {
-    console.error(error instanceof Error ? error.name : "UnknownError");
-    if (hasSqlState(error) && error.code === RELATION_DOES_NOT_EXIST) {
+    console.error(innermostErrorName(error));
+    if (findSqlState(error) === RELATION_DOES_NOT_EXIST) {
       return "behind";
     }
     return unknownMigrationsStatus();

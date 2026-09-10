@@ -1,3 +1,5 @@
+import type { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "./client.ts";
@@ -6,6 +8,11 @@ import {
   getExpectedMigrations,
   getMigrationsStatus,
 } from "./migrations-status";
+
+function dbOverFakePool(queryError: unknown): Database {
+  const fakePool = { query: vi.fn().mockRejectedValue(queryError) } as unknown as Pool;
+  return drizzle({ client: fakePool }) as unknown as Database;
+}
 
 describe("evaluateMigrationsStatus", () => {
   it("reports up-to-date when applied timestamps match the journal exactly", () => {
@@ -121,6 +128,53 @@ describe("getMigrationsStatus", () => {
 
     expect(status).toBe("behind");
     expect(consoleError).toHaveBeenCalledWith("NeonDbError");
+
+    consoleError.mockRestore();
+  });
+
+  it("reports behind when the driver error with code 42P01 is wrapped in DrizzleQueryError", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = dbOverFakePool(
+      Object.assign(new Error('relation "drizzle.__drizzle_migrations" does not exist'), {
+        name: "NeonDbError",
+        code: "42P01",
+      }),
+    );
+
+    const status = await getMigrationsStatus(db);
+
+    expect(status).toBe("behind");
+    expect(consoleError).toHaveBeenCalledWith("NeonDbError");
+
+    consoleError.mockRestore();
+  });
+
+  it("reports unknown when the wrapped driver error has an unrelated SQLSTATE code", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = dbOverFakePool(
+      Object.assign(new Error("permission denied for schema drizzle"), {
+        name: "NeonDbError",
+        code: "42501",
+      }),
+    );
+
+    const status = await getMigrationsStatus(db);
+
+    expect(status).toBe("unknown");
+    expect(consoleError).toHaveBeenCalledWith("NeonDbError");
+
+    consoleError.mockRestore();
+  });
+
+  it("reports unknown and logs the innermost error's name for a plain connectivity failure", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = dbOverFakePool(new TypeError("fetch failed"));
+
+    const status = await getMigrationsStatus(db);
+
+    expect(status).toBe("unknown");
+    expect(consoleError).toHaveBeenCalledWith("TypeError");
+    expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining("fetch failed"));
 
     consoleError.mockRestore();
   });
