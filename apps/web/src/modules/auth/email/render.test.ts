@@ -18,6 +18,17 @@ describe("renderEmail", () => {
     );
   });
 
+  it("inserts a value containing $' literally instead of as a replacement pattern", () => {
+    const result = renderEmail(
+      { subject: "{name}", text: "Hi {name}", html: "<p>{name}</p>" },
+      { name: "Household $' Corp" },
+    );
+
+    expect(result.subject).toBe("Household $' Corp");
+    expect(result.text).toBe("Hi Household $' Corp");
+    expect(result.html).toBe("<p>Household $&#39; Corp</p>");
+  });
+
   it("leaves the copy untouched when no replacement key appears in it", () => {
     const result = renderEmail(
       { subject: "Subject", text: "No placeholders here", html: "<p>No placeholders here</p>" },
