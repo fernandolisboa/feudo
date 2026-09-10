@@ -349,7 +349,7 @@ separate known addresses from unknown ones by averaging a few samples — the fl
 branch up, but never caps the slow one. `sendResetPassword` and `sendMagicLink` (`options.ts`) fix
 this by never awaiting the provider call themselves: each builds the email, calls
 `emailSender.send(...)`, attaches its own `.catch` that logs `error.name` only
-(`logAuthEmailSendFailure`), and hands that already-caught promise to `scheduleBackgroundTask`
+(`logSendFailure`), and hands that already-caught promise to `scheduleBackgroundTask`
 (`apps/web/src/modules/auth/background-tasks.ts`, which wraps `waitUntil` from `@vercel/functions`)
 without awaiting it — so the callback itself returns almost immediately regardless of how long the
 provider takes, and `hooks.after`'s floor is the only thing left padding the response. A failed
@@ -382,9 +382,8 @@ from `waitUntil` never turns into an unhandled rejection either way.
 
 Invitation e-mails (`sendInvitationEmail`, the organization plugin) still go through Better Auth's
 own `runInBackgroundOrAwait` unmodified and are still awaited inline, since that option was never
-set globally — this ticket only touches the two floor-protected paths. #59 tracks giving the
-inviting household visibility into a failed invite delivery, a separate concern from the timing
-floor this ticket closes.
+set globally — the timing floor only covers the two paths above. Invite delivery failures are
+surfaced to the inviting household instead: see "Resend" in `docs/runbooks/households.md`.
 
 `/sign-in/magic-link` and `/reset-password` (the POST that submits the new password) get a tight
 `rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the magic-link plugin's own

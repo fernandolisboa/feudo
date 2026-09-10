@@ -35,7 +35,7 @@ async function lastEmailTextFor(email: string): Promise<string> {
 const CONSOLE_ERROR_WAIT_TIMEOUT_MS = 3000;
 const CONSOLE_ERROR_WAIT_POLL_INTERVAL_MS = 10;
 
-// logAuthEmailSendFailure runs inside the scheduled send's own .catch, off
+// logSendFailure runs inside the scheduled send's own .catch, off
 // the response path (that is the point of this ticket) — so a test that
 // wants to see it fire must poll rather than assume it already ran by the
 // time the request handler's promise resolved.
