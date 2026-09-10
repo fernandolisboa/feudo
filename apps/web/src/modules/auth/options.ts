@@ -10,6 +10,7 @@ import {
   householdSettings,
   invitation as invitationTable,
   member,
+  organization as organizationTable,
   session as sessionTable,
 } from "@/db/schema";
 
@@ -45,7 +46,12 @@ const ORGANIZATION_LIMIT = 20;
 const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
 const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = 6;
 const OWNER_ROLE = "owner";
-const MEMBER_ROLE = "member";
+// households/membership.ts stores and reads back a single role per member
+// (beforeCreateInvitation below rejects a multi-role invitation outright),
+// but a raw member row's role is still read here as Better Auth's own
+// comma-joined string shape, defensively, rather than an exact-match against
+// "member".
+const INVITATION_READ_ROLES = new Set(["owner", "admin"]);
 // Mirrors households/validation.ts's/auth/validation.ts's own 120-char
 // bound at the edge (Zod) — this is the server-side floor for a raw call
 // that skips the app's forms entirely.
@@ -82,12 +88,26 @@ function hasConsentField(body: unknown): boolean {
   return CONSENT_FIELDS.some((field) => keys.includes(field));
 }
 
-function readQueryOrganizationId(query: unknown): string | undefined {
+function readQueryStringField(query: unknown, field: string): string | undefined {
   if (typeof query !== "object" || query === null) {
     return undefined;
   }
-  const value = (query as Record<string, unknown>).organizationId;
-  return typeof value === "string" ? value : undefined;
+  const value = (query as Record<string, unknown>)[field];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+// Mirrors listInvitations' own fallback (crud-invites.mjs: `ctx.query?.organizationId ||
+// session.session.activeOrganizationId`) and getFullOrganization's
+// (crud-org.mjs: `ctx.query?.organizationSlug || ctx.query?.organizationId ||
+// session.session.activeOrganizationId`): `||`, not `??`, so an empty-string
+// query value falls through to the active organization instead of the guard
+// below silently skipping its check on a falsy-but-defined id.
+function readQueryOrganizationId(query: unknown): string | undefined {
+  return readQueryStringField(query, "organizationId");
+}
+
+function readQueryOrganizationSlug(query: unknown): string | undefined {
+  return readQueryStringField(query, "organizationSlug");
 }
 
 function readEmail(body: unknown): string | undefined {
@@ -98,18 +118,21 @@ function readEmail(body: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function logMagicLinkSendFailure(error: unknown): void {
-  console.error(
-    "magic-link email send failed",
-    error instanceof Error ? error.name : "UnknownError",
-  );
+function logSendFailure(label: string, error: unknown): void {
+  console.error(`${label} email send failed`, error instanceof Error ? error.name : "UnknownError");
 }
 
-function logInvitationSendFailure(error: unknown): void {
-  console.error(
-    "invitation email send failed",
-    error instanceof Error ? error.name : "UnknownError",
-  );
+// activeOrganizationId lives on the session row (organization plugin
+// extension) but isn't part of Better Auth's own base Session type — pass
+// this as getSessionFromCtx's session generic so reading it doesn't fall
+// through to the default Record<string, any>'s implicit `any`.
+type SessionActiveOrganization = { activeOrganizationId?: string | null };
+
+function hasInvitationReadRole(role: string | null | undefined): boolean {
+  if (!role) {
+    return false;
+  }
+  return role.split(",").some((entry) => INVITATION_READ_ROLES.has(entry.trim()));
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
@@ -132,6 +155,32 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
   // reports the request ok (docs/runbooks/auth.md), so a misconfigured provider
   // must throw here, while buildAuthOptions runs, to actually fail the request.
   const emailSender = getEmailSender(env);
+
+  // Shared by /organization/list-invitations and /organization/get-full-organization
+  // (both hooks.before branches below): each resolves its own organizationId
+  // (query, slug, or the session's active household) first, then this only
+  // checks the caller's own membership role there. Unauthenticated or
+  // unresolved-organization requests are left to the underlying endpoint's
+  // own error (401 or "Organization ID is required"/null).
+  async function requireInvitationReadRole(
+    ctx: Parameters<typeof getSessionFromCtx>[0],
+    organizationId: string | undefined,
+  ): Promise<void> {
+    if (!organizationId) {
+      return;
+    }
+    const rawSession = await getSessionFromCtx(ctx);
+    if (!rawSession) {
+      return;
+    }
+    const [callerMembership] = await db
+      .select({ role: member.role })
+      .from(member)
+      .where(and(eq(member.organizationId, organizationId), eq(member.userId, rawSession.user.id)));
+    if (!hasInvitationReadRole(callerMembership?.role)) {
+      throw new APIError("FORBIDDEN", { message: "owner_or_admin_required" });
+    }
+  }
 
   return {
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -219,39 +268,47 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
       before: createAuthMiddleware(async (ctx) => {
         markTimingFloorRequestStart(ctx.path, ctx.context);
 
+        // Both raw endpoints below return invitation data (pending invitee
+        // emails) to any *member* of the organization, not just the people
+        // who can manage invites (Better Auth 1.7.3's crud-invites.mjs and
+        // adapter.mjs's findFullOrganization join in `invitation: true`). No
+        // organizationHooks entry point exists for either, so this is
+        // enforced the same way /update-user and /sign-up/email are below: a
+        // path-matched branch in the global before hook. listMembers
+        // (households.ts) and /organization/list-members stay open to every
+        // member on purpose — only invitee emails are restricted here.
         if (ctx.path === "/organization/list-invitations") {
-          // The raw endpoint only checks membership, not role (Better Auth
-          // 1.7.3's crud-invites.mjs) — a pending invitee's email is
-          // otherwise readable by any plain member, not just the people who
-          // sent or can manage invites. No organizationHooks entry point
-          // exists for this endpoint, so this is enforced the same way
-          // /update-user and /sign-up/email are above: a path-matched branch
-          // in the global before hook. listMembers (households.ts) stays
-          // open to every member on purpose — only invitee emails are
-          // restricted here.
-          const rawSession = (await getSessionFromCtx(ctx)) as {
-            session: { activeOrganizationId?: string | null };
-            user: { id: string };
-          } | null;
-          if (!rawSession) {
-            return;
-          }
+          const rawSession = await getSessionFromCtx<
+            Record<string, unknown>,
+            SessionActiveOrganization
+          >(ctx);
           const organizationId =
-            readQueryOrganizationId(ctx.query) ??
-            rawSession.session.activeOrganizationId ??
+            readQueryOrganizationId(ctx.query) ||
+            rawSession?.session.activeOrganizationId ||
             undefined;
-          if (!organizationId) {
-            return;
+          await requireInvitationReadRole(ctx, organizationId);
+          return;
+        }
+
+        if (ctx.path === "/organization/get-full-organization") {
+          const rawSession = await getSessionFromCtx<
+            Record<string, unknown>,
+            SessionActiveOrganization
+          >(ctx);
+          const organizationSlug = readQueryOrganizationSlug(ctx.query);
+          let organizationId =
+            readQueryOrganizationId(ctx.query) ||
+            rawSession?.session.activeOrganizationId ||
+            undefined;
+          if (organizationSlug) {
+            const [bySlug] = await db
+              .select({ id: organizationTable.id })
+              .from(organizationTable)
+              .where(eq(organizationTable.slug, organizationSlug))
+              .limit(1);
+            organizationId = bySlug?.id;
           }
-          const [callerMembership] = await db
-            .select({ role: member.role })
-            .from(member)
-            .where(
-              and(eq(member.organizationId, organizationId), eq(member.userId, rawSession.user.id)),
-            );
-          if (callerMembership?.role === MEMBER_ROLE) {
-            throw new APIError("FORBIDDEN", { message: "owner_or_admin_required" });
-          }
+          await requireInvitationReadRole(ctx, organizationId);
           return;
         }
 
@@ -331,10 +388,10 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             await emailSender.send({ to: email, ...invitationEmail });
             await db
               .update(invitationTable)
-              .set({ deliveryFailedAt: null })
+              .set({ deliveryFailedAt: null, lastSentAt: new Date() })
               .where(eq(invitationTable.id, id));
           } catch (error) {
-            logInvitationSendFailure(error);
+            logSendFailure("invitation", error);
             await db
               .update(invitationTable)
               .set({ deliveryFailedAt: new Date() })
@@ -470,7 +527,7 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             // fast, non-`APIError` 500 — that would skip the timing-floor
             // after-hook and let a caller tell known and unknown addresses
             // apart by status code alone.
-            logMagicLinkSendFailure(error);
+            logSendFailure("magic-link", error);
           }
         },
       }),
