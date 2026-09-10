@@ -23,7 +23,7 @@ const DIRECTLY_FETCHED_SERIES_CODES = [
   SgsSeriesCode.Ipca12MonthAccumulated,
 ] as const;
 
-export type RefreshOutcome = "fetched" | "skipped";
+type RefreshOutcome = "fetched" | "skipped";
 
 export interface RefreshSeriesResult {
   seriesCode: SgsSeriesCode;

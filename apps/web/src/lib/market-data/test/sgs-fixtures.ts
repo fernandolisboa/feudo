@@ -6,9 +6,9 @@ export const CDI_DAILY_OBSERVATIONS = [
   { data: "03/09/2026", valor: "0.053701" },
 ];
 
-export const SELIC_TARGET_OBSERVATIONS = [{ data: "20/08/2026", valor: "15.00" }];
+const SELIC_TARGET_OBSERVATIONS = [{ data: "20/08/2026", valor: "15.00" }];
 
-export const SELIC_DAILY_OBSERVATIONS = [{ data: "03/09/2026", valor: "0.056834" }];
+const SELIC_DAILY_OBSERVATIONS = [{ data: "03/09/2026", valor: "0.056834" }];
 
 export const IPCA_MONTHLY_OBSERVATIONS = [
   { data: "01/09/2025", valor: "0.48" },
@@ -25,9 +25,9 @@ export const IPCA_MONTHLY_OBSERVATIONS = [
   { data: "01/08/2026", valor: "0.45" },
 ];
 
-export const IPCA_12M_OBSERVATIONS = [{ data: "01/08/2026", valor: "4.86" }];
+const IPCA_12M_OBSERVATIONS = [{ data: "01/08/2026", valor: "4.86" }];
 
-export const SGS_URLS_BY_SERIES: Record<string, string> = {
+const SGS_URLS_BY_SERIES: Record<string, string> = {
   "12": "bcdata.sgs.12/",
   "432": "bcdata.sgs.432/",
   "11": "bcdata.sgs.11/",
@@ -43,14 +43,14 @@ export const SUCCESS_FIXTURES_BY_SERIES: Record<string, unknown> = {
   "13522": IPCA_12M_OBSERVATIONS,
 };
 
-export function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
   });
 }
 
-export interface BuildSgsFetchMockOptions {
+interface BuildSgsFetchMockOptions {
   failingSeriesCodes?: string[];
   notFoundSeriesCodes?: string[];
   malformedSeriesCodes?: string[];
