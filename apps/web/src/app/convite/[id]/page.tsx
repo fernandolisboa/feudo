@@ -1,14 +1,12 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 
 import { AuthShell, getCurrentSession } from "@/modules/auth";
-import { AcceptInvitationButton } from "@/modules/households/components/accept-invitation-button";
-import { getInvitationPreview } from "@/modules/households/membership";
-import { t } from "@/modules/households/strings";
+import { AcceptInvitationButton, getInvitationPreview, t } from "@/modules/households";
 
 export default async function InviteAcceptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getCurrentSession();
+  const next = `/convite/${id}`;
 
   if (!session) {
     return (
@@ -16,13 +14,13 @@ export default async function InviteAcceptPage({ params }: { params: Promise<{ i
         <p className="text-sm">{t.inviteAcceptPage.signedOutPrompt}</p>
         <div className="mt-4 flex flex-col gap-2">
           <Link
-            href="/entrar"
+            href={`/entrar?next=${encodeURIComponent(next)}`}
             className="text-brand hover:text-brand-hover underline underline-offset-4"
           >
             {t.inviteAcceptPage.signInLink}
           </Link>
           <Link
-            href="/registrar"
+            href={`/registrar?next=${encodeURIComponent(next)}`}
             className="text-brand hover:text-brand-hover underline underline-offset-4"
           >
             {t.inviteAcceptPage.signUpLink}
@@ -32,8 +30,7 @@ export default async function InviteAcceptPage({ params }: { params: Promise<{ i
     );
   }
 
-  const requestHeaders = await headers();
-  const preview = await getInvitationPreview(id, session, requestHeaders);
+  const preview = await getInvitationPreview(id, session);
 
   if (preview.status !== "ok") {
     const message =

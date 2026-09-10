@@ -1,11 +1,14 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/modules/auth";
-import { OnboardingInvitesPanel } from "@/modules/households/components/onboarding-invites-panel";
-import { listMyPendingInvitations } from "@/modules/households/membership";
-import { OnboardingForm, resolveOnboardingRoute, t } from "@/modules/households";
+import {
+  OnboardingForm,
+  OnboardingInvitesPanel,
+  getOnboardingInvites,
+  resolveOnboardingRoute,
+  t,
+} from "@/modules/households";
 
 export default async function OnboardingPage() {
   const session = await getCurrentSession();
@@ -14,8 +17,7 @@ export default async function OnboardingPage() {
     redirect(redirectTarget);
   }
 
-  const requestHeaders = await headers();
-  const invitations = await listMyPendingInvitations(requestHeaders);
+  const invitations = await getOnboardingInvites();
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
