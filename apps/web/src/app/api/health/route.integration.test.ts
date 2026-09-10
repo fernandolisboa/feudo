@@ -16,7 +16,7 @@ interface MigrationRow {
 interface HealthBody {
   ok: boolean;
   db: boolean;
-  migrations: { applied: number; expected: number; upToDate: boolean };
+  migrations: { status: "up-to-date" | "behind" | "ahead" | "unknown" };
 }
 
 describe("GET /api/health (integration)", () => {
@@ -29,8 +29,7 @@ describe("GET /api/health (integration)", () => {
 
       expect(response.status).toBe(200);
       expect(body.ok).toBe(true);
-      expect(body.migrations.upToDate).toBe(true);
-      expect(body.migrations.applied).toBe(body.migrations.expected);
+      expect(body.migrations.status).toBe("up-to-date");
     });
   });
 
@@ -55,7 +54,7 @@ describe("GET /api/health (integration)", () => {
         expect(response.status).toBe(503);
         expect(body.ok).toBe(false);
         expect(body.db).toBe(true);
-        expect(body.migrations.upToDate).toBe(false);
+        expect(body.migrations.status).toBe("behind");
       } finally {
         await db.execute(
           sql`insert into drizzle.__drizzle_migrations (id, hash, created_at) values (${lastRow.id}, ${lastRow.hash}, ${lastRow.created_at})`,

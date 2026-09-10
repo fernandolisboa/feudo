@@ -15,7 +15,7 @@ const expected = getExpectedMigrations();
 function mockUpToDateMigrations(): void {
   executeMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
   executeMock.mockResolvedValueOnce({
-    rows: [{ count: expected.count, latestCreatedAt: String(expected.latestWhen) }],
+    rows: expected.map((when) => ({ created_at: String(when) })),
   });
 }
 
@@ -34,7 +34,7 @@ describe("GET /api/health", () => {
     await expect(response.json()).resolves.toEqual({
       ok: true,
       db: true,
-      migrations: { applied: expected.count, expected: expected.count, upToDate: true },
+      migrations: { status: "up-to-date" },
     });
   });
 
@@ -48,7 +48,7 @@ describe("GET /api/health", () => {
     expect(body).toEqual({
       ok: false,
       db: false,
-      migrations: { applied: 0, expected: expected.count, upToDate: false },
+      migrations: { status: "unknown" },
     });
     expect(JSON.stringify(body)).not.toContain("postgres://");
   });
@@ -56,7 +56,7 @@ describe("GET /api/health", () => {
   it("returns 503 when the database answers but migrations are behind", async () => {
     executeMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
     executeMock.mockResolvedValueOnce({
-      rows: [{ count: expected.count - 1, latestCreatedAt: null }],
+      rows: expected.slice(0, -1).map((when) => ({ created_at: String(when) })),
     });
 
     const response = await GET();
@@ -66,14 +66,40 @@ describe("GET /api/health", () => {
     expect(body).toEqual({
       ok: false,
       db: true,
-      migrations: { applied: expected.count - 1, expected: expected.count, upToDate: false },
+      migrations: { status: "behind" },
     });
+  });
+
+  it("returns 503 when the database has migrations rows absent from the journal", async () => {
+    executeMock.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] });
+    executeMock.mockResolvedValueOnce({
+      rows: [...expected, 1].map((when) => ({ created_at: String(when) })),
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    const body: unknown = await response.json();
+    expect(body).toEqual({
+      ok: false,
+      db: true,
+      migrations: { status: "ahead" },
+    });
+  });
+
+  it("never includes applied or expected counts in the response body", async () => {
+    mockUpToDateMigrations();
+
+    const response = await GET();
+    const body: unknown = await response.json();
+
+    expect(JSON.stringify(body)).not.toMatch(/applied|expected/);
   });
 
   it("memoizes the database probe instead of querying on every request", async () => {
     mockUpToDateMigrations();
     executeMock.mockResolvedValue({
-      rows: [{ count: expected.count, latestCreatedAt: String(expected.latestWhen) }],
+      rows: expected.map((when) => ({ created_at: String(when) })),
     });
 
     await GET();
@@ -92,5 +118,28 @@ describe("GET /api/health", () => {
     await GET();
 
     expect(executeMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("shares a single in-flight probe across concurrent requests", async () => {
+    let resolveSelectOne: (value: { rows: { "?column?": number }[] }) => void = () => undefined;
+    executeMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSelectOne = resolve;
+        }),
+    );
+    executeMock.mockResolvedValueOnce({
+      rows: expected.map((when) => ({ created_at: String(when) })),
+    });
+
+    const first = GET();
+    const second = GET();
+
+    resolveSelectOne({ rows: [{ "?column?": 1 }] });
+
+    const [firstResponse, secondResponse] = await Promise.all([first, second]);
+
+    expect(await firstResponse.json()).toEqual(await secondResponse.json());
+    expect(executeMock).toHaveBeenCalledTimes(2);
   });
 });

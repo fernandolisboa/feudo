@@ -189,21 +189,26 @@ been migrated.
 
 ## Health check
 
-`GET /api/health` runs `select 1` against `DATABASE_URL` and also compares
-`drizzle.__drizzle_migrations` against the committed journal
-(`apps/web/drizzle/meta/_journal.json`, bundled into the server build): it counts applied rows and
-compares the latest row's `created_at` against the journal's last entry's `when` — the two values
-`drizzle-kit migrate` always writes in lockstep, so an exact match is a reliable "nothing is
-missing" signal without needing to read the migration `.sql` files at runtime.
+`GET /api/health` runs `select 1` against `DATABASE_URL` and also compares the full multiset of
+`drizzle.__drizzle_migrations.created_at` values against every `when` in the committed journal
+(`apps/web/drizzle/meta/_journal.json`, bundled into the server build) — `drizzle-kit migrate`
+always writes `created_at = journal.when` for every row it applies, so this is a reliable
+membership check without needing to read the migration `.sql` files at runtime. It reports one of
+four states: `up-to-date` (the two sets match exactly), `behind` (the database is missing rows the
+journal expects and has no extra ones), `ahead` (the database has at least one row the journal does
+not — this wins over `behind` even if rows are also missing, since a `drizzle-kit migrate` run
+against a database in this state is a silent no-op and needs manual recovery, see below), or
+`unknown` (the query itself failed; logged server-side with `error.name` only, never the message).
 
-The response is `{ ok, db, migrations: { applied, expected, upToDate } }`. `ok` is `true` only when
-`db` is reachable and `migrations.upToDate` is `true`; otherwise the route returns status 503. This
-is what would have caught the 2026-09-09 incident described in issue #49: connectivity alone (`db:
-true`) is not enough to call the deployment healthy.
+The public response is `{ ok, db, migrations: { status } }` — no counts. `ok` is `true` only when
+`db` is reachable and `migrations.status` is `"up-to-date"`; otherwise the route returns status 503. Applied/expected counts are logged server-side only, at most once per probe, never returned to
+callers. This is what would have caught the 2026-09-09 incident described in issue #49:
+connectivity alone (`db: true`) is not enough to call the deployment healthy.
 
-The result is memoized for 10 seconds per warm instance, since the endpoint is public and
-unauthenticated. It never returns the connection string or the underlying error. It stores nothing,
-so it has no entry in the ADR-0008 data map.
+The result is memoized for 10 seconds per warm instance and concurrent callers during that window
+share one in-flight probe instead of each issuing their own queries, since the endpoint is public
+and unauthenticated. It never returns the connection string or the underlying error. It stores
+nothing, so it has no entry in the ADR-0008 data map.
 
 ## WebSocket driver on Vercel
 
