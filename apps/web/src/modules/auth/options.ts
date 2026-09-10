@@ -3,13 +3,14 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
-import { and, eq, like } from "drizzle-orm";
+import { and, count, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
 
-import { householdSettings, session as sessionTable } from "@/db/schema";
+import { householdSettings, member, session as sessionTable } from "@/db/schema";
 
 import type { Database } from "@/db/client";
 import { verification } from "@/db/schema/auth";
+import { clearActiveHouseholdOnSessions } from "./clear-active-household";
 import { buildInvitationEmail } from "./email/invitation-email";
 import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
@@ -39,12 +40,29 @@ const ORGANIZATION_LIMIT = 20;
 const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
 const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = 6;
 const OWNER_ROLE = "owner";
+// Mirrors households/validation.ts's/auth/validation.ts's own 120-char
+// bound at the edge (Zod) — this is the server-side floor for a raw call
+// that skips the app's forms entirely.
+const MAX_NAME_LENGTH = 120;
+// A household is a small pool of people, not a mailing list (see
+// inviteMember's INVITE_HOURLY_LIMIT in households/membership.ts, the
+// per-inviter check): this is the plugin's own ceiling on pending
+// invitations per household.
+const INVITATION_LIMIT = 10;
 
 function readTermsVersion(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) {
     return undefined;
   }
   const value = (body as Record<string, unknown>).termsVersion;
+  return typeof value === "string" ? value : undefined;
+}
+
+function readName(body: unknown): string | undefined {
+  if (typeof body !== "object" || body === null) {
+    return undefined;
+  }
+  const value = (body as Record<string, unknown>).name;
   return typeof value === "string" ? value : undefined;
 }
 
@@ -168,6 +186,12 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         "/magic-link/verify": { window: 10, max: 20 },
         "/reset-password": { window: 10, max: 3 },
         "/reset-password/*": { window: 10, max: 20 },
+        // auth.api.createInvitation (households.inviteMember) never
+        // traverses this limiter — only a direct HTTP call to the raw
+        // endpoint does — so this is a second, independent ceiling next to
+        // inviteMember's own per-inviter database count, not a replacement
+        // for it.
+        "/organization/invite-member": { window: 60, max: 5 },
       },
     },
     hooks: {
@@ -179,6 +203,10 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           // signed-in session must never be able to rewrite its own consent record.
           if (hasConsentField(ctx.body)) {
             throw new APIError("BAD_REQUEST", { message: "consent_fields_immutable" });
+          }
+          const updatedName = readName(ctx.body);
+          if (updatedName !== undefined && updatedName.length > MAX_NAME_LENGTH) {
+            throw new APIError("BAD_REQUEST", { message: "name_too_long" });
           }
           return;
         }
@@ -195,6 +223,11 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         const registrationDecision = evaluateRegistrationMode(mode, hasPendingInvite);
         if (!registrationDecision.allowed) {
           throw new APIError("FORBIDDEN", { message: registrationDecision.reason });
+        }
+
+        const name = readName(ctx.body);
+        if (name !== undefined && name.length > MAX_NAME_LENGTH) {
+          throw new APIError("BAD_REQUEST", { message: "name_too_long" });
         }
 
         if (readTermsVersion(ctx.body) !== TERMS_VERSION) {
@@ -221,14 +254,16 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         // roles, so no ac/roles override is needed to match household vocabulary.
         invitationExpiresIn: INVITATION_EXPIRES_IN_SECONDS,
         organizationLimit: ORGANIZATION_LIMIT,
+        invitationLimit: INVITATION_LIMIT,
+        requireEmailVerificationOnInvitation: true,
         sendInvitationEmail: async ({ id, email, role, organization, inviter }) => {
-          const invitationEmail = buildInvitationEmail(
-            `${baseURL}/convite/${id}`,
-            organization.name,
-            inviter.user.name,
+          const invitationEmail = buildInvitationEmail({
+            url: `${baseURL}/convite/${id}`,
+            householdName: organization.name,
+            inviterName: inviter.user.name,
             role,
-            describeExpiryPtBR(INVITATION_EXPIRES_IN_SECONDS),
-          );
+            expiresIn: describeExpiryPtBR(INVITATION_EXPIRES_IN_SECONDS),
+          });
           await emailSender.send({ to: email, ...invitationEmail });
         },
         organizationHooks: {
@@ -277,26 +312,52 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           // Mirrors beforeUpdateMemberRole: nobody is ever invited as owner
           // (ADR-0001) — a household always has exactly one, established at
           // creation and moved only through households.transferOwnership.
+          // households/membership.ts stores and reads back a single role per
+          // member, so a multi-role invitation (an array, or a comma-joined
+          // string once Better Auth's own parseRoles has run) is rejected
+          // outright rather than silently keeping only the first role.
           beforeCreateInvitation: ({ invitation }) => {
-            const roles = invitation.role.split(",").map((role) => role.trim());
-            if (roles.includes(OWNER_ROLE)) {
+            // Typed as a plain string, but Better Auth's own parseRoles
+            // already comma-joins an array body before this hook runs, and
+            // nothing stops a raw caller from sending one directly — the
+            // array check is defensive against either.
+            const role = invitation.role as string | string[];
+            if (Array.isArray(role) || role.includes(",")) {
+              throw new APIError("BAD_REQUEST", { message: "multiple_roles_not_allowed" });
+            }
+            if (role === OWNER_ROLE) {
               throw new APIError("FORBIDDEN", { message: "owner_role_not_invitable" });
             }
             return Promise.resolve();
+          },
+          // households.cancelInvitation reports the truth for an invitation
+          // that already moved past "pending" (accepted or rejected) instead
+          // of silently overwriting its status to "canceled" and reporting
+          // success for an action that changed nothing meaningful.
+          beforeCancelInvitation: ({ invitation }) => {
+            if (invitation.status !== "pending") {
+              throw new APIError("BAD_REQUEST", { message: "invitation_not_pending" });
+            }
+            return Promise.resolve();
+          },
+          // Second line of defense behind households.leaveHousehold's own
+          // last-member check: a raw call to /organization/delete must never
+          // erase a household that still has other members in it, even if
+          // that check is ever bypassed.
+          beforeDeleteOrganization: async ({ organization }) => {
+            const [row] = await db
+              .select({ total: count() })
+              .from(member)
+              .where(eq(member.organizationId, organization.id));
+            if ((row?.total ?? 0) > 1) {
+              throw new APIError("BAD_REQUEST", { message: "household_has_other_members" });
+            }
           },
           // A removed member's existing sessions must stop scoping data to
           // the household they were removed from, immediately, not just on
           // their next getCurrentSession() re-validation.
           afterRemoveMember: async ({ user, organization }) => {
-            await db
-              .update(sessionTable)
-              .set({ activeOrganizationId: null })
-              .where(
-                and(
-                  eq(sessionTable.userId, user.id),
-                  eq(sessionTable.activeOrganizationId, organization.id),
-                ),
-              );
+            await clearActiveHouseholdOnSessions(db, user.id, organization.id);
           },
           afterDeleteOrganization: async ({ organization }) => {
             await db
