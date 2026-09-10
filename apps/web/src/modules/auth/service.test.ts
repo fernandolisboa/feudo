@@ -151,4 +151,26 @@ describe("service boundary error handling", () => {
 
     expect(outcome).toEqual({ status: "failed" });
   });
+
+  it("signOut returns failed when the post-sign-out session re-check rejects", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockRejectedValueOnce(new Error("db unavailable"));
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("signOut re-checks the session with disableRefresh so it cannot re-issue the cleared cookie", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce(null);
+    const requestHeaders = new Headers();
+
+    await signOut(requestHeaders);
+
+    expect(getSessionMock).toHaveBeenCalledWith({
+      headers: requestHeaders,
+      query: { disableRefresh: true },
+    });
+  });
 });

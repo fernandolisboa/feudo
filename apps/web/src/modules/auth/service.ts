@@ -223,8 +223,15 @@ export async function signOut(requestHeaders: Headers): Promise<SignOutOutcome> 
     return { status: "failed" };
   }
 
-  const session = await getAuth().api.getSession({ headers: requestHeaders });
-  if (session) {
+  try {
+    const session = await getAuth().api.getSession({
+      headers: requestHeaders,
+      query: { disableRefresh: true },
+    });
+    if (session) {
+      return { status: "failed" };
+    }
+  } catch {
     return { status: "failed" };
   }
 
