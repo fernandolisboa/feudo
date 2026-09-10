@@ -231,14 +231,22 @@ and the verification prune share a single route instead of one cron each.
 Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
 `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
 (`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
-runs each of its steps — the market-data refresh (`refreshMarketData`) and the expired-verification
-prune (`pruneExpiredVerifications`) — in its own try/catch, so one step failing never stops the
-other from running, and returns a per-step summary:
+runs each of its steps in its own try/catch, so one step failing never stops the other from
+running, and returns a per-step summary:
 `{ ok, steps: { marketData: { ok, results } | { error }, pruneVerification: { deleted } | { error } } }`.
-The response is `200` when every step succeeded and `500` when any step errored or, for
-market-data, fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from
-ADR-0008) becomes a third step of this same route rather than a new cron entry, since the Hobby
-limit leaves no room for a third schedule.
+The steps run in this order:
+
+1. The expired-verification prune (`pruneExpiredVerifications`) — one cheap `DELETE`.
+2. The market-data refresh (`refreshMarketData`) — up to five sequential SGS fetches, each with its
+   own 10 s timeout.
+
+The prune runs first deliberately: it is orders of magnitude cheaper than the market-data step, and
+running it after would let a slow or unreachable Bacen SGS starve it on every invocation. The
+response is `200` when every step succeeded and `500` when any step errored or, for market-data,
+fetched nothing at all. Any new daily housekeeping task (e.g. the invite prune from ADR-0008)
+becomes a step of this same route rather than a new cron entry, since the Hobby limit leaves no
+room for a third schedule; new steps that are not one cheap query should run after the market-data
+refresh, not before it, to keep the prune's execution time predictable.
 
 ## Magic link never signs up
 
