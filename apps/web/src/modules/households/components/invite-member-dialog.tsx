@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialActionState } from "@/lib/action-state";
+import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { inviteMemberAction } from "../actions";
 import { t } from "../strings";
@@ -32,13 +33,7 @@ export function InviteMemberDialog() {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(inviteMemberAction, initialActionState);
 
-  const [lastHandledState, setLastHandledState] = useState(state);
-  if (state !== lastHandledState) {
-    setLastHandledState(state);
-    if (state.status === "success") {
-      setOpen(false);
-    }
-  }
+  useCloseOnSuccess(state, setOpen);
 
   return (
     <Dialog

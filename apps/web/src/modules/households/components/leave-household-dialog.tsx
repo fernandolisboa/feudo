@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isRedirectSignal } from "@/lib/is-redirect-signal";
+import { useActionInTransition } from "@/lib/use-action-in-transition";
 
 import { leaveHouseholdAction } from "../actions";
 import { t } from "../strings";
@@ -26,24 +24,10 @@ export function LeaveHouseholdDialog({
   onOpenChange: (open: boolean) => void;
   isLastMember: boolean;
 }) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { errorMessage, isPending, run } = useActionInTransition(t.errors.leaveFailed);
 
   function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      try {
-        const result = await leaveHouseholdAction();
-        if (result.status === "error") {
-          setErrorMessage(result.message);
-        }
-      } catch (error) {
-        if (isRedirectSignal(error)) {
-          throw error;
-        }
-        setErrorMessage(t.errors.leaveFailed);
-      }
-    });
+    run(() => leaveHouseholdAction());
   }
 
   return (

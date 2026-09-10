@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { initialActionState } from "@/lib/action-state";
+import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { removeMemberAction } from "../actions";
 import { t } from "../strings";
@@ -30,17 +31,11 @@ export function RemoveMemberDialog({
 }) {
   const [state, formAction, isPending] = useActionState(removeMemberAction, initialActionState);
 
-  // See TransferOwnershipDialog: revalidatePath remounts this dialog's own
-  // subtree as part of a successful submit, so closing right away is what a
-  // user actually sees — the members table losing the row is the real
-  // confirmation, a success message here never gets the chance to paint.
-  const [lastHandledState, setLastHandledState] = useState(state);
-  if (state !== lastHandledState) {
-    setLastHandledState(state);
-    if (state.status === "success") {
-      onOpenChange(false);
-    }
-  }
+  // revalidatePath remounts this dialog's own subtree as part of a
+  // successful submit, so closing right away is what a user actually sees —
+  // the members table losing the row is the real confirmation, a success
+  // message here never gets the chance to paint.
+  useCloseOnSuccess(state, onOpenChange);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

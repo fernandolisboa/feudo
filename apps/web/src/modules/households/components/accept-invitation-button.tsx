@@ -1,33 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { isRedirectSignal } from "@/lib/is-redirect-signal";
+import { useActionInTransition } from "@/lib/use-action-in-transition";
 
 import { acceptInvitationAction } from "../actions";
 import { t } from "../strings";
 
 export function AcceptInvitationButton({ invitationId }: { invitationId: string }) {
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { errorMessage, isPending, run } = useActionInTransition(t.errors.acceptInvitationFailed);
 
   function handleAccept() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      try {
-        const result = await acceptInvitationAction(invitationId);
-        if (result.status === "error") {
-          setErrorMessage(result.message);
-        }
-      } catch (error) {
-        if (isRedirectSignal(error)) {
-          throw error;
-        }
-        setErrorMessage(t.errors.acceptInvitationFailed);
-      }
-    });
+    run(() => acceptInvitationAction(invitationId));
   }
 
   return (

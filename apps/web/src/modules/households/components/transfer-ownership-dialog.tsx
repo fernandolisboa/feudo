@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { initialActionState } from "@/lib/action-state";
+import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { transferOwnershipAction } from "../actions";
 import { t } from "../strings";
@@ -39,13 +40,7 @@ export function TransferOwnershipDialog({
   // never has a chance to paint — closing immediately, before that remount,
   // is what a user actually sees, and the members table's updated roles are
   // the real confirmation.
-  const [lastHandledState, setLastHandledState] = useState(state);
-  if (state !== lastHandledState) {
-    setLastHandledState(state);
-    if (state.status === "success") {
-      onOpenChange(false);
-    }
-  }
+  useCloseOnSuccess(state, onOpenChange);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
