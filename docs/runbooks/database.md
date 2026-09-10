@@ -104,9 +104,14 @@ CI owns applying committed migrations to production. On every push to `main` (af
    of dropping the production schema.
 
 The job holds a `production-db` concurrency group (`cancel-in-progress: false`), separate from the
-preview project's `preview-db` group, so two pushes to `main` in quick succession migrate
-production one at a time instead of racing. Failure is visible the normal GitHub Actions way: a
-red check on the `main` branch's commit and run history — there is no separate alerting yet.
+preview project's `preview-db` group, so two pushes to `main` in quick succession queue and migrate
+production one at a time instead of racing. This depends on the workflow-level `ci-${{
+github.ref }}` group never cancelling a run on `main` — its `cancel-in-progress` is
+`github.ref != 'refs/heads/main'`, `false` for `main` and `true` for pull requests — because
+`github.ref` is the same `refs/heads/main` for every push to `main`, and an unconditional
+`cancel-in-progress: true` there would kill an in-flight `migrate-production` job outright before
+the job-level group ever got to serialize anything. Failure is visible the normal GitHub Actions
+way: a red check on the `main` branch's commit and run history — there is no separate alerting yet.
 
 **By hand, in an emergency only** (CI down, or a migration needs to land before the next push to
 `main`) — never with a reset script, and only from the repo root:
