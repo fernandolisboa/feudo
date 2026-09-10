@@ -1,24 +1,4 @@
 const en = {
-  nav: {
-    overview: "Overview",
-    transactions: "Transactions",
-    reserve: "Reserve",
-    banks: "Banks",
-    household: "Household",
-    comingSoon: "Coming soon",
-    collapseSidebar: "Collapse sidebar",
-    expandSidebar: "Expand sidebar",
-  },
-  userMenu: {
-    preferences: "Preferences",
-    signOut: "Sign out",
-    signOutError: "Could not sign you out. Try again.",
-  },
-  placeholder: {
-    overline: "Coming soon",
-    transactionsBody: "Your transactions will show up here once this page ships.",
-    reserveBody: "Your emergency reserve will show up here once this page ships.",
-  },
   preferences: {
     title: "Preferences",
     overline: "Settings",
@@ -36,26 +16,6 @@ const en = {
 };
 
 const ptBR = {
-  nav: {
-    overview: "Visão geral",
-    transactions: "Transações",
-    reserve: "Reserva",
-    banks: "Bancos",
-    household: "Casa",
-    comingSoon: "Em breve",
-    collapseSidebar: "Recolher menu",
-    expandSidebar: "Expandir menu",
-  },
-  userMenu: {
-    preferences: "Preferências",
-    signOut: "Sair",
-    signOutError: "Não foi possível sair. Tente novamente.",
-  },
-  placeholder: {
-    overline: "Em breve",
-    transactionsBody: "Suas transações aparecerão aqui quando esta página chegar.",
-    reserveBody: "Sua reserva de emergência aparecerá aqui quando esta página chegar.",
-  },
   preferences: {
     title: "Preferências",
     overline: "Configurações",

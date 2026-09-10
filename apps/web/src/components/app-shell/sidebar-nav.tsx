@@ -5,7 +5,6 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { t } from "@/modules/theme";
 
 import { NavLink } from "./nav-link";
 import type { NavItem } from "./nav-items";
@@ -13,6 +12,7 @@ import {
   SIDEBAR_COLLAPSED_COOKIE,
   SIDEBAR_COLLAPSED_COOKIE_MAX_AGE_SECONDS,
 } from "./sidebar-cookie-name";
+import { t } from "./strings";
 
 export function SidebarNav({
   items,
