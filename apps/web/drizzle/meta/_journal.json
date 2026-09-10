@@ -50,6 +50,20 @@
       "when": 1788994896606,
       "tag": "0006_user_theme_preference",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789026932369,
+      "tag": "0007_single_owner_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789026959904,
+      "tag": "0008_invitation_delivery_failed_at",
+      "breakpoints": true
     }
   ]
 }

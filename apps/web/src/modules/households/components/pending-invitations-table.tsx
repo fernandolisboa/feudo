@@ -15,7 +15,7 @@ import {
 import { initialActionState } from "@/lib/action-state";
 import { formatShortDate } from "@/lib/format-date";
 
-import { cancelInvitationAction } from "../actions";
+import { cancelInvitationAction, resendInvitationAction } from "../actions";
 import type { PendingInvitation } from "../membership";
 import { t } from "../strings";
 
@@ -27,6 +27,22 @@ function CancelInvitationButton({ invitationId }: { invitationId: string }) {
       <input type="hidden" name="invitationId" value={invitationId} />
       <Button type="submit" variant="ghost" disabled={isPending}>
         {t.casa.rowActions.cancelInvite}
+      </Button>
+      {state.status === "error" ? (
+        <span className="text-destructive text-xs">{state.message}</span>
+      ) : null}
+    </form>
+  );
+}
+
+function ResendInvitationButton({ invitationId }: { invitationId: string }) {
+  const [state, formAction, isPending] = useActionState(resendInvitationAction, initialActionState);
+
+  return (
+    <form action={formAction} className="flex flex-col items-end gap-1">
+      <input type="hidden" name="invitationId" value={invitationId} />
+      <Button type="submit" variant="ghost" disabled={isPending}>
+        {t.casa.rowActions.resendInvite}
       </Button>
       {state.status === "error" ? (
         <span className="text-destructive text-xs">{state.message}</span>
@@ -67,7 +83,16 @@ export function PendingInvitationsTable({
       <TableBody>
         {invitations.map((invitation) => (
           <TableRow key={invitation.id} className="h-[var(--density-row)]">
-            <TableCell className="text-muted-foreground">{invitation.email}</TableCell>
+            <TableCell className="text-muted-foreground">
+              <div className="flex flex-col gap-1">
+                <span>{invitation.email}</span>
+                {invitation.deliveryFailedAt ? (
+                  <Badge variant="destructive" className="w-fit">
+                    {t.casa.deliveryFailed}
+                  </Badge>
+                ) : null}
+              </div>
+            </TableCell>
             <TableCell>
               <Badge variant="outline">{t.casa.roles[invitation.role]}</Badge>
             </TableCell>
@@ -75,7 +100,12 @@ export function PendingInvitationsTable({
               {formatShortDate(invitation.expiresAt, timeZone)}
             </TableCell>
             <TableCell className="text-right">
-              <CancelInvitationButton invitationId={invitation.id} />
+              <div className="flex items-start justify-end gap-2">
+                {invitation.deliveryFailedAt ? (
+                  <ResendInvitationButton invitationId={invitation.id} />
+                ) : null}
+                <CancelInvitationButton invitationId={invitation.id} />
+              </div>
             </TableCell>
           </TableRow>
         ))}

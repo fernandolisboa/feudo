@@ -1,5 +1,5 @@
 import { APIError } from "better-auth/api";
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, isNotNull, ne, or } from "drizzle-orm";
 
 import { clearActiveHouseholdOnSessions, getAuth, type CurrentSession } from "@/modules/auth";
 import { invitation as invitationTable, member, organization } from "@/db/schema";
@@ -51,25 +51,41 @@ export type PendingInvitation = {
   email: string;
   role: InvitableRole;
   expiresAt: Date;
+  deliveryFailedAt: Date | null;
 };
 
+// A single household-scoped Drizzle select, not Better Auth's own
+// listInvitations joined against a second query for deliveryFailedAt: that
+// endpoint doesn't return Feudo's own delivery-state columns anyway, so
+// reading the table directly is both the only way to get them and one round
+// trip instead of two.
 export async function listPendingInvitations(
   session: HouseholdSession,
-  requestHeaders: Headers,
+  db: Database,
 ): Promise<PendingInvitation[]> {
-  const invitations = await getAuth().api.listInvitations({
-    headers: requestHeaders,
-    query: { organizationId: session.householdId },
-  });
-  const now = new Date();
-  return invitations
-    .filter((invitation) => invitation.status === "pending" && invitation.expiresAt > now)
-    .map((invitation) => ({
-      id: invitation.id,
-      email: invitation.email,
-      role: invitation.role as InvitableRole,
-      expiresAt: invitation.expiresAt,
-    }));
+  const rows = await db
+    .select({
+      id: invitationTable.id,
+      email: invitationTable.email,
+      role: invitationTable.role,
+      expiresAt: invitationTable.expiresAt,
+      deliveryFailedAt: invitationTable.deliveryFailedAt,
+    })
+    .from(invitationTable)
+    .where(
+      and(
+        eq(invitationTable.organizationId, session.householdId),
+        eq(invitationTable.status, "pending"),
+        gt(invitationTable.expiresAt, new Date()),
+      ),
+    );
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    role: row.role as InvitableRole,
+    expiresAt: row.expiresAt,
+    deliveryFailedAt: row.deliveryFailedAt,
+  }));
 }
 
 export type InvitationForUser = {
@@ -101,14 +117,26 @@ export async function listMyPendingInvitations(
 // an hour is already generous headroom for onboarding a real household and
 // keeps a compromised session from spraying invitation emails.
 const INVITE_HOURLY_LIMIT = 20;
+// Below this interval, a resend of the same invitation is refused
+// (rate_limited) instead of firing another email: a double-click or a
+// scripted retry loop must not outrun what a human resending by hand would
+// ever do.
+const RESEND_MIN_INTERVAL_MS = 60 * 1000;
 
+// A row counts toward the ceiling if it was either created or last sent
+// within the hour: createdAt alone would let an old invitation be resent
+// indefinitely once it ages out of the window, since resend (resend: true)
+// only ever bumps expiresAt on the existing row, never createdAt.
 async function recentInvitationCount(db: Database, inviterId: string): Promise<number> {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const [row] = await db
     .select({ total: count() })
     .from(invitationTable)
     .where(
-      and(eq(invitationTable.inviterId, inviterId), gt(invitationTable.createdAt, oneHourAgo)),
+      and(
+        eq(invitationTable.inviterId, inviterId),
+        or(gt(invitationTable.createdAt, oneHourAgo), gt(invitationTable.lastSentAt, oneHourAgo)),
+      ),
     );
   return row?.total ?? 0;
 }
@@ -162,6 +190,143 @@ export async function inviteMember(
     }
     return { status: "failed" };
   }
+}
+
+export type ResendInvitationOutcome = SimpleOutcome<
+  "ok" | "unauthenticated" | "not_allowed" | "not_found" | "rate_limited" | "failed"
+>;
+
+// Used by PendingInvitationsTable's "Reenviar" action, offered when an
+// invitation's deliveryFailedAt is set: reuses the pending row's own email
+// and role instead of taking them from the caller, so this can only ever
+// resend an invitation that already exists — never mint a new one under a
+// different identity — and is subject to the same per-inviter hourly ceiling
+// as a fresh invite (recentInvitationCount above), plus its own minimum
+// interval (RESEND_MIN_INTERVAL_MS). Eligibility (status = 'pending',
+// deliveryFailedAt set and expiresAt in the future) is required in the
+// scoped select itself, not just checked in code, and re-checked
+// immediately before the Better Auth call: a concurrent cancel of the same
+// invitation between the two reads must refuse the resend (not_found),
+// never resurrect a cancelled invite. The expiresAt check also matters on
+// the first read: an already-expired row is invisible to Better Auth's own
+// findPendingInvitation, so without it createInvitation would take the
+// create branch and mint a second, unrelated invitation instead of erroring.
+export async function resendInvitation(
+  invitationId: string,
+  session: HouseholdSession | null,
+  db: Database,
+  requestHeaders: Headers,
+): Promise<ResendInvitationOutcome> {
+  if (!session) {
+    return { status: "unauthenticated" };
+  }
+
+  const rows = await db
+    .select({
+      email: invitationTable.email,
+      role: invitationTable.role,
+      lastSentAt: invitationTable.lastSentAt,
+    })
+    .from(invitationTable)
+    .where(
+      and(
+        eq(invitationTable.id, invitationId),
+        eq(invitationTable.organizationId, session.householdId),
+        eq(invitationTable.status, "pending"),
+        isNotNull(invitationTable.deliveryFailedAt),
+        gt(invitationTable.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  const existing = rows[0];
+  if (!existing || !existing.role) {
+    return { status: "not_found" };
+  }
+
+  if (existing.lastSentAt && Date.now() - existing.lastSentAt.getTime() < RESEND_MIN_INTERVAL_MS) {
+    return { status: "rate_limited" };
+  }
+
+  const recentCount = await recentInvitationCount(db, session.userId);
+  if (recentCount >= INVITE_HOURLY_LIMIT) {
+    return { status: "rate_limited" };
+  }
+
+  const [stillPending] = await db
+    .select({ status: invitationTable.status })
+    .from(invitationTable)
+    .where(eq(invitationTable.id, invitationId))
+    .limit(1);
+  if (stillPending?.status !== "pending") {
+    return { status: "not_found" };
+  }
+
+  try {
+    await getAuth().api.createInvitation({
+      headers: requestHeaders,
+      body: {
+        email: existing.email,
+        role: existing.role as InvitableRole,
+        organizationId: session.householdId,
+        resend: true,
+      },
+    });
+  } catch (error) {
+    const code = apiErrorCode(error);
+    if (
+      code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION" ||
+      code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USER_WITH_THIS_ROLE"
+    ) {
+      return { status: "not_allowed" };
+    }
+    return { status: "failed" };
+  }
+
+  // Better Auth's own resend path (crud-invites.mjs) looks up the target row
+  // by email + organization, not by id: if a second pending invitation for
+  // this email somehow exists (a genuine race past the "already invited"
+  // guard), it can update the wrong row. A stray row appearing for this
+  // email after the call means this resend never touched invitationId — it
+  // is cancelled here and reported as not_found rather than a false "ok".
+  const strayRows = await db
+    .select({ id: invitationTable.id })
+    .from(invitationTable)
+    .where(
+      and(
+        eq(invitationTable.organizationId, session.householdId),
+        eq(invitationTable.email, existing.email),
+        eq(invitationTable.status, "pending"),
+        ne(invitationTable.id, invitationId),
+        gt(invitationTable.expiresAt, new Date()),
+      ),
+    );
+  if (strayRows.length > 0) {
+    try {
+      await Promise.all(
+        strayRows.map((row) =>
+          getAuth().api.cancelInvitation({
+            headers: requestHeaders,
+            body: { invitationId: row.id },
+          }),
+        ),
+      );
+    } catch {
+      // A stray row was accepted or cancelled concurrently; either way it no
+      // longer collides with this resend, so fall through to not_found below.
+    }
+    return { status: "not_found" };
+  }
+
+  const [after] = await db
+    .select({ deliveryFailedAt: invitationTable.deliveryFailedAt })
+    .from(invitationTable)
+    .where(eq(invitationTable.id, invitationId))
+    .limit(1);
+  if (after?.deliveryFailedAt) {
+    return { status: "failed" };
+  }
+
+  return { status: "ok" };
 }
 
 export type CancelInvitationOutcome = SimpleOutcome<

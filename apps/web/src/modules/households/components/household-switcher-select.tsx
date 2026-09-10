@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -10,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useActionInTransition } from "@/lib/use-action-in-transition";
 
 import { switchHouseholdAction } from "../actions";
 import { t } from "../strings";
@@ -22,20 +21,13 @@ export function HouseholdSwitcherSelect({
   households: HouseholdSummary[];
   activeHouseholdId: string;
 }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { errorMessage, isPending, run } = useActionInTransition(t.errors.switchFailed);
 
   function handleValueChange(householdId: string | null) {
     if (!householdId || householdId === activeHouseholdId) {
       return;
     }
-    setError(null);
-    startTransition(async () => {
-      const result = await switchHouseholdAction(householdId);
-      if (result.status === "error") {
-        setError(result.message);
-      }
-    });
+    run(() => switchHouseholdAction(householdId));
   }
 
   return (
@@ -52,9 +44,9 @@ export function HouseholdSwitcherSelect({
           ))}
         </SelectContent>
       </Select>
-      {error ? (
+      {errorMessage ? (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
     </div>
