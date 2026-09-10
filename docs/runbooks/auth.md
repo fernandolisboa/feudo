@@ -356,9 +356,24 @@ already single-use, so a generous ceiling costs nothing.
 
 `verification-email.ts`, `magic-link-email.ts` and `reset-password-email.ts` all delegate to
 `renderEmail` (`email/render.ts`): it substitutes every `{placeholder}` from `strings.ts` into the
-text part verbatim and into the html part HTML-escaped. Verification and reset emails no longer
-interpolate the account holder's name. For verification that name is attacker-chosen: sign-up
-accepts any `name` alongside any email, so an attacker could land their own text in a stranger's
-inbox before that stranger ever proves they own the address. Reset email's `name` came from the DB
-instead, but the two templates now share the same minimal shape (link + expiry only), which is one
-fewer field to keep escaped and one fewer thing the recipient's name has to appear correct for.
+text part verbatim and into the html part HTML-escaped, using a function replacer (not a plain
+string one) so a name or household containing `$&`, `$'` or `` $` `` is inserted literally instead
+of being read by `String.prototype.replaceAll` as one of those special replacement patterns.
+Verification and reset emails no longer interpolate the account holder's name. For verification
+that name is attacker-chosen: sign-up accepts any `name` alongside any email, so an attacker could
+land their own text in a stranger's inbox before that stranger ever proves they own the address.
+Reset email's `name` came from the DB instead, but the two templates now share the same minimal
+shape (link + expiry only), which is one fewer field to keep escaped and one fewer thing the
+recipient's name has to appear correct for.
+
+## Post-sign-in redirect (`next`)
+
+`/entrar` and `/registrar` accept an optional `?next=` query parameter, validated by
+`sanitizeNextPath` (`next-redirect.ts`) against `^/convite/[A-Za-z0-9_-]+$` — the only destination
+that needs it today — and never a client-supplied absolute or protocol-relative URL (open
+redirect). `/convite/[id]`'s signed-out prompt builds its "Entrar"/"Criar cadastro" links with
+`next` set to its own path; both forms carry it through as a hidden field, `signInAction` redirects
+there on success instead of `/`, and `signUpAction` both appends it to the `/verificar-email`
+redirect and to the email verification link's own `callbackURL` (`/entrar?next=...`) so clicking
+that link also lands back on the invite. `ResendVerificationForm` carries the same `next` through a
+resend. A `next` that fails validation is treated as absent, never surfaced as an error.

@@ -8,7 +8,7 @@ import { initialActionState } from "@/lib/action-state";
 import { resendVerificationAction } from "../actions";
 import { t } from "../strings";
 
-export function ResendVerificationForm({ email }: { email: string }) {
+export function ResendVerificationForm({ email, next }: { email: string; next?: string | null }) {
   const [state, formAction, isPending] = useActionState(
     resendVerificationAction,
     initialActionState,
@@ -17,6 +17,7 @@ export function ResendVerificationForm({ email }: { email: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="email" value={email} />
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       {state.status === "error" ? (
         <Alert variant="destructive">

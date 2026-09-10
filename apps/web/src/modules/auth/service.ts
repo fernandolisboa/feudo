@@ -100,7 +100,15 @@ export type SignUpOutcome = SimpleOutcome<
   | "sign_up_failed"
 >;
 
-export async function signUp(input: SignUpInput, requestHeaders: Headers): Promise<SignUpOutcome> {
+// next is appended, not inserted, so every existing two-argument call site
+// (most of this module's own integration tests) keeps compiling unchanged;
+// only the one caller that has a validated post-invite destination
+// (auth/actions.ts's signUpAction) passes it.
+export async function signUp(
+  input: SignUpInput,
+  requestHeaders: Headers,
+  next?: string | null,
+): Promise<SignUpOutcome> {
   if (!input.termsAccepted) {
     return { status: "terms_not_accepted" };
   }
@@ -112,7 +120,7 @@ export async function signUp(input: SignUpInput, requestHeaders: Headers): Promi
       email: input.email,
       password: input.password,
       termsVersion: TERMS_VERSION,
-      callbackURL: "/entrar",
+      callbackURL: next ? `/entrar?next=${encodeURIComponent(next)}` : "/entrar",
     },
     requestHeaders,
   );
@@ -203,10 +211,11 @@ async function requestEmailFlow(
 export async function resendVerification(
   email: string,
   requestHeaders: Headers,
+  next?: string | null,
 ): Promise<RequestEmailFlowOutcome> {
   return requestEmailFlow(
     "/send-verification-email",
-    { email, callbackURL: "/entrar" },
+    { email, callbackURL: next ? `/entrar?next=${encodeURIComponent(next)}` : "/entrar" },
     requestHeaders,
   );
 }
