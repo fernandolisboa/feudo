@@ -118,7 +118,7 @@ export async function resendVerificationAction(
   }
 }
 
-export async function signOutAction(): Promise<ActionState | undefined> {
+export async function signOutAction(): Promise<ActionState> {
   const requestHeaders = await headers();
   const outcome = await signOut(requestHeaders);
   if (outcome.status === "failed") {

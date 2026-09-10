@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const handlerMock = vi.fn();
 const signOutMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock("./auth", () => ({
-  getAuth: () => ({ handler: handlerMock, api: { signOut: signOutMock } }),
+  getAuth: () => ({
+    handler: handlerMock,
+    api: { signOut: signOutMock, getSession: getSessionMock },
+  }),
 }));
 
 const { resendVerification, signIn, signOut, signUp } = await import("./service");
@@ -12,6 +16,8 @@ const { resendVerification, signIn, signOut, signUp } = await import("./service"
 beforeEach(() => {
   handlerMock.mockReset();
   signOutMock.mockReset();
+  getSessionMock.mockReset();
+  getSessionMock.mockResolvedValue(null);
   process.env.REGISTRATION_MODE = "open";
   process.env.BETTER_AUTH_URL = "http://localhost:3000";
 });
@@ -125,11 +131,24 @@ describe("service boundary error handling", () => {
     expect(outcome).toEqual({ status: "failed" });
   });
 
-  it("signOut returns ok when the handler responds ok", async () => {
+  it("signOut returns ok when the handler responds ok and no session resolves afterwards", async () => {
     handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce(null);
 
     const outcome = await signOut(new Headers());
 
     expect(outcome).toEqual({ status: "ok" });
+  });
+
+  it("signOut returns failed when the handler responds ok but a session still resolves (deleteSession failed silently)", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    getSessionMock.mockResolvedValueOnce({
+      session: { id: "s1" },
+      user: { id: "u1" },
+    });
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
   });
 });
