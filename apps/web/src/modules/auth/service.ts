@@ -211,8 +211,14 @@ export async function resendVerification(
   );
 }
 
-export async function signOut(requestHeaders: Headers): Promise<void> {
-  await callAuthHandler("/sign-out", {}, requestHeaders);
+export type SignOutOutcome = SimpleOutcome<"ok" | "failed">;
+
+export async function signOut(requestHeaders: Headers): Promise<SignOutOutcome> {
+  const response = await callAuthHandler("/sign-out", {}, requestHeaders);
+  if (!response || !response.ok) {
+    return { status: "failed" };
+  }
+  return { status: "ok" };
 }
 
 export async function requestMagicLink(

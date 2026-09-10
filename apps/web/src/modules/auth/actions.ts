@@ -118,9 +118,12 @@ export async function resendVerificationAction(
   }
 }
 
-export async function signOutAction(): Promise<void> {
+export async function signOutAction(): Promise<ActionState | undefined> {
   const requestHeaders = await headers();
-  await signOut(requestHeaders);
+  const outcome = await signOut(requestHeaders);
+  if (outcome.status === "failed") {
+    return { status: "error", message: t.errors.signOutFailed };
+  }
   redirect("/entrar");
 }
 

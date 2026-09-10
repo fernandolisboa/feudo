@@ -7,7 +7,7 @@ vi.mock("./auth", () => ({
   getAuth: () => ({ handler: handlerMock, api: { signOut: signOutMock } }),
 }));
 
-const { resendVerification, signIn, signUp } = await import("./service");
+const { resendVerification, signIn, signOut, signUp } = await import("./service");
 
 beforeEach(() => {
   handlerMock.mockReset();
@@ -104,5 +104,32 @@ describe("service boundary error handling", () => {
     );
 
     expect(outcome).toEqual({ status: "terms_not_accepted" });
+  });
+
+  it("signOut returns failed and logs only the error name when the handler rejects", async () => {
+    handlerMock.mockRejectedValueOnce(new Error("boom"));
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(String), "Error");
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("signOut returns failed when the handler responds with a non-ok status", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("signOut returns ok when the handler responds ok", async () => {
+    handlerMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const outcome = await signOut(new Headers());
+
+    expect(outcome).toEqual({ status: "ok" });
   });
 });
