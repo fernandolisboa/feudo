@@ -419,7 +419,7 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
             logSendFailure("invitation", error);
             await db
               .update(invitationTable)
-              .set({ deliveryFailedAt: new Date() })
+              .set({ deliveryFailedAt: new Date(), lastSentAt: new Date() })
               .where(eq(invitationTable.id, id));
           }
         },

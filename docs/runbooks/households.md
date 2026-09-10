@@ -176,10 +176,10 @@ and "the last member leaving deletes the household"):
   invitations per household on top of both. A send failure is not silently dropped:
   `sendInvitationEmail` (`auth/options.ts`) wraps the `EmailSender` call in its own try/catch —
   Better Auth's `runInBackgroundOrAwait` only logs a rejection here and still returns the
-  already-created invitation as success — and sets `invitation.delivery_failed_at` (nullable
-  timestamp, added by `0008_invitation_delivery_failed_at.sql`) on failure, clearing it and setting
-  `invitation.last_sent_at` (same migration) to the current time on the next send from that same row
-  that succeeds, initial or resend alike.
+  already-created invitation as success — and sets `invitation.last_sent_at` (nullable timestamp,
+  added by `0008_invitation_delivery_failed_at.sql`) to the current time on every send attempt from
+  that row, initial or resend alike, success or failure; `invitation.delivery_failed_at` (same
+  migration) is set on failure and cleared on the next attempt that succeeds.
 - **Resend** (`resendInvitation`): `PendingInvitationsTable` (`/casa`) shows "e-mail não enviado" on
   a row with `delivery_failed_at` set, with a **Resend** action (`resendInvitationAction` →
   `households.resendInvitation`) that looks up the invitation's own email and role from the
