@@ -12,6 +12,8 @@ import { marketData } from "@/db/schema/market-data";
 import { verification } from "@/db/schema/auth";
 import { withTestDb } from "@/db/test/harness";
 import { getLatestIndicators } from "@/lib/market-data";
+import * as marketDataModule from "@/lib/market-data";
+import * as authModule from "@/modules/auth";
 
 import { GET } from "./route";
 
@@ -266,6 +268,49 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const survivor = await db.select().from(verification).where(eq(verification.id, validId));
       expect(survivor).toHaveLength(1);
+    });
+  });
+
+  it("runs the verification prune before the market-data refresh, so a Bacen outage cannot starve it", async () => {
+    await withTestDb(async () => {
+      globalThis.fetch = buildFetchMock();
+      const callOrder: string[] = [];
+      const actualPrune = authModule.pruneExpiredVerifications;
+      const actualRefresh = marketDataModule.refreshMarketData;
+      vi.spyOn(authModule, "pruneExpiredVerifications").mockImplementation(async (...args) => {
+        callOrder.push("pruneVerification");
+        return actualPrune(...args);
+      });
+      vi.spyOn(marketDataModule, "refreshMarketData").mockImplementation(async (...args) => {
+        callOrder.push("marketData");
+        return actualRefresh(...args);
+      });
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(200);
+      expect(callOrder).toEqual(["pruneVerification", "marketData"]);
+    });
+  });
+
+  it("returns ok: false with a 500 status when the prune step throws after a successful market-data refresh", async () => {
+    await withTestDb(async () => {
+      globalThis.fetch = buildFetchMock();
+      vi.spyOn(authModule, "pruneExpiredVerifications").mockRejectedValue(
+        new Error("connection reset"),
+      );
+
+      const response = await callCronRoute();
+      expect(response.status).toBe(500);
+      const body = (await response.json()) as {
+        ok: boolean;
+        steps: {
+          marketData: { ok: boolean };
+          pruneVerification: { error: string };
+        };
+      };
+      expect(body.ok).toBe(false);
+      expect(body.steps.marketData.ok).toBe(true);
+      expect(body.steps.pruneVerification).toEqual({ error: "Error" });
     });
   });
 });
