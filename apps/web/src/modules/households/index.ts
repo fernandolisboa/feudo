@@ -1,6 +1,5 @@
 export { HouseholdSwitcherSelect } from "./components/household-switcher-select";
 export { OnboardingForm } from "./components/onboarding-form";
-export type { HouseholdSwitcherProps } from "./get-household-switcher-props";
 export { getHouseholdSwitcherProps } from "./get-household-switcher-props";
 export type { HouseholdSettings } from "./repository";
 export { getHouseholdSettings } from "./repository";

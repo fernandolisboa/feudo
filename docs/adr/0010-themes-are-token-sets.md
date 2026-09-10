@@ -9,7 +9,7 @@ The owner wants users to pick a look, and the three direction sketches from Phas
 
 ## Consequences
 
-- Adding a theme is a `[data-theme]` block in `globals.css`, a `THEME_NAMES` entry, a `strings.themeNames` entry and an enum migration for the `theme` column; no component changes.
+- Adding a theme is a `[data-theme]` block in `globals.css`, a `THEME_NAMES` entry, a `themeRegistry` entry choosing the shell, a `strings.themeNames` entry and an enum migration for the `theme` column; no component changes.
 - The Impeccable gate runs on the default theme; an automated contrast test covers every theme's text-on-surface and chart-on-background pairs, so no theme can ship below WCAG AA.
 - A theme may move the navigation (sidebar or top bar) and restyle any component through tokens (`--elevation`, `--radius`, density), but it cannot change component anatomy: the accounts list is one table component in every theme, the page headline is one component. Swapping a table for a card grid would be a new component decision, not a theme.
 - The AppShell is tested in both layouts plus the mobile bottom-tab variant.

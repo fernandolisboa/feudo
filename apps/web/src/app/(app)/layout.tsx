@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell/app-shell";
 import { readSidebarCollapsed } from "@/components/app-shell/sidebar-cookie";
-import { requireHouseholdSession } from "@/modules/households";
+import {
+  getHouseholdSwitcherProps,
+  HouseholdSwitcherSelect,
+  requireHouseholdSession,
+} from "@/modules/households";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -10,6 +14,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const shell = shellLayoutFor(resolveTheme(theme));
   const sidebarCollapsed = shell === "sidebar" ? await readSidebarCollapsed() : false;
+  const switcherProps = await getHouseholdSwitcherProps(householdId);
+  const householdSwitcher = switcherProps ? <HouseholdSwitcherSelect {...switcherProps} /> : null;
 
   return (
     <AppShell
@@ -17,7 +23,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       sidebarCollapsed={sidebarCollapsed}
       userName={name}
       userEmail={email}
-      householdId={householdId}
+      householdSwitcher={householdSwitcher}
     >
       {children}
     </AppShell>
