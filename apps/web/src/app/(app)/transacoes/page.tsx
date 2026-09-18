@@ -1,12 +1,15 @@
 import { PageHeader } from "@/ui/page-header";
 
-import { t } from "./strings";
+import { t } from "@/modules/shell";
 
 export default function TransactionsPage() {
   return (
     <>
-      <PageHeader overline={t.overline} title={t.title} />
-      <p className="font-heading text-foreground text-[18px]">{t.body}</p>
+      <PageHeader
+        overline={t.comingSoon.transactions.overline}
+        title={t.comingSoon.transactions.title}
+      />
+      <p className="font-heading text-foreground text-[18px]">{t.comingSoon.transactions.body}</p>
     </>
   );
 }
