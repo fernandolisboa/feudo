@@ -2,6 +2,8 @@ import { lt } from "drizzle-orm";
 
 import { verification } from "./schema";
 
+import { errorName } from "@/lib/error-name";
+
 import type { Database } from "@/platform/db/client";
 
 export async function pruneExpiredVerifications(db: Database): Promise<number> {
@@ -10,10 +12,6 @@ export async function pruneExpiredVerifications(db: Database): Promise<number> {
 }
 
 export type DailyPruneStep = { deleted: number } | { error: string };
-
-function errorName(error: unknown): string {
-  return error instanceof Error ? error.name : "UnknownError";
-}
 
 export async function runDailyPruneStep(db: Database): Promise<DailyPruneStep> {
   try {

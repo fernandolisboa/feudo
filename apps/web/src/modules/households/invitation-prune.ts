@@ -2,6 +2,8 @@ import { and, eq, lt, or } from "drizzle-orm";
 
 import { invitation } from "@/modules/auth/schema";
 
+import { errorName } from "@/lib/error-name";
+
 import type { Database } from "@/platform/db/client";
 
 // ADR-0008: expired and cancelled invites are removed by the daily
@@ -21,10 +23,6 @@ export async function pruneExpiredInvitations(db: Database): Promise<number> {
 }
 
 export type DailyPruneStep = { deleted: number } | { error: string };
-
-function errorName(error: unknown): string {
-  return error instanceof Error ? error.name : "UnknownError";
-}
 
 export async function runDailyPruneStep(db: Database): Promise<DailyPruneStep> {
   try {

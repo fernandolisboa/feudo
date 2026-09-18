@@ -4,6 +4,8 @@ import { computeFetchWindow } from "./fetch-window";
 import { fetchSgsSeries } from "./sgs-client";
 import { SgsSeriesCode } from "./series";
 
+import { errorName } from "@/lib/error-name";
+
 import type { SeriesFrequency } from "./fetch-window";
 import type { Database } from "@/platform/db/client";
 
@@ -31,8 +33,7 @@ export interface RefreshSeriesResult {
 }
 
 function logFetchFailure(seriesCode: SgsSeriesCode, error: unknown): void {
-  const errorName = error instanceof Error ? error.name : "UnknownError";
-  console.warn(`market-data: fetch failed for series ${seriesCode} (${errorName})`);
+  console.warn(`market-data: fetch failed for series ${seriesCode} (${errorName(error)})`);
 }
 
 async function refreshDirectSeries(
@@ -75,10 +76,6 @@ export async function refreshMarketData(
 }
 
 export type DailyRefreshStep = RefreshMarketDataOutcome | { error: string };
-
-function errorName(error: unknown): string {
-  return error instanceof Error ? error.name : "UnknownError";
-}
 
 export async function runDailyRefreshStep(db: Database): Promise<DailyRefreshStep> {
   try {
