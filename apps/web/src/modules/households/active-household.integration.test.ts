@@ -6,8 +6,8 @@ vi.mock("next/headers", () => ({
   headers: () => Promise.resolve(currentHeaders.value),
 }));
 
-import { withTestDb } from "@/db/test/harness";
-import { session as sessionTable } from "@/db/schema/auth.ts";
+import { withTestDb } from "@/platform/db/test/harness";
+import { session as sessionTable } from "@/modules/auth/schema.ts";
 import { getAuth, getCurrentSession } from "@/modules/auth";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 

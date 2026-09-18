@@ -1,25 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/db/client", () => ({
+vi.mock("@/platform/db/client", () => ({
   getDb: () => ({}),
 }));
 
-vi.mock("@/lib/market-data", () => ({
-  refreshMarketData: vi.fn(),
+vi.mock("@/modules/market-data", () => ({
+  runDailyRefreshStep: vi.fn(),
 }));
 
 vi.mock("@/modules/auth", () => ({
-  pruneExpiredVerifications: vi.fn(),
+  runDailyPruneStep: vi.fn(),
 }));
 
 vi.mock("@/modules/households", () => ({
-  pruneExpiredInvitations: vi.fn(),
+  runDailyPruneStep: vi.fn(),
 }));
 
 const { GET } = await import("./route");
-const { refreshMarketData } = await import("@/lib/market-data");
-const { pruneExpiredVerifications } = await import("@/modules/auth");
-const { pruneExpiredInvitations } = await import("@/modules/households");
+const { runDailyRefreshStep } = await import("@/modules/market-data");
+const { runDailyPruneStep: runAuthPruneStep } = await import("@/modules/auth");
+const { runDailyPruneStep: runHouseholdsPruneStep } = await import("@/modules/households");
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 
@@ -34,9 +34,9 @@ async function callCronRoute(): Promise<Response> {
 describe("GET /api/cron/daily", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
-    vi.mocked(pruneExpiredVerifications).mockResolvedValue(0);
-    vi.mocked(pruneExpiredInvitations).mockResolvedValue(0);
-    vi.mocked(refreshMarketData).mockResolvedValue({ ok: true, results: [] });
+    vi.mocked(runAuthPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runDailyRefreshStep).mockResolvedValue({ ok: true, results: [] });
   });
 
   afterEach(() => {
@@ -61,8 +61,8 @@ describe("GET /api/cron/daily", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 500 with an error summary and still reports the prune steps when refreshMarketData rejects", async () => {
-    vi.mocked(refreshMarketData).mockRejectedValue(new Error("unexpected crash"));
+  it("returns 500 with an error summary and still reports the prune steps when the market-data step fails", async () => {
+    vi.mocked(runDailyRefreshStep).mockResolvedValue({ error: "Error" });
 
     const response = await callCronRoute();
 
@@ -79,5 +79,45 @@ describe("GET /api/cron/daily", () => {
     expect(body.steps.marketData).toEqual({ error: "Error" });
     expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
     expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the auth prune step fails", async () => {
+    vi.mocked(runAuthPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { error: string };
+        pruneInvitations: { deleted: number };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneVerification).toEqual({ error: "Error" });
+    expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the households prune step fails", async () => {
+    vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { deleted: number };
+        pruneInvitations: { error: string };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
+    expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 });

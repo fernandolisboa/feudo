@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { parseSetCookieHeader } from "better-auth/cookies";
 
-import { withTestDb } from "@/db/test/harness";
-import { rateLimit } from "@/db/schema/auth";
+import { withTestDb } from "@/platform/db/test/harness";
+import { rateLimit } from "@/modules/auth/schema";
 
 // signOutAction is a Server Action: it reaches next/headers and
 // next/navigation directly, which throw outside a real request. These stubs

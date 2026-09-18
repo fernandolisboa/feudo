@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
 import { getCurrentSession } from "@/modules/auth";
 

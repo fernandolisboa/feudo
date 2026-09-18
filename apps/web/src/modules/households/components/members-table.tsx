@@ -1,12 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatShortDate } from "@/lib/format-date";
 
 import type { HouseholdMember, HouseholdRole } from "../membership";

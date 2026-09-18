@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { withTestDb } from "@/db/test/harness";
+import { withTestDb } from "@/platform/db/test/harness";
 
-import { resetHealthProbeCache } from "./probe";
+import { resetHealthProbeCache } from "@/platform/health/probe";
 import { GET } from "./route";
 
 interface MigrationRow {

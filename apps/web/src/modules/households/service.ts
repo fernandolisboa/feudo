@@ -2,10 +2,10 @@ import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 
 import { getAuth, type CurrentSession } from "@/modules/auth";
-import { organization } from "@/db/schema/auth";
+import { organization } from "@/modules/auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { createHouseholdSettingsRepository } from "./repository";
 import { scopeForNewHousehold } from "./scope";
 import type { CreateHouseholdFormInput } from "./validation";

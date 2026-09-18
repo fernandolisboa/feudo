@@ -37,7 +37,7 @@ and closes once E2E lands and needs its own predictable schema.
 | `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`)                                                                 | CI `integration` job's reset and integration-test steps: must equal `new URL(DATABASE_URL).hostname`                                                                                                                                                                                   |
 | `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo, `production` environment only                                                                       | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                                                                                                                                                                            |
 | `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo, both at repo level (`vars.DATABASE_PRODUCTION_HOST`) and duplicated in the `production` environment | CI `migrate-production` job's guard step (reads the `production` environment copy); also the belt-and-braces refusal in `assertDatabaseResetAllowed` in the `integration` and `e2e` jobs' reset/migrate/test steps (read the repo-level copy, since those jobs have no `environment:`) |
-| `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                           |
+| `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/platform/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                  |
 
 Secrets are set once, in this repo, through the GitHub CLI — never pasted into a workflow file or
 committed:
@@ -98,7 +98,7 @@ CI owns applying committed migrations to production. On every push to `main` (af
 
 1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname, normalises it
    (lowercase, strip a trailing dot, strip a `-pooler` suffix from the first label — the same
-   normalisation `databaseHost()` in `apps/web/src/db/reset-guard.ts` applies) and fails the job —
+   normalisation `databaseHost()` in `apps/web/src/platform/db/reset-guard.ts` applies) and fails the job —
    printing only `PASS` or `FAIL`, never the URL — unless the normalised host equals the normalised
    `vars.DATABASE_PRODUCTION_HOST`. This is what stops a mispointed or stale
    `DATABASE_URL_PRODUCTION` secret, or a merely differently-cased or pooler/direct variant of the
@@ -149,7 +149,7 @@ needs it, never `export`ed into the shell's environment. Confirm `GET /api/healt
 
 ## The reset guard
 
-`assertDatabaseResetAllowed` (`apps/web/src/db/reset-guard.ts`) runs before any reset query and:
+`assertDatabaseResetAllowed` (`apps/web/src/platform/db/reset-guard.ts`) runs before any reset query and:
 
 - refuses unconditionally when `VERCEL_ENV=production`;
 - requires `DATABASE_RESET_ALLOWED_HOST` to be set and, once both are normalised through
@@ -173,13 +173,13 @@ pnpm --filter @feudo/web db:migrate        # apply committed migrations
 ```
 
 `db:reset-schema` (`apps/web/scripts/reset-schema.mjs`, logic in
-`apps/web/src/db/schema-reset.ts`) drops the `public` and `drizzle` schemas with `cascade`,
+`apps/web/src/platform/db/schema-reset.ts`) drops the `public` and `drizzle` schemas with `cascade`,
 recreates an empty `public` schema and re-grants `usage, create` on it to `public`. It refuses to
 run — before issuing any query — unless the guard above passes.
 
 `db:reset` (`apps/web/scripts/reset-db.mjs`) and the `withTestDb` test harness
-(`apps/web/src/db/test/harness.ts`) share a separate, faster truncate routine
-(`apps/web/src/db/reset.ts`) that truncates every table already present in the `public` schema
+(`apps/web/src/platform/db/test/harness.ts`) share a separate, faster truncate routine
+(`apps/web/src/platform/db/reset.ts`) that truncates every table already present in the `public` schema
 with `restart identity cascade`, using safely quoted identifiers — it does not touch the schema
 itself, so it is only useful once the schema has been migrated at least once. It shares the same
 guard.
@@ -198,7 +198,7 @@ Run either reset only against `DATABASE_URL_PREVIEW`'s value, never against prod
 notice and exits 0 locally, and fails loudly (exit 1) when `CI` is set. `pnpm test` (unit tests,
 `packages/core` and `apps/web`) never needs a database.
 
-Tests use the `withTestDb` helper (`apps/web/src/db/test/harness.ts`): it truncates every table in
+Tests use the `withTestDb` helper (`apps/web/src/platform/db/test/harness.ts`): it truncates every table in
 the `public` schema before the test body runs, so each test starts from a known-empty state.
 Running it locally requires `DATABASE_RESET_ALLOWED_HOST` (see above) and a schema that has already
 been migrated.
@@ -255,12 +255,12 @@ right tool for a database holding real household data.
 
 ## WebSocket driver on Vercel
 
-`apps/web/src/db/client.ts` connects with `drizzle-orm/neon-serverless` and no `ws` option: Node 24
+`apps/web/src/platform/db/client.ts` connects with `drizzle-orm/neon-serverless` and no `ws` option: Node 24
 (the runtime everywhere, `.nvmrc`, and now `apps/web/package.json`'s `engines.node`) has a global
 `WebSocket`, which `@neondatabase/serverless` v1 picks up automatically. Do not add the `ws`
 package back — webpack bundling it broke `/api/health` in production (`TypeError: b.mask is not a
 function`) because its `bufferutil` fallback does not survive minification.
 
-`getDb()` attaches `attachPoolErrorLogger` (`apps/web/src/db/pool-error-logger.ts`) to the pool's
+`getDb()` attaches `attachPoolErrorLogger` (`apps/web/src/platform/db/pool-error-logger.ts`) to the pool's
 `error` event on creation, so Neon dropping an idle WebSocket on a warm serverless instance is
 logged (`error.name`/`code` only, never the message) instead of becoming an uncaught exception.

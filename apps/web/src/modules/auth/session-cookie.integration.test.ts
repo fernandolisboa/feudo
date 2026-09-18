@@ -30,7 +30,7 @@ vi.mock("next/headers", () => ({
 
 import { headers } from "next/headers";
 
-import { withTestDb } from "@/db/test/harness";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";

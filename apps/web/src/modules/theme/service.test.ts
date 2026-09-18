@@ -4,7 +4,7 @@ const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 const setUserThemeMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/auth", () => ({ getCurrentSession: getCurrentSessionMock }));
-vi.mock("@/db/client", () => ({ getDb: () => "db" }));
+vi.mock("@/platform/db/client", () => ({ getDb: () => "db" }));
 vi.mock("./repository", () => ({ setUserTheme: setUserThemeMock }));
 
 import { updateTheme } from "./service";

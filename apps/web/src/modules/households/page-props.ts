@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 
 import type { CurrentSession } from "@/modules/auth";
 import {

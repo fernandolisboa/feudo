@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { withTestDb } from "@/db/test/harness";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { getAuth } from "./auth";
 import { readAuthBaseUrl } from "./env";

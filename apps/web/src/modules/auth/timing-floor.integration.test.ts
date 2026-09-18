@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-import { withTestDb } from "@/db/test/harness";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { getAuth } from "./auth";
 import { fakeEmailSender } from "./email/fake-sender";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import { signUp } from "./service";
 import { t } from "./strings";
 

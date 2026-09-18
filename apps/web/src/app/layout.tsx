@@ -8,7 +8,7 @@ import {
 } from "next/font/google";
 import type { ReactNode } from "react";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/ui/tooltip";
 import { getCurrentSession } from "@/modules/auth";
 import { resolveTheme } from "@/modules/theme";
 

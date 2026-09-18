@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 
-import { AppShell } from "@/components/app-shell/app-shell";
-import { readSidebarCollapsed } from "@/components/app-shell/sidebar-cookie";
 import {
   getHouseholdSwitcherProps,
   HouseholdSwitcherSelect,
   requireHouseholdSession,
 } from "@/modules/households";
+import { AppShell, readSidebarCollapsed } from "@/modules/shell";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {

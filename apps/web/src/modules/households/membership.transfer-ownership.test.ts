@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import type { HouseholdSession } from "./require-household-session";
 import { transferOwnership } from "./membership";
 

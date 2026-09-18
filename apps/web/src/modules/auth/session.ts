@@ -2,10 +2,10 @@ import { headers } from "next/headers";
 import { cache } from "react";
 import { desc, eq } from "drizzle-orm";
 
-import { getDb } from "@/db/client";
-import { member, session as sessionTable } from "@/db/schema";
+import { getDb } from "@/platform/db/client";
+import { member, session as sessionTable } from "./schema";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { getAuth } from "./auth";
 
 export type CurrentSession = {

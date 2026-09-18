@@ -1,5 +1,5 @@
-import { PageHeader } from "@/components/page-header";
-import { SectionHeader } from "@/components/section-header";
+import { PageHeader } from "@/ui/page-header";
+import { SectionHeader } from "@/ui/section-header";
 import {
   InviteMemberDialog,
   MembersTable,

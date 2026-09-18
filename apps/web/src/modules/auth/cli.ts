@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { betterAuth } from "better-auth";
 
-import * as schema from "../../db/schema/index.ts";
+import * as schema from "../../platform/db/schema.ts";
 import { buildAuthOptions } from "./options.ts";
 
 const PLACEHOLDER_CONNECTION = "postgres://placeholder:placeholder@localhost:5432/placeholder";

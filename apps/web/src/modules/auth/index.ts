@@ -25,4 +25,4 @@ export { getCurrentSession } from "./session";
 export type { SignInInput, SignInOutcome, SignUpInput, SignUpOutcome } from "./service";
 export { signUp } from "./service";
 export { t } from "./strings";
-export { pruneExpiredVerifications } from "./verification-prune";
+export { runDailyPruneStep } from "./verification-prune";

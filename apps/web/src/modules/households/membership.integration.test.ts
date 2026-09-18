@@ -6,20 +6,20 @@ vi.mock("next/headers", () => ({
   headers: () => Promise.resolve(currentHeaders.value),
 }));
 
-import { withTestDb } from "@/db/test/harness";
 import {
   fakeSentEmails,
   invitation,
   member,
   organization,
   session as sessionTable,
-} from "@/db/schema";
+} from "@/modules/auth/schema";
+import { withTestDb } from "@/platform/db/test/harness";
 import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
 import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
 import { fakeEmailSender } from "@/modules/auth/email/fake-sender";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import {
   acceptInvitation,
   cancelInvitation,

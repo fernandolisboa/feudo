@@ -1,8 +1,10 @@
 import { and, eq, lt, or } from "drizzle-orm";
 
-import { invitation } from "@/db/schema";
+import { invitation } from "@/modules/auth/schema";
 
-import type { Database } from "@/db/client";
+import { errorName } from "@/lib/error-name";
+
+import type { Database } from "@/platform/db/client";
 
 // ADR-0008: expired and cancelled invites are removed by the daily
 // housekeeping job. Accepted and rejected rows stay — a rejected invite is
@@ -18,4 +20,15 @@ export async function pruneExpiredInvitations(db: Database): Promise<number> {
       ),
     );
   return result.rowCount ?? 0;
+}
+
+export type DailyPruneStep = { deleted: number } | { error: string };
+
+export async function runDailyPruneStep(db: Database): Promise<DailyPruneStep> {
+  try {
+    const deleted = await pruneExpiredInvitations(db);
+    return { deleted };
+  } catch (error) {
+    return { error: errorName(error) };
+  }
 }

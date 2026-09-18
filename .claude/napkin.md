@@ -23,6 +23,8 @@
    Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
 
 ## Shell & Command Reliability
+1. **[2026-09-18] `scripts/reset-*.mjs` and drizzle-kit load `src/platform/db/schema.ts` under plain Node, which has no `@/` alias; `pnpm test`, Next and vitest all resolve it, so only CI's `db:reset-schema` breaks**
+   Do instead: inside `schema.ts` files and `platform/db/*` use relative imports with the `.ts` extension; before a PR run `env -u DATABASE_URL node apps/web/scripts/reset-schema.mjs` and expect the "DATABASE_URL is not set" message, not `ERR_MODULE_NOT_FOUND`.
 1. **[2026-09-09] `vercel env rm VAR <env>` on an integration-managed variable deletes the record for EVERY environment (production lost DATABASE_URL once)**
    Do instead: never `env rm` marketplace vars; `vercel integration resource disconnect <resource> <project>` then `connect ... -e <env>` to re-scope; verify hosts per environment with `vercel env pull` afterwards.
 2. **[2026-09-09] Vercel marketplace integrations that need terms acceptance (Resend) return a `verification_uri` the owner must open once; afterwards `vercel integration add` works non-interactively**
@@ -49,6 +51,8 @@
    Do instead: filter the `ci` row (`grep -E "^ci\s"`) before testing pass/fail.
 
 ## Domain Behavior Guardrails
+1. **[2026-09-18] Layout is vertical slices in one Next app (ADR-0011, #62/#63)**
+   Do instead: `app/` is routing only; every capability lives in `apps/web/src/modules/<slice>/` (schema, repository, service, actions, components, strings, tests, `index.ts`); infra in `platform/`, shadcn and layout atoms in `ui/`, pure helpers in `lib/`; import a slice only via `@/modules/<slice>`; `packages/core/src/<slice>` mirrors the names. Never propose `apps/api` or per-slice packages unless the owner asks.
 1. **[2026-09-09] Preview and development use a SEPARATE free Neon project (`feudo-preview`, host ep-late-flower); production stays on `neon-byzantium-mountain` (ep-dry-wildflower)**
    Do instead: no Neon API key, no branch reset job; CI recreates the schema on the preview project each run; `DATABASE_URL_PREVIEW` GitHub secret = the preview project's URL (set from `vercel env pull`, never printed).
 2. **[2026-09-09] All three Vercel environments point at the same Neon branch (main); the marketplace integration creates no per-deploy branches**

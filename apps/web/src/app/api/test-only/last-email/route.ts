@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/db/client";
-import { tokensMatch } from "@/lib/timing-safe-token";
+import { getDb } from "@/platform/db/client";
+import { tokensMatch } from "@/platform/timing-safe-token";
 import { findLastFakeSentEmail, isFakeEmailProvider } from "@/modules/auth";
 
 function isEligibleEnvironment(): boolean {

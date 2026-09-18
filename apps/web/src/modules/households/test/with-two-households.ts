@@ -1,7 +1,7 @@
-import { organization } from "@/db/schema";
-import { withTestDb } from "@/db/test/harness";
+import { organization } from "@/modules/auth/schema";
+import { withTestDb } from "@/platform/db/test/harness";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { createHouseholdSettingsRepository, type HouseholdSettings } from "../repository";
 import { scopeForNewHousehold, type HouseholdScope } from "../scope";
 

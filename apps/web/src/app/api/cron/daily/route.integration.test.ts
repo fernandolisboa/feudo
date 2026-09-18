@@ -8,23 +8,23 @@ import {
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { marketData } from "@/db/schema/market-data";
-import { invitation, verification } from "@/db/schema/auth";
-import { withTestDb } from "@/db/test/harness";
-import * as marketDataModule from "@/lib/market-data";
-import {
-  CDI_DAILY_OBSERVATIONS,
-  IPCA_MONTHLY_OBSERVATIONS,
-  buildSgsFetchMock,
-} from "@/lib/market-data/test/sgs-fixtures";
+import { invitation, verification } from "@/modules/auth/schema";
 import * as authModule from "@/modules/auth";
 import { getAuth } from "@/modules/auth";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 import * as householdsModule from "@/modules/households";
+import * as marketDataModule from "@/modules/market-data";
+import {
+  CDI_DAILY_OBSERVATIONS,
+  IPCA_MONTHLY_OBSERVATIONS,
+  buildSgsFetchMock,
+} from "@/modules/market-data/test/sgs-fixtures";
+import { marketData } from "@/modules/market-data/schema";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { GET } from "./route";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 
 const { getLatestIndicators } = marketDataModule;
 
@@ -282,18 +282,18 @@ describe("GET /api/cron/daily (integration)", () => {
     await withTestDb(async () => {
       globalThis.fetch = buildSgsFetchMock();
       const callOrder: string[] = [];
-      const actualPruneVerification = authModule.pruneExpiredVerifications;
-      const actualPruneInvitations = householdsModule.pruneExpiredInvitations;
-      const actualRefresh = marketDataModule.refreshMarketData;
-      vi.spyOn(authModule, "pruneExpiredVerifications").mockImplementation(async (...args) => {
+      const actualPruneVerification = authModule.runDailyPruneStep;
+      const actualPruneInvitations = householdsModule.runDailyPruneStep;
+      const actualRefresh = marketDataModule.runDailyRefreshStep;
+      vi.spyOn(authModule, "runDailyPruneStep").mockImplementation(async (...args) => {
         callOrder.push("pruneVerification");
         return actualPruneVerification(...args);
       });
-      vi.spyOn(householdsModule, "pruneExpiredInvitations").mockImplementation(async (...args) => {
+      vi.spyOn(householdsModule, "runDailyPruneStep").mockImplementation(async (...args) => {
         callOrder.push("pruneInvitations");
         return actualPruneInvitations(...args);
       });
-      vi.spyOn(marketDataModule, "refreshMarketData").mockImplementation(async (...args) => {
+      vi.spyOn(marketDataModule, "runDailyRefreshStep").mockImplementation(async (...args) => {
         callOrder.push("marketData");
         return actualRefresh(...args);
       });
@@ -301,54 +301,6 @@ describe("GET /api/cron/daily (integration)", () => {
       const response = await callCronRoute();
       expect(response.status).toBe(200);
       expect(callOrder).toEqual(["pruneVerification", "pruneInvitations", "marketData"]);
-    });
-  });
-
-  it("keeps running the remaining steps and still returns 500 when the verification prune throws", async () => {
-    await withTestDb(async () => {
-      globalThis.fetch = buildSgsFetchMock();
-      vi.spyOn(authModule, "pruneExpiredVerifications").mockRejectedValue(
-        new Error("connection reset"),
-      );
-
-      const response = await callCronRoute();
-      expect(response.status).toBe(500);
-      const body = (await response.json()) as {
-        ok: boolean;
-        steps: {
-          marketData: { ok: boolean };
-          pruneVerification: { error: string };
-          pruneInvitations: { deleted: number };
-        };
-      };
-      expect(body.ok).toBe(false);
-      expect(body.steps.marketData.ok).toBe(true);
-      expect(body.steps.pruneVerification).toEqual({ error: "Error" });
-      expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
-    });
-  });
-
-  it("keeps running the remaining steps and still returns 500 when the invitation prune throws", async () => {
-    await withTestDb(async () => {
-      globalThis.fetch = buildSgsFetchMock();
-      vi.spyOn(householdsModule, "pruneExpiredInvitations").mockRejectedValue(
-        new Error("connection reset"),
-      );
-
-      const response = await callCronRoute();
-      expect(response.status).toBe(500);
-      const body = (await response.json()) as {
-        ok: boolean;
-        steps: {
-          marketData: { ok: boolean };
-          pruneVerification: { deleted: number };
-          pruneInvitations: { error: string };
-        };
-      };
-      expect(body.ok).toBe(false);
-      expect(body.steps.marketData.ok).toBe(true);
-      expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
-      expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
     });
   });
 });

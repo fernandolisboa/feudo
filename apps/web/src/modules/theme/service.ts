@@ -1,4 +1,4 @@
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import { getCurrentSession } from "@/modules/auth";
 
 import { setUserTheme } from "./repository";

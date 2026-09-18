@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Button } from "@/ui/button";
 import { initialActionState } from "@/lib/action-state";
 import { resendVerificationAction } from "../actions";
 import { t } from "../strings";

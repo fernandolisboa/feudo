@@ -5,9 +5,9 @@ const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/auth", () => ({ getCurrentSession: getCurrentSessionMock }));
 
-import type { Database } from "@/db/client";
-import { user } from "@/db/schema";
-import { withTestDb } from "@/db/test/harness";
+import type { Database } from "@/platform/db/client";
+import { user } from "@/modules/auth/schema";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { updateTheme } from "./service";
 

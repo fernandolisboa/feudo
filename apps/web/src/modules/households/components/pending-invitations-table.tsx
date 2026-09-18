@@ -2,16 +2,9 @@
 
 import { useActionState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { initialActionState } from "@/lib/action-state";
 import { formatShortDate } from "@/lib/format-date";
 

@@ -1,4 +1,4 @@
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { findLastFakeSentEmail, type FakeSentEmail } from "../email/fake-email-repository";
 
 const DEFAULT_TIMEOUT_MS = 3000;

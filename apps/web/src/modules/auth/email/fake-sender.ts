@@ -1,4 +1,4 @@
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import { recordFakeSentEmail } from "./fake-email-repository";
 import type { EmailSender, SendEmailInput } from "./sender";
 

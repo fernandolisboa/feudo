@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { getDb, type Database } from "@/db/client";
-import { withTestDb } from "@/db/test/harness";
-import { invitation, organization, user } from "@/db/schema/auth.ts";
+import { getDb, type Database } from "@/platform/db/client";
+import { withTestDb } from "@/platform/db/test/harness";
+import { invitation, organization, user } from "@/modules/auth/schema.ts";
 
 import { getAuth } from "./auth";
 import { findLastFakeSentEmail } from "./email/fake-email-repository";

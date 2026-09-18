@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { withTestDb } from "@/db/test/harness";
-import { rateLimit } from "@/db/schema/auth";
+import { withTestDb } from "@/platform/db/test/harness";
+import { rateLimit } from "@/modules/auth/schema";
 
 import {
   requestMagicLink,

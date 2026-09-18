@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import type { HouseholdSession } from "./require-household-session";
 
 const createInvitationMock = vi.hoisted(() => vi.fn());
