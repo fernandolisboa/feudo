@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { AuthShell, MagicLinkForm, getCurrentSession, t } from "@/modules/auth";
 
 export default async function MagicLinkPage({

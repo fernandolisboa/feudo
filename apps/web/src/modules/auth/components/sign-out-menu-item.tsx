@@ -2,7 +2,7 @@
 
 import { LogOut } from "lucide-react";
 
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/ui/dropdown-menu";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
 // Direct file import, not the auth module's index: this file is bundled for
 // the client, and the auth index also re-exports getCurrentSession, which

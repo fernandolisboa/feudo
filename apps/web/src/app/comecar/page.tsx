@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { getCurrentSession } from "@/modules/auth";
 import {
   OnboardingForm,

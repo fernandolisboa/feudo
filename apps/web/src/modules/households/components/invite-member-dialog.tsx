@@ -3,8 +3,8 @@
 import { useActionState, useState } from "react";
 import { UserPlus } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,16 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+} from "@/ui/dialog";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { initialActionState } from "@/lib/action-state";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 

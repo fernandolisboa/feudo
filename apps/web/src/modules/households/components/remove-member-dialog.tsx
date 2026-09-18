@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/ui/dialog";
 import { initialActionState } from "@/lib/action-state";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 

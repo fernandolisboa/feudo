@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/ui/page-header";
 
 import { t } from "./strings";
 

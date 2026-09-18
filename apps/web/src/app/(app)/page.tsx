@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/ui/page-header";
 import { interpolate } from "@/lib/interpolate";
 import { t } from "@/modules/auth";
 import { requireHouseholdSession } from "@/modules/households";

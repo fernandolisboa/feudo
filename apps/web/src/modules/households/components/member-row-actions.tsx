@@ -3,14 +3,14 @@
 import { useActionState, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/ui/dropdown-menu";
 import { initialActionState } from "@/lib/action-state";
 
 import { updateMemberRoleAction } from "../actions";
