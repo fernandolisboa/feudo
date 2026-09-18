@@ -132,7 +132,7 @@ one place (`apps/web/src/modules/auth/email/select.ts`):
 `GET /api/test-only/last-email?to=<email>` returns the last fake-sent message to that address as
 JSON. It 404s unless `VERCEL_ENV !== "production"` **and** `EMAIL_PROVIDER=fake`, and separately
 401s unless the request carries `authorization: Bearer <TEST_ONLY_TOKEN>`, compared with the same
-constant-time helper the cron endpoint uses (`apps/web/src/lib/timing-safe-token.ts`). It never
+constant-time helper the cron endpoint uses (`apps/web/src/platform/timing-safe-token.ts`). It never
 exists in a `resend`-configured or production environment, so it never ships live traffic risk.
 `TEST_ONLY_TOKEN` is a GitHub Actions secret and a Vercel Preview env var; it has no default and
 the route refuses every request when it is unset.
@@ -166,7 +166,7 @@ PLAYWRIGHT_BASE_URL=https://<preview-url> TEST_ONLY_TOKEN=<value> VERCEL_AUTOMAT
 
 ## The committed schema is hand-maintained, not generated
 
-`src/db/schema/auth.ts` is the authoritative, hand-maintained schema — it is never overwritten by
+`src/modules/auth/schema.ts` is the authoritative, hand-maintained schema — it is never overwritten by
 the Better Auth CLI. `generate` performs a full rewrite from the auth/plugin config, not a
 config-aware merge with the existing file, so it cannot express two constructs the committed file
 carries and the CLI has no way to produce: `withTimezone: true` on `user.termsAcceptedAt`, and the
@@ -179,11 +179,11 @@ byte-for-byte does not hold and never has for any CLI version.
 `better-auth` or changing plugins/`additionalFields` — not part of the normal edit loop. It runs
 the Better Auth CLI against `cli.ts` (`apps/web/src/modules/auth/cli.ts`, module-private — not part
 of `auth/index.ts`), writes the result to the git-ignored `apps/web/.generated/auth-schema.ts`, and
-then prints a `git diff --stat` between it and the committed `src/db/schema/auth.ts`. Only the
+then prints a `git diff --stat` between it and the committed `src/modules/auth/schema.ts`. Only the
 diff step is tolerant of a difference (it never fails the script, since the two files always
 differ by the two constructs above); a `generate` failure — a broken `cli.ts`, for instance —
 still exits the script non-zero.
-Read the full diff with `git --no-pager diff --no-index src/db/schema/auth.ts
+Read the full diff with `git --no-pager diff --no-index src/modules/auth/schema.ts
 .generated/auth-schema.ts`, port only the changes the upgrade/plugin change actually intends by
 hand into the committed file, and keep the two hand-added constructs above. Run `db:generate` on
 the committed file afterwards, as usual.
@@ -231,17 +231,23 @@ and the verification prune share a single route instead of one cron each.
 
 Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
 `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
-(`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily` is a thin route that
-runs each of its steps in its own try/catch, so one step failing never stops the others from
-running, and returns a per-step summary:
+(`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily`
+(`apps/web/src/app/api/cron/daily/route.ts`) only checks the bearer token, calls each slice's own
+daily step and composes the response — per ADR-0011, each slice owns its own try/catch around its
+step, so one step failing never stops the others from running: `runDailyPruneStep`
+(`apps/web/src/modules/auth/verification-prune.ts` and
+`apps/web/src/modules/households/invitation-prune.ts`) and `runDailyRefreshStep`
+(`apps/web/src/modules/market-data/refresh-market-data.ts`), all exported through each module's
+`index.ts`. The response is a per-step summary:
 `{ ok, steps: { pruneVerification: { deleted } | { error }, pruneInvitations: { deleted } | { error }, marketData: { ok, results } | { error } } }`.
 The steps run in this order:
 
-1. The expired-verification prune (`pruneExpiredVerifications`) — one cheap `DELETE`.
-2. The expired/cancelled-invitation prune (`households.pruneExpiredInvitations`, ADR-0008) —
-   another cheap `DELETE`.
-3. The market-data refresh (`refreshMarketData`) — up to five sequential SGS fetches, each with its
-   own 10 s timeout.
+1. The expired-verification prune (`auth.runDailyPruneStep`, wrapping `pruneExpiredVerifications`)
+   — one cheap `DELETE`.
+2. The expired/cancelled-invitation prune (`households.runDailyPruneStep`, wrapping
+   `pruneExpiredInvitations`, ADR-0008) — another cheap `DELETE`.
+3. The market-data refresh (`market-data.runDailyRefreshStep`, wrapping `refreshMarketData`) — up
+   to five sequential SGS fetches, each with its own 10 s timeout.
 
 The two prunes run first deliberately: each is orders of magnitude cheaper than the market-data
 step, and running them after it would let a slow or unreachable Bacen SGS starve them on every

@@ -90,7 +90,10 @@ Confirm with the owner before creating any paid resource.
    registration opens beyond the first household.
 4. **Deep modules, thin interfaces**: `auth`, `households`, `sync`, `market-data`, `ledger`,
    `reserve`, `banking-intel`, `analysis`. Each exposes a small entry point; implementation stays
-   private.
+   private. These modules are vertical slices under `apps/web/src/modules/<slice>/` (schema,
+   repository, service, actions, components, strings, tests, `index.ts`, per ADR-0011); `app/` is
+   routing only (pages, layouts, route handlers), and infrastructure with no domain meaning (the DB
+   client and migration tooling, cron auth, the health probe) lives in `apps/web/src/platform/`.
 5. **Domain docs are the source of truth**: `CONTEXT.md`, `UBIQUITOUS_LANGUAGE.md`, `docs/adr/`.
    Update them as decisions crystallize, not after.
 6. **Validation at the edges**: Zod schemas on every external input (Pluggy payloads, SGS

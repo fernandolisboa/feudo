@@ -259,9 +259,10 @@ and "the last member leaving deletes the household"):
 
 `households.pruneExpiredInvitations` (`invitation-prune.ts`, exported from the barrel) deletes
 every `invitation` row that is `status = 'canceled'` or `status = 'pending'` with `expires_at` in
-the past (ADR-0008); accepted and rejected rows are left alone. It runs as a third step of the
-shared housekeeping cron, `GET /api/cron/daily` (`apps/web/src/app/api/cron/daily/route.ts`), next
-to `refreshMarketData` and `pruneExpiredVerifications` — see "Cron jobs" in `docs/runbooks/auth.md`.
+the past (ADR-0008); accepted and rejected rows are left alone. `households.runDailyPruneStep`, in
+the same file, wraps it in a try/catch and runs as the second step of the shared housekeeping cron,
+`GET /api/cron/daily` (`apps/web/src/app/api/cron/daily/route.ts`), next to `market-data`'s
+`runDailyRefreshStep` and `auth`'s `runDailyPruneStep` — see "Cron jobs" in `docs/runbooks/auth.md`.
 
 ## Time zone validation
 
