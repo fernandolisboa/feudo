@@ -80,4 +80,44 @@ describe("GET /api/cron/daily", () => {
     expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
     expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
   });
+
+  it("returns 500 with an error summary and still reports the other steps when the auth prune step fails", async () => {
+    vi.mocked(runAuthPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { error: string };
+        pruneInvitations: { deleted: number };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneVerification).toEqual({ error: "Error" });
+    expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the households prune step fails", async () => {
+    vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { deleted: number };
+        pruneInvitations: { error: string };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
+    expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
 });
