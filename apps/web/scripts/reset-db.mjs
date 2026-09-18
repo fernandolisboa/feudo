@@ -1,6 +1,6 @@
-import { getDb } from "../src/db/client.ts";
-import { DatabaseResetNotAllowedError } from "../src/db/errors.ts";
-import { resetDatabase } from "../src/db/reset.ts";
+import { getDb } from "../src/platform/db/client.ts";
+import { DatabaseResetNotAllowedError } from "../src/platform/db/errors.ts";
+import { resetDatabase } from "../src/platform/db/reset.ts";
 
 async function main() {
   const url = process.env.DATABASE_URL;

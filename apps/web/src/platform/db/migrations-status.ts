@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import journal from "../../drizzle/meta/_journal.json";
+import journal from "../../../drizzle/meta/_journal.json";
 
 import type { Database } from "./client.ts";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getHealthStatus } from "./probe";
+import { getHealthStatus } from "@/platform/health/probe";
 
 export async function GET(): Promise<NextResponse> {
   const { db, migrations } = await getHealthStatus();

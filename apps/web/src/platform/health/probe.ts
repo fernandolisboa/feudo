@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import {
   getMigrationsStatus,
   unknownMigrationsStatus,
   type MigrationsStatus,
-} from "@/db/migrations-status";
+} from "@/platform/db/migrations-status";
 
 const CACHE_TTL_MS = 10_000;
 const PROBE_TIMEOUT_MS = 5_000;

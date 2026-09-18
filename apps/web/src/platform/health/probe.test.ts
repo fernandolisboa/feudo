@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const executeMock = vi.fn();
 
-vi.mock("@/db/client", () => ({
+vi.mock("@/platform/db/client", () => ({
   getDb: () => ({ execute: executeMock }),
 }));
 

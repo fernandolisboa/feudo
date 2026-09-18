@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const executeMock = vi.fn();
 
-vi.mock("@/db/client", () => ({
+vi.mock("@/platform/db/client", () => ({
   getDb: () => ({ execute: executeMock }),
 }));
 
 const { GET } = await import("./route");
-const { resetHealthProbeCache } = await import("./probe");
-const { getExpectedMigrations } = await import("@/db/migrations-status");
+const { resetHealthProbeCache } = await import("@/platform/health/probe");
+const { getExpectedMigrations } = await import("@/platform/db/migrations-status");
 
 const expected = getExpectedMigrations();
 
