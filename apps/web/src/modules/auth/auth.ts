@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { getDb } from "@/db/client";
+import { getDb } from "@/platform/db/client";
 import { buildAuthOptions } from "./options";
 
 type AuthOptions = ReturnType<typeof buildAuthOptions>;

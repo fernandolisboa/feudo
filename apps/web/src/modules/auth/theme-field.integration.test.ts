@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { withTestDb } from "@/db/test/harness";
-import { user } from "@/db/schema/auth.ts";
+import { withTestDb } from "@/platform/db/test/harness";
+import { user } from "@/modules/auth/schema.ts";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { getAuth } from "./auth";
 import { readAuthBaseUrl } from "./env";
 import { TERMS_VERSION } from "./terms";

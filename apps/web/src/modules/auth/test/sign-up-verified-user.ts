@@ -1,4 +1,4 @@
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import { findLastFakeSentEmail } from "../email/fake-email-repository";
 import { getAuth } from "../auth";
 import { signUp } from "../service";

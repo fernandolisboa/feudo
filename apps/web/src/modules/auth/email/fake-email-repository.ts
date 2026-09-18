@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
-import type { Database } from "@/db/client";
-import { fakeSentEmails } from "@/db/schema/fake-sent-emails";
+import type { Database } from "@/platform/db/client";
+import { fakeSentEmails } from "../schema";
 import type { SendEmailInput } from "./sender";
 
 export async function recordFakeSentEmail(db: Database, input: SendEmailInput): Promise<void> {

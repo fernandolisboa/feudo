@@ -6,16 +6,16 @@ import { magicLink, organization } from "better-auth/plugins";
 import { and, count, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
 
+import { householdSettings } from "../households/schema";
 import {
-  householdSettings,
   invitation as invitationTable,
   member,
   organization as organizationTable,
   session as sessionTable,
-} from "@/db/schema";
+  verification,
+} from "./schema";
 
-import type { Database } from "@/db/client";
-import { verification } from "@/db/schema/auth";
+import type { Database } from "@/platform/db/client";
 import { scheduleBackgroundTask } from "./background-tasks";
 import { clearActiveHouseholdOnSessions } from "./clear-active-household";
 import { buildInvitationEmail } from "./email/invitation-email";

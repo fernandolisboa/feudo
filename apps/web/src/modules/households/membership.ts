@@ -2,10 +2,10 @@ import { APIError } from "better-auth/api";
 import { and, count, eq, gt, isNotNull, ne, or } from "drizzle-orm";
 
 import { clearActiveHouseholdOnSessions, getAuth, type CurrentSession } from "@/modules/auth";
-import { invitation as invitationTable, member, organization } from "@/db/schema";
+import { invitation as invitationTable, member, organization } from "../auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import type { HouseholdSession } from "./require-household-session";
 import type { InvitableRole, InviteMemberFormInput, UpdateMemberRoleFormInput } from "./validation";
 

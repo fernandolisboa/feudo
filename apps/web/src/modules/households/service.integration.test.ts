@@ -6,9 +6,9 @@ vi.mock("next/headers", () => ({
   headers: () => Promise.resolve(currentHeaders.value),
 }));
 
-import { withTestDb } from "@/db/test/harness";
-import { member } from "@/db/schema/auth.ts";
-import { householdSettings } from "@/db/schema/households.ts";
+import { withTestDb } from "@/platform/db/test/harness";
+import { member } from "@/modules/auth/schema.ts";
+import { householdSettings } from "@/modules/households/schema.ts";
 import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 

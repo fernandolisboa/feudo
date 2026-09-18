@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 
-import { session as sessionTable } from "@/db/schema";
+import { session as sessionTable } from "./schema";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 
 // Shared by organizationHooks.afterRemoveMember (options.ts, a removed
 // member's stale session) and households.leaveHousehold (a non-owner who

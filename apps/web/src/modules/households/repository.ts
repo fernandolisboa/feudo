@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 
-import { householdSettings } from "@/db/schema";
+import { householdSettings } from "./schema";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 import type { HouseholdScope } from "./scope";
 
 export type HouseholdSettings = {

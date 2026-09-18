@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { parseSetCookieHeader } from "better-auth/cookies";
 
-import { getDb } from "@/db/client";
-import { withTestDb } from "@/db/test/harness";
+import { getDb } from "@/platform/db/client";
+import { withTestDb } from "@/platform/db/test/harness";
 
 import { getAuth } from "./auth";
 import { extractTokenFromEmail } from "./test/extract-token-from-email";

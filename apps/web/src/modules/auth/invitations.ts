@@ -1,8 +1,8 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 
-import { invitation } from "@/db/schema";
+import { invitation } from "./schema";
 
-import type { Database } from "@/db/client";
+import type { Database } from "@/platform/db/client";
 
 export async function hasPendingInvitation(db: Database, email: string): Promise<boolean> {
   const rows = await db
