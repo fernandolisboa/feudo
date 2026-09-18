@@ -12,10 +12,8 @@ vi.mock("@/modules/households", () => ({
   getHouseholdSwitcherProps: getHouseholdSwitcherPropsMock,
   HouseholdSwitcherSelect: () => <div data-testid="household-switcher" />,
 }));
-vi.mock("@/components/app-shell/sidebar-cookie", () => ({
+vi.mock("@/modules/shell", () => ({
   readSidebarCollapsed: readSidebarCollapsedMock,
-}));
-vi.mock("@/components/app-shell/app-shell", () => ({
   AppShell: ({ householdSwitcher }: { householdSwitcher: ReactNode }) => (
     <>
       <div data-testid="nav-slot">{householdSwitcher}</div>
