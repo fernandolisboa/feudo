@@ -39,11 +39,12 @@ The slice list is the module list already fixed in CLAUDE.md: `auth`, `household
 
 `packages/core/src/<slice>/` keeps the deterministic layer (architecture principle 1) and mirrors the slice names, so a reader finds the maths for `reserve` in `packages/core/src/reserve` and everything else about it in `apps/web/src/modules/reserve`.
 
-Boundaries are enforced by lint, not convention (the ESLint rule ships in #63):
+Boundaries are enforced by lint, not convention (`no-restricted-imports` and `no-restricted-syntax` in `apps/web/eslint.config.mjs`, since #63):
 
 - code outside a slice imports it only via `@/modules/<slice>` (its `index.ts`) or `@/modules/<slice>/schema` (its Drizzle tables, for foreign keys and joins); inside `schema.ts` files the cross-slice reference is a relative `.ts` import (`../auth/schema.ts`) because drizzle-kit and the database reset scripts load the schema graph under plain Node, which has no path aliases; the only other exception is `@/modules/<slice>/test/*` from test files;
 - `app/**` imports only from `@/modules/*`, `@/ui/*`, `@/platform/*` and `@/lib/*`;
-- `modules/**` never imports from `@/app/*`;
+- `modules/**`, `platform/**`, `ui/**` and `lib/**` never import from `app/`, and `app/**` never imports from `app/` either: a route file wires a URL to a slice and shares nothing;
+- `ui/**` and `lib/**` never import from `modules/**` or `platform/**`;
 - `platform/db/schema.ts` re-exports every slice's `schema.ts` and `drizzle.config.ts` reads that file; a new slice with tables registers its `schema.ts` there.
 
 ## Alternatives considered

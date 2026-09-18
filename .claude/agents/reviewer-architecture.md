@@ -13,6 +13,13 @@ Read the ADRs that touch the changed modules. A change that re-decides an ADR wi
 
 Read `CLAUDE.md` for the standards and principles you enforce. Read only what you need to verify a finding; verify each finding in the actual code before reporting it.
 
+ADR-0011 slice boundaries are lint-enforced (`no-restricted-imports` and `no-restricted-syntax`, so a dynamic `import()` is covered too, in `apps/web/eslint.config.mjs`), so do not re-flag an import lint would already catch; check instead for an `eslint-disable` comment bypassing one of these, or a gap lint cannot see:
+
+1. Outside `src/modules/<x>/`, only `@/modules/<x>` and `@/modules/<x>/schema` may be imported; everything else is private to the slice, with two exceptions: a test file may import `@/modules/<x>/test/*`, and a `schema.ts` may import `../<x>/schema.ts` relatively.
+2. `src/app/**` imports only through `@/modules/*`, `@/modules/*/schema`, `@/ui/**`, `@/platform/**` and `@/lib/**`, never relatively out of its own folder and never through another `@/app/**` route.
+3. `src/modules/**`, `src/platform/**`, `src/ui/**` and `src/lib/**` never import `@/app/**`.
+4. `src/ui/**` and `src/lib/**` never import `@/modules/**` or `@/platform/**`.
+
 Output, as a checklist the orchestrator can merge with other lenses:
 
 - `[BLOCKING]` or `[ADVISORY]` — `file:line` — one-sentence defect — concrete failure scenario — suggested fix.

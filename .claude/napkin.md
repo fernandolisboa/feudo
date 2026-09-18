@@ -48,7 +48,7 @@
 11. **[2026-09-02] Toolchain: node 24 (nvm), pnpm 10.31, gh (fernandolisboa), vercel CLI (team feuxs-projects)**
    Do instead: Neon has no CLI here; it is managed through the Vercel integration (resource `neon-byzantium-mountain`, Free plan).
 12. **[2026-09-08] `gh pr checks | grep pass` matches the Vercel comment check before `ci` finishes**
-   Do instead: filter the `ci` row (`grep -E "^ci\s"`) before testing pass/fail.
+   Do instead: the PR has several rows (`ci`, then `integration`, plus Vercel); poll until no row is `pending`/`queued`/`in_progress` and then check every row, not only `ci`.
 
 ## Domain Behavior Guardrails
 1. **[2026-09-18] Layout is vertical slices in one Next app (ADR-0011, #62/#63)**

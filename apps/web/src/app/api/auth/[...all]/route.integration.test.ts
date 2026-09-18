@@ -4,9 +4,8 @@ import { eq } from "drizzle-orm";
 import { withTestDb } from "@/platform/db/test/harness";
 import type { Database } from "@/platform/db/client";
 import { user } from "@/modules/auth/schema.ts";
-import { getAuth } from "@/modules/auth/auth";
-import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
-import { TERMS_VERSION } from "@/modules/auth/terms";
+import { findLastFakeSentEmail, getAuth } from "@/modules/auth";
+import { TERMS_VERSION } from "@/modules/auth/test";
 import { extractTokenFromEmail } from "@/modules/auth/test/extract-token-from-email";
 
 import { POST } from "./route";

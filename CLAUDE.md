@@ -121,6 +121,8 @@ Confirm with the owner before creating any paid resource.
 - Pure functions in `packages/core`; side effects (DB, HTTP, AI, sync, email) at the edges.
 - Formatting and lint are machine-enforced (Prettier, ESLint strict, typescript-eslint). Reviewers
   never comment on what a tool enforces.
+- Slice boundaries (ADR-0011) are lint-enforced: import a slice only through `@/modules/<slice>`
+  or `@/modules/<slice>/schema`; `app/` never reaches into a slice's internals.
 - Conventional commits, small commits, descriptive PRs. One PR per ticket, squash-merge.
 
 ## Testing

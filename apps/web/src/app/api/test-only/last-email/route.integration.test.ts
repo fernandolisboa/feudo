@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { withTestDb } from "@/platform/db/test/harness";
-import { recordFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
+import { recordFakeSentEmail } from "@/modules/auth/test";
 
 import { GET } from "./route";
 

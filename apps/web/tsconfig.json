@@ -33,5 +33,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "public/sw.js"]
+  "exclude": ["node_modules", "public/sw.js", "**/__fixture*__/**", "**/__fixture_root__.ts"]
 }

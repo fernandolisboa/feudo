@@ -14,9 +14,13 @@ import {
   session as sessionTable,
 } from "@/modules/auth/schema";
 import { withTestDb } from "@/platform/db/test/harness";
-import { getAuth, getCurrentSession, type CurrentSession } from "@/modules/auth";
-import { findLastFakeSentEmail } from "@/modules/auth/email/fake-email-repository";
-import { fakeEmailSender } from "@/modules/auth/email/fake-sender";
+import {
+  findLastFakeSentEmail,
+  getAuth,
+  getCurrentSession,
+  type CurrentSession,
+} from "@/modules/auth";
+import { fakeEmailSender } from "@/modules/auth/test";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 
 import type { Database } from "@/platform/db/client";

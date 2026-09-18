@@ -10,7 +10,11 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
-    exclude: [...configDefaults.exclude, "src/**/*.integration.test.{ts,tsx}"],
+    exclude: [
+      ...configDefaults.exclude,
+      "src/**/*.integration.test.{ts,tsx}",
+      "**/__fixture*__/**",
+    ],
     environment: "node",
   },
 });
