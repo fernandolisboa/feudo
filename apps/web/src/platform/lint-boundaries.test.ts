@@ -3,7 +3,9 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ESLint } from "eslint";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.setConfig({ testTimeout: 20_000 });
 
 const WEB_ROOT = path.resolve(import.meta.dirname, "../..");
 
@@ -34,7 +36,12 @@ beforeAll(async () => {
     cwd: WEB_ROOT,
     overrideConfigFile: path.join(WEB_ROOT, "eslint.config.mjs"),
   });
-});
+
+  // Pays the TypeScript project-service start-up cost here, once, instead of
+  // inside the first real test case below: on a slower CI runner that
+  // start-up alone can exceed the per-test timeout.
+  await lint("src/app/__fixture__/warmup.ts", 'import "@/modules/__fixture_a__";\n');
+}, 60_000);
 
 afterAll(async () => {
   await Promise.all([

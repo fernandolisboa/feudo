@@ -23,6 +23,8 @@
    Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
 
 ## Shell & Command Reliability
+1. **[2026-09-18] Boundary lint: `no-restricted-imports` ignores `import()`, matches the spelling of relative specifiers (not the resolved path), and typed linting needs fixture files on disk (`lintText` on a non-existent path is a fatal parse error)**
+   Do instead: pair every pattern with a `no-restricted-syntax` `ImportExpression > Literal[value=/…/]` selector; anchor relative patterns as `^(\./)*(\.\./)+`; write fixtures under transient `__fixture*__` dirs created before the ESLint instance loads the config, guard with `existsSync`, remove in `afterAll`.
 1. **[2026-09-18] `scripts/reset-*.mjs` and drizzle-kit load `src/platform/db/schema.ts` under plain Node, which has no `@/` alias; `pnpm test`, Next and vitest all resolve it, so only CI's `db:reset-schema` breaks**
    Do instead: inside `schema.ts` files and `platform/db/*` use relative imports with the `.ts` extension; before a PR run `env -u DATABASE_URL node apps/web/scripts/reset-schema.mjs` and expect the "DATABASE_URL is not set" message, not `ERR_MODULE_NOT_FOUND`.
 1. **[2026-09-09] `vercel env rm VAR <env>` on an integration-managed variable deletes the record for EVERY environment (production lost DATABASE_URL once)**
