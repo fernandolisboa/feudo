@@ -23,6 +23,8 @@
    Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
 
 ## Shell & Command Reliability
+1. **[2026-09-18] `scripts/reset-*.mjs` and drizzle-kit load `src/platform/db/schema.ts` under plain Node, which has no `@/` alias; `pnpm test`, Next and vitest all resolve it, so only CI's `db:reset-schema` breaks**
+   Do instead: inside `schema.ts` files and `platform/db/*` use relative imports with the `.ts` extension; before a PR run `env -u DATABASE_URL node apps/web/scripts/reset-schema.mjs` and expect the "DATABASE_URL is not set" message, not `ERR_MODULE_NOT_FOUND`.
 1. **[2026-09-09] `vercel env rm VAR <env>` on an integration-managed variable deletes the record for EVERY environment (production lost DATABASE_URL once)**
    Do instead: never `env rm` marketplace vars; `vercel integration resource disconnect <resource> <project>` then `connect ... -e <env>` to re-scope; verify hosts per environment with `vercel env pull` afterwards.
 2. **[2026-09-09] Vercel marketplace integrations that need terms acceptance (Resend) return a `verification_uri` the owner must open once; afterwards `vercel integration add` works non-interactively**

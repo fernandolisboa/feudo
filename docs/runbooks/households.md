@@ -103,7 +103,7 @@ Feudo never uses either field on `organization`.
 ## Single-owner enforcement
 
 Better Auth's `organization` plugin allows several owners; Feudo does not (ADR-0001). Three lines of
-defense in total; the first two live in `auth/options.ts` and `db/schema/auth.ts`:
+defense in total; the first two live in `auth/options.ts` and `modules/auth/schema.ts`:
 `organizationHooks.beforeUpdateMemberRole`
 rejects any role update to `owner` outright and `organizationHooks.beforeCreateInvitation` rejects
 any invitation with role `owner` outright (and any invitation carrying more than one role — an
@@ -257,10 +257,11 @@ and "the last member leaving deletes the household"):
 
 ## Expired and cancelled invitations
 
-`households.pruneExpiredInvitations` (`invitation-prune.ts`, exported from the barrel) deletes
-every `invitation` row that is `status = 'canceled'` or `status = 'pending'` with `expires_at` in
-the past (ADR-0008); accepted and rejected rows are left alone. `households.runDailyPruneStep`, in
-the same file, wraps it in a try/catch and runs as the second step of the shared housekeeping cron,
+`households.pruneExpiredInvitations` (`invitation-prune.ts`, module-private) deletes every
+`invitation` row that is `status = 'canceled'` or `status = 'pending'` with `expires_at` in the
+past (ADR-0008); accepted and rejected rows are left alone. `households.runDailyPruneStep`, in
+the same file and exported from the barrel, wraps it in a try/catch and runs as the second step of
+the shared housekeeping cron,
 `GET /api/cron/daily` (`apps/web/src/app/api/cron/daily/route.ts`), next to `market-data`'s
 `runDailyRefreshStep` and `auth`'s `runDailyPruneStep` — see "Cron jobs" in `docs/runbooks/auth.md`.
 

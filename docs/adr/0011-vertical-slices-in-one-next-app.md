@@ -30,7 +30,7 @@ apps/web/src/
       *.test.ts            unit, *.integration.test.ts against feudo-preview
       test/                fixtures and helpers other slices may import for tests
   platform/                infrastructure with no domain meaning: db client and
-                           migration tooling, cron auth, email transport, env
+                           migration tooling, cron auth, health probe
   ui/                      shadcn primitives and layout atoms (page header, section header)
   lib/                     tiny pure helpers with no domain (interpolate, format-date, cn)
 ```
@@ -39,12 +39,12 @@ The slice list is the module list already fixed in CLAUDE.md: `auth`, `household
 
 `packages/core/src/<slice>/` keeps the deterministic layer (architecture principle 1) and mirrors the slice names, so a reader finds the maths for `reserve` in `packages/core/src/reserve` and everything else about it in `apps/web/src/modules/reserve`.
 
-Boundaries are enforced by lint, not convention:
+Boundaries are enforced by lint, not convention (the ESLint rule ships in #63):
 
-- code outside a slice imports it only via `@/modules/<slice>` (its `index.ts`) or `@/modules/<slice>/schema` (its Drizzle tables, for foreign keys and joins); the only other exception is `@/modules/<slice>/test/*` from test files;
-- `app/**` imports only from `@/modules/*`, `@/ui/*` and `@/platform/*`;
+- code outside a slice imports it only via `@/modules/<slice>` (its `index.ts`) or `@/modules/<slice>/schema` (its Drizzle tables, for foreign keys and joins); inside `schema.ts` files the cross-slice reference is a relative `.ts` import (`../auth/schema.ts`) because drizzle-kit and the database reset scripts load the schema graph under plain Node, which has no path aliases; the only other exception is `@/modules/<slice>/test/*` from test files;
+- `app/**` imports only from `@/modules/*`, `@/ui/*`, `@/platform/*` and `@/lib/*`;
 - `modules/**` never imports from `@/app/*`;
-- `drizzle.config.ts` reads `./src/modules/*/schema.ts`; `platform/db/schema.ts` re-exports them for the client and for migrations.
+- `platform/db/schema.ts` re-exports every slice's `schema.ts` and `drizzle.config.ts` reads that file; a new slice with tables registers its `schema.ts` there.
 
 ## Alternatives considered
 
@@ -54,7 +54,7 @@ Boundaries are enforced by lint, not convention:
 
 ## Consequences
 
-- Moves, no behaviour change: `lib/market-data` → `modules/market-data`; `db/schema/{auth,households,market-data,fake-sent-emails}.ts` → the owning slice's `schema.ts`; `components/app-shell` → `modules/shell`; `app/api/health/probe.ts` → `modules/platform-health` or `platform/health`; the cron step wrappers in `app/api/cron/daily/route.ts` → each slice exports its step and the route only composes; `db/{client,reset*,migrations-status,pool-error-logger}` → `platform/db`; `lib/cron-auth` and `lib/timing-safe-token` → `platform/`; `components/ui` and `components/{page,section}-header` → `ui/`.
+- Moves, no behaviour change: `lib/market-data` → `modules/market-data`; `db/schema/{auth,households,market-data,fake-sent-emails}.ts` → the owning slice's `schema.ts`; `components/app-shell` → `modules/shell`; `app/api/health/probe.ts` → `platform/health`; the cron step wrappers in `app/api/cron/daily/route.ts` → each slice exports its step and the route only composes; `db/{client,reset*,migrations-status,pool-error-logger}` → `platform/db`; `lib/cron-auth` and `lib/timing-safe-token` → `platform/`; `components/ui` and `components/{page,section}-header` → `ui/`.
 - `modules/households/strings.ts` currently imports `@/modules/auth/strings` directly; the shared strings move to the `auth` index or to `households`.
 - `apps/web/e2e/`, `apps/web/drizzle/` and `apps/web/scripts/` stay where they are: Playwright and drizzle-kit expect them at the app root.
 - Every new slice ships with `index.ts`, `schema.ts` when it owns tables, and an isolation test (ADR-0001, ADR-0008). The reviewer-architecture lens checks the boundaries; ESLint blocks the imports.

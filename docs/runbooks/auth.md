@@ -221,9 +221,10 @@ Magic-link tokens are stored `storeToken: "hashed"` (Better Auth's own default i
 Every request for a magic link or a password reset writes a `verification` row, including for an
 address with no sign-up (`disableSignUp`/enumeration protection above), and Better Auth never prunes
 expired ones itself. `pruneExpiredVerifications` (`apps/web/src/modules/auth/verification-prune.ts`,
-exported from the module barrel) deletes every `verification` row with `expires_at` in the past,
-using the driver's `rowCount` rather than `.returning()` since the route only needs a count. It runs
-as one step of the shared housekeeping cron, `GET /api/cron/daily`
+module-private) deletes every `verification` row with `expires_at` in the past, using the driver's
+`rowCount` rather than `.returning()` since the route only needs a count. `runDailyPruneStep`, in
+the same file and exported from the module barrel, wraps it in a try/catch and runs it as one step
+of the shared housekeeping cron, `GET /api/cron/daily`
 (`apps/web/src/app/api/cron/daily/route.ts`) — see "Cron jobs" below for why the market-data refresh
 and the verification prune share a single route instead of one cron each.
 
