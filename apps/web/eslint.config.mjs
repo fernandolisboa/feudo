@@ -19,10 +19,11 @@ const slicesAlternation = slices.join("|");
 
 const MESSAGES = {
   sliceInternal: `${ADR}: import a slice only through its index ("@/modules/<slice>") or its schema ("@/modules/<slice>/schema"); everything else is private to the slice (tests may also reach "@/modules/<slice>/test").`,
-  relativeCrossSlice: `${ADR}: reach another slice through its "@/modules/<slice>" alias, not a relative import.`,
+  relativeEscape: `${ADR}: reach another slice, "app/" or "platform/" through its alias, not a relative import.`,
   relativeSchemaOnly: `${ADR}: a schema.ts file may only reach another slice relatively through its schema.ts ("../<slice>/schema.ts"); use the "@/modules/<slice>" alias for anything else.`,
   appRelativeEscape: `${ADR}: "app/" is routing only; reach modules, ui, platform and lib through their aliases, not a relative import that leaves the current folder.`,
   noAppImport: `${ADR}: "app/" depends on modules, platform, ui and lib, never the other way around; do not import "@/app/**" from here.`,
+  appSharesNothing: `${ADR}: app/ files wire a URL to a slice and share nothing between routes; do not import "@/app/**" from here.`,
   uiLibNoDomain: `${ADR}: "ui/" and "lib/" hold no domain logic; do not import "@/modules/**" or "@/platform/**" from here.`,
 };
 
@@ -37,33 +38,59 @@ const aliasTestPattern = {
 };
 
 // A slice's own name can collide with one of its own files (e.g. "auth/auth.ts"),
-// so the relative-import patterns below only ever look at the *other* slices, per
-// current slice, never at the slice a file already lives in.
+// so every relative-escape pattern below is built from the *other* slices for a
+// given current slice, never from the slice a file already lives in.
 function otherSlicesAlternation(currentSlice) {
   return slices.filter((slice) => slice !== currentSlice).join("|");
 }
 
-function relativeBlanketPattern(currentSlice) {
+// Forbids a relative import that, after any number of "./" and "../" segments,
+// names one of `forbiddenNames` — either another slice, or the top-level
+// "modules"/"app"/"platform" segments a slice, platform, ui or lib file can
+// only ever reach by escaping past its own folder (none of those folders has a
+// real subfolder with those names). `schemaException` additionally allows the
+// one sanctioned case: "<forbidden>/schema.ts" exactly.
+function relativeEscapePattern(forbiddenNames, { schemaException = false } = {}) {
+  const names = forbiddenNames.join("|");
+  if (schemaException) {
+    return {
+      regex: `^(\\./)*(\\.\\./)+(${names})($|/(?!schema\\.ts$))`,
+      message: MESSAGES.relativeSchemaOnly,
+    };
+  }
   return {
-    regex: `^(\\.\\./)+(${otherSlicesAlternation(currentSlice)})(/|$)`,
-    message: MESSAGES.relativeCrossSlice,
+    regex: `^(\\./)*(\\.\\./)+(${names})(/|$)`,
+    message: MESSAGES.relativeEscape,
   };
 }
 
-function relativeSchemaExceptionPattern(currentSlice) {
-  return {
-    regex: `^\\.\\./(${otherSlicesAlternation(currentSlice)})/(?!schema\\.ts$)`,
-    message: MESSAGES.relativeSchemaOnly,
-  };
-}
+// platform/db/schema.ts is the one sanctioned exception to "platform never
+// reaches modules relatively": it re-exports every slice's schema.ts so
+// drizzle-kit and the reset scripts can load the whole schema graph under
+// plain Node, which has no path aliases (ADR-0011). Anything else relative
+// under "modules/" or "app/" is still forbidden.
+const platformSchemaModulesPattern = {
+  regex: `^(\\./)*(\\.\\./)+modules(?!/(${slicesAlternation})/schema\\.ts$)(/|$)`,
+  message: MESSAGES.relativeSchemaOnly,
+};
+
+const platformSchemaAppPattern = {
+  regex: "^(\\./)*(\\.\\./)+app(/|$)",
+  message: MESSAGES.relativeEscape,
+};
 
 const noAppImportPattern = {
   regex: "^@/app/",
   message: MESSAGES.noAppImport,
 };
 
+const noAppSelfImportPattern = {
+  regex: "^@/app/",
+  message: MESSAGES.appSharesNothing,
+};
+
 const noRelativeEscapePattern = {
-  regex: "^\\.\\./",
+  regex: "^(\\./)*\\.\\./",
   message: MESSAGES.appRelativeEscape,
 };
 
@@ -77,12 +104,34 @@ const blockPlatformPattern = {
   message: MESSAGES.uiLibNoDomain,
 };
 
-function restrictImports(patterns) {
-  return { "no-restricted-imports": ["error", { patterns }] };
+// A dynamic import() bypasses no-restricted-imports entirely, so every
+// pattern is also enforced as a no-restricted-syntax selector against the
+// literal argument of an ImportExpression. Escape "/" for the esquery
+// attribute-regex delimiter; the pattern's own regex syntax (lookaheads,
+// backslash escapes) carries over unchanged.
+function toDynamicImportSelector(regexSource) {
+  return `ImportExpression > Literal[value=/${regexSource.replace(/\//g, "\\/")}/]`;
 }
+
+function restrictImports(patterns) {
+  return {
+    "no-restricted-imports": ["error", { patterns }],
+    "no-restricted-syntax": [
+      "error",
+      ...patterns.map((pattern) => ({
+        selector: toDynamicImportSelector(pattern.regex),
+        message: pattern.message,
+      })),
+    ],
+  };
+}
+
+const MODULES_AND_APP_SEGMENTS = ["modules", "app"];
+const MODULES_APP_AND_PLATFORM_SEGMENTS = ["modules", "app", "platform"];
 
 const APP_TEST_LIKE_FILES = ["src/app/**/*.test.ts", "src/app/**/*.test.tsx"];
 const PLATFORM_TEST_LIKE_FILES = ["src/platform/**/*.test.ts", "src/platform/**/*.test.tsx"];
+const PLATFORM_SCHEMA_FILE = "src/platform/db/schema.ts";
 
 function moduleBoundaryConfigs(slice) {
   const schemaFile = `src/modules/${slice}/schema.ts`;
@@ -92,49 +141,36 @@ function moduleBoundaryConfigs(slice) {
     `src/modules/${slice}/test/**/*.ts`,
     `src/modules/${slice}/test/**/*.tsx`,
   ];
-  const others = slices.filter((other) => other !== slice);
-  const relativePatterns =
-    others.length > 0
-      ? {
-          blanket: relativeBlanketPattern(slice),
-          schemaException: relativeSchemaExceptionPattern(slice),
-        }
-      : { blanket: null, schemaException: null };
+  const forbiddenNames = [...otherSlicesAlternation(slice).split("|"), ...MODULES_AND_APP_SEGMENTS];
 
-  const configs = [
-    // ADR-0011 rule 1 (this slice's schema.ts): may reach another slice's
-    // schema.ts relatively with the .ts extension; everything else follows
-    // the regular index/schema-only restriction, plus rule 3.
+  return [
     {
       files: [schemaFile],
-      rules: restrictImports(
-        [aliasRegularPattern, relativePatterns.schemaException, noAppImportPattern].filter(Boolean),
-      ),
+      rules: restrictImports([
+        aliasRegularPattern,
+        relativeEscapePattern(forbiddenNames, { schemaException: true }),
+        noAppImportPattern,
+      ]),
     },
-
-    // ADR-0011 rule 1 (this slice's test files and test/ helpers): may reach
-    // another slice's test/ helpers, plus the blanket relative-import ban
-    // and rule 3.
     {
       files: testLikeFiles,
       ignores: [schemaFile],
-      rules: restrictImports(
-        [aliasTestPattern, relativePatterns.blanket, noAppImportPattern].filter(Boolean),
-      ),
+      rules: restrictImports([
+        aliasTestPattern,
+        relativeEscapePattern(forbiddenNames),
+        noAppImportPattern,
+      ]),
     },
-
-    // ADR-0011 rule 1 (this slice's regular files): index/schema-only
-    // restriction, the blanket relative-import ban, plus rule 3.
     {
       files: [`src/modules/${slice}/**/*.ts`, `src/modules/${slice}/**/*.tsx`],
       ignores: [schemaFile, ...testLikeFiles],
-      rules: restrictImports(
-        [aliasRegularPattern, relativePatterns.blanket, noAppImportPattern].filter(Boolean),
-      ),
+      rules: restrictImports([
+        aliasRegularPattern,
+        relativeEscapePattern(forbiddenNames),
+        noAppImportPattern,
+      ]),
     },
   ];
-
-  return configs;
 }
 
 const eslintConfig = defineConfig([
@@ -148,7 +184,25 @@ const eslintConfig = defineConfig([
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // apps/web/tsconfig.json excludes __fixture*__ paths so a leftover
+          // fixture from an aborted test run cannot break `tsc --noEmit`;
+          // this lets ESLint's own type-aware parsing still service the
+          // handful of fixture files apps/web/src/platform/lint-boundaries.test.ts
+          // writes while it runs.
+          allowDefaultProject: [
+            "src/modules/__fixture_a__/*.ts",
+            "src/modules/__fixture_a__/test/*.ts",
+            "src/modules/__fixture_b__/*.ts",
+            "src/modules/__fixture_b__/test/*.ts",
+            "src/app/__fixture__/*.ts",
+            "src/platform/__fixture__/*.ts",
+            "src/ui/__fixture__/*.ts",
+            "src/lib/__fixture__/*.ts",
+            "src/__fixture_root__.ts",
+          ],
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 200,
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -168,50 +222,70 @@ const eslintConfig = defineConfig([
 
   ...slices.flatMap(moduleBoundaryConfigs),
 
-  // ADR-0011 rule 2 (app/ test files): the index/schema-only restriction
-  // (with the test/ exception) and no relative import leaving the folder.
   {
     files: APP_TEST_LIKE_FILES,
-    rules: restrictImports([aliasTestPattern, noRelativeEscapePattern]),
+    rules: restrictImports([aliasTestPattern, noRelativeEscapePattern, noAppSelfImportPattern]),
   },
-
-  // ADR-0011 rule 2 (app/ regular files): same as above, without the test/
-  // exception.
   {
     files: ["src/app/**/*.ts", "src/app/**/*.tsx"],
     ignores: APP_TEST_LIKE_FILES,
-    rules: restrictImports([aliasRegularPattern, noRelativeEscapePattern]),
+    rules: restrictImports([aliasRegularPattern, noRelativeEscapePattern, noAppSelfImportPattern]),
   },
 
-  // e2e/** gets the same index/schema-only restriction (rule 1's exception
-  // for e2e reaching a slice's test/ helpers); it is outside src/app/**, so
-  // rule 2's relative-import ban does not apply and rule 3 does not either.
+  // e2e/** sits outside src/, so only rule 1's index/schema-only restriction
+  // (with the test exception) applies here.
   {
     files: ["e2e/**/*.ts", "e2e/**/*.tsx"],
     rules: restrictImports([aliasTestPattern]),
   },
 
-  // ADR-0011 rule 3 (platform/ test files): index/schema-only restriction
-  // (with the test/ exception) plus never importing app/.
+  {
+    files: [PLATFORM_SCHEMA_FILE],
+    rules: restrictImports([
+      aliasRegularPattern,
+      platformSchemaModulesPattern,
+      platformSchemaAppPattern,
+      noAppImportPattern,
+    ]),
+  },
   {
     files: PLATFORM_TEST_LIKE_FILES,
-    rules: restrictImports([aliasTestPattern, noAppImportPattern]),
+    ignores: [PLATFORM_SCHEMA_FILE],
+    rules: restrictImports([
+      aliasTestPattern,
+      relativeEscapePattern(MODULES_AND_APP_SEGMENTS),
+      noAppImportPattern,
+    ]),
   },
-
-  // ADR-0011 rule 3 (platform/ regular files): same, without the test/
-  // exception.
   {
     files: ["src/platform/**/*.ts", "src/platform/**/*.tsx"],
-    ignores: PLATFORM_TEST_LIKE_FILES,
-    rules: restrictImports([aliasRegularPattern, noAppImportPattern]),
+    ignores: [PLATFORM_SCHEMA_FILE, ...PLATFORM_TEST_LIKE_FILES],
+    rules: restrictImports([
+      aliasRegularPattern,
+      relativeEscapePattern(MODULES_AND_APP_SEGMENTS),
+      noAppImportPattern,
+    ]),
   },
 
-  // ADR-0011 rules 3 and 4: ui/ and lib/ never import app/, modules/ or
-  // platform/ at all, test files included; this is stricter than the
-  // index/schema-only restriction, so it stands on its own.
+  // ui/ and lib/ ban modules/, app/ and platform/ outright (alias, relative
+  // and dynamic import alike), which is stricter than the index/schema-only
+  // restriction, so they do not need that restriction too.
   {
     files: ["src/ui/**/*.ts", "src/ui/**/*.tsx", "src/lib/**/*.ts", "src/lib/**/*.tsx"],
-    rules: restrictImports([noAppImportPattern, blockModulesPattern, blockPlatformPattern]),
+    rules: restrictImports([
+      noAppImportPattern,
+      blockModulesPattern,
+      blockPlatformPattern,
+      relativeEscapePattern(MODULES_APP_AND_PLATFORM_SEGMENTS),
+    ]),
+  },
+
+  // A future src/middleware.ts or src/instrumentation.ts is outside every
+  // block above, so it gets the same index/schema-only and app-import
+  // restrictions as any other non-slice, non-app file.
+  {
+    files: ["src/*.ts", "src/*.tsx"],
+    rules: restrictImports([aliasRegularPattern, noAppImportPattern]),
   },
 
   globalIgnores([
