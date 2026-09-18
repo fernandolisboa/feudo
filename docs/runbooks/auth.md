@@ -9,7 +9,11 @@ identifier) — neither adds a table or column, so this ticket ships no new migr
 public surface is `apps/web/src/modules/auth/index.ts`; `auth.ts`, `options.ts`, `service.ts`,
 `env.ts`, `invitations.ts`, `session.ts`, `cli.ts`, `token-expiry.ts` and `email/*` are private to
 the module (`test/*` is a test-only helper other modules import directly, not through the barrel —
-see `test/signUpVerifiedUser.ts`). The two route handlers outside the module that need it — the
+see `test/signUpVerifiedUser.ts`). `test/index.ts` is the exception: it re-exports the handful of
+internals (`fakeEmailSender`, `recordFakeSentEmail`, `TERMS_VERSION`) that tests outside the module
+need but the module itself does not expose publicly, imported as `@/modules/auth/test`, distinct
+from importing a helper file like `test/sign-up-verified-user.ts` directly. The two route handlers
+outside the module that need it — the
 catch-all (`apps/web/src/app/api/auth/[...all]/route.ts`, the module's own HTTP entry point) and
 the test-only mailbox route (`apps/web/src/app/api/test-only/last-email/route.ts`) — import only
 from `apps/web/src/modules/auth/index.ts`, never from the module's internals directly.
