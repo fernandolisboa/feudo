@@ -6,7 +6,7 @@ import { magicLink, organization } from "better-auth/plugins";
 import { and, count, eq, like } from "drizzle-orm";
 import { evaluateRegistrationMode } from "@feudo/core";
 
-import { householdSettings } from "../households/schema";
+import { householdSettings } from "@/modules/households/schema";
 import {
   invitation as invitationTable,
   member,

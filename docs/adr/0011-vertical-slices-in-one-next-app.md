@@ -41,7 +41,7 @@ The slice list is the module list already fixed in CLAUDE.md: `auth`, `household
 
 Boundaries are enforced by lint, not convention:
 
-- code outside a slice imports it only via `@/modules/<slice>` (its `index.ts`); the only exception is `@/modules/<slice>/test/*` from test files;
+- code outside a slice imports it only via `@/modules/<slice>` (its `index.ts`) or `@/modules/<slice>/schema` (its Drizzle tables, for foreign keys and joins); the only other exception is `@/modules/<slice>/test/*` from test files;
 - `app/**` imports only from `@/modules/*`, `@/ui/*` and `@/platform/*`;
 - `modules/**` never imports from `@/app/*`;
 - `drizzle.config.ts` reads `./src/modules/*/schema.ts`; `platform/db/schema.ts` re-exports them for the client and for migrations.

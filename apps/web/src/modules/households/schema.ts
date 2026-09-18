@@ -1,6 +1,6 @@
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-import { organization } from "../auth/schema.ts";
+import { organization } from "@/modules/auth/schema";
 
 export const householdSettings = pgTable("household_settings", {
   householdId: text("household_id")

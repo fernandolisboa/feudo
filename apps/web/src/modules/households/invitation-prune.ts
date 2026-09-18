@@ -1,6 +1,6 @@
 import { and, eq, lt, or } from "drizzle-orm";
 
-import { invitation } from "../auth/schema";
+import { invitation } from "@/modules/auth/schema";
 
 import type { Database } from "@/platform/db/client";
 

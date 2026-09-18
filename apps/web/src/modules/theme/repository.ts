@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import type { Database } from "@/platform/db/client";
-import { user } from "../auth/schema";
+import { user } from "@/modules/auth/schema";
 
 import type { ThemeName } from "./tokens";
 

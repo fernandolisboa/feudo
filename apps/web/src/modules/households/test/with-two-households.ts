@@ -1,4 +1,4 @@
-import { organization } from "../../auth/schema";
+import { organization } from "@/modules/auth/schema";
 import { withTestDb } from "@/platform/db/test/harness";
 
 import type { Database } from "@/platform/db/client";

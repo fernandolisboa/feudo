@@ -2,7 +2,7 @@ import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 
 import { getAuth, type CurrentSession } from "@/modules/auth";
-import { organization } from "../auth/schema";
+import { organization } from "@/modules/auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";

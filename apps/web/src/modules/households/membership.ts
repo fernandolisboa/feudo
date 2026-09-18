@@ -2,7 +2,7 @@ import { APIError } from "better-auth/api";
 import { and, count, eq, gt, isNotNull, ne, or } from "drizzle-orm";
 
 import { clearActiveHouseholdOnSessions, getAuth, type CurrentSession } from "@/modules/auth";
-import { invitation as invitationTable, member, organization } from "../auth/schema";
+import { invitation as invitationTable, member, organization } from "@/modules/auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
