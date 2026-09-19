@@ -15,6 +15,16 @@ export class NonIntegerAmountError extends Error {
   }
 }
 
+export class NonFiniteAmountError extends Error {
+  readonly amount: number;
+
+  constructor(amount: number) {
+    super(`Decimal amounts must be finite numbers, received ${String(amount)}`);
+    this.name = "NonFiniteAmountError";
+    this.amount = amount;
+  }
+}
+
 function assertIntegerAmount(amountCentavos: number): void {
   if (!Number.isInteger(amountCentavos)) {
     throw new NonIntegerAmountError(amountCentavos);
@@ -43,4 +53,14 @@ export function formatBRL(money: Money): string {
   const centavosPadded = centavos.toString().padStart(2, "0");
   const sign = isNegative ? "-" : "";
   return `${sign}R$ ${reaisWithSeparators},${centavosPadded}`;
+}
+
+// Providers publish balances as decimal numbers in currency units (1234.56);
+// rounding once here, at the boundary, keeps binary float noise such as
+// 0.1 + 0.2 out of the integer centavos every calculation reads.
+export function decimalToCentavos(amount: number): number {
+  if (!Number.isFinite(amount)) {
+    throw new NonFiniteAmountError(amount);
+  }
+  return Math.round(amount * 100);
 }

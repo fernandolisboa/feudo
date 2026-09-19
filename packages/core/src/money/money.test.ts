@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { add, subtract, formatBRL, NonIntegerAmountError, type Money } from "./money";
+import {
+  add,
+  subtract,
+  formatBRL,
+  decimalToCentavos,
+  NonFiniteAmountError,
+  NonIntegerAmountError,
+  type Money,
+} from "./money";
 
 function brl(amountCentavos: number): Money {
   return { amountCentavos, currency: "BRL" };
@@ -75,6 +83,40 @@ describe("NonIntegerAmountError", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(NonIntegerAmountError);
       expect((error as NonIntegerAmountError).amountCentavos).toBe(1.1);
+    }
+  });
+});
+
+describe("decimalToCentavos", () => {
+  it("converts a provider balance in currency units to integer centavos", () => {
+    expect(decimalToCentavos(1234.56)).toBe(123456);
+  });
+
+  it("keeps binary float noise out of the result", () => {
+    expect(decimalToCentavos(0.1 + 0.2)).toBe(30);
+  });
+
+  it("handles negative balances such as an overdrawn account", () => {
+    expect(decimalToCentavos(-15.5)).toBe(-1550);
+  });
+
+  it("handles whole amounts and zero", () => {
+    expect(decimalToCentavos(5000)).toBe(500000);
+    expect(decimalToCentavos(0)).toBe(0);
+  });
+
+  it("throws NonFiniteAmountError for NaN and infinities", () => {
+    expect(() => decimalToCentavos(Number.NaN)).toThrow(NonFiniteAmountError);
+    expect(() => decimalToCentavos(Number.POSITIVE_INFINITY)).toThrow(NonFiniteAmountError);
+  });
+
+  it("carries the offending amount on the error", () => {
+    try {
+      decimalToCentavos(Number.NEGATIVE_INFINITY);
+      throw new Error("expected decimalToCentavos to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(NonFiniteAmountError);
+      expect((error as NonFiniteAmountError).amount).toBe(Number.NEGATIVE_INFINITY);
     }
   });
 });

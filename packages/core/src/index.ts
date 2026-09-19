@@ -1,5 +1,12 @@
 export type { Money } from "./money/money";
-export { add, subtract, formatBRL, NonIntegerAmountError } from "./money/money";
+export {
+  add,
+  subtract,
+  formatBRL,
+  decimalToCentavos,
+  NonFiniteAmountError,
+  NonIntegerAmountError,
+} from "./money/money";
 
 export type {
   RegistrationMode,
