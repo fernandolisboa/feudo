@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { CurrentSession } from "@/modules/auth";
-import type { HouseholdSession } from "@/modules/households";
+import type { HouseholdScope, HouseholdSession } from "@/modules/households";
 import { householdScope } from "@/modules/households";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
@@ -72,30 +72,53 @@ export async function acceptConsent(
   }
 }
 
+// A consent backs exactly one connection (ADR-0008): one already referenced
+// by a connection cannot be replayed from the wizard's hidden field to
+// record more connections under one checkbox.
 async function findUsableConsent(
   repository: SyncUserRepository,
   db: Database,
   consentId: string,
 ): Promise<boolean> {
   const consent = await repository.findConsent(db, consentId);
-  if (!consent) {
+  if (!consent || consent.used) {
     return false;
   }
   return Date.now() - consent.acceptedAt.getTime() <= CONSENT_MAX_AGE_MS;
+}
+
+// Server Actions never pass through Better Auth's limiter (auth/options.ts),
+// so the two entry points that reach the provider keep their own per-user
+// ceiling: enough for a person mistyping a secret, not for a script turning
+// Feudo into a credential-testing proxy against Pluggy.
+export const AUTH_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+export const AUTH_ATTEMPTS_PER_WINDOW = 5;
+
+async function reserveAuthAttempt(repository: SyncUserRepository, db: Database): Promise<boolean> {
+  const recent = await repository.countAuthAttemptsSince(
+    db,
+    new Date(Date.now() - AUTH_ATTEMPT_WINDOW_MS),
+  );
+  if (recent >= AUTH_ATTEMPTS_PER_WINDOW) {
+    return false;
+  }
+  await repository.recordAuthAttempt(db);
+  return true;
 }
 
 type ConnectionFailure = "item_not_found" | "already_connected" | "provider_unavailable" | "failed";
 
 type EstablishedConnection = { connectionId: string; accountsCount: number };
 
-// Every provider read happens before the first write, so a provider that
-// answers the credential check but fails on the listing leaves nothing
-// behind: no half-synced connection to explain.
+// Every provider read happens before the first write, and the writes share
+// one transaction, so neither a provider failure nor a database failure
+// leaves a half-synced connection behind. A concurrent submit of the same
+// item loses on the unique index and is reported as already connected.
 async function establishConnection(
   client: ProviderClient,
   repository: SyncUserRepository,
   db: Database,
-  input: { providerItemId: string; consentId: string; householdId: string },
+  input: { providerItemId: string; consentId: string; assignTo: HouseholdScope },
 ): Promise<Outcome<EstablishedConnection, ConnectionFailure>> {
   const existing = await repository.findConnectionByItem(db, PROVIDER_KIND, input.providerItemId);
   if (existing) {
@@ -121,28 +144,32 @@ async function establishConnection(
   }
 
   const syncedAt = new Date();
+  const institution = described.connection;
   try {
-    const connectionId = await repository.createConnection(db, {
-      provider: PROVIDER_KIND,
-      providerItemId: input.providerItemId,
-      institutionName: described.connection.institutionName,
-      institutionProviderId: described.connection.institutionProviderId,
-      consentId: input.consentId,
+    return await db.transaction(async (tx) => {
+      const connectionId = await repository.createConnection(tx, {
+        provider: PROVIDER_KIND,
+        providerItemId: input.providerItemId,
+        institutionName: institution.institutionName,
+        institutionProviderId: institution.institutionProviderId,
+        consentId: input.consentId,
+      });
+      await repository.upsertAccounts(tx, connectionId, accounts, {
+        assignTo: input.assignTo,
+        syncedAt,
+      });
+      await repository.markSynced(tx, connectionId, { syncedAt, error: null });
+      return { status: "ok", connectionId, accountsCount: accounts.length };
     });
-    await repository.upsertAccounts(db, connectionId, accounts, {
-      householdIdForNew: input.householdId,
-      syncedAt,
-    });
-    await repository.markSynced(db, connectionId, { syncedAt, error: null });
-    return { status: "ok", connectionId, accountsCount: accounts.length };
   } catch {
-    return { status: "failed" };
+    const raced = await repository.findConnectionByItem(db, PROVIDER_KIND, input.providerItemId);
+    return { status: raced ? "already_connected" : "failed" };
   }
 }
 
 export type ConnectProviderOutcome = Outcome<
   EstablishedConnection,
-  "consent_required" | "invalid_credentials" | ConnectionFailure
+  "consent_required" | "rate_limited" | "invalid_credentials" | ConnectionFailure
 >;
 
 // The wizard's last step: validate the pasted credentials against the
@@ -158,6 +185,9 @@ export async function connectProvider(
   const repository = createSyncUserRepository(userScope(session));
   if (!(await findUsableConsent(repository, db, input.consentId))) {
     return { status: "consent_required" };
+  }
+  if (!(await reserveAuthAttempt(repository, db))) {
+    return { status: "rate_limited" };
   }
 
   const credentials: ProviderCredentials = {
@@ -190,13 +220,13 @@ export async function connectProvider(
   return establishConnection(authenticated.client, repository, db, {
     providerItemId: input.providerItemId,
     consentId: input.consentId,
-    householdId: session.householdId,
+    assignTo: householdScope(session),
   });
 }
 
 export type AddConnectionOutcome = Outcome<
   EstablishedConnection,
-  "no_credentials" | "invalid_credentials" | ConnectionFailure
+  "no_credentials" | "rate_limited" | "invalid_credentials" | ConnectionFailure
 >;
 
 // Adds another item under the stored credentials. A fresh consent row is
@@ -212,6 +242,9 @@ export async function addConnection(
   const stored = await repository.getCredential(db);
   if (!stored) {
     return { status: "no_credentials" };
+  }
+  if (!(await reserveAuthAttempt(repository, db))) {
+    return { status: "rate_limited" };
   }
 
   let authenticated;
@@ -237,7 +270,7 @@ export async function addConnection(
   return establishConnection(authenticated.client, repository, db, {
     providerItemId: input.providerItemId,
     consentId: consent.consentId,
-    householdId: session.householdId,
+    assignTo: householdScope(session),
   });
 }
 
@@ -283,11 +316,10 @@ export async function relabelAccount(
   db: Database,
 ): Promise<RelabelAccountOutcome> {
   try {
-    const updated = await createHouseholdAccountsRepository(householdScope(session)).relabel(db, {
-      accountId: input.accountId,
-      label: input.label,
-      ownerUserId: session.userId,
-    });
+    const updated = await createHouseholdAccountsRepository(
+      householdScope(session),
+      userScope(session),
+    ).relabel(db, { accountId: input.accountId, label: input.label });
     return { status: updated ? "ok" : "not_found" };
   } catch {
     return { status: "failed" };

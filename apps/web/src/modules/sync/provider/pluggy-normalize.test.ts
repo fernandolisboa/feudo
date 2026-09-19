@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { ProviderResponseShapeError } from "./provider";
+
 import { createDocumentHasher } from "../document-hash";
 import {
   FAKE_ACCOUNTS,
@@ -75,7 +77,7 @@ describe("normalizeAccount", () => {
   });
 
   it("maps savings and credit cards by subtype", () => {
-    expect(normalizeAccount(requireAt(bancoAccounts, 1), hasher).type).toBe("savings");
+    expect(normalizeAccount(requireAt(bancoAccounts, 1), hasher)?.type).toBe("savings");
     expect(normalizeAccount(requireAt(bancoAccounts, 2), hasher)).toMatchObject({
       type: "credit_card",
       balanceCentavos: 35010,
@@ -92,8 +94,20 @@ describe("normalizeAccount", () => {
   it("leaves the holder hash null when the provider gives no document", () => {
     expect(
       normalizeAccount({ ...requireAt(bancoAccounts, 0), taxNumber: null }, hasher)
-        .holderDocumentHash,
+        ?.holderDocumentHash,
     ).toBeNull();
+  });
+
+  it("skips an account whose subtype Feudo does not model", () => {
+    expect(
+      normalizeAccount({ ...requireAt(bancoAccounts, 0), subtype: "PREPAID_CARD" }, hasher),
+    ).toBeNull();
+  });
+
+  it("raises ProviderResponseShapeError when the normalized shape is invalid", () => {
+    expect(() =>
+      normalizeAccount({ ...requireAt(bancoAccounts, 0), currencyCode: "reais" }, hasher),
+    ).toThrow(ProviderResponseShapeError);
   });
 });
 

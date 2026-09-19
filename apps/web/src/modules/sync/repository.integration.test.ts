@@ -6,6 +6,7 @@ import {
   ConnectionNotOwnedError,
   createHouseholdAccountsRepository,
   createSyncUserRepository,
+  pruneOldAuthAttempts,
   pruneOrphanConsents,
 } from "./repository";
 import { householdScope } from "@/modules/households";
@@ -37,7 +38,6 @@ function account(overrides: Partial<NormalizedAccount> = {}): NormalizedAccount 
 async function connectFor(
   db: Database,
   owner: TwoUsers["userA"],
-  householdId: string,
   itemId = ITEM_ID,
 ): Promise<string> {
   const repository = createSyncUserRepository(owner.scope);
@@ -50,7 +50,7 @@ async function connectFor(
     consentId,
   });
   await repository.upsertAccounts(db, connectionId, [account()], {
-    householdIdForNew: householdId,
+    assignTo: householdScope(owner.session),
     syncedAt: new Date(),
   });
   return connectionId;
@@ -75,10 +75,10 @@ describe("sync user-scoped repository isolation (integration)", () => {
   });
 
   it("does not let another user read, reuse or delete a consent or connection", async () => {
-    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
       const repositoryA = createSyncUserRepository(userA.scope);
       const repositoryB = createSyncUserRepository(userB.scope);
-      const connectionId = await connectFor(db, userA, householdA);
+      const connectionId = await connectFor(db, userA);
       const [connectionA] = await repositoryA.listConnections(db);
 
       expect(await repositoryB.listConnections(db)).toEqual([]);
@@ -99,7 +99,7 @@ describe("sync user-scoped repository isolation (integration)", () => {
       ).rejects.toThrow(ConnectionNotOwnedError);
       await expect(
         repositoryB.upsertAccounts(db, connectionId, [account()], {
-          householdIdForNew: null,
+          assignTo: null,
           syncedAt: new Date(),
         }),
       ).rejects.toThrow(ConnectionNotOwnedError);
@@ -109,34 +109,35 @@ describe("sync user-scoped repository isolation (integration)", () => {
   });
 
   it("deletes the consent together with the last connection that referenced it", async () => {
-    await withTwoUsers(async ({ db, userA, householdA }) => {
+    await withTwoUsers(async ({ db, userA }) => {
       const repository = createSyncUserRepository(userA.scope);
-      const connectionId = await connectFor(db, userA, householdA);
+      const connectionId = await connectFor(db, userA);
       const consentId = (await repository.findConnection(db, connectionId))?.consentId ?? "";
 
       expect(await repository.deleteConnection(db, connectionId)).toBe(true);
 
       expect(await repository.findConsent(db, consentId)).toBeUndefined();
       expect(
-        await createHouseholdAccountsRepository(householdScope(userA.session)).list(db),
+        await createHouseholdAccountsRepository(householdScope(userA.session), userA.scope).list(
+          db,
+        ),
       ).toEqual([]);
     });
   });
 
   it("keeps the household and label of an account seen before on re-sync", async () => {
-    await withTwoUsers(async ({ db, userA, householdA }) => {
+    await withTwoUsers(async ({ db, userA }) => {
       const repository = createSyncUserRepository(userA.scope);
-      const accounts = createHouseholdAccountsRepository(householdScope(userA.session));
-      const connectionId = await connectFor(db, userA, householdA);
+      const accounts = createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      );
+      const connectionId = await connectFor(db, userA);
       const [first] = await accounts.list(db);
-      await accounts.relabel(db, {
-        accountId: first?.id ?? "",
-        label: "shared",
-        ownerUserId: userA.id,
-      });
+      await accounts.relabel(db, { accountId: first?.id ?? "", label: "shared" });
 
       await repository.upsertAccounts(db, connectionId, [account({ balanceCentavos: 1 })], {
-        householdIdForNew: null,
+        assignTo: null,
         syncedAt: new Date(),
       });
 
@@ -148,12 +149,18 @@ describe("sync user-scoped repository isolation (integration)", () => {
 
 describe("household accounts repository isolation (integration)", () => {
   it("lists only the scoped household's accounts", async () => {
-    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
-      await connectFor(db, userA, householdA);
-      await connectFor(db, userB, householdB);
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await connectFor(db, userA);
+      await connectFor(db, userB);
 
-      const listA = await createHouseholdAccountsRepository(householdScope(userA.session)).list(db);
-      const listB = await createHouseholdAccountsRepository(householdScope(userB.session)).list(db);
+      const listA = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
+      const listB = await createHouseholdAccountsRepository(
+        householdScope(userB.session),
+        userB.scope,
+      ).list(db);
 
       expect(listA.map((row) => row.connectedByUserId)).toEqual([userA.id]);
       expect(listB.map((row) => row.connectedByUserId)).toEqual([userB.id]);
@@ -161,32 +168,55 @@ describe("household accounts repository isolation (integration)", () => {
   });
 
   it("relabels only when the account is in the scoped household and the caller owns its connection", async () => {
-    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
-      await connectFor(db, userA, householdA);
-      const accountsA = createHouseholdAccountsRepository(householdScope(userA.session));
-      const accountsB = createHouseholdAccountsRepository(householdScope(userB.session));
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await connectFor(db, userA);
+      const accountsA = createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      );
+      const otherHousehold = createHouseholdAccountsRepository(
+        householdScope(userB.session),
+        userA.scope,
+      );
+      const otherOwner = createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userB.scope,
+      );
       const [row] = await accountsA.list(db);
       const accountId = row?.id ?? "";
 
-      expect(
-        await accountsB.relabel(db, { accountId, label: "shared", ownerUserId: userA.id }),
-      ).toBe(false);
-      expect(
-        await accountsA.relabel(db, { accountId, label: "shared", ownerUserId: userB.id }),
-      ).toBe(false);
-      expect(
-        await accountsA.relabel(db, { accountId, label: "shared", ownerUserId: userA.id }),
-      ).toBe(true);
+      expect(await otherHousehold.relabel(db, { accountId, label: "shared" })).toBe(false);
+      expect(await otherOwner.relabel(db, { accountId, label: "shared" })).toBe(false);
+      expect(await accountsA.relabel(db, { accountId, label: "shared" })).toBe(true);
       expect((await accountsA.list(db))[0]?.label).toBe("shared");
+    });
+  });
+});
+
+describe("provider auth attempts (integration)", () => {
+  it("counts only the scoped user's attempts and prunes old ones", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const repositoryA = createSyncUserRepository(userA.scope);
+      const repositoryB = createSyncUserRepository(userB.scope);
+      await repositoryA.recordAuthAttempt(db);
+      await repositoryA.recordAuthAttempt(db);
+      const since = new Date(Date.now() - 60 * 1000);
+
+      expect(await repositoryA.countAuthAttemptsSince(db, since)).toBe(2);
+      expect(await repositoryB.countAuthAttemptsSince(db, since)).toBe(0);
+
+      expect(await pruneOldAuthAttempts(db, since)).toBe(0);
+      expect(await pruneOldAuthAttempts(db, new Date(Date.now() + 1000))).toBe(2);
+      expect(await repositoryA.countAuthAttemptsSince(db, since)).toBe(0);
     });
   });
 });
 
 describe("pruneOrphanConsents (integration)", () => {
   it("removes old consents that back no connection and keeps the rest", async () => {
-    await withTwoUsers(async ({ db, userA, householdA }) => {
+    await withTwoUsers(async ({ db, userA }) => {
       const repository = createSyncUserRepository(userA.scope);
-      const connectionId = await connectFor(db, userA, householdA);
+      const connectionId = await connectFor(db, userA);
       const backing = (await repository.findConnection(db, connectionId))?.consentId ?? "";
       const oldOrphan = await repository.createConsent(db, { scopeVersion: "v", scopeText: "t" });
       const freshOrphan = await repository.createConsent(db, { scopeVersion: "v", scopeText: "t" });

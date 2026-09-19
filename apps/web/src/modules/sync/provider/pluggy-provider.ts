@@ -119,6 +119,12 @@ class PluggyClient implements ProviderClient {
         pageSize: String(PAGE_SIZE),
       });
       const parsed = parseOrThrow(pageSchema, json, endpoint);
+      // A server that ignores the requested page (a pageSize above its cap
+      // is one known cause) would echo page 1 forever: that is a shape Feudo
+      // does not understand, not a longer listing.
+      if (parsed.page !== page) {
+        throw new ProviderResponseShapeError(endpoint);
+      }
       items.push(...parsed.results);
       if (parsed.page >= parsed.totalPages) {
         break;
@@ -145,7 +151,9 @@ class PluggyClient implements ProviderClient {
       { itemId: providerItemId },
       pluggyAccountSchema,
     );
-    return accounts.map((account) => normalizeAccount(account, this.hasher));
+    return accounts
+      .map((account) => normalizeAccount(account, this.hasher))
+      .filter((account) => account !== null);
   }
 
   async listInvestmentPositions(providerItemId: string): Promise<NormalizedAccount[]> {

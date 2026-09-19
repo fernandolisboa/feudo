@@ -1,13 +1,23 @@
-import { and, count, eq, inArray, lt, notExists, sql } from "drizzle-orm";
+import { and, count, eq, exists, gte, inArray, lt, notExists, sql } from "drizzle-orm";
 
 import { user } from "@/modules/auth/schema";
 
-import { bankAccount, bankConnection, bankConnectionConsent, providerCredential } from "./schema";
+import {
+  bankAccount,
+  bankConnection,
+  bankConnectionConsent,
+  providerAuthAttempt,
+  providerCredential,
+} from "./schema";
 
-import type { Database } from "@/platform/db/client";
+import type { Database as Connection } from "@/platform/db/client";
 import type { HouseholdScope } from "@/modules/households";
 import type { AccountType, NormalizedAccount, RateType } from "./provider/provider";
 import type { UserScope } from "./scope";
+
+// Every method runs equally on the pooled connection or inside a transaction
+// it opened, so a service can group several writes into one commit.
+export type Database = Connection | Parameters<Parameters<Connection["transaction"]>[0]>[0];
 
 export type DataProviderKind = "pluggy";
 
@@ -22,6 +32,7 @@ export type ConsentRecord = {
   id: string;
   scopeVersion: string;
   acceptedAt: Date;
+  used: boolean;
 };
 
 export type ConnectionSummary = {
@@ -50,6 +61,16 @@ export type NewConnection = {
   institutionProviderId: string;
   consentId: string;
 };
+
+// A write that Postgres accepted but returned nothing for, or a consent
+// handed in that the scope cannot see: both mean a caller broke an
+// invariant, so they surface as a named error rather than a bare one.
+export class SyncRepositoryInvariantError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SyncRepositoryInvariantError";
+  }
+}
 
 export class ConnectionNotOwnedError extends Error {
   constructor(connectionId: string) {
@@ -92,6 +113,23 @@ export function createSyncUserRepository(scope: UserScope) {
   }
 
   return {
+    async countAuthAttemptsSince(db: Database, since: Date): Promise<number> {
+      const [row] = await db
+        .select({ total: count() })
+        .from(providerAuthAttempt)
+        .where(
+          and(
+            eq(providerAuthAttempt.userId, scope.userId),
+            gte(providerAuthAttempt.attemptedAt, since),
+          ),
+        );
+      return row?.total ?? 0;
+    },
+
+    async recordAuthAttempt(db: Database): Promise<void> {
+      await db.insert(providerAuthAttempt).values({ userId: scope.userId });
+    },
+
     async getCredential(db: Database): Promise<StoredCredential | undefined> {
       const rows = await db
         .select({
@@ -141,7 +179,7 @@ export function createSyncUserRepository(scope: UserScope) {
         .values({ userId: scope.userId, ...input })
         .returning({ id: bankConnectionConsent.id });
       if (!row) {
-        throw new Error("consent insert returned no row");
+        throw new SyncRepositoryInvariantError("consent insert returned no row");
       }
       return row.id;
     },
@@ -152,6 +190,12 @@ export function createSyncUserRepository(scope: UserScope) {
           id: bankConnectionConsent.id,
           scopeVersion: bankConnectionConsent.scopeVersion,
           acceptedAt: bankConnectionConsent.acceptedAt,
+          used: exists(
+            db
+              .select({ id: bankConnection.id })
+              .from(bankConnection)
+              .where(eq(bankConnection.consentId, bankConnectionConsent.id)),
+          ).mapWith(Boolean),
         })
         .from(bankConnectionConsent)
         .where(
@@ -213,15 +257,15 @@ export function createSyncUserRepository(scope: UserScope) {
 
     async createConnection(db: Database, input: NewConnection): Promise<string> {
       const consent = await this.findConsent(db, input.consentId);
-      if (!consent) {
-        throw new Error("consent does not belong to the scoped user");
+      if (!consent || consent.used) {
+        throw new SyncRepositoryInvariantError("consent is not the scoped user's, or already used");
       }
       const [row] = await db
         .insert(bankConnection)
         .values({ userId: scope.userId, ...input })
         .returning({ id: bankConnection.id });
       if (!row) {
-        throw new Error("connection insert returned no row");
+        throw new SyncRepositoryInvariantError("connection insert returned no row");
       }
       return row.id;
     },
@@ -265,25 +309,31 @@ export function createSyncUserRepository(scope: UserScope) {
         .where(eq(bankConnection.id, connectionId));
     },
 
-    // New accounts land in householdIdForNew with the default label; an
+    // New accounts land in the assigned household with the default label; an
     // account seen before keeps its household and label and only refreshes
-    // what the provider publishes.
+    // what the provider publishes. The household arrives as a scope, never a
+    // loose id (ADR-0001): only households.householdScope(session) builds one.
     async upsertAccounts(
       db: Database,
       connectionId: string,
       accounts: NormalizedAccount[],
-      options: { householdIdForNew: string | null; syncedAt: Date },
+      options: { assignTo: HouseholdScope | null; syncedAt: Date },
     ): Promise<void> {
       await requireOwnedConnection(db, connectionId);
-      if (accounts.length === 0) {
+      // One statement cannot touch the same conflict target twice, and a
+      // provider may list the same account under two listings.
+      const unique = [
+        ...new Map(accounts.map((account) => [account.providerAccountId, account])).values(),
+      ];
+      if (unique.length === 0) {
         return;
       }
       await db
         .insert(bankAccount)
         .values(
-          accounts.map((account) => ({
+          unique.map((account) => ({
             connectionId,
-            householdId: options.householdIdForNew,
+            householdId: options.assignTo?.householdId ?? null,
             providerAccountId: account.providerAccountId,
             type: account.type,
             productType: account.productType,
@@ -344,8 +394,9 @@ export type HouseholdAccount = {
 // Household-scoped view of the accounts assigned to the session's household
 // (ADR-0001). Relabelling additionally requires the caller to own the
 // connection: the label is a household fact, but only the person who
-// connected the account decides it (#12).
-export function createHouseholdAccountsRepository(scope: HouseholdScope) {
+// connected the account decides it (#12). Both scopes come from the same
+// session at construction; no method takes a tenant id.
+export function createHouseholdAccountsRepository(scope: HouseholdScope, owner: UserScope) {
   return {
     async list(db: Database): Promise<HouseholdAccount[]> {
       return db
@@ -376,12 +427,12 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope) {
 
     async relabel(
       db: Database,
-      input: { accountId: string; label: AccountLabel; ownerUserId: string },
+      input: { accountId: string; label: AccountLabel },
     ): Promise<boolean> {
       const ownedConnections = db
         .select({ id: bankConnection.id })
         .from(bankConnection)
-        .where(eq(bankConnection.userId, input.ownerUserId));
+        .where(eq(bankConnection.userId, owner.userId));
       const updated = await db
         .update(bankAccount)
         .set({ label: input.label })
@@ -400,9 +451,18 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope) {
 
 export type HouseholdAccountsRepository = ReturnType<typeof createHouseholdAccountsRepository>;
 
-// Not scoped: a consent that never backed a connection belongs to no
-// connection's lifetime, so the daily housekeeping removes it once it is too
-// old to be used (CONSENT_MAX_AGE_MS).
+// Not scoped: housekeeping for the daily cron. Attempts older than the
+// rate-limit window count for nothing, so they go; a consent that never
+// backed a connection belongs to no connection's lifetime, so it goes once it
+// is too old to be used (CONSENT_MAX_AGE_MS).
+export async function pruneOldAuthAttempts(db: Database, olderThan: Date): Promise<number> {
+  const deleted = await db
+    .delete(providerAuthAttempt)
+    .where(lt(providerAuthAttempt.attemptedAt, olderThan))
+    .returning({ id: providerAuthAttempt.id });
+  return deleted.length;
+}
+
 export async function pruneOrphanConsents(db: Database, olderThan: Date): Promise<number> {
   const deleted = await db
     .delete(bankConnectionConsent)

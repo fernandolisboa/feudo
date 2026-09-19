@@ -21,7 +21,7 @@ export const pluggyAccountSchema = z
     id: z.string().min(1),
     itemId: z.string().min(1),
     type: z.enum(["BANK", "CREDIT"]),
-    subtype: z.enum(["CHECKING_ACCOUNT", "SAVINGS_ACCOUNT", "CREDIT_CARD"]),
+    subtype: z.string().min(1),
     name: z.string().min(1),
     marketingName: z.string().nullable().optional(),
     balance: z.number(),

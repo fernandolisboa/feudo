@@ -88,6 +88,8 @@ export async function connectProviderAction(
       redirect("/");
     case "consent_required":
       return { status: "error", message: t.errors.consentRequired };
+    case "rate_limited":
+      return { status: "error", message: t.errors.rateLimited };
     case "invalid_credentials":
       return { status: "error", message: t.errors.invalidCredentials };
     case "item_not_found":
@@ -125,6 +127,8 @@ export async function addConnectionAction(
       return { status: "success", message: t.connections.addDialog.added };
     case "no_credentials":
       return { status: "error", message: t.errors.noCredentials };
+    case "rate_limited":
+      return { status: "error", message: t.errors.rateLimited };
     case "invalid_credentials":
       return { status: "error", message: t.errors.invalidCredentials };
     case "item_not_found":

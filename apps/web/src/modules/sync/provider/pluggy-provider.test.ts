@@ -188,6 +188,38 @@ describe("createPluggyProvider", () => {
     expect(positions.map((position) => position.name)).toEqual(fixtures.map((f) => f.name));
   });
 
+  it("raises ProviderResponseShapeError when the server echoes the same page", async () => {
+    const fixtures = FAKE_INVESTMENTS[FAKE_ITEM_BANCO_FIXTURE] ?? [];
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/investments": () => json({ results: fixtures, page: 1, totalPages: 2 }),
+        }),
+      ),
+    );
+    await expect(client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
+      ProviderResponseShapeError,
+    );
+  });
+
+  it("skips an account with an unknown subtype and keeps the rest", async () => {
+    const fixtures = FAKE_ACCOUNTS[FAKE_ITEM_BANCO_FIXTURE] ?? [];
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/accounts": () =>
+            json({
+              results: [{ ...fixtures[0], subtype: "PREPAID_CARD" }, fixtures[1]],
+              page: 1,
+              totalPages: 1,
+            }),
+        }),
+      ),
+    );
+    const accounts = await client.listAccounts(FAKE_ITEM_BANCO_FIXTURE);
+    expect(accounts.map((account) => account.type)).toEqual(["savings"]);
+  });
+
   it("drops fully withdrawn positions", async () => {
     const fixtures = FAKE_INVESTMENTS[FAKE_ITEM_BANCO_FIXTURE] ?? [];
     const client = await authenticatedClient(

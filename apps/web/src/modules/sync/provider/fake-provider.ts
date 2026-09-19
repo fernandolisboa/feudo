@@ -38,7 +38,11 @@ class FakeClient implements ProviderClient {
 
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]> {
     const accounts = FAKE_ACCOUNTS[providerItemId] ?? [];
-    return Promise.resolve(accounts.map((account) => normalizeAccount(account, this.hasher)));
+    return Promise.resolve(
+      accounts
+        .map((account) => normalizeAccount(account, this.hasher))
+        .filter((account) => account !== null),
+    );
   }
 
   listInvestmentPositions(providerItemId: string): Promise<NormalizedAccount[]> {

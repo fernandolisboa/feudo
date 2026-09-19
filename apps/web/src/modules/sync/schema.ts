@@ -27,6 +27,26 @@ export const rateTypeEnum = pgEnum("rate_type", [
   "other",
 ]);
 
+// User-scoped (ADR-0001): one row per attempt to authenticate against the
+// provider, so connectProvider/addConnection can refuse a scripted loop of
+// credential guesses or item ids before a single request leaves for Pluggy.
+// Holds no data beyond who and when; rows past the window are pruned daily.
+export const providerAuthAttempt = pgTable(
+  "provider_auth_attempt",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("provider_auth_attempt_user_attempted_idx").on(table.userId, table.attemptedAt),
+  ],
+);
+
 // User-scoped (ADR-0001): the secret a user hands Feudo to read their own
 // bank data. One row per user and provider; the client id and secret travel
 // together inside one ciphertext (sync/crypto.ts) whose envelope carries the

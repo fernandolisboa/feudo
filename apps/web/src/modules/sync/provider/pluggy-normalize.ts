@@ -1,3 +1,5 @@
+import type { z } from "zod";
+
 import { decimalToCentavos, parsePercentToRatePpm } from "@feudo/core";
 
 import type { DocumentHasher } from "../document-hash";
@@ -8,7 +10,11 @@ import type {
   ProviderConnection,
   RateType,
 } from "./provider";
-import { normalizedAccountSchema, normalizedTransactionSchema } from "./provider";
+import {
+  normalizedAccountSchema,
+  normalizedTransactionSchema,
+  ProviderResponseShapeError,
+} from "./provider";
 import type {
   PluggyAccount,
   PluggyInvestment,
@@ -41,30 +47,55 @@ export function normalizeItem(item: PluggyItem): ProviderConnection {
   };
 }
 
-const ACCOUNT_TYPE_BY_SUBTYPE: Record<PluggyAccount["subtype"], AccountType> = {
+const ACCOUNT_TYPE_BY_SUBTYPE: Record<string, AccountType> = {
   CHECKING_ACCOUNT: "checking",
   SAVINGS_ACCOUNT: "savings",
   CREDIT_CARD: "credit_card",
 };
 
+// A normalized shape that fails its own schema is a payload Feudo does not
+// understand, the same failure as an unparseable page: it must surface as a
+// typed provider error, never as a raw ZodError out of a Server Action.
+function normalizeOrThrow<Shape>(
+  schema: z.ZodType<Shape>,
+  value: unknown,
+  endpoint: string,
+): Shape {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new ProviderResponseShapeError(endpoint);
+  }
+  return parsed.data;
+}
+
+// An account whose subtype Feudo does not model yet is skipped, not fatal:
+// one unknown product must not keep the rest of the bank out.
 export function normalizeAccount(
   account: PluggyAccount,
   hasher: DocumentHasher,
-): NormalizedAccount {
-  return normalizedAccountSchema.parse({
-    providerAccountId: account.id,
-    providerItemId: account.itemId,
-    type: ACCOUNT_TYPE_BY_SUBTYPE[account.subtype],
-    productType: null,
-    name: account.name,
-    balanceCentavos: decimalToCentavos(account.balance),
-    currency: currencyOf(account.currencyCode),
-    holderDocumentHash: hashOrNull(hasher, account.taxNumber),
-    ratePpm: null,
-    rateType: null,
-    dueDate: null,
-    acquisitionDate: null,
-  });
+): NormalizedAccount | null {
+  const type = ACCOUNT_TYPE_BY_SUBTYPE[account.subtype];
+  if (!type) {
+    return null;
+  }
+  return normalizeOrThrow(
+    normalizedAccountSchema,
+    {
+      providerAccountId: account.id,
+      providerItemId: account.itemId,
+      type,
+      productType: null,
+      name: account.name,
+      balanceCentavos: decimalToCentavos(account.balance),
+      currency: currencyOf(account.currencyCode),
+      holderDocumentHash: hashOrNull(hasher, account.taxNumber),
+      ratePpm: null,
+      rateType: null,
+      dueDate: null,
+      acquisitionDate: null,
+    },
+    "accounts",
+  );
 }
 
 // Pluggy names the index a fixed-income rate is quoted against ("CDI",
@@ -106,20 +137,24 @@ export function normalizeInvestment(
   hasher: DocumentHasher,
 ): NormalizedAccount {
   const rateType = rateTypeOf(investment);
-  return normalizedAccountSchema.parse({
-    providerAccountId: investment.id,
-    providerItemId: investment.itemId,
-    type: "investment",
-    productType: investment.subtype ?? investment.type,
-    name: investment.name,
-    balanceCentavos: decimalToCentavos(investment.balance),
-    currency: currencyOf(investment.currencyCode),
-    holderDocumentHash: hashOrNull(hasher, investment.taxNumber),
-    ratePpm: ratePpmOf(investment, rateType),
-    rateType,
-    dueDate: isoDateOnly(investment.dueDate),
-    acquisitionDate: isoDateOnly(investment.purchaseDate),
-  });
+  return normalizeOrThrow(
+    normalizedAccountSchema,
+    {
+      providerAccountId: investment.id,
+      providerItemId: investment.itemId,
+      type: "investment",
+      productType: investment.subtype || investment.type,
+      name: investment.name,
+      balanceCentavos: decimalToCentavos(investment.balance),
+      currency: currencyOf(investment.currencyCode),
+      holderDocumentHash: hashOrNull(hasher, investment.taxNumber),
+      ratePpm: ratePpmOf(investment, rateType),
+      rateType,
+      dueDate: isoDateOnly(investment.dueDate),
+      acquisitionDate: isoDateOnly(investment.purchaseDate),
+    },
+    "investments",
+  );
 }
 
 function counterpartOf(
@@ -144,16 +179,20 @@ export function normalizeTransaction(
 ): NormalizedTransaction {
   const counterpart = counterpartOf(transaction);
   const counterpartDocumentHash = counterpart ? hasher(counterpart.value) : null;
-  return normalizedTransactionSchema.parse({
-    providerTransactionId: transaction.id,
-    providerAccountId: transaction.accountId,
-    date: isoDateOnly(transaction.date),
-    amountCentavos: decimalToCentavos(transaction.amount),
-    currency: currencyOf(transaction.currencyCode),
-    description: transaction.description,
-    providerCategory: transaction.category ?? null,
-    type: transaction.type === "CREDIT" ? "credit" : "debit",
-    counterpartType: counterpart && counterpartDocumentHash ? counterpart.type : null,
-    counterpartDocumentHash,
-  });
+  return normalizeOrThrow(
+    normalizedTransactionSchema,
+    {
+      providerTransactionId: transaction.id,
+      providerAccountId: transaction.accountId,
+      date: isoDateOnly(transaction.date),
+      amountCentavos: decimalToCentavos(transaction.amount),
+      currency: currencyOf(transaction.currencyCode),
+      description: transaction.description,
+      providerCategory: transaction.category ?? null,
+      type: transaction.type === "CREDIT" ? "credit" : "debit",
+      counterpartType: counterpart && counterpartDocumentHash ? counterpart.type : null,
+      counterpartDocumentHash,
+    },
+    "transactions",
+  );
 }

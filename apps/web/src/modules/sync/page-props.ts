@@ -1,6 +1,6 @@
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
-import { getHouseholdSettings, householdScope } from "@/modules/households";
+import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
 import {
   createHouseholdAccountsRepository,
@@ -10,10 +10,13 @@ import {
 } from "./repository";
 import { userScope } from "./scope";
 
-const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
+// Only BRL accounts ever enter a household total (#12); the split is made
+// here, once, so no component decides which currency counts.
+const HOUSEHOLD_CURRENCY = "BRL";
 
 export type AccountsSectionProps = {
-  accounts: HouseholdAccount[];
+  domesticAccounts: HouseholdAccount[];
+  foreignAccounts: HouseholdAccount[];
   connections: ConnectionSummary[];
   hasCredentials: boolean;
   credentialsSavedAt: Date | null;
@@ -29,14 +32,15 @@ export async function getAccountsSectionProps(
   const db = getDb();
   const userRepository = createSyncUserRepository(userScope(session));
   const [accounts, connections, credential, settings] = await Promise.all([
-    createHouseholdAccountsRepository(householdScope(session)).list(db),
+    createHouseholdAccountsRepository(householdScope(session), userScope(session)).list(db),
     userRepository.listConnections(db),
     userRepository.getCredential(db),
     getHouseholdSettings(householdScope(session), db),
   ]);
 
   return {
-    accounts,
+    domesticAccounts: accounts.filter((account) => account.currency === HOUSEHOLD_CURRENCY),
+    foreignAccounts: accounts.filter((account) => account.currency !== HOUSEHOLD_CURRENCY),
     connections,
     hasCredentials: credential !== undefined,
     credentialsSavedAt: credential?.lastValidatedAt ?? null,

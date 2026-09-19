@@ -43,6 +43,12 @@ CREATE TABLE "bank_connection_consent" (
 	"accepted_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "provider_auth_attempt" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"attempted_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "provider_credential" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
@@ -57,10 +63,12 @@ ALTER TABLE "bank_account" ADD CONSTRAINT "bank_account_household_id_organizatio
 ALTER TABLE "bank_connection" ADD CONSTRAINT "bank_connection_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bank_connection" ADD CONSTRAINT "bank_connection_consent_id_bank_connection_consent_id_fk" FOREIGN KEY ("consent_id") REFERENCES "public"."bank_connection_consent"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bank_connection_consent" ADD CONSTRAINT "bank_connection_consent_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "provider_auth_attempt" ADD CONSTRAINT "provider_auth_attempt_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "provider_credential" ADD CONSTRAINT "provider_credential_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "bank_account_connection_provider_account_uidx" ON "bank_account" USING btree ("connection_id","provider_account_id");--> statement-breakpoint
 CREATE INDEX "bank_account_householdId_idx" ON "bank_account" USING btree ("household_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "bank_connection_user_provider_item_uidx" ON "bank_connection" USING btree ("user_id","provider","provider_item_id");--> statement-breakpoint
 CREATE INDEX "bank_connection_consentId_idx" ON "bank_connection" USING btree ("consent_id");--> statement-breakpoint
 CREATE INDEX "bank_connection_consent_userId_idx" ON "bank_connection_consent" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "provider_auth_attempt_user_attempted_idx" ON "provider_auth_attempt" USING btree ("user_id","attempted_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "provider_credential_user_provider_uidx" ON "provider_credential" USING btree ("user_id","provider");

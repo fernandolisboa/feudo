@@ -12,8 +12,9 @@ import {
 } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
 import { createHouseholdAccountsRepository, createSyncUserRepository } from "./repository";
-import { bankConnectionConsent, providerCredential } from "./schema";
+import { bankConnection, bankConnectionConsent, providerCredential } from "./schema";
 import {
+  AUTH_ATTEMPTS_PER_WINDOW,
   acceptConsent,
   addConnection,
   connectProvider,
@@ -25,6 +26,7 @@ import {
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
 
 import type { Database } from "@/platform/db/client";
+import type { DataProvider, ProviderClient } from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -127,9 +129,10 @@ describe("connectProvider (integration)", () => {
       expect(stored?.ciphertext).not.toContain(credentials.clientSecret);
       expect(stored?.ciphertext).not.toContain(credentials.clientId);
 
-      const accounts = await createHouseholdAccountsRepository(householdScope(userA.session)).list(
-        db,
-      );
+      const accounts = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
       expect(accounts).toHaveLength(6);
       expect(accounts.every((account) => account.label === "individual")).toBe(true);
       expect(accounts.every((account) => account.connectedByUserId === userA.id)).toBe(true);
@@ -146,6 +149,128 @@ describe("connectProvider (integration)", () => {
       expect(connection).toMatchObject({ institutionName: "Banco Fixture", accountsCount: 6 });
       expect(connection?.lastSyncedAt).toBeInstanceOf(Date);
       expect(householdA).toBe(userA.session.householdId);
+    });
+  });
+
+  it("refuses to reuse a consent that already backs a connection", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const consentId = await consentFor(db, userA);
+      const first = await connectProvider(
+        { ...credentials, consentId, providerItemId: FAKE_ITEM_BANCO_FIXTURE },
+        userA.session,
+        db,
+        deps,
+      );
+      expect(first.status).toBe("ok");
+
+      const replayed = await connectProvider(
+        { ...credentials, consentId, providerItemId: FAKE_ITEM_CORRETORA_FIXTURE },
+        userA.session,
+        db,
+        deps,
+      );
+      expect(replayed).toEqual({ status: "consent_required" });
+    });
+  });
+
+  it("stops calling the provider once a user exhausts their attempts, per user", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      let providerCalls = 0;
+      const countingProvider: DataProvider = {
+        name: "fake",
+        authenticate: async (input) => {
+          providerCalls += 1;
+          return deps.provider.authenticate(input);
+        },
+      };
+      const countingDeps = { ...deps, provider: countingProvider };
+      const consentId = await consentFor(db, userA);
+      const attempt = (user: TwoUsers["userA"], consent: string) =>
+        connectProvider(
+          {
+            ...credentials,
+            clientSecret: FAKE_INVALID_CLIENT_SECRET,
+            consentId: consent,
+            providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+          },
+          user.session,
+          db,
+          countingDeps,
+        );
+
+      for (let index = 0; index < AUTH_ATTEMPTS_PER_WINDOW; index += 1) {
+        expect(await attempt(userA, consentId)).toEqual({ status: "invalid_credentials" });
+      }
+      expect(await attempt(userA, consentId)).toEqual({ status: "rate_limited" });
+      expect(providerCalls).toBe(AUTH_ATTEMPTS_PER_WINDOW);
+
+      expect(await attempt(userB, await consentFor(db, userB))).toEqual({
+        status: "invalid_credentials",
+      });
+      expect(providerCalls).toBe(AUTH_ATTEMPTS_PER_WINDOW + 1);
+    });
+  });
+
+  it("leaves no connection behind when the account write fails, and dedupes listings", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const withListAccounts = (listAccounts: ProviderClient["listAccounts"]): DataProvider => ({
+        name: "fake",
+        authenticate: () =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) =>
+                real.listTransactionsSince(accountId, since),
+              refresh: (itemId) => real.refresh(itemId),
+              listAccounts,
+            },
+          }),
+      });
+      const brokenProvider = withListAccounts(async (itemId) => {
+        const accounts = await real.listAccounts(itemId);
+        const [first] = accounts;
+        if (!first) throw new Error("fixture has no accounts");
+        return [...accounts, { ...first, providerAccountId: "broken", dueDate: "not-a-date" }];
+      });
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: brokenProvider },
+      );
+
+      expect(outcome).toEqual({ status: "failed" });
+      expect(await db.select().from(bankConnection)).toEqual([]);
+
+      const duplicatesOnly = withListAccounts(async (itemId) => {
+        const accounts = await real.listAccounts(itemId);
+        return [...accounts, ...accounts];
+      });
+      const deduped = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: duplicatesOnly },
+      );
+      expect(deduped.status).toBe("ok");
+      expect(
+        await createHouseholdAccountsRepository(householdScope(userA.session), userA.scope).list(
+          db,
+        ),
+      ).toHaveLength(6);
     });
   });
 
@@ -211,7 +336,9 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
       expect(await removeCredentials(userA.session, db)).toEqual({ status: "not_found" });
       expect(await repository.getCredential(db)).toBeUndefined();
       expect(
-        await createHouseholdAccountsRepository(householdScope(userA.session)).list(db),
+        await createHouseholdAccountsRepository(householdScope(userA.session), userA.scope).list(
+          db,
+        ),
       ).toHaveLength(6);
 
       const [connection] = await repository.listConnections(db);
@@ -219,7 +346,9 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
         status: "ok",
       });
       expect(
-        await createHouseholdAccountsRepository(householdScope(userA.session)).list(db),
+        await createHouseholdAccountsRepository(householdScope(userA.session), userA.scope).list(
+          db,
+        ),
       ).toEqual([]);
       expect(await deleteConnection(connection?.id ?? "", userA.session, db)).toEqual({
         status: "not_found",
@@ -230,9 +359,10 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
   it("lets only the connection owner relabel, inside their household", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await connectBanco(db, userA);
-      const [account] = await createHouseholdAccountsRepository(householdScope(userA.session)).list(
-        db,
-      );
+      const [account] = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
       const accountId = account?.id ?? "";
 
       expect(await relabelAccount({ accountId, label: "shared" }, userB.session, db)).toEqual({
@@ -248,9 +378,10 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
       expect(await relabelAccount({ accountId, label: "shared" }, userA.session, db)).toEqual({
         status: "ok",
       });
-      const [after] = await createHouseholdAccountsRepository(householdScope(userA.session)).list(
-        db,
-      );
+      const [after] = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
       expect(after?.label).toBe("shared");
     });
   });

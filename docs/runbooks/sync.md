@@ -14,13 +14,15 @@ Everything else (`service.ts`, `repository.ts`, `actions.ts`, `validation.ts`, `
 
 ## Two scopes, one invariant (ADR-0001)
 
-- **User-scoped**: `provider_credential`, `bank_connection_consent`, `bank_connection`. Reached only
+- **User-scoped**: `provider_credential`, `bank_connection_consent`, `bank_connection`,
+  `provider_auth_attempt`. Reached only
   through `createSyncUserRepository(userScope(session))`; every method closes over the session's
   user id and a connection id is honoured only after the row is re-read under that scope.
 - **Household-scoped**: `bank_account` (read through
   `createHouseholdAccountsRepository(householdScope(session))`). `household_id` is nullable only to
-  mean "unassigned" (the household was deleted); an unassigned account is visible to nobody until
-  a later ticket lets its owner reassign it. Writes to `bank_account` go only through the user-scoped
+  mean "unassigned" (the household was deleted); an unassigned account is visible only to its
+  owner until reassigned (ADR-0001). Household deletion is not implemented yet, so no code path
+  produces such a row today. Writes to `bank_account` go only through the user-scoped
   connection repository (`upsertAccounts`), and the label is changed only by the household member
   who owns the connection.
 
@@ -32,8 +34,9 @@ credential, consent or connection; household A never lists or relabels household
 1. **Consent** (`acceptConsentAction`): the checkbox records a `bank_connection_consent` row with
    the scope version (`CONSENT_SCOPE_VERSION`) and the exact text shown (`consent-text.ts`). The
    row's id travels to step 3 as a hidden field; a connection is refused without a consent that
-   belongs to the session's user and is at most 24h old (`CONSENT_MAX_AGE_MS`). Consents that never
-   backed a connection are pruned daily once older than that.
+   belongs to the session's user, is at most 24h old (`CONSENT_MAX_AGE_MS`) and does not already
+   back a connection (one consent, one connection). Consents that never backed a connection are
+   pruned daily once older than that.
 2. **Guide**: the steps to create a Meu Pluggy account, connect banks there, generate an API client
    and copy the Item ID of one connection. Pluggy's API has no list-items endpoint, so the wizard
    asks for the Item ID instead of listing the user's connections.
@@ -46,6 +49,13 @@ credential, consent or connection; household A never lists or relabels household
 
 More banks: "Adicionar conexão" (`addConnectionAction`) reuses the stored credentials and records a
 fresh consent row for the new connection.
+
+Both entry points that reach the provider are rate-limited per user, since Server Actions never pass
+through Better Auth's limiter: at most `AUTH_ATTEMPTS_PER_WINDOW` (5) attempts per
+`AUTH_ATTEMPT_WINDOW_MS` (15 minutes), counted in `provider_auth_attempt` before any request leaves
+for Pluggy; the sixth returns `rate_limited`. The connection, its accounts and the sync stamp are
+written in one transaction: a failure after the provider answered leaves no connection row, and a
+concurrent submit of the same Item ID is reported as already connected.
 
 ## Removal
 

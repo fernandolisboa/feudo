@@ -17,3 +17,4 @@ export { resolveAppRoute, resolveOnboardingRoute } from "./routing";
 export type { HouseholdScope } from "./scope";
 export { NoActiveHouseholdError, householdScope } from "./scope";
 export { t } from "./strings";
+export { DEFAULT_TIME_ZONE } from "./validation";
