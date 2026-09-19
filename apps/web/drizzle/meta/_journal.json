@@ -64,6 +64,13 @@
       "when": 1789026959904,
       "tag": "0008_invitation_delivery_failed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789827752353,
+      "tag": "0009_sync_connections_and_accounts",
+      "breakpoints": true
     }
   ]
 }
