@@ -68,7 +68,7 @@ ALTER TABLE "provider_credential" ADD CONSTRAINT "provider_credential_user_id_us
 CREATE UNIQUE INDEX "bank_account_connection_provider_account_uidx" ON "bank_account" USING btree ("connection_id","provider_account_id");--> statement-breakpoint
 CREATE INDEX "bank_account_householdId_idx" ON "bank_account" USING btree ("household_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "bank_connection_user_provider_item_uidx" ON "bank_connection" USING btree ("user_id","provider","provider_item_id");--> statement-breakpoint
-CREATE INDEX "bank_connection_consentId_idx" ON "bank_connection" USING btree ("consent_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "bank_connection_consentId_uidx" ON "bank_connection" USING btree ("consent_id");--> statement-breakpoint
 CREATE INDEX "bank_connection_consent_userId_idx" ON "bank_connection_consent" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "provider_auth_attempt_user_attempted_idx" ON "provider_auth_attempt" USING btree ("user_id","attempted_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "provider_credential_user_provider_uidx" ON "provider_credential" USING btree ("user_id","provider");

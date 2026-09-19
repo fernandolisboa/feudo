@@ -318,7 +318,7 @@ export function createSyncUserRepository(scope: UserScope) {
       connectionId: string,
       accounts: NormalizedAccount[],
       options: { assignTo: HouseholdScope | null; syncedAt: Date },
-    ): Promise<void> {
+    ): Promise<number> {
       await requireOwnedConnection(db, connectionId);
       // One statement cannot touch the same conflict target twice, and a
       // provider may list the same account under two listings.
@@ -326,7 +326,7 @@ export function createSyncUserRepository(scope: UserScope) {
         ...new Map(accounts.map((account) => [account.providerAccountId, account])).values(),
       ];
       if (unique.length === 0) {
-        return;
+        return 0;
       }
       await db
         .insert(bankAccount)
@@ -364,6 +364,7 @@ export function createSyncUserRepository(scope: UserScope) {
             syncedAt: sql`excluded.synced_at`,
           },
         });
+      return unique.length;
     },
   };
 }

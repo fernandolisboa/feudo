@@ -118,7 +118,7 @@ export const bankConnection = pgTable(
       table.provider,
       table.providerItemId,
     ),
-    index("bank_connection_consentId_idx").on(table.consentId),
+    uniqueIndex("bank_connection_consentId_uidx").on(table.consentId),
   ],
 );
 

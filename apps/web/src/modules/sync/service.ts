@@ -154,12 +154,12 @@ async function establishConnection(
         institutionProviderId: institution.institutionProviderId,
         consentId: input.consentId,
       });
-      await repository.upsertAccounts(tx, connectionId, accounts, {
+      const accountsCount = await repository.upsertAccounts(tx, connectionId, accounts, {
         assignTo: input.assignTo,
         syncedAt,
       });
       await repository.markSynced(tx, connectionId, { syncedAt, error: null });
-      return { status: "ok", connectionId, accountsCount: accounts.length };
+      return { status: "ok", connectionId, accountsCount };
     });
   } catch {
     const raced = await repository.findConnectionByItem(db, PROVIDER_KIND, input.providerItemId);

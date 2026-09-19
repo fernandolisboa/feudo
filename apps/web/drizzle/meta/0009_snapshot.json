@@ -1,5 +1,5 @@
 {
-  "id": "3bc469da-d2d8-4fb3-a86e-e2ea083e31e7",
+  "id": "2b208819-d1c5-49be-bb1b-8c8a6d915aae",
   "prevId": "93bd1a13-1082-4154-962e-1da47f2518eb",
   "version": "7",
   "dialect": "postgresql",
@@ -1188,8 +1188,8 @@
           "method": "btree",
           "with": {}
         },
-        "bank_connection_consentId_idx": {
-          "name": "bank_connection_consentId_idx",
+        "bank_connection_consentId_uidx": {
+          "name": "bank_connection_consentId_uidx",
           "columns": [
             {
               "expression": "consent_id",
@@ -1198,7 +1198,7 @@
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
