@@ -66,6 +66,8 @@
    Do instead: no Connect widget, no pooled credentials; closed beta needs Pluggy support's written OK (draft in docs/research); public launch needs a paid aggregator.
 5. **[2026-09-02] Money is integer centavos + currency code**
    Do instead: never floats; dates UTC, displayed in household time zone.
+6. **[2026-09-19] Pluggy's API has no list-items endpoint; the wizard takes one Item ID per connection (#12)**
+   Do instead: credentials are validated with `POST /auth`, the item with `GET /items/{id}`; more banks come in through "Adicionar conexão" with the stored credentials, each under a fresh consent row. Pluggy docs and api.vercel.com are unreachable from the cloud container; shapes came from the `pluggy-sdk` npm types.
 
 ## User Directives
 1. **[2026-09-09] Secrets the user creates (Neon API key, Resend key) go in through terminal commands that prompt for the value (`gh secret set`, `vercel env add --sensitive`), never through chat**
