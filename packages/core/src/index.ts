@@ -3,6 +3,7 @@ export {
   add,
   subtract,
   formatBRL,
+  formatMoney,
   decimalToCentavos,
   NonFiniteAmountError,
   NonIntegerAmountError,

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { add, decimalToCentavos, type Money } from "./money";
+import { add, decimalToCentavos, formatMoney, type Money } from "./money";
 
 const safeCentavos = fc.integer({ min: -1_000_000_000_000, max: 1_000_000_000_000 });
 
@@ -43,6 +43,26 @@ describe("decimalToCentavos property tests", () => {
           expect(Number.isInteger(decimalToCentavos(amount))).toBe(true);
         },
       ),
+    );
+  });
+});
+
+describe("formatMoney property tests", () => {
+  it("renders the same digits as the absolute centavos amount", () => {
+    fc.assert(
+      fc.property(safeCentavos, (amountCentavos) => {
+        const digitsOnly = formatMoney({ amountCentavos, currency: "BRL" }).replace(/\D/g, "");
+        expect(Number(digitsOnly)).toBe(Math.abs(amountCentavos));
+      }),
+    );
+  });
+
+  it("starts with a minus sign for negative amounts only", () => {
+    fc.assert(
+      fc.property(safeCentavos, (amountCentavos) => {
+        const formatted = formatMoney({ amountCentavos, currency: "BRL" });
+        expect(formatted.startsWith("-")).toBe(amountCentavos < 0);
+      }),
     );
   });
 });

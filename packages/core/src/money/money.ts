@@ -43,16 +43,16 @@ export function subtract(a: Money, b: Money): Money {
   return { amountCentavos: a.amountCentavos - b.amountCentavos, currency: "BRL" };
 }
 
+export function formatMoney(amount: { amountCentavos: number; currency: string }): string {
+  assertIntegerAmount(amount.amountCentavos);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: amount.currency,
+  }).format(amount.amountCentavos / 100);
+}
+
 export function formatBRL(money: Money): string {
-  assertIntegerAmount(money.amountCentavos);
-  const isNegative = money.amountCentavos < 0;
-  const absoluteCentavos = Math.abs(money.amountCentavos);
-  const reais = Math.floor(absoluteCentavos / 100);
-  const centavos = absoluteCentavos % 100;
-  const reaisWithSeparators = reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  const centavosPadded = centavos.toString().padStart(2, "0");
-  const sign = isNegative ? "-" : "";
-  return `${sign}R$ ${reaisWithSeparators},${centavosPadded}`;
+  return formatMoney(money);
 }
 
 // Providers publish balances as decimal numbers in currency units (1234.56);

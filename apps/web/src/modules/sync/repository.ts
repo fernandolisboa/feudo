@@ -271,8 +271,8 @@ export function createSyncUserRepository(scope: UserScope) {
     },
 
     // Deletes the connection (its accounts cascade) and, in the same
-    // transaction, the consent row once nothing references it any more:
-    // consent lives exactly as long as the connections it backed (ADR-0008).
+    // transaction, its consent row: a consent backs exactly one connection
+    // (ADR-0008), so it never survives it.
     async deleteConnection(db: Database, connectionId: string): Promise<boolean> {
       const connection = await findConnection(db, connectionId);
       if (!connection) {
@@ -282,17 +282,7 @@ export function createSyncUserRepository(scope: UserScope) {
         await tx.delete(bankConnection).where(eq(bankConnection.id, connection.id));
         await tx
           .delete(bankConnectionConsent)
-          .where(
-            and(
-              eq(bankConnectionConsent.id, connection.consentId),
-              notExists(
-                tx
-                  .select({ id: bankConnection.id })
-                  .from(bankConnection)
-                  .where(eq(bankConnection.consentId, connection.consentId)),
-              ),
-            ),
-          );
+          .where(eq(bankConnectionConsent.id, connection.consentId));
       });
       return true;
     },

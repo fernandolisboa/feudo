@@ -35,7 +35,7 @@ A user's authorization for Feudo to read data from one institution through a dat
 _Avoid_: item (Pluggy's term) to mean the connection itself, link, integration
 
 **Bank-connection consent**:
-The recorded acceptance that precedes every bank connection: the timestamp, the version and the exact text the user saw. It is user-scoped, backs one or more connections, lives as long as the last of them, and is honoured for a new connection only within 24 hours of acceptance; an accepted-but-abandoned consent is pruned by the daily job (ADR-0008).
+The recorded acceptance that precedes every bank connection: the timestamp, the version and the exact text the user saw. It is user-scoped, backs exactly one connection, is deleted with it, and is honoured for a new connection only within 24 hours of acceptance; an accepted-but-abandoned consent is pruned by the daily job (ADR-0008).
 _Avoid_: terms (that is the registration acceptance), authorization (ambiguous with the bank's own)
 
 **Data provider**:

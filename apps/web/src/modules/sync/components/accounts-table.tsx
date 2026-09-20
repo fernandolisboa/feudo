@@ -1,7 +1,8 @@
+import { formatMoney } from "@feudo/core";
+
 import { Badge } from "@/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatShortDateTime } from "@/lib/format-date";
-import { formatMoney } from "@/lib/format-money";
 
 import type { HouseholdAccount } from "../repository";
 import { AccountRowActions } from "./account-row-actions";
@@ -53,7 +54,7 @@ export function AccountsTable({
               ) : null}
             </TableCell>
             <TableCell className="font-heading text-right tabular-nums">
-              {formatMoney(account.balanceCentavos, account.currency)}
+              {formatMoney({ amountCentavos: account.balanceCentavos, currency: account.currency })}
             </TableCell>
             <TableCell className="text-right">
               {account.connectedByUserId === viewerUserId ? (

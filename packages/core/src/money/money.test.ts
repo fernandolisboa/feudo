@@ -3,11 +3,14 @@ import {
   add,
   subtract,
   formatBRL,
+  formatMoney,
   decimalToCentavos,
   NonFiniteAmountError,
   NonIntegerAmountError,
   type Money,
 } from "./money";
+
+const NBSP = " ";
 
 function brl(amountCentavos: number): Money {
   return { amountCentavos, currency: "BRL" };
@@ -51,27 +54,44 @@ describe("subtract", () => {
 
 describe("formatBRL", () => {
   it("formats a value under a thousand", () => {
-    expect(formatBRL(brl(4256))).toBe("R$ 42,56");
+    expect(formatBRL(brl(4256))).toBe(`R$${NBSP}42,56`);
   });
 
   it("formats a value with thousands separators", () => {
-    expect(formatBRL(brl(123456))).toBe("R$ 1.234,56");
+    expect(formatBRL(brl(123456))).toBe(`R$${NBSP}1.234,56`);
   });
 
   it("formats a negative value with the sign before R$", () => {
-    expect(formatBRL(brl(-123456))).toBe("-R$ 1.234,56");
+    expect(formatBRL(brl(-123456))).toBe(`-R$${NBSP}1.234,56`);
   });
 
   it("formats zero", () => {
-    expect(formatBRL(brl(0))).toBe("R$ 0,00");
+    expect(formatBRL(brl(0))).toBe(`R$${NBSP}0,00`);
   });
 
   it("pads single-digit centavos", () => {
-    expect(formatBRL(brl(105))).toBe("R$ 1,05");
+    expect(formatBRL(brl(105))).toBe(`R$${NBSP}1,05`);
   });
 
   it("throws NonIntegerAmountError for a non-integer amount", () => {
     expect(() => formatBRL(brl(10.5))).toThrow(NonIntegerAmountError);
+  });
+});
+
+describe("formatMoney", () => {
+  it("formats centavos in Brazilian reais with Brazilian separators", () => {
+    expect(formatMoney({ amountCentavos: 123456, currency: "BRL" })).toBe(`R$${NBSP}1.234,56`);
+    expect(formatMoney({ amountCentavos: -35010, currency: "BRL" })).toBe(`-R$${NBSP}350,10`);
+  });
+
+  it("keeps the currency symbol of a foreign account", () => {
+    expect(formatMoney({ amountCentavos: 12000, currency: "USD" })).toBe(`US$${NBSP}120,00`);
+  });
+
+  it("throws NonIntegerAmountError for a non-integer amount", () => {
+    expect(() => formatMoney({ amountCentavos: 10.5, currency: "BRL" })).toThrow(
+      NonIntegerAmountError,
+    );
   });
 });
 
