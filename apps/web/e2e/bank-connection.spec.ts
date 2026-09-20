@@ -49,7 +49,9 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "Contas", exact: true })).toBeVisible();
-  const contaCorrente = page.getByRole("row", { name: /Conta corrente/ });
+  const contaCorrente = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("button", { name: "Ações: Conta corrente" }) });
   await expect(contaCorrente).toContainText("R$ 1.234,56");
   await expect(contaCorrente).toContainText("Conta individual");
   await expect(page.getByRole("row", { name: /CDB Fixture 110% CDI/ })).toContainText(
@@ -62,11 +64,11 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
 
   await contaCorrente.getByRole("button", { name: "Ações: Conta corrente" }).click();
   await page.getByRole("menuitem", { name: "Marcar como conta da casa" }).click();
-  await expect(page.getByRole("row", { name: /Conta corrente/ })).toContainText("Conta da casa");
+  await expect(contaCorrente).toContainText("Conta da casa");
 
   await page.getByRole("button", { name: "Remover credenciais" }).click();
   await page.getByRole("button", { name: "Remover", exact: true }).click();
   await expect(page.getByText("Você não tem credenciais do Meu Pluggy salvas.")).toBeVisible();
   await expect(page.getByText("Sincronização interrompida")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Conta corrente/ })).toBeVisible();
+  await expect(contaCorrente).toBeVisible();
 });
