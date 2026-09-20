@@ -48,7 +48,7 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
   await page.getByRole("button", { name: "Conectar e sincronizar" }).click();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: "Contas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Contas", exact: true })).toBeVisible();
   const contaCorrente = page.getByRole("row", { name: /Conta corrente/ });
   await expect(contaCorrente).toContainText("R$ 1.234,56");
   await expect(contaCorrente).toContainText("Conta individual");
