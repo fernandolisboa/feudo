@@ -1,5 +1,9 @@
 {
   "permissions": {
-    "allow": ["Bash(curl -sS -X POST https://api.vercel.com/v10/projects/*)"]
+    "allow": [
+      "Bash(curl -sS -X POST https://api.vercel.com/v10/projects/*)",
+      "Bash(git push:*)"
+    ],
+    "deny": ["Bash(git push --force:*)", "Bash(git push -f:*)"]
   }
 }
