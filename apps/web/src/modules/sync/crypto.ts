@@ -72,13 +72,13 @@ export function decryptSecret(envelope: string, encryptionKey: string): string {
   if (keyId !== keyIdFor(encryptionKey)) {
     throw new EncryptionKeyMismatchError(keyId);
   }
-  const decipher = createDecipheriv(
-    ALGORITHM,
-    deriveAesKey(encryptionKey),
-    Buffer.from(ivEncoded, "base64url"),
-  );
-  decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
   try {
+    const decipher = createDecipheriv(
+      ALGORITHM,
+      deriveAesKey(encryptionKey),
+      Buffer.from(ivEncoded, "base64url"),
+    );
+    decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
     return Buffer.concat([
       decipher.update(Buffer.from(ciphertextEncoded, "base64url")),
       decipher.final(),

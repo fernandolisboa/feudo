@@ -62,7 +62,7 @@ concurrent submit of the same Item ID is reported as already connected.
 - **Remover credenciais** (`removeCredentials`): deletes the `provider_credential` row and nothing
   else. Sync stops (nothing left to authenticate with); connections and accounts stay until deleted.
 - **Excluir conexão** (`deleteConnection`): deletes the connection, its accounts (cascade) and, in
-  the same transaction, its consent row once nothing references it.
+  the same transaction, its consent row (a consent backs exactly one connection).
 
 ## Providers (ADR-0005)
 

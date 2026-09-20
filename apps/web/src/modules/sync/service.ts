@@ -262,10 +262,6 @@ export async function addConnection(
   if (!stored) {
     return { status: "no_credentials" };
   }
-  if (!(await reserveAuthAttempt(repository, db))) {
-    return { status: "rate_limited" };
-  }
-
   let credentials: ProviderCredentials;
   try {
     credentials = deserializeCredentials(stored.ciphertext, deps.encryptionKey);
@@ -274,6 +270,9 @@ export async function addConnection(
       return { status: "credentials_unreadable" };
     }
     throw error;
+  }
+  if (!(await reserveAuthAttempt(repository, db))) {
+    return { status: "rate_limited" };
   }
 
   let authenticated;

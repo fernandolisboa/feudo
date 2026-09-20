@@ -49,6 +49,12 @@ describe("encryptSecret / decryptSecret", () => {
     expect(() => decryptSecret(parts.join(":"), KEY)).toThrow(MalformedCiphertextError);
   });
 
+  it("rejects a truncated authentication tag", () => {
+    const parts = encryptSecret("s3cret", KEY).split(":");
+    parts[4] = (parts[4] ?? "").slice(0, 4);
+    expect(() => decryptSecret(parts.join(":"), KEY)).toThrow(MalformedCiphertextError);
+  });
+
   it("rejects an envelope it did not produce", () => {
     expect(() => decryptSecret("plain-text-secret", KEY)).toThrow(MalformedCiphertextError);
     expect(() => decryptSecret("enc:v2:abcd1234:iv:tag:ct", KEY)).toThrow(MalformedCiphertextError);
