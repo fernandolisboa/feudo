@@ -16,10 +16,15 @@ vi.mock("@/modules/households", () => ({
   runDailyPruneStep: vi.fn(),
 }));
 
+vi.mock("@/modules/sync", () => ({
+  runDailyPruneStep: vi.fn(),
+}));
+
 const { GET } = await import("./route");
 const { runDailyRefreshStep } = await import("@/modules/market-data");
 const { runDailyPruneStep: runAuthPruneStep } = await import("@/modules/auth");
 const { runDailyPruneStep: runHouseholdsPruneStep } = await import("@/modules/households");
+const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 
@@ -36,6 +41,7 @@ describe("GET /api/cron/daily", () => {
     process.env.CRON_SECRET = "test-secret";
     vi.mocked(runAuthPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runDailyRefreshStep).mockResolvedValue({ ok: true, results: [] });
   });
 
@@ -118,6 +124,27 @@ describe("GET /api/cron/daily", () => {
     expect(body.ok).toBe(false);
     expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
     expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the consent prune step fails", async () => {
+    vi.mocked(runSyncPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { deleted: number };
+        pruneInvitations: { deleted: number };
+        pruneConsents: { error: string };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneConsents).toEqual({ error: "Error" });
+    expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 });

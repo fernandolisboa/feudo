@@ -31,8 +31,12 @@ An offer, sent to an email address, to join a household with a given role.
 ### Banks and accounts
 
 **Bank connection**:
-A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it.
-_Avoid_: item (Pluggy's term), link, integration
+A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it. Meu Pluggy has no endpoint that lists a user's connections, so the user identifies the one to bring into Feudo by pasting its **Item ID**, Pluggy's own identifier, which is kept verbatim in copy for that reason.
+_Avoid_: item (Pluggy's term) to mean the connection itself, link, integration
+
+**Bank-connection consent**:
+The recorded acceptance that precedes every bank connection: the timestamp, the version and the exact text the user saw. It is user-scoped, backs exactly one connection, is deleted with it, and is honoured for a new connection only within 24 hours of acceptance; an accepted-but-abandoned consent is pruned by the daily job (ADR-0008).
+_Avoid_: terms (that is the registration acceptance), authorization (ambiguous with the bank's own)
 
 **Data provider**:
 The service through which Feudo reads bank data on a user's behalf. Each user brings their own provider credentials; Feudo never pools several users' data under one credential.

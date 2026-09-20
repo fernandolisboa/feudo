@@ -24,6 +24,8 @@
 | Bank connection                             | conexão bancária                               | "conectar banco"                                                             |
 | Data provider                               | provedor de dados                              | "Meu Pluggy" when naming it                                                  |
 | Provider credentials                        | credenciais do provedor                        |                                                                              |
+| Item ID                                     | Item ID                                        | Meu Pluggy's identifier of one connected bank; kept in English in copy       |
+| Bank-connection consent                     | consentimento                                  | the recorded acceptance that precedes every connection                       |
 | Account                                     | conta                                          | bank account only                                                            |
 | Shared account                              | conta da casa                                  |                                                                              |
 | Individual account                          | conta individual                               |                                                                              |
