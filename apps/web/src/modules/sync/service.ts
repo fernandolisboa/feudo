@@ -7,7 +7,12 @@ import { householdScope } from "@/modules/households";
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import { CONSENT_MAX_AGE_MS, CONSENT_SCOPE_VERSION, currentConsentScopeText } from "./consent-text";
-import { decryptSecret, encryptSecret } from "./crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  EncryptionKeyMismatchError,
+  MalformedCiphertextError,
+} from "./crypto";
 import { readEncryptionKey, type SyncEnv } from "./env";
 import type { DataProvider, ProviderClient, ProviderCredentials } from "./provider/provider";
 import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider/provider";
@@ -55,6 +60,15 @@ function isProviderFailure(error: unknown): boolean {
   return error instanceof ProviderUnavailableError || error instanceof ProviderResponseShapeError;
 }
 
+function isUnreadableCredentialsFailure(error: unknown): boolean {
+  return (
+    error instanceof EncryptionKeyMismatchError ||
+    error instanceof MalformedCiphertextError ||
+    error instanceof SyntaxError ||
+    error instanceof z.ZodError
+  );
+}
+
 export type AcceptConsentOutcome = Outcome<{ consentId: string }, "failed">;
 
 export async function acceptConsent(
@@ -94,16 +108,17 @@ async function findUsableConsent(
 export const AUTH_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 export const AUTH_ATTEMPTS_PER_WINDOW = 5;
 
+// Records the attempt before counting it: two requests racing to read the
+// count below the ceiling before either commits its insert would otherwise
+// both pass. Recording first means the count each sees already includes its
+// own attempt, so the ceiling holds even when two attempts land together.
 async function reserveAuthAttempt(repository: SyncUserRepository, db: Database): Promise<boolean> {
+  await repository.recordAuthAttempt(db);
   const recent = await repository.countAuthAttemptsSince(
     db,
     new Date(Date.now() - AUTH_ATTEMPT_WINDOW_MS),
   );
-  if (recent >= AUTH_ATTEMPTS_PER_WINDOW) {
-    return false;
-  }
-  await repository.recordAuthAttempt(db);
-  return true;
+  return recent <= AUTH_ATTEMPTS_PER_WINDOW;
 }
 
 type ConnectionFailure = "item_not_found" | "already_connected" | "provider_unavailable" | "failed";
@@ -226,7 +241,11 @@ export async function connectProvider(
 
 export type AddConnectionOutcome = Outcome<
   EstablishedConnection,
-  "no_credentials" | "rate_limited" | "invalid_credentials" | ConnectionFailure
+  | "no_credentials"
+  | "credentials_unreadable"
+  | "rate_limited"
+  | "invalid_credentials"
+  | ConnectionFailure
 >;
 
 // Adds another item under the stored credentials. A fresh consent row is
@@ -247,11 +266,19 @@ export async function addConnection(
     return { status: "rate_limited" };
   }
 
+  let credentials: ProviderCredentials;
+  try {
+    credentials = deserializeCredentials(stored.ciphertext, deps.encryptionKey);
+  } catch (error) {
+    if (isUnreadableCredentialsFailure(error)) {
+      return { status: "credentials_unreadable" };
+    }
+    throw error;
+  }
+
   let authenticated;
   try {
-    authenticated = await deps.provider.authenticate(
-      deserializeCredentials(stored.ciphertext, deps.encryptionKey),
-    );
+    authenticated = await deps.provider.authenticate(credentials);
   } catch (error) {
     if (isProviderFailure(error)) {
       return { status: "provider_unavailable" };

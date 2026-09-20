@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 
@@ -23,13 +23,12 @@ const initialConsentState: AcceptConsentState = initialActionState;
 
 function ConsentStep({ onAccepted }: { onAccepted: (consentId: string) => void }) {
   const [state, formAction, isPending] = useActionState(acceptConsentAction, initialConsentState);
-  const [lastHandled, setLastHandled] = useState(state);
-  if (state !== lastHandled) {
-    setLastHandled(state);
+
+  useEffect(() => {
     if (state.status === "accepted") {
       onAccepted(state.consentId);
     }
-  }
+  }, [state, onAccepted]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

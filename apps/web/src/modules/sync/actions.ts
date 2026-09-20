@@ -127,6 +127,8 @@ export async function addConnectionAction(
       return { status: "success", message: t.connections.addDialog.added };
     case "no_credentials":
       return { status: "error", message: t.errors.noCredentials };
+    case "credentials_unreadable":
+      return { status: "error", message: t.errors.credentialsUnreadable };
     case "rate_limited":
       return { status: "error", message: t.errors.rateLimited };
     case "invalid_credentials":

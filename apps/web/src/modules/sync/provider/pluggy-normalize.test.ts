@@ -199,6 +199,18 @@ describe("normalizeInvestment", () => {
       currency: "BRL",
     });
   });
+
+  it("yields a null rate rather than throwing for a rate Number#toString renders in exponential notation", () => {
+    const tinyRate: PluggyInvestment = {
+      ...requireAt(bancoInvestments, 0),
+      rate: 1e-7,
+      rateType: "IPCA",
+    };
+    expect(normalizeInvestment(tinyRate, hasher)).toMatchObject({
+      rateType: "inflation_linked",
+      ratePpm: null,
+    });
+  });
 });
 
 describe("normalizeTransaction", () => {

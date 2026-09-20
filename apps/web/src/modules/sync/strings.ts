@@ -125,6 +125,8 @@ const en = {
     providerUnavailable: "Meu Pluggy did not answer. Try again in a few minutes.",
     rateLimited: "Too many connection attempts. Wait a few minutes and try again.",
     noCredentials: "Save your Meu Pluggy credentials first.",
+    credentialsUnreadable:
+      "We could not read your saved credentials. Remove them and enter them again.",
     connectionNotFound: "This connection no longer exists.",
     accountNotFound: "This account no longer exists or is not yours to relabel.",
     connectFailed: "We could not save this connection. Try again.",
@@ -258,6 +260,8 @@ const ptBR = {
     providerUnavailable: "O Meu Pluggy não respondeu. Tente de novo em alguns minutos.",
     rateLimited: "Muitas tentativas de conexão. Espere alguns minutos e tente de novo.",
     noCredentials: "Salve suas credenciais do Meu Pluggy primeiro.",
+    credentialsUnreadable:
+      "Não foi possível ler as credenciais salvas. Remova as credenciais e informe-as de novo.",
     connectionNotFound: "Essa conexão não existe mais.",
     accountNotFound: "Essa conta não existe mais ou não é sua para rotular.",
     connectFailed: "Não foi possível salvar essa conexão. Tente novamente.",

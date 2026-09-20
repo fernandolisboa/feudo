@@ -327,6 +327,34 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
     });
   });
 
+  it("reports unreadable credentials without calling the provider, e.g. after a key rotation", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await connectBanco(db, userA);
+      let providerCalls = 0;
+      const countingProvider: DataProvider = {
+        name: "fake",
+        authenticate: async (input) => {
+          providerCalls += 1;
+          return deps.provider.authenticate(input);
+        },
+      };
+      const rotatedKeyDeps: SyncDeps = {
+        provider: countingProvider,
+        encryptionKey: "another-integration-test-encryption-key-32c",
+      };
+
+      const outcome = await addConnection(
+        { providerItemId: FAKE_ITEM_CORRETORA_FIXTURE },
+        userA.session,
+        db,
+        rotatedKeyDeps,
+      );
+
+      expect(outcome).toEqual({ status: "credentials_unreadable" });
+      expect(providerCalls).toBe(0);
+    });
+  });
+
   it("destroys the credentials but keeps connections and accounts until deleted", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await connectBanco(db, userA);

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { decimalToCentavos, parsePercentToRatePpm } from "@feudo/core";
+import { decimalToCentavos, InvalidPercentStringError, parsePercentToRatePpm } from "@feudo/core";
 
 import type { DocumentHasher } from "../document-hash";
 import type {
@@ -129,7 +129,14 @@ function ratePpmOf(investment: PluggyInvestment, rateType: RateType | null): num
   if (typeof percent !== "number" || !Number.isFinite(percent)) {
     return null;
   }
-  return parsePercentToRatePpm(percent.toString());
+  try {
+    return parsePercentToRatePpm(percent.toString());
+  } catch (error) {
+    if (error instanceof InvalidPercentStringError) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export function normalizeInvestment(
