@@ -13,7 +13,12 @@ const placeholderDb = drizzle({ connection: PLACEHOLDER_CONNECTION, schema });
 // nothing connects to a database or an email provider at import time). This
 // placeholder never opens the connection or sends an email, so
 // `db:auth-schema` runs without DATABASE_URL, RESEND_API_KEY or
-// BETTER_AUTH_SECRET.
+// BETTER_AUTH_SECRET, and VERCEL_ENV is cleared so a shell holding pulled
+// production env vars does not trip the fake-sender production guard.
 export const auth = betterAuth(
-  buildAuthOptions(placeholderDb, { ...process.env, EMAIL_PROVIDER: "fake" }),
+  buildAuthOptions(placeholderDb, {
+    ...process.env,
+    EMAIL_PROVIDER: "fake",
+    VERCEL_ENV: undefined,
+  }),
 );

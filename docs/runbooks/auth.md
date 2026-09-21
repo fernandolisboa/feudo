@@ -136,9 +136,13 @@ the provider call, since a hung provider would otherwise run until the function'
   provider's SMTP endpoint. Reads `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM`
   (each missing one throws `MissingSmtpSettingError` / `MissingEmailFromError` from the
   constructor, with the same eager-throw contract as `resend`), plus `SMTP_PORT` (default `465`;
-  `InvalidSmtpPortError` on anything outside 1–65535). Port 465 is implicit TLS; any other port
-  sets nodemailer's `requireTLS`, so credentials are never sent before STARTTLS. A fresh transport
-  is created per send and closed in `finally`. Gmail specifics: 2-step verification on, a 16-char
+  `InvalidSmtpPortError` on anything outside 1–65535; every value is trimmed, and whitespace-only
+  counts as unset). Port 465, and only 465, is implicit TLS; any other port sets nodemailer's
+  `requireTLS`, so credentials are never sent before STARTTLS (a relay that speaks implicit TLS on a
+  non-standard port fails closed with a timeout, not in clear). nodemailer's own
+  connection/greeting/socket timeouts carry the 10s ceiling, since its failure path is what closes
+  an in-flight connection; the shared `withSendTimeout` race sits 1s above them as a backstop. A
+  fresh transport is created per send and closed in `finally`. Gmail specifics: 2-step verification on, a 16-char
   app password as `SMTP_PASSWORD`, `smtp.gmail.com`, and Gmail rewrites `EMAIL_FROM` to the
   account's own address unless it is a configured alias; Google can also block a first login from
   a new IP range (Vercel's rotate), which surfaces as `EmailSendError` in the function log.
@@ -151,16 +155,17 @@ the provider call, since a hung provider would otherwise run until the function'
   `EMAIL_PROVIDER=fake` and `VERCEL_ENV=production`, the same guard `sync/env.ts` applies to
   `DATA_PROVIDER=fake` — a production deployment with the fake sender would accept every sign-up
   and strand it behind a verification link nobody receives (ADR-0008). Because the guard runs
-  inside `buildAuthOptions`, it fails every auth request of such a deployment with a 500, so the
-  production `EMAIL_PROVIDER` must be `resend` or `smtp` (with its settings) **before** a build
-  carrying this guard is deployed.
+  inside `buildAuthOptions`, and the root layout reads the session on every page, **every request
+  of such a deployment fails with a 500**, not just the auth endpoints: a full outage with no way
+  to sign in and fix it from the UI. The production `EMAIL_PROVIDER` must be `resend` or `smtp`
+  (with its settings) **before** a build carrying this guard is deployed.
 
 ### First account on a fresh environment
 
 The first person in an environment cannot be invited (an invitation needs an existing household
 and inviter), so with `REGISTRATION_MODE=invite` nobody can ever sign up. The procedure is: set
-the registration mode to `open` (the env var, or the Global Config item once ADR-0001's runtime
-override is in place), sign up at `/registrar`, open the verification link, sign in, create the
+`REGISTRATION_MODE=open` (a runtime override without a redeploy is proposed in PR #70; until it
+lands, this is the env var plus a redeploy), sign up at `/registrar`, open the verification link, sign in, create the
 household at `/comecar`, invite the rest of the household from `/casa`, then set the mode back to
 `invite`. Invitees who already signed up while the mode was `open` find the pending invitation
 on `/comecar`'s "Tenho um convite" tab, without needing the invitation email.

@@ -36,6 +36,20 @@ describe("SmtpEmailSender", () => {
     },
   );
 
+  it("treats a whitespace-only setting as unset and trims the others", async () => {
+    expect(() => new SmtpEmailSender({ ...ENV, SMTP_HOST: "   " })).toThrow(
+      MissingSmtpSettingError,
+    );
+    resetMocks();
+    sendMailMock.mockResolvedValueOnce({ messageId: "<0@example.com>" });
+
+    await new SmtpEmailSender({ ...ENV, SMTP_HOST: " smtp.example.com " }).send(INPUT);
+
+    expect(createTransportMock).toHaveBeenCalledWith(
+      expect.objectContaining({ host: "smtp.example.com" }),
+    );
+  });
+
   it("throws MissingEmailFromError when EMAIL_FROM is unset", () => {
     expect(() => new SmtpEmailSender({ ...ENV, EMAIL_FROM: undefined })).toThrow(
       MissingEmailFromError,
@@ -62,6 +76,9 @@ describe("SmtpEmailSender", () => {
         port: 465,
         secure: true,
         auth: { user: ENV.SMTP_USER, pass: ENV.SMTP_PASSWORD },
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 10_000,
       }),
     );
     expect(sendMailMock).toHaveBeenCalledWith({
@@ -86,17 +103,54 @@ describe("SmtpEmailSender", () => {
     );
   });
 
-  it("wraps a transport rejection in EmailSendError and still closes the transport", async () => {
+  it("wraps a transport rejection in EmailSendError with only its structured fields, and still closes the transport", async () => {
     resetMocks();
-    sendMailMock.mockRejectedValue(new Error("535 Authentication failed"));
+    const rejection = Object.assign(
+      new Error("Can't send mail - all recipients were rejected: 550 5.1.1 <user@example.com>"),
+      { code: "EENVELOPE", responseCode: 550, command: "RCPT TO" },
+    );
+    sendMailMock.mockRejectedValue(rejection);
     const sender = new SmtpEmailSender(ENV);
 
-    await expect(sender.send(INPUT)).rejects.toThrow(EmailSendError);
-    await expect(sender.send(INPUT)).rejects.toThrow("535 Authentication failed");
-    expect(closeMock).toHaveBeenCalledTimes(2);
+    const error = await sender.send(INPUT).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(EmailSendError);
+    expect((error as Error).message).toContain("EENVELOPE 550 RCPT TO");
+    expect((error as Error).message).not.toContain("user@example.com");
+    expect(closeMock).toHaveBeenCalledTimes(1);
   });
 
-  it("throws EmailSendTimeoutError instead of hanging when the server never answers", async () => {
+  it("falls back to the error name when the rejection carries no structured fields", async () => {
+    resetMocks();
+    sendMailMock.mockRejectedValue(new TypeError("boom <user@example.com>"));
+    const sender = new SmtpEmailSender(ENV);
+
+    const error = await sender.send(INPUT).catch((caught: unknown) => caught);
+
+    expect((error as Error).message).toContain("TypeError");
+    expect((error as Error).message).not.toContain("user@example.com");
+  });
+
+  it("rejects a hung send with the transport's own timeout error, not the backstop race", async () => {
+    resetMocks();
+    sendMailMock.mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(Object.assign(new Error("Greeting never received"), { code: "ETIMEDOUT" }));
+          }, 10);
+        }),
+    );
+    const sender = new SmtpEmailSender(ENV, 10);
+
+    const error = await sender.send(INPUT).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(EmailSendError);
+    expect((error as Error).message).toContain("ETIMEDOUT");
+    expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws EmailSendTimeoutError as a backstop when the transport never settles at all", async () => {
     resetMocks();
     sendMailMock.mockImplementation(() => new Promise(() => {}));
     const sender = new SmtpEmailSender(ENV, 10);

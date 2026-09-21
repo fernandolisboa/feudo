@@ -29,14 +29,35 @@ export class InvalidSmtpPortError extends Error {
 }
 
 const IMPLICIT_TLS_PORT = 465;
+// The shared race is only a backstop: nodemailer's own timeouts fire first,
+// and its failure path is the one that closes the connection (close() on a
+// non-pooled transport never touches an in-flight socket).
+const BACKSTOP_MARGIN_MS = 1_000;
 const portSchema = z.coerce.number().int().min(1).max(65535);
 
 function readRequiredSetting(env: AuthEnv, variable: string): string {
-  const value = env[variable];
+  const value = env[variable]?.trim();
   if (!value) {
     throw new MissingSmtpSettingError(variable);
   }
   return value;
+}
+
+type TransportError = Error & { code?: unknown; responseCode?: unknown; command?: unknown };
+
+// nodemailer appends the relay's raw response to its message, and relays echo
+// the recipient address in RCPT TO rejections; Better Auth logs the whole
+// error for the verification send, so the wrapped message carries only the
+// structured fields, never the response text.
+function describeTransportError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "unknown error";
+  }
+  const { code, responseCode, command } = error as TransportError;
+  const parts = [code, responseCode, command].filter(
+    (part): part is string | number => typeof part === "string" || typeof part === "number",
+  );
+  return parts.length > 0 ? parts.map(String).join(" ") : error.name;
 }
 
 function readPort(env: AuthEnv): number {
@@ -64,7 +85,7 @@ export class SmtpEmailSender implements EmailSender {
     this.port = readPort(env);
     this.user = readRequiredSetting(env, "SMTP_USER");
     this.password = readRequiredSetting(env, "SMTP_PASSWORD");
-    const from = env.EMAIL_FROM;
+    const from = env.EMAIL_FROM?.trim();
     if (!from) {
       throw new MissingEmailFromError();
     }
@@ -95,13 +116,13 @@ export class SmtpEmailSender implements EmailSender {
           text: input.text,
           html: input.html,
         }),
-        this.timeoutMs,
+        this.timeoutMs + BACKSTOP_MARGIN_MS,
       );
     } catch (error) {
       if (error instanceof EmailSendTimeoutError) {
         throw error;
       }
-      throw new EmailSendError(error instanceof Error ? error.message : "unknown error");
+      throw new EmailSendError(describeTransportError(error));
     } finally {
       transport.close();
     }
