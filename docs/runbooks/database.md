@@ -183,8 +183,10 @@ shares its host policy with the reset guard (`apps/web/src/platform/db/host-poli
 - requires `DATABASE_URL` to parse and, after `databaseHost()` normalisation, its host to equal
   `DATABASE_RESET_ALLOWED_HOST`;
 - refuses the host that equals `DATABASE_PRODUCTION_HOST` even when it is also the allowed host,
-  except in two places that opt in: `getDb()` when `VERCEL_ENV` is `production` (the deployed app),
-  and `drizzle.config.ts` for the `migrate` command only (`migrate-production` and the manual
+  except in two places that opt in: `getDb()` when both `VERCEL_ENV` and `NODE_ENV` are
+  `production` (the deployed app; a production env file pulled into `next dev` still fails, since
+  `next dev` runs with `NODE_ENV=development`), and `drizzle.config.ts` for the `migrate` command
+  only (`migrate-production` and the manual
   emergency migration). `drizzle-kit push`, `drop`, `check` or `studio` never admit the production
   host.
 

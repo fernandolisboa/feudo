@@ -19,7 +19,8 @@ export function getDb(): Database {
     throw new MissingDatabaseUrlError();
   }
   assertDatabaseConnectionAllowed(process.env, {
-    allowProduction: process.env.VERCEL_ENV === "production",
+    allowProduction:
+      process.env.VERCEL_ENV === "production" && process.env.NODE_ENV === "production",
   });
 
   cachedDb = drizzle({ connection: url, schema });

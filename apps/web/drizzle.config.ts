@@ -10,7 +10,7 @@ function databaseUrl(): string {
     return PLACEHOLDER_URL;
   }
   assertDatabaseConnectionAllowed(process.env, {
-    allowProduction: process.argv.includes("migrate"),
+    allowProduction: process.argv[2] === "migrate",
   });
   return url;
 }

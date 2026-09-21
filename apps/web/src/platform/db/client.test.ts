@@ -39,11 +39,18 @@ describe("getDb", () => {
     vi.stubEnv("DATABASE_PRODUCTION_HOST", "localhost");
 
     vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("NODE_ENV", "production");
     const preview = await import("./client.ts");
     expect(() => preview.getDb()).toThrow("Database connection refused");
 
     vi.resetModules();
     vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "development");
+    const pulledIntoNextDev = await import("./client.ts");
+    expect(() => pulledIntoNextDev.getDb()).toThrow("Database connection refused");
+
+    vi.resetModules();
+    vi.stubEnv("NODE_ENV", "production");
     const production = await import("./client.ts");
     expect(() => production.getDb()).not.toThrow();
   });
