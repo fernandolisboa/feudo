@@ -10,7 +10,7 @@ export async function resolveRegistrationMode(
   env: AuthEnv,
 ): Promise<RegistrationMode> {
   const stored = await settings.read(REGISTRATION_MODE_SETTING);
-  if (stored !== undefined && stored !== null) {
+  if (stored !== undefined && stored !== null && stored !== "") {
     const parsed = registrationModeSchema.safeParse(stored);
     if (parsed.success) {
       return parsed.data;
