@@ -112,8 +112,12 @@ on `/sign-up/email` deletes it from `ctx.body` before that parser runs, which is
 
 ## Email sending
 
-`EMAIL_PROVIDER` (`resend | fake`, default `resend`) selects the `EmailSender` implementation in
-one place (`apps/web/src/modules/auth/email/select.ts`):
+`EMAIL_PROVIDER` (`resend | smtp | fake`, default `resend`) selects the `EmailSender` implementation
+in one place (`apps/web/src/modules/auth/email/select.ts`, an exhaustive `switch`). Every provider
+shares the same 10s send ceiling (`withSendTimeout` in `email/sender.ts`, racing a timer against
+the provider call, since a hung provider would otherwise run until the function's own
+`maxDuration`) and the same typed failures (`EmailSendError`, `EmailSendTimeoutError`,
+`MissingEmailFromError`).
 
 - `resend`: `getEmailSender` (`email/select.ts`) builds `ResendEmailSender` eagerly and its
   constructor throws a typed error (`MissingResendApiKeyError` / `MissingEmailFromError`) if
@@ -124,12 +128,42 @@ one place (`apps/web/src/modules/auth/email/select.ts`):
   always logs a rejection as "Failed to run background task" and still reports the outer request
   `ok`, so a throw from inside it can never surface as a failed sign-up. A misconfigured `resend`
   provider now fails the very first request instead of silently accepting sign-ups it cannot verify.
+  Resend only delivers to arbitrary recipients from a verified domain (a subdomain of a domain
+  already verified in the same Resend account counts, with its own three DNS records); with no
+  domain, `onboarding@resend.dev` reaches the Resend account owner's own inbox and nobody else.
+- `smtp`: `SmtpEmailSender` (`email/smtp-sender.ts`, nodemailer) for any authenticated SMTP relay
+  — a Gmail account with an app password, a mailbox on an existing domain, a transactional
+  provider's SMTP endpoint. Reads `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM`
+  (each missing one throws `MissingSmtpSettingError` / `MissingEmailFromError` from the
+  constructor, with the same eager-throw contract as `resend`), plus `SMTP_PORT` (default `465`;
+  `InvalidSmtpPortError` on anything outside 1–65535). Port 465 is implicit TLS; any other port
+  sets nodemailer's `requireTLS`, so credentials are never sent before STARTTLS. A fresh transport
+  is created per send and closed in `finally`. Gmail specifics: 2-step verification on, a 16-char
+  app password as `SMTP_PASSWORD`, `smtp.gmail.com`, and Gmail rewrites `EMAIL_FROM` to the
+  account's own address unless it is a configured alias; Google can also block a first login from
+  a new IP range (Vercel's rotate), which surfaces as `EmailSendError` in the function log.
 - `fake`: `FakeEmailSender` writes every message to the `fake_sent_emails` table
   (`apps/web/src/modules/auth/email/fake-email-repository.ts`) instead of an in-memory singleton.
   Vercel functions are separate processes, so a `globalThis` store would not be visible to the
   request that later reads it back through the test-only route; the database is. Used by
-  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). Never written in production —
-  see ADR-0008.
+  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). **Refused in production**:
+  `readEmailProvider` (`env.ts`) throws `FakeEmailProviderInProductionError` when
+  `EMAIL_PROVIDER=fake` and `VERCEL_ENV=production`, the same guard `sync/env.ts` applies to
+  `DATA_PROVIDER=fake` — a production deployment with the fake sender would accept every sign-up
+  and strand it behind a verification link nobody receives (ADR-0008). Because the guard runs
+  inside `buildAuthOptions`, it fails every auth request of such a deployment with a 500, so the
+  production `EMAIL_PROVIDER` must be `resend` or `smtp` (with its settings) **before** a build
+  carrying this guard is deployed.
+
+### First account on a fresh environment
+
+The first person in an environment cannot be invited (an invitation needs an existing household
+and inviter), so with `REGISTRATION_MODE=invite` nobody can ever sign up. The procedure is: set
+the registration mode to `open` (the env var, or the Global Config item once ADR-0001's runtime
+override is in place), sign up at `/registrar`, open the verification link, sign in, create the
+household at `/comecar`, invite the rest of the household from `/casa`, then set the mode back to
+`invite`. Invitees who already signed up while the mode was `open` find the pending invitation
+on `/comecar`'s "Tenho um convite" tab, without needing the invitation email.
 
 ## Test-only route
 
