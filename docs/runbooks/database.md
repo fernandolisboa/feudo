@@ -60,6 +60,12 @@ vercel env add DATABASE_RESET_ALLOWED_HOST development
 vercel env add DATABASE_PRODUCTION_HOST production
 ```
 
+Rollout order for any change that makes the guard require a variable a deployment does not have
+yet (the first one was PR #71): 1. create the Vercel variables above; 2. merge; 3. once the
+production deployment of that merge is live, confirm `GET /api/health` returns 200. A deployment
+built before step 1 refuses every database call, and `migrate-production` still succeeds on its
+own, so a 503 from `/api/health` after the merge is the only signal that step 1 was skipped.
+
 `gh secret set` prompts for the value on stdin; nothing is echoed and nothing is written to the
 repo. `DATABASE_URL_PREVIEW` is the pooled connection string for the `feudo-preview` project, and
 `DATABASE_URL_PRODUCTION` is the pooled connection string for the `feudo` (production) project,
@@ -110,7 +116,7 @@ CI owns applying committed migrations to production. On every push to `main` (af
 
 1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname, normalises it
    (lowercase, strip a trailing dot, strip a `-pooler` suffix from the first label — the same
-   normalisation `databaseHost()` in `apps/web/src/platform/db/reset-guard.ts` applies) and fails the job —
+   normalisation `databaseHost()` in `apps/web/src/platform/db/host-policy.ts` applies) and fails the job —
    printing only `PASS` or `FAIL`, never the URL — unless the normalised host equals the normalised
    `vars.DATABASE_PRODUCTION_HOST`. This is what stops a mispointed or stale
    `DATABASE_URL_PRODUCTION` secret, or a merely differently-cased or pooler/direct variant of the

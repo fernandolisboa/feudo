@@ -36,7 +36,12 @@ export function checkDatabaseHost(
   }
 
   if (!env.DATABASE_RESET_ALLOWED_HOST) {
-    return { ok: false, reason: "DATABASE_RESET_ALLOWED_HOST is not set" };
+    return {
+      ok: false,
+      reason: allowProduction
+        ? "DATABASE_PRODUCTION_HOST does not match DATABASE_URL's host and DATABASE_RESET_ALLOWED_HOST is not set"
+        : "DATABASE_RESET_ALLOWED_HOST is not set",
+    };
   }
 
   if (targetHost !== databaseHost(env.DATABASE_RESET_ALLOWED_HOST)) {
