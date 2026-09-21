@@ -28,7 +28,7 @@ function readOptionalEnvValue(env: AuthEnv, key: string): string | undefined {
   return raw === undefined || raw === "" ? undefined : raw;
 }
 
-const registrationModeSchema = z.enum(["open", "invite", "closed"]);
+export const registrationModeSchema = z.enum(["open", "invite", "closed"]);
 const DEFAULT_REGISTRATION_MODE: RegistrationMode = "invite";
 
 export function readRegistrationMode(env: AuthEnv = process.env): RegistrationMode {

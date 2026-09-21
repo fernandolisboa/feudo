@@ -64,10 +64,22 @@ helper treats that as a no-op rather than failing the call.
 
 ## Registration modes
 
-`REGISTRATION_MODE` is read at request time (Zod-validated: `open | invite | closed`, default
-`invite`, empty string treated as unset) by `readRegistrationMode`
-(`apps/web/src/modules/auth/env.ts`) and enforced by `evaluateRegistrationMode`
-(`packages/core/src/auth/registration-policy.ts`).
+The registration mode is resolved at request time by `resolveRegistrationMode`
+(`apps/web/src/modules/auth/registration-mode.ts`) and enforced by `evaluateRegistrationMode`
+(`packages/core/src/auth/registration-policy.ts`). Resolution order:
+
+1. The `registration_mode` item of the Vercel Global Config store whose connection string is in
+   `GLOBAL_CONFIG` (`apps/web/src/platform/runtime-settings.ts`). This is how the mode changes
+   without a redeploy: edit the item in the Vercel dashboard (Storage → the store → Items) and
+   it propagates within about 10 seconds. A `null` item means "unset". An unreachable store or a
+   value outside `open | invite | closed` is logged and ignored, so a broken store can never
+   open registration by accident.
+2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, empty string treated as unset)
+   by `readRegistrationMode` (`apps/web/src/modules/auth/env.ts`).
+3. `invite`.
+
+Only the production deployment has `GLOBAL_CONFIG`; preview, CI and local runs keep using the
+environment variable. A malformed `GLOBAL_CONFIG` throws when the auth instance is built.
 
 - `closed`: sign-up always refused.
 - `invite`: sign-up refused unless the email holds a pending invitation. `hasPendingInvitation`
