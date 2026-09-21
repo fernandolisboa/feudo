@@ -18,7 +18,9 @@ export function getDb(): Database {
   if (!url) {
     throw new MissingDatabaseUrlError();
   }
-  assertDatabaseConnectionAllowed(process.env);
+  assertDatabaseConnectionAllowed(process.env, {
+    allowProduction: process.env.VERCEL_ENV === "production",
+  });
 
   cachedDb = drizzle({ connection: url, schema });
   attachPoolErrorLogger(cachedDb.$client);

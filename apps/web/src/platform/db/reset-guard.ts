@@ -1,18 +1,8 @@
 import { DatabaseResetNotAllowedError } from "./errors.ts";
+import { checkDatabaseHost, type DatabaseHostEnv } from "./host-policy.ts";
 
-export interface ResetGuardEnv {
-  DATABASE_URL?: string;
-  DATABASE_RESET_ALLOWED_HOST?: string;
-  DATABASE_PRODUCTION_HOST?: string;
+export interface ResetGuardEnv extends DatabaseHostEnv {
   VERCEL_ENV?: string;
-  [key: string]: string | undefined;
-}
-
-export function databaseHost(host: string): string {
-  const withoutTrailingDot = host.toLowerCase().replace(/\.$/, "");
-  const [firstLabel = "", ...rest] = withoutTrailingDot.split(".");
-  const withoutPoolerSuffix = firstLabel.replace(/-pooler$/, "");
-  return [withoutPoolerSuffix, ...rest].join(".");
 }
 
 export function assertDatabaseResetAllowed(env: ResetGuardEnv): void {
@@ -20,24 +10,8 @@ export function assertDatabaseResetAllowed(env: ResetGuardEnv): void {
     throw new DatabaseResetNotAllowedError("VERCEL_ENV is production");
   }
 
-  if (!env.DATABASE_RESET_ALLOWED_HOST) {
-    throw new DatabaseResetNotAllowedError("DATABASE_RESET_ALLOWED_HOST is not set");
-  }
-
-  let targetHost: string;
-  try {
-    targetHost = databaseHost(new URL(env.DATABASE_URL ?? "").hostname);
-  } catch {
-    throw new DatabaseResetNotAllowedError("DATABASE_URL is not a valid URL");
-  }
-
-  if (env.DATABASE_PRODUCTION_HOST && targetHost === databaseHost(env.DATABASE_PRODUCTION_HOST)) {
-    throw new DatabaseResetNotAllowedError("DATABASE_URL's host matches DATABASE_PRODUCTION_HOST");
-  }
-
-  if (targetHost !== databaseHost(env.DATABASE_RESET_ALLOWED_HOST)) {
-    throw new DatabaseResetNotAllowedError(
-      "DATABASE_RESET_ALLOWED_HOST does not match DATABASE_URL's host",
-    );
+  const check = checkDatabaseHost(env);
+  if (!check.ok) {
+    throw new DatabaseResetNotAllowedError(check.reason);
   }
 }

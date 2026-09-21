@@ -9,7 +9,9 @@ function databaseUrl(): string {
   if (!url) {
     return PLACEHOLDER_URL;
   }
-  assertDatabaseConnectionAllowed(process.env, { allowProduction: true });
+  assertDatabaseConnectionAllowed(process.env, {
+    allowProduction: process.argv.includes("migrate"),
+  });
   return url;
 }
 

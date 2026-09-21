@@ -38,6 +38,8 @@ and closes once E2E lands and needs its own predictable schema.
 | `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo, `production` environment only                                                                       | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                                                                                                                                                                                                                                                                                                    |
 | `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo, both at repo level (`vars.DATABASE_PRODUCTION_HOST`) and duplicated in the `production` environment | CI `migrate-production` job's guard and migrate steps (read the `production` environment copy; the migrate step needs it because the connection guard only admits the production host when it is declared); also the belt-and-braces refusal in `assertDatabaseResetAllowed` in the `integration` and `e2e` jobs' reset/migrate/test steps (read the repo-level copy, since those jobs have no `environment:`) |
 | `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/platform/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                                                                                                                                          |
+| `DATABASE_RESET_ALLOWED_HOST` | Vercel env              | Preview, Development                                                                                           | the connection guard in `getDb()` on Preview deployments (and in `next dev` after `vercel env pull --environment=development`): must equal the `feudo-preview` pooler host, the same value as the GitHub variable                                                                                                                                                                                              |
+| `DATABASE_PRODUCTION_HOST`    | Vercel env              | Production                                                                                                     | the connection guard in `getDb()` on Production deployments: must equal the `feudo` pooler host, the same value as the GitHub variable. Both Vercel variables must exist before a deployment that carries the guard, or every database call on that deployment is refused                                                                                                                                      |
 
 Secrets are set once, in this repo, through the GitHub CLI — never pasted into a workflow file or
 committed:
@@ -48,6 +50,14 @@ gh variable set DATABASE_RESET_ALLOWED_HOST --body "<feudo-preview pooler hostna
 gh secret set DATABASE_URL_PRODUCTION --env production
 gh variable set DATABASE_PRODUCTION_HOST --body "<feudo (production) pooler hostname>" --env production
 gh variable set DATABASE_PRODUCTION_HOST --body "<feudo (production) pooler hostname>"
+```
+
+The two Vercel copies are set once from the same hostnames, and never need rotating:
+
+```
+vercel env add DATABASE_RESET_ALLOWED_HOST preview
+vercel env add DATABASE_RESET_ALLOWED_HOST development
+vercel env add DATABASE_PRODUCTION_HOST production
 ```
 
 `gh secret set` prompts for the value on stdin; nothing is echoed and nothing is written to the
@@ -106,10 +116,11 @@ CI owns applying committed migrations to production. On every push to `main` (af
    same host, from migrating the wrong database.
 2. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
    `secrets.DATABASE_URL_PRODUCTION`, with `DATABASE_PRODUCTION_HOST` set so the connection guard
-   in `drizzle.config.ts` admits the production host. Nothing resets or drops anything — `db:reset` and
-   `db:reset-schema` never appear in this job, and `assertDatabaseResetAllowed` also refuses
-   outright whenever `DATABASE_URL`'s host matches `DATABASE_PRODUCTION_HOST` (see "The reset
-   guard" below), so even a copy-pasted step from the `integration` job would fail closed instead
+   in `drizzle.config.ts` admits the production host, which it does for the `migrate` command
+   only. Nothing resets or drops anything — `db:reset` and `db:reset-schema` never appear in this
+   job, and `assertDatabaseResetAllowed` also refuses outright whenever `DATABASE_URL`'s host
+   matches `DATABASE_PRODUCTION_HOST` (see "The reset guard" below), so even a copy-pasted step
+   from the `integration` job would fail closed instead
    of dropping the production schema.
 
 The job holds a `production-db` concurrency group (`cancel-in-progress: false`), separate from the
@@ -159,22 +170,30 @@ needs it, never `export`ed into the shell's environment. Confirm `GET /api/healt
 Nothing in this repo may connect to a database the environment did not explicitly declare. On
 2026-09-09 an agent inherited a `TEST_DATABASE_URL` from the owner's shell profile that pointed at
 another project's production Neon database and ran against it; the guard exists so that a
-connection string merely present in the shell is never enough.
+connection string merely present in the environment is never enough.
 
 `assertDatabaseConnectionAllowed` (`apps/web/src/platform/db/connection-guard.ts`) runs inside
-`getDb()` before the pool is created, so it covers `next dev`, every script under `apps/web/scripts`,
-the integration-test harness and any test or script that calls `getDb()` directly. `drizzle.config.ts`
-runs it as well whenever `DATABASE_URL` is set, so `db:migrate`, `db:generate` and `db:check` are
-covered too. It:
+`getDb()` before the pool is created, so it covers the app on Vercel, `next dev`, every script under
+`apps/web/scripts`, the integration-test harness and any test or script that calls `getDb()`
+directly. `drizzle.config.ts` runs it as well whenever `DATABASE_URL` is set, so `db:migrate`,
+`db:generate` and `db:check` are covered too. There is no environment in which it is skipped. It
+shares its host policy with the reset guard (`apps/web/src/platform/db/host-policy.ts`) and:
 
-- is skipped when `VERCEL=1`, i.e. on a Vercel build or runtime, where the platform injects
-  `DATABASE_URL` per environment and no shell is involved;
-- otherwise requires `DATABASE_URL` to parse and, after `databaseHost()` normalisation, its host to
-  equal `DATABASE_RESET_ALLOWED_HOST`;
-- refuses the host that equals `DATABASE_PRODUCTION_HOST` even when it is also the allowed host.
-  Only `drizzle.config.ts` opts into admitting the production host (`allowProduction`), and only
-  when `DATABASE_PRODUCTION_HOST` is set, which is what `migrate-production` and the manual
-  emergency migration do; `getDb()` never admits it outside Vercel.
+- requires `DATABASE_URL` to parse and, after `databaseHost()` normalisation, its host to equal
+  `DATABASE_RESET_ALLOWED_HOST`;
+- refuses the host that equals `DATABASE_PRODUCTION_HOST` even when it is also the allowed host,
+  except in two places that opt in: `getDb()` when `VERCEL_ENV` is `production` (the deployed app),
+  and `drizzle.config.ts` for the `migrate` command only (`migrate-production` and the manual
+  emergency migration). `drizzle-kit push`, `drop`, `check` or `studio` never admit the production
+  host.
+
+Because the guard never skips, every environment declares its host: Vercel Production carries
+`DATABASE_PRODUCTION_HOST`, Vercel Preview and Development carry `DATABASE_RESET_ALLOWED_HOST` (see
+the table above), CI passes the GitHub variables to each step that connects, and a local shell or
+`.env.local` sets `DATABASE_RESET_ALLOWED_HOST` by hand. The guard is deliberately not keyed on
+`VERCEL=1` or any other variable the platform injects: `vercel env pull` writes those same variables
+into the pulled file, so a skip based on them would be switched off by the very workflow that
+fetches a preview connection string.
 
 The error names the missing or mismatched variable and never includes the URL or its host. In
 practice: an exported `DATABASE_URL` alone fails fast with `DATABASE_RESET_ALLOWED_HOST is not set`;
@@ -238,7 +257,10 @@ DATABASE_RESET_ALLOWED_HOST=<feudo-preview pooler hostname>
 
 Without the second line every page that touches the database fails with
 `DATABASE_RESET_ALLOWED_HOST is not set`. That is the guard doing its job, not a misconfiguration to
-route around: declare the host of the database you mean to use.
+route around: declare the host of the database you mean to use. `vercel env pull
+--environment=development .env.local` writes both lines, since the Development environment carries
+`DATABASE_RESET_ALLOWED_HOST`; it also writes `VERCEL=1` and `VERCEL_ENV=development`, which the
+guard ignores on purpose.
 
 ## Integration tests
 

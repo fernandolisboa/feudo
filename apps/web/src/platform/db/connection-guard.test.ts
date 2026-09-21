@@ -86,10 +86,14 @@ describe("assertDatabaseConnectionAllowed", () => {
     }).toThrow(DatabaseConnectionNotAllowedError);
   });
 
-  it("skips the check on Vercel, where the platform injects DATABASE_URL", () => {
+  it("is not switched off by the Vercel system variables a pulled env file carries", () => {
     expect(() => {
-      assertDatabaseConnectionAllowed({ DATABASE_URL: AMBIENT_URL, VERCEL: "1" });
-    }).not.toThrow();
+      assertDatabaseConnectionAllowed({
+        DATABASE_URL: AMBIENT_URL,
+        VERCEL: "1",
+        VERCEL_ENV: "development",
+      });
+    }).toThrow(DatabaseConnectionNotAllowedError);
   });
 
   it("never leaks the connection string in the error message", () => {
