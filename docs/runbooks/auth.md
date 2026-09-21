@@ -40,12 +40,12 @@ this (active-household resolution, single-owner enforcement, the isolation-test 
 
 ## Policy enforcement lives in Better Auth, not in the server action
 
-`REGISTRATION_MODE` and the terms-version match are enforced in exactly one place: a Better Auth
+The registration mode and the terms-version match are enforced in exactly one place: a Better Auth
 `hooks.before` on `/sign-up/email` (`apps/web/src/modules/auth/options.ts`), which throws an
 `APIError` before any user is created. This is what actually protects the system — it runs for
 every request to the route, including one that bypasses the server action entirely (a direct
 `POST /api/auth/sign-up/email`). `signUp` (`apps/web/src/modules/auth/service.ts`) does not
-re-check `REGISTRATION_MODE`; it only maps the hook's `APIError` message back to a typed
+re-check the registration mode; it only maps the hook's `APIError` message back to a typed
 `SignUpOutcome`, and still short-circuits locally on the terms checkbox
 (`input.termsAccepted`) for no-round-trip form feedback, since that flag never reaches the hook.
 
@@ -64,10 +64,26 @@ helper treats that as a no-op rather than failing the call.
 
 ## Registration modes
 
-`REGISTRATION_MODE` is read at request time (Zod-validated: `open | invite | closed`, default
-`invite`, empty string treated as unset) by `readRegistrationMode`
-(`apps/web/src/modules/auth/env.ts`) and enforced by `evaluateRegistrationMode`
-(`packages/core/src/auth/registration-policy.ts`).
+The registration mode is resolved at request time by `resolveRegistrationMode`
+(`apps/web/src/modules/auth/registration-mode.ts`) and enforced by `evaluateRegistrationMode`
+(`packages/core/src/auth/registration-policy.ts`). Resolution order:
+
+1. The `registration_mode` item of the Vercel Global Config store whose connection string is in
+   `GLOBAL_CONFIG` (`apps/web/src/platform/runtime-settings.ts`). This is how the mode changes
+   without a redeploy: edit the item in the Vercel dashboard (Storage → the store → Items) and
+   it propagates within about 10 seconds. A `null` or empty item means "unset". An unreachable
+   store (the read gives up after 2 seconds and never serves a stale value on upstream errors)
+   or a value outside `open | invite | closed` is logged and ignored, so a broken store can
+   never open registration by accident. Write access to the store is the authority to open
+   registration: setting the item to `open` stays subject to the gates in ADR-0005 and
+   ADR-0008 and to the `/security-audit` rule in `CLAUDE.md`.
+2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, empty string treated as unset)
+   by `readRegistrationMode` (`apps/web/src/modules/auth/env.ts`).
+3. `invite`.
+
+Only the production deployment has `GLOBAL_CONFIG`; preview, CI and local runs keep using the
+environment variable. A malformed `GLOBAL_CONFIG` is logged and ignored (the environment
+variable decides) rather than failing every auth endpoint.
 
 - `closed`: sign-up always refused.
 - `invite`: sign-up refused unless the email holds a pending invitation. `hasPendingInvitation`
@@ -276,7 +292,7 @@ is set explicitly instead of relying on the ambient default either way.
 
 ## Magic link never signs up
 
-`magicLink({ disableSignUp: true, ... })` in `options.ts` is deliberate: `REGISTRATION_MODE` and
+`magicLink({ disableSignUp: true, ... })` in `options.ts` is deliberate: the registration mode and
 terms acceptance are enforced only by the `hooks.before` on `/sign-up/email` ("Policy enforcement"
 above), and the magic-link plugin's own sign-in endpoint would otherwise mint a brand-new,
 unverified-policy account for any email a requester types in, bypassing both checks entirely. With
