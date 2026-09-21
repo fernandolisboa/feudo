@@ -11,3 +11,10 @@ export class DatabaseResetNotAllowedError extends Error {
     this.name = "DatabaseResetNotAllowedError";
   }
 }
+
+export class DatabaseConnectionNotAllowedError extends Error {
+  constructor(reason: string) {
+    super(`Database connection refused: ${reason}`);
+    this.name = "DatabaseConnectionNotAllowedError";
+  }
+}

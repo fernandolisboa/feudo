@@ -1,5 +1,8 @@
 import { getDb } from "../src/platform/db/client.ts";
-import { DatabaseResetNotAllowedError } from "../src/platform/db/errors.ts";
+import {
+  DatabaseConnectionNotAllowedError,
+  DatabaseResetNotAllowedError,
+} from "../src/platform/db/errors.ts";
 import { resetDatabase } from "../src/platform/db/reset.ts";
 
 async function main() {
@@ -24,7 +27,10 @@ async function main() {
 
 main().catch((error) => {
   console.error("Database reset failed.");
-  if (error instanceof DatabaseResetNotAllowedError) {
+  if (
+    error instanceof DatabaseResetNotAllowedError ||
+    error instanceof DatabaseConnectionNotAllowedError
+  ) {
     console.error(error.message);
   } else {
     console.error(error?.name ?? "Error");

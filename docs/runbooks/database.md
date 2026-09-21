@@ -31,13 +31,13 @@ and closes once E2E lands and needs its own predictable schema.
 
 ## Secrets and variables
 
-| name                          | kind                    | where                                                                                                          | used by                                                                                                                                                                                                                                                                                |
-| ----------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL_PREVIEW`        | GitHub Actions secret   | this repo                                                                                                      | CI `integration` job: resets the `feudo-preview` project's schema, migrates it, runs `pnpm test:integration`                                                                                                                                                                           |
-| `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`)                                                                 | CI `integration` job's reset and integration-test steps: must equal `new URL(DATABASE_URL).hostname`                                                                                                                                                                                   |
-| `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo, `production` environment only                                                                       | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                                                                                                                                                                            |
-| `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo, both at repo level (`vars.DATABASE_PRODUCTION_HOST`) and duplicated in the `production` environment | CI `migrate-production` job's guard step (reads the `production` environment copy); also the belt-and-braces refusal in `assertDatabaseResetAllowed` in the `integration` and `e2e` jobs' reset/migrate/test steps (read the repo-level copy, since those jobs have no `environment:`) |
-| `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/platform/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                  |
+| name                          | kind                    | where                                                                                                          | used by                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL_PREVIEW`        | GitHub Actions secret   | this repo                                                                                                      | CI `integration` job: resets the `feudo-preview` project's schema, migrates it, runs `pnpm test:integration`                                                                                                                                                                                                                                                                                                   |
+| `DATABASE_RESET_ALLOWED_HOST` | GitHub Actions variable | this repo (`vars.DATABASE_RESET_ALLOWED_HOST`)                                                                 | CI `integration` and `e2e` jobs' reset, migrate and integration-test steps, and every local shell or `.env.local` that connects to the preview project: must equal `new URL(DATABASE_URL).hostname` (see "The connection guard" below)                                                                                                                                                                         |
+| `DATABASE_URL_PRODUCTION`     | GitHub Actions secret   | this repo, `production` environment only                                                                       | CI `migrate-production` job: the only place this connection string is read outside the owner's own terminal                                                                                                                                                                                                                                                                                                    |
+| `DATABASE_PRODUCTION_HOST`    | GitHub Actions variable | this repo, both at repo level (`vars.DATABASE_PRODUCTION_HOST`) and duplicated in the `production` environment | CI `migrate-production` job's guard and migrate steps (read the `production` environment copy; the migrate step needs it because the connection guard only admits the production host when it is declared); also the belt-and-braces refusal in `assertDatabaseResetAllowed` in the `integration` and `e2e` jobs' reset/migrate/test steps (read the repo-level copy, since those jobs have no `environment:`) |
+| `DATABASE_URL`                | Vercel env              | Production, Preview, Development                                                                               | the app itself, read by `apps/web/src/platform/db/client.ts`; Preview and Development point at `feudo-preview`, Production at `feudo`                                                                                                                                                                                                                                                                          |
 
 Secrets are set once, in this repo, through the GitHub CLI — never pasted into a workflow file or
 committed:
@@ -82,7 +82,8 @@ On every push and pull request, once the `ci` job passes, `integration` runs aga
    no rows, so a migration or column left behind by another branch never survives into the next
    run.
 2. **Migrate** (`pnpm --filter @feudo/web db:migrate`): applies every committed migration to the
-   now-empty schema, which also recreates the `drizzle` migrations schema.
+   now-empty schema, which also recreates the `drizzle` migrations schema. The step carries
+   `DATABASE_RESET_ALLOWED_HOST` too, because `drizzle.config.ts` runs the connection guard.
 3. **Integration tests** (`pnpm test:integration`): runs `apps/web`'s integration Vitest project
    against the freshly migrated schema.
 
@@ -104,7 +105,8 @@ CI owns applying committed migrations to production. On every push to `main` (af
    `DATABASE_URL_PRODUCTION` secret, or a merely differently-cased or pooler/direct variant of the
    same host, from migrating the wrong database.
 2. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
-   `secrets.DATABASE_URL_PRODUCTION`. Nothing resets or drops anything — `db:reset` and
+   `secrets.DATABASE_URL_PRODUCTION`, with `DATABASE_PRODUCTION_HOST` set so the connection guard
+   in `drizzle.config.ts` admits the production host. Nothing resets or drops anything — `db:reset` and
    `db:reset-schema` never appear in this job, and `assertDatabaseResetAllowed` also refuses
    outright whenever `DATABASE_URL`'s host matches `DATABASE_PRODUCTION_HOST` (see "The reset
    guard" below), so even a copy-pasted step from the `integration` job would fail closed instead
@@ -130,10 +132,15 @@ way: a red check on the `main` branch's commit and run history — there is no s
   sed -n 's/^DATABASE_URL=".*@\([^/:?]*\).*/\1/p' .env.production.local
   # Eyeball the host printed above: it must be the `feudo` project's, e.g. ep-dry-wildflower-…,
   # never ep-late-flower-… (that is `feudo-preview`). Stop here if it looks wrong.
+  DATABASE_PRODUCTION_HOST=<the host printed above> \
   DATABASE_URL=$(sed -n 's/^DATABASE_URL="\(.*\)"$/\1/p' .env.production.local) \
     pnpm --filter @feudo/web exec drizzle-kit migrate
 )
 ```
+
+`DATABASE_PRODUCTION_HOST` has to be typed by hand, from the host you just eyeballed: the connection
+guard in `drizzle.config.ts` refuses any host that the environment does not declare, and declaring
+the production host is the deliberate act that makes a manual production migration possible.
 
 `vercel env pull --environment=production --yes <file>` requires being logged into the Vercel
 account that owns the project and writes exactly the file named on the command line — passing no
@@ -146,6 +153,35 @@ the second `sed` (used only inline in the `DATABASE_URL=…` assignment) is the 
 string is extracted, and it is piped straight into the one `drizzle-kit migrate` invocation that
 needs it, never `export`ed into the shell's environment. Confirm `GET /api/health` reports
 `migrations.status: "up-to-date"` once the command finishes.
+
+## The connection guard
+
+Nothing in this repo may connect to a database the environment did not explicitly declare. On
+2026-09-09 an agent inherited a `TEST_DATABASE_URL` from the owner's shell profile that pointed at
+another project's production Neon database and ran against it; the guard exists so that a
+connection string merely present in the shell is never enough.
+
+`assertDatabaseConnectionAllowed` (`apps/web/src/platform/db/connection-guard.ts`) runs inside
+`getDb()` before the pool is created, so it covers `next dev`, every script under `apps/web/scripts`,
+the integration-test harness and any test or script that calls `getDb()` directly. `drizzle.config.ts`
+runs it as well whenever `DATABASE_URL` is set, so `db:migrate`, `db:generate` and `db:check` are
+covered too. It:
+
+- is skipped when `VERCEL=1`, i.e. on a Vercel build or runtime, where the platform injects
+  `DATABASE_URL` per environment and no shell is involved;
+- otherwise requires `DATABASE_URL` to parse and, after `databaseHost()` normalisation, its host to
+  equal `DATABASE_RESET_ALLOWED_HOST`;
+- refuses the host that equals `DATABASE_PRODUCTION_HOST` even when it is also the allowed host.
+  Only `drizzle.config.ts` opts into admitting the production host (`allowProduction`), and only
+  when `DATABASE_PRODUCTION_HOST` is set, which is what `migrate-production` and the manual
+  emergency migration do; `getDb()` never admits it outside Vercel.
+
+The error names the missing or mismatched variable and never includes the URL or its host. In
+practice: an exported `DATABASE_URL` alone fails fast with `DATABASE_RESET_ALLOWED_HOST is not set`;
+a shell that exports a URL for one project and declares the host of another fails with
+`DATABASE_RESET_ALLOWED_HOST does not match DATABASE_URL's host`. Note that `next dev` reads an
+already-exported `DATABASE_URL` in preference to `.env.local`, so a stale shell export used to win
+silently; with the guard it is refused unless the declared host matches it.
 
 ## The reset guard
 
@@ -190,6 +226,19 @@ connection string. The guard's own `DatabaseResetNotAllowedError.message` is saf
 it never contains a credential.
 
 Run either reset only against `DATABASE_URL_PREVIEW`'s value, never against production.
+
+## Running the app locally
+
+`next dev` connects through the same `getDb()`, so `.env.local` needs both lines:
+
+```
+DATABASE_URL=<feudo-preview connection string>
+DATABASE_RESET_ALLOWED_HOST=<feudo-preview pooler hostname>
+```
+
+Without the second line every page that touches the database fails with
+`DATABASE_RESET_ALLOWED_HOST is not set`. That is the guard doing its job, not a misconfiguration to
+route around: declare the host of the database you mean to use.
 
 ## Integration tests
 

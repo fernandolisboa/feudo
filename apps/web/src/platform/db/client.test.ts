@@ -3,19 +3,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const DUMMY_DATABASE_URL = "postgres://user:pass@localhost:5432/db";
 
 describe("getDb", () => {
-  const originalDatabaseUrl = process.env.DATABASE_URL;
-
   beforeEach(() => {
     vi.resetModules();
-    process.env.DATABASE_URL = DUMMY_DATABASE_URL;
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("DATABASE_URL", DUMMY_DATABASE_URL);
+    vi.stubEnv("DATABASE_RESET_ALLOWED_HOST", "localhost");
   });
 
   afterEach(() => {
-    if (originalDatabaseUrl === undefined) {
-      delete process.env.DATABASE_URL;
-    } else {
-      process.env.DATABASE_URL = originalDatabaseUrl;
-    }
+    vi.unstubAllEnvs();
+  });
+
+  it("refuses a DATABASE_URL whose host was not declared, before opening a connection", async () => {
+    vi.stubEnv("DATABASE_RESET_ALLOWED_HOST", "");
+
+    const { getDb } = await import("./client.ts");
+
+    expect(() => getDb()).toThrow("Database connection refused");
   });
 
   it("wires the pool error logger onto the underlying client", async () => {
