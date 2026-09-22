@@ -19,6 +19,10 @@ describe("readRegistrationMode", () => {
     expect(readRegistrationMode({ REGISTRATION_MODE: "" })).toBe("invite");
   });
 
+  it("defaults to invite when the variable is whitespace only", () => {
+    expect(readRegistrationMode({ REGISTRATION_MODE: " " })).toBe("invite");
+  });
+
   it("returns the parsed value when it is valid", () => {
     expect(readRegistrationMode({ REGISTRATION_MODE: "open" })).toBe("open");
   });

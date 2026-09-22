@@ -46,7 +46,7 @@ export function parseRegistrationMode(raw: string): RegistrationMode | undefined
 
 export function readRegistrationMode(env: AuthEnv = process.env): RegistrationMode {
   const raw = readOptionalEnvValue(env, "REGISTRATION_MODE");
-  if (raw === undefined) {
+  if (raw === undefined || raw.trim() === "") {
     return DEFAULT_REGISTRATION_MODE;
   }
   const parsed = parseRegistrationMode(raw);
