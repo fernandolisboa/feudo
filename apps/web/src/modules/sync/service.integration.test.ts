@@ -12,7 +12,12 @@ import {
 } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
 import { createHouseholdAccountsRepository, createSyncUserRepository } from "./repository";
-import { bankConnection, bankConnectionConsent, providerCredential } from "./schema";
+import {
+  bankConnection,
+  bankConnectionConsent,
+  bankTransaction,
+  providerCredential,
+} from "./schema";
 import {
   AUTH_ATTEMPTS_PER_WINDOW,
   acceptConsent,
@@ -149,6 +154,18 @@ describe("connectProvider (integration)", () => {
       expect(connection).toMatchObject({ institutionName: "Banco Fixture", accountsCount: 6 });
       expect(connection?.lastSyncedAt).toBeInstanceOf(Date);
       expect(householdA).toBe(userA.session.householdId);
+      const transactions = await db
+        .select({
+          amountCentavos: bankTransaction.amountCentavos,
+          hash: bankTransaction.counterpartDocumentHash,
+        })
+        .from(bankTransaction)
+        .orderBy(bankTransaction.date);
+      expect(transactions.map((transaction) => transaction.amountCentavos)).toEqual([
+        850000, -98050, -21230,
+      ]);
+      expect(transactions[0]?.hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(transactions[2]?.hash).toBeNull();
     });
   });
 

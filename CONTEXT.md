@@ -56,6 +56,10 @@ An account the household treats as the household's own, for reporting purposes. 
 An account the household treats as one member's own, for reporting purposes. Every member still sees it in full. Default label for a newly assigned account.
 _Avoid_: private account, personal account
 
+**Sync**:
+The daily read of every bank connection with its owner's own credentials, one connection at a time: the provider is asked to refresh the connection, then its accounts, positions and transactions are re-read and stored. The first sync of a connection reads from the first day of the month twelve months back; later ones re-read from a week before the last successful sync, so late or revised postings are picked up without duplicates. A failed sync records why on the connection and leaves its data and last sync time untouched.
+_Avoid_: refresh (that is the provider-side step), import
+
 **Institution**:
 A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation.
 _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
@@ -124,7 +128,7 @@ The mean monthly fixed cost over the last six complete months, computed with at 
 ### Market data
 
 **Market data**:
-Reference rates (CDI, Selic, IPCA) synced daily from Bacen's SGS API. Shared across every household, never scoped to one; the only domain table without a `household_id`. Feudo's own annualised CDI and 12-month accumulated IPCA are computed values, distinguished from a rate Bacen itself publishes.
+Reference rates (CDI, Selic, IPCA) synced daily from Bacen's SGS API. Shared across every household, never scoped to one; the only domain table that belongs to no household and no user. Feudo's own annualised CDI and 12-month accumulated IPCA are computed values, distinguished from a rate Bacen itself publishes.
 _Avoid_: indicators (ambiguous with dashboard stat tiles), rates table
 
 ### Banking intelligence

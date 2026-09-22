@@ -4,6 +4,7 @@ import type { CurrentSession } from "@/modules/auth";
 import type { HouseholdScope, HouseholdSession } from "@/modules/households";
 import { householdScope } from "@/modules/households";
 
+import { errorName } from "@/lib/error-name";
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import { CONSENT_MAX_AGE_MS, CONSENT_SCOPE_VERSION, currentConsentScopeText } from "./consent-text";
@@ -14,16 +15,25 @@ import {
   MalformedCiphertextError,
 } from "./crypto";
 import { readEncryptionKey, type SyncEnv } from "./env";
-import type { DataProvider, ProviderClient, ProviderCredentials } from "./provider/provider";
+import type {
+  DataProvider,
+  NormalizedAccount,
+  NormalizedTransaction,
+  ProviderClient,
+  ProviderCredentials,
+} from "./provider/provider";
 import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider/provider";
 import { getDataProvider } from "./provider/select";
 import {
   createHouseholdAccountsRepository,
   createSyncUserRepository,
+  listConnectionsToSync,
+  type ConnectionToSync,
   type DataProviderKind,
   type SyncUserRepository,
 } from "./repository";
-import { userScope } from "./scope";
+import { scopeForUser, userScope } from "./scope";
+import { transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
   ConnectProviderFormInput,
@@ -125,6 +135,33 @@ type ConnectionFailure = "item_not_found" | "already_connected" | "provider_unav
 
 type EstablishedConnection = { connectionId: string; accountsCount: number };
 
+type ConnectionSnapshot = { accounts: NormalizedAccount[]; transactions: NormalizedTransaction[] };
+
+// Investment positions are accounts of type "investment" in Feudo's shape
+// (ADR-0005) but not accounts at the provider: their movements live behind
+// another endpoint and are not part of the ledger yet, so only the accounts
+// that hold transactions are asked for them.
+async function readConnection(
+  client: ProviderClient,
+  providerItemId: string,
+  since: string,
+): Promise<ConnectionSnapshot> {
+  const accounts = [
+    ...(await client.listAccounts(providerItemId)),
+    ...(await client.listInvestmentPositions(providerItemId)),
+  ];
+  const transactions: NormalizedTransaction[] = [];
+  const seen = new Set<string>();
+  for (const account of accounts) {
+    if (account.type === "investment" || seen.has(account.providerAccountId)) {
+      continue;
+    }
+    seen.add(account.providerAccountId);
+    transactions.push(...(await client.listTransactionsSince(account.providerAccountId, since)));
+  }
+  return { accounts, transactions };
+}
+
 // Every provider read happens before the first write, and the writes share
 // one transaction, so neither a provider failure nor a database failure
 // leaves a half-synced connection behind. A concurrent submit of the same
@@ -140,17 +177,19 @@ async function establishConnection(
     return { status: "already_connected" };
   }
 
+  const syncedAt = new Date();
   let described;
-  let accounts;
+  let snapshot;
   try {
     described = await client.describeConnection(input.providerItemId);
     if (described.status === "not_found") {
       return { status: "item_not_found" };
     }
-    accounts = [
-      ...(await client.listAccounts(input.providerItemId)),
-      ...(await client.listInvestmentPositions(input.providerItemId)),
-    ];
+    snapshot = await readConnection(
+      client,
+      input.providerItemId,
+      transactionsSince(syncedAt, null),
+    );
   } catch (error) {
     if (isProviderFailure(error)) {
       return { status: "provider_unavailable" };
@@ -158,7 +197,6 @@ async function establishConnection(
     throw error;
   }
 
-  const syncedAt = new Date();
   const institution = described.connection;
   try {
     return await db.transaction(async (tx) => {
@@ -169,16 +207,63 @@ async function establishConnection(
         institutionProviderId: institution.institutionProviderId,
         consentId: input.consentId,
       });
-      const accountsCount = await repository.upsertAccounts(tx, connectionId, accounts, {
+      const accountsCount = await repository.upsertAccounts(tx, connectionId, snapshot.accounts, {
         assignTo: input.assignTo,
         syncedAt,
       });
+      await repository.upsertTransactions(tx, connectionId, snapshot.transactions, { syncedAt });
       await repository.markSynced(tx, connectionId, { syncedAt, error: null });
       return { status: "ok", connectionId, accountsCount };
     });
   } catch {
     const raced = await repository.findConnectionByItem(db, PROVIDER_KIND, input.providerItemId);
     return { status: raced ? "already_connected" : "failed" };
+  }
+}
+
+type StoredCredentialsOutcome = Outcome<
+  { credentials: ProviderCredentials },
+  "no_credentials" | "credentials_unreadable"
+>;
+
+async function loadStoredCredentials(
+  repository: SyncUserRepository,
+  db: Database,
+  encryptionKey: string,
+): Promise<StoredCredentialsOutcome> {
+  const stored = await repository.getCredential(db);
+  if (!stored) {
+    return { status: "no_credentials" };
+  }
+  try {
+    return {
+      status: "ok",
+      credentials: deserializeCredentials(stored.ciphertext, encryptionKey),
+    };
+  } catch (error) {
+    if (isUnreadableCredentialsFailure(error)) {
+      return { status: "credentials_unreadable" };
+    }
+    throw error;
+  }
+}
+
+type ProviderSessionOutcome = Outcome<
+  { client: ProviderClient },
+  "invalid_credentials" | "provider_unavailable"
+>;
+
+async function openProviderSession(
+  provider: DataProvider,
+  credentials: ProviderCredentials,
+): Promise<ProviderSessionOutcome> {
+  try {
+    return await provider.authenticate(credentials);
+  } catch (error) {
+    if (isProviderFailure(error)) {
+      return { status: "provider_unavailable" };
+    }
+    throw error;
   }
 }
 
@@ -209,17 +294,9 @@ export async function connectProvider(
     clientId: input.clientId,
     clientSecret: input.clientSecret,
   };
-  let authenticated;
-  try {
-    authenticated = await deps.provider.authenticate(credentials);
-  } catch (error) {
-    if (isProviderFailure(error)) {
-      return { status: "provider_unavailable" };
-    }
-    throw error;
-  }
-  if (authenticated.status === "invalid_credentials") {
-    return { status: "invalid_credentials" };
+  const authenticated = await openProviderSession(deps.provider, credentials);
+  if (authenticated.status !== "ok") {
+    return { status: authenticated.status };
   }
 
   try {
@@ -258,34 +335,17 @@ export async function addConnection(
   deps: SyncDeps,
 ): Promise<AddConnectionOutcome> {
   const repository = createSyncUserRepository(userScope(session));
-  const stored = await repository.getCredential(db);
-  if (!stored) {
-    return { status: "no_credentials" };
-  }
-  let credentials: ProviderCredentials;
-  try {
-    credentials = deserializeCredentials(stored.ciphertext, deps.encryptionKey);
-  } catch (error) {
-    if (isUnreadableCredentialsFailure(error)) {
-      return { status: "credentials_unreadable" };
-    }
-    throw error;
+  const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
+  if (stored.status !== "ok") {
+    return { status: stored.status };
   }
   if (!(await reserveAuthAttempt(repository, db))) {
     return { status: "rate_limited" };
   }
 
-  let authenticated;
-  try {
-    authenticated = await deps.provider.authenticate(credentials);
-  } catch (error) {
-    if (isProviderFailure(error)) {
-      return { status: "provider_unavailable" };
-    }
-    throw error;
-  }
-  if (authenticated.status === "invalid_credentials") {
-    return { status: "invalid_credentials" };
+  const authenticated = await openProviderSession(deps.provider, stored.credentials);
+  if (authenticated.status !== "ok") {
+    return { status: authenticated.status };
   }
 
   const consent = await acceptConsent(session, db);
@@ -349,5 +409,122 @@ export async function relabelAccount(
     return { status: updated ? "ok" : "not_found" };
   } catch {
     return { status: "failed" };
+  }
+}
+
+type ConnectionSyncFailure =
+  | "no_credentials"
+  | "credentials_unreadable"
+  | "invalid_credentials"
+  | "provider_unavailable"
+  | "failed";
+
+type ConnectionSyncOutcome = SimpleOutcome<"ok" | ConnectionSyncFailure>;
+
+type ProviderSessions = Map<string, Outcome<{ client: ProviderClient }, ConnectionSyncFailure>>;
+
+async function providerSessionFor(
+  sessions: ProviderSessions,
+  repository: SyncUserRepository,
+  userId: string,
+  db: Database,
+  deps: SyncDeps,
+): Promise<Outcome<{ client: ProviderClient }, ConnectionSyncFailure>> {
+  const cached = sessions.get(userId);
+  if (cached) {
+    return cached;
+  }
+  const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
+  const outcome =
+    stored.status === "ok"
+      ? await openProviderSession(deps.provider, stored.credentials)
+      : { status: stored.status };
+  sessions.set(userId, outcome);
+  return outcome;
+}
+
+// Refresh first so the provider re-reads the bank, then take one snapshot
+// and commit it whole; a failure leaves the previous data and the last
+// successful sync time untouched, and only records why.
+async function syncConnection(
+  client: ProviderClient,
+  repository: SyncUserRepository,
+  db: Database,
+  connection: ConnectionToSync,
+  now: Date,
+): Promise<ConnectionSyncOutcome> {
+  let snapshot;
+  try {
+    await client.refresh(connection.providerItemId);
+    snapshot = await readConnection(
+      client,
+      connection.providerItemId,
+      transactionsSince(now, connection.lastSyncedAt),
+    );
+  } catch (error) {
+    if (isProviderFailure(error)) {
+      return { status: "provider_unavailable" };
+    }
+    throw error;
+  }
+
+  try {
+    const assignTo = await repository.householdOfConnection(db, connection.id);
+    await db.transaction(async (tx) => {
+      await repository.upsertAccounts(tx, connection.id, snapshot.accounts, {
+        assignTo,
+        syncedAt: now,
+      });
+      await repository.upsertTransactions(tx, connection.id, snapshot.transactions, {
+        syncedAt: now,
+      });
+      await repository.markSynced(tx, connection.id, { syncedAt: now, error: null });
+    });
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`sync: writing a connection's snapshot failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export type ConnectionsSyncResult = { ok: boolean; synced: number; failed: number };
+
+// The daily job (ADR-0005): every connection, under its owner's own scope and
+// credentials, one after the other. The run is reported as failed only when
+// nothing could be synced, so one member's revoked credentials do not turn
+// every household's daily run red.
+export async function syncAllConnections(
+  db: Database,
+  deps: SyncDeps,
+  now: Date = new Date(),
+): Promise<ConnectionsSyncResult> {
+  const connections = await listConnectionsToSync(db);
+  const sessions: ProviderSessions = new Map();
+  let synced = 0;
+  let failed = 0;
+  for (const connection of connections) {
+    const repository = createSyncUserRepository(scopeForUser(connection.userId));
+    const session = await providerSessionFor(sessions, repository, connection.userId, db, deps);
+    const outcome =
+      session.status === "ok"
+        ? await syncConnection(session.client, repository, db, connection, now)
+        : session;
+    if (outcome.status === "ok") {
+      synced += 1;
+    } else {
+      failed += 1;
+      await repository.recordSyncFailure(db, connection.id, outcome.status);
+    }
+  }
+  return { ok: connections.length === 0 || synced > 0, synced, failed };
+}
+
+export type ConnectionsSyncStep = ConnectionsSyncResult | { error: string };
+
+export async function runConnectionsSyncStep(db: Database): Promise<ConnectionsSyncStep> {
+  try {
+    return await syncAllConnections(db, createSyncDeps());
+  } catch (error) {
+    return { error: errorName(error) };
   }
 }

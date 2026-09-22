@@ -26,6 +26,8 @@ export const rateTypeEnum = pgEnum("rate_type", [
   "inflation_linked",
   "other",
 ]);
+export const bankTransactionTypeEnum = pgEnum("bank_transaction_type", ["credit", "debit"]);
+export const counterpartTypeEnum = pgEnum("counterpart_type", ["cpf", "cnpj"]);
 
 // User-scoped (ADR-0001): one row per attempt to authenticate against the
 // provider, so connectProvider/addConnection can refuse a scripted loop of
@@ -157,5 +159,40 @@ export const bankAccount = pgTable(
       table.providerAccountId,
     ),
     index("bank_account_householdId_idx").on(table.householdId),
+  ],
+);
+
+// Household-scoped through its account (ADR-0001): a transaction has no
+// household column of its own, so reassigning an account moves its history
+// with it and an unassigned account's transactions are visible to nobody.
+// The counterpart document is kept only as the same keyed hash used for
+// account holders, so ledger can pair internal transfers later (ADR-0008).
+export const bankTransaction = pgTable(
+  "bank_transaction",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => bankAccount.id, { onDelete: "cascade" }),
+    providerTransactionId: text("provider_transaction_id").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    amountCentavos: bigint("amount_centavos", { mode: "number" }).notNull(),
+    currency: text("currency").notNull(),
+    description: text("description").notNull(),
+    providerCategory: text("provider_category"),
+    type: bankTransactionTypeEnum("type").notNull(),
+    counterpartType: counterpartTypeEnum("counterpart_type"),
+    counterpartDocumentHash: text("counterpart_document_hash"),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("bank_transaction_account_provider_transaction_uidx").on(
+      table.accountId,
+      table.providerTransactionId,
+    ),
+    index("bank_transaction_account_date_idx").on(table.accountId, table.date),
   ],
 );

@@ -1,4 +1,4 @@
-import { and, count, eq, exists, gte, inArray, lt, notExists, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, gte, inArray, lt, notExists, sql } from "drizzle-orm";
 
 import { user } from "@/modules/auth/schema";
 
@@ -6,13 +6,19 @@ import {
   bankAccount,
   bankConnection,
   bankConnectionConsent,
+  bankTransaction,
   providerAuthAttempt,
   providerCredential,
 } from "./schema";
 
 import type { Database as Connection } from "@/platform/db/client";
 import type { HouseholdScope } from "@/modules/households";
-import type { AccountType, NormalizedAccount, RateType } from "./provider/provider";
+import type {
+  AccountType,
+  NormalizedAccount,
+  NormalizedTransaction,
+  RateType,
+} from "./provider/provider";
 import type { UserScope } from "./scope";
 
 // Every method runs equally on the pooled connection or inside a transaction
@@ -356,10 +362,122 @@ export function createSyncUserRepository(scope: UserScope) {
         });
       return unique.length;
     },
+
+    // The one household every account of the connection is assigned to, so
+    // an account the provider starts listing after the connection was made
+    // joins its siblings; null when they disagree or none is assigned. Built
+    // from rows already under this user's scope, never from an id handed in.
+    async householdOfConnection(
+      db: Database,
+      connectionId: string,
+    ): Promise<HouseholdScope | null> {
+      await requireOwnedConnection(db, connectionId);
+      const rows = await db
+        .selectDistinct({ householdId: bankAccount.householdId })
+        .from(bankAccount)
+        .where(eq(bankAccount.connectionId, connectionId));
+      const [only] = rows;
+      return rows.length === 1 && only?.householdId ? { householdId: only.householdId } : null;
+    },
+
+    // A transaction lands under the account row this connection holds for its
+    // provider account; one for an account the connection does not hold is
+    // dropped, since accounts are always upserted first in the same sync. A
+    // provider transaction seen before refreshes and never duplicates.
+    async upsertTransactions(
+      db: Database,
+      connectionId: string,
+      transactions: NormalizedTransaction[],
+      options: { syncedAt: Date },
+    ): Promise<number> {
+      await requireOwnedConnection(db, connectionId);
+      const accounts = await db
+        .select({ id: bankAccount.id, providerAccountId: bankAccount.providerAccountId })
+        .from(bankAccount)
+        .where(eq(bankAccount.connectionId, connectionId));
+      const accountIdByProvider = new Map(
+        accounts.map((account) => [account.providerAccountId, account.id]),
+      );
+      const unique = new Map<string, typeof bankTransaction.$inferInsert>();
+      for (const transaction of transactions) {
+        const accountId = accountIdByProvider.get(transaction.providerAccountId);
+        if (!accountId) {
+          continue;
+        }
+        unique.set(`${accountId}:${transaction.providerTransactionId}`, {
+          accountId,
+          providerTransactionId: transaction.providerTransactionId,
+          date: transaction.date,
+          amountCentavos: transaction.amountCentavos,
+          currency: transaction.currency,
+          description: transaction.description,
+          providerCategory: transaction.providerCategory,
+          type: transaction.type,
+          counterpartType: transaction.counterpartType,
+          counterpartDocumentHash: transaction.counterpartDocumentHash,
+          syncedAt: options.syncedAt,
+        });
+      }
+      const rows = [...unique.values()];
+      for (let start = 0; start < rows.length; start += TRANSACTION_UPSERT_CHUNK) {
+        await db
+          .insert(bankTransaction)
+          .values(rows.slice(start, start + TRANSACTION_UPSERT_CHUNK))
+          .onConflictDoUpdate({
+            target: [bankTransaction.accountId, bankTransaction.providerTransactionId],
+            set: {
+              date: sql`excluded.date`,
+              amountCentavos: sql`excluded.amount_centavos`,
+              currency: sql`excluded.currency`,
+              description: sql`excluded.description`,
+              providerCategory: sql`excluded.provider_category`,
+              type: sql`excluded.type`,
+              counterpartType: sql`excluded.counterpart_type`,
+              counterpartDocumentHash: sql`excluded.counterpart_document_hash`,
+              syncedAt: sql`excluded.synced_at`,
+            },
+          });
+      }
+      return rows.length;
+    },
+
+    async recordSyncFailure(db: Database, connectionId: string, error: string): Promise<void> {
+      await requireOwnedConnection(db, connectionId);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncError: error })
+        .where(eq(bankConnection.id, connectionId));
+    },
   };
 }
 
+// Postgres caps a statement at 65535 parameters; 500 rows of 11 columns stay
+// well under it while keeping a year of one account in a handful of round trips.
+const TRANSACTION_UPSERT_CHUNK = 500;
+
 export type SyncUserRepository = ReturnType<typeof createSyncUserRepository>;
+
+export type ConnectionToSync = {
+  id: string;
+  userId: string;
+  providerItemId: string;
+  lastSyncedAt: Date | null;
+};
+
+// Not scoped: the daily job's work list (ADR-0005). Each connection is then
+// synced under its own owner's scope, and the never-synced ones go first so a
+// run cut short by the function's time limit still reaches them.
+export async function listConnectionsToSync(db: Database): Promise<ConnectionToSync[]> {
+  return db
+    .select({
+      id: bankConnection.id,
+      userId: bankConnection.userId,
+      providerItemId: bankConnection.providerItemId,
+      lastSyncedAt: bankConnection.lastSyncedAt,
+    })
+    .from(bankConnection)
+    .orderBy(sql`${bankConnection.lastSyncedAt} asc nulls first`, asc(bankConnection.createdAt));
+}
 
 export type AccountLabel = "individual" | "shared";
 

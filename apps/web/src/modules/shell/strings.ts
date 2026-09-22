@@ -18,11 +18,6 @@ const en = {
       title: "Reserve",
       body: "Your emergency reserve will show up here once this page ships.",
     },
-    transactions: {
-      overline: "Coming soon",
-      title: "Transactions",
-      body: "Your transactions will show up here once this page ships.",
-    },
   },
 };
 
@@ -45,11 +40,6 @@ const ptBR = {
       overline: "Em breve",
       title: "Reserva",
       body: "Sua reserva de emergência aparecerá aqui quando esta página chegar.",
-    },
-    transactions: {
-      overline: "Em breve",
-      title: "Transações",
-      body: "Suas transações aparecerão aqui quando esta página chegar.",
     },
   },
 } satisfies typeof en;
