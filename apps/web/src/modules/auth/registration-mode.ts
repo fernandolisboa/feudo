@@ -5,16 +5,22 @@ import { type AuthEnv, parseRegistrationMode, readRegistrationMode } from "./env
 
 export const REGISTRATION_MODE_SETTING = "registration_mode";
 
-// A registration mode is at most six characters ("closed"), so 32 shows any
-// realistic typo in full while bounding what reaches the logs if someone
-// pastes something large into the store item by mistake.
-const MAX_LOGGED_VALUE_LENGTH = 32;
-const TRUNCATION_MARKER = "…";
+// The store item sits next to secrets in the Vercel dashboard, so a value this
+// long is more likely a mis-pasted database URL or API key than a typo'd mode
+// ("closed" is six characters); log only its length, never its content.
+const MAX_LOGGED_VALUE_LENGTH = 12;
 
-function truncateForLog(value: string): string {
-  return value.length > MAX_LOGGED_VALUE_LENGTH
-    ? `${value.slice(0, MAX_LOGGED_VALUE_LENGTH)}${TRUNCATION_MARKER}`
-    : value;
+function describeInvalidStoredValue(stored: unknown): {
+  type: string;
+  value?: string;
+  length?: number;
+} {
+  if (typeof stored !== "string") {
+    return { type: typeof stored };
+  }
+  return stored.length <= MAX_LOGGED_VALUE_LENGTH
+    ? { type: "string", value: stored }
+    : { type: "string", length: stored.length };
 }
 
 export async function resolveRegistrationMode(
@@ -27,10 +33,10 @@ export async function resolveRegistrationMode(
     if (parsed !== undefined) {
       return parsed;
     }
-    console.error("registration_mode setting ignored: invalid value", {
-      type: typeof stored,
-      ...(typeof stored === "string" ? { value: truncateForLog(stored) } : {}),
-    });
+    console.error(
+      "registration_mode setting ignored: invalid value",
+      describeInvalidStoredValue(stored),
+    );
   }
   return readRegistrationMode(env);
 }

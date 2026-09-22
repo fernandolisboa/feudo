@@ -75,14 +75,14 @@ The registration mode is resolved at request time by `resolveRegistrationMode`
    store (the read gives up after 2 seconds and never serves a stale value on upstream errors)
    or a value outside `open | invite | closed` (trimmed and lower-cased before validation, so
    `OPEN`, `open` and `Open` all resolve to `open`) is logged and ignored, so a broken store
-   can never open registration by accident. The log line carries the item's type always, and,
-   when the item is a string, the value itself, truncated to 32 characters with a trailing `…`
-   if it was longer (`registration-mode.ts`'s `MAX_LOGGED_VALUE_LENGTH`) — enough to show a
-   realistic typo in full without letting an oversized paste into the store item reach the logs
-   whole. A non-string item (Global Config accepts arbitrary JSON) only ever logs its type, never
-   its value. Write access to the store is the authority to open registration: setting the item
-   to `open` stays subject to the gates in ADR-0005 and ADR-0008 and to the `/security-audit`
-   rule in `CLAUDE.md`.
+   can never open registration by accident. The log line always carries the item's type; a
+   string item of at most 12 characters also carries the raw value as stored, before that
+   trimming and lower-casing — long enough for a typo'd mode, short enough that a mis-pasted
+   secret from elsewhere in the store never lands in the logs. A longer string logs only its
+   length, and a non-string item (Global Config accepts arbitrary JSON) logs only its type.
+   Write access to the store is the authority to open registration: setting the item to `open`
+   stays subject to the gates in ADR-0005 and ADR-0008 and to the `/security-audit` rule in
+   `CLAUDE.md`.
 2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, trimmed and case-insensitive,
    empty string treated as unset) by `readRegistrationMode`
    (`apps/web/src/modules/auth/env.ts`).

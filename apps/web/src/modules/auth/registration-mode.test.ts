@@ -57,7 +57,7 @@ describe("resolveRegistrationMode", () => {
     expect(await resolveRegistrationMode(settingsWith(undefined), {})).toBe("invite");
   });
 
-  it("ignores an invalid stored string, logs its type and value and falls back to the environment", async () => {
+  it("ignores an invalid short stored string, logs its type and value and falls back to the environment", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     expect(
@@ -69,7 +69,7 @@ describe("resolveRegistrationMode", () => {
     );
   });
 
-  it("truncates an invalid stored string longer than the cap and marks it as truncated", async () => {
+  it("logs only the type and length of a stored string longer than the threshold, never its content", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const longValue = "a".repeat(50);
 
@@ -78,13 +78,8 @@ describe("resolveRegistrationMode", () => {
     ).toBe("closed");
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "registration_mode setting ignored: invalid value",
-      { type: "string", value: `${"a".repeat(32)}…` },
+      { type: "string", length: 50 },
     );
-    const loggedCall = consoleErrorSpy.mock.calls.find(
-      (call) => call[0] === "registration_mode setting ignored: invalid value",
-    );
-    const loggedValue = (loggedCall?.[1] as { value: string }).value;
-    expect(loggedValue).not.toContain(longValue);
   });
 
   it("ignores a non-string stored value, logs its type only and falls back to the environment", async () => {
