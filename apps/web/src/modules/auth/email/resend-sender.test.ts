@@ -8,8 +8,13 @@ vi.mock("resend", () => ({
   },
 }));
 
-const { MissingResendApiKeyError, ResendEmailSender } = await import("./resend-sender");
-const { EmailSendError, EmailSendTimeoutError, MissingEmailFromError } = await import("./sender");
+const {
+  EmailSendError,
+  EmailSendTimeoutError,
+  MissingEmailFromError,
+  MissingResendApiKeyError,
+  ResendEmailSender,
+} = await import("./resend-sender");
 
 const ENV = { RESEND_API_KEY: "re_test_key", EMAIL_FROM: "no-reply@feudo.app" };
 const INPUT = { to: "user@example.com", subject: "Subject", text: "text", html: "<p>html</p>" };

@@ -51,8 +51,7 @@ Handlers.
   verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
   the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
   households and works in one active household at a time; invite by email (24h expiry),
-  leave/transfer ownership. Emails via Resend, or any authenticated SMTP relay
-  (`EMAIL_PROVIDER=smtp`); the fake sender is refused in production.
+  leave/transfer ownership. Emails via Resend; the fake sender is refused in production.
 - **Jobs**: Vercel Cron hitting bearer-protected Route Handlers for bank-connection sync (the unit
   of work is the user-owned connection; manual triggers are limited per household, ADR-0005) and
   indicator refresh. No queue or worker until a measured need appears.

@@ -51,9 +51,9 @@ export function readRegistrationMode(env: AuthEnv = process.env): RegistrationMo
   return parsed.data;
 }
 
-export type EmailProvider = "resend" | "smtp" | "fake";
+export type EmailProvider = "resend" | "fake";
 
-const emailProviderSchema = z.enum(["resend", "smtp", "fake"]);
+const emailProviderSchema = z.enum(["resend", "fake"]);
 const DEFAULT_EMAIL_PROVIDER: EmailProvider = "resend";
 
 export function readEmailProvider(env: AuthEnv = process.env): EmailProvider {

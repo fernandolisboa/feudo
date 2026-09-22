@@ -128,12 +128,8 @@ on `/sign-up/email` deletes it from `ctx.body` before that parser runs, which is
 
 ## Email sending
 
-`EMAIL_PROVIDER` (`resend | smtp | fake`, default `resend`) selects the `EmailSender` implementation
-in one place (`apps/web/src/modules/auth/email/select.ts`, an exhaustive `switch`). Every provider
-shares the same 10s send ceiling (`withSendTimeout` in `email/sender.ts`, racing a timer against
-the provider call, since a hung provider would otherwise run until the function's own
-`maxDuration`) and the same typed failures (`EmailSendError`, `EmailSendTimeoutError`,
-`MissingEmailFromError`).
+`EMAIL_PROVIDER` (`resend | fake`, default `resend`) selects the `EmailSender` implementation in
+one place (`apps/web/src/modules/auth/email/select.ts`):
 
 - `resend`: `getEmailSender` (`email/select.ts`) builds `ResendEmailSender` eagerly and its
   constructor throws a typed error (`MissingResendApiKeyError` / `MissingEmailFromError`) if
@@ -147,21 +143,6 @@ the provider call, since a hung provider would otherwise run until the function'
   Resend only delivers to arbitrary recipients from a verified domain (a subdomain of a domain
   already verified in the same Resend account counts, with its own three DNS records); with no
   domain, `onboarding@resend.dev` reaches the Resend account owner's own inbox and nobody else.
-- `smtp`: `SmtpEmailSender` (`email/smtp-sender.ts`, nodemailer) for any authenticated SMTP relay
-  — a Gmail account with an app password, a mailbox on an existing domain, a transactional
-  provider's SMTP endpoint. Reads `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM`
-  (each missing one throws `MissingSmtpSettingError` / `MissingEmailFromError` from the
-  constructor, with the same eager-throw contract as `resend`), plus `SMTP_PORT` (default `465`;
-  `InvalidSmtpPortError` on anything outside 1–65535; every value is trimmed, and whitespace-only
-  counts as unset). Port 465, and only 465, is implicit TLS; any other port sets nodemailer's
-  `requireTLS`, so credentials are never sent before STARTTLS (a relay that speaks implicit TLS on a
-  non-standard port fails closed with a timeout, not in clear). nodemailer's own
-  connection/greeting/socket timeouts carry the 10s ceiling, since its failure path is what closes
-  an in-flight connection; the shared `withSendTimeout` race sits 1s above them as a backstop. A
-  fresh transport is created per send and closed in `finally`. Gmail specifics: 2-step verification on, a 16-char
-  app password as `SMTP_PASSWORD`, `smtp.gmail.com`, and Gmail rewrites `EMAIL_FROM` to the
-  account's own address unless it is a configured alias; Google can also block a first login from
-  a new IP range (Vercel's rotate), which surfaces as `EmailSendError` in the function log.
 - `fake`: `FakeEmailSender` writes every message to the `fake_sent_emails` table
   (`apps/web/src/modules/auth/email/fake-email-repository.ts`) instead of an in-memory singleton.
   Vercel functions are separate processes, so a `globalThis` store would not be visible to the
@@ -173,8 +154,8 @@ the provider call, since a hung provider would otherwise run until the function'
   and strand it behind a verification link nobody receives (ADR-0008). Because the guard runs
   inside `buildAuthOptions`, and the root layout reads the session on every page, **every request
   of such a deployment fails with a 500**, not just the auth endpoints: a full outage with no way
-  to sign in and fix it from the UI. The production `EMAIL_PROVIDER` must be `resend` or `smtp`
-  (with its settings) **before** a build carrying this guard is deployed.
+  to sign in and fix it from the UI. The production `EMAIL_PROVIDER` must be `resend` (with
+  `RESEND_API_KEY` and `EMAIL_FROM`) **before** a build carrying this guard is deployed.
 
 ### First account on a fresh environment
 

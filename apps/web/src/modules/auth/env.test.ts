@@ -39,7 +39,7 @@ describe("readEmailProvider", () => {
     expect(readEmailProvider({ EMAIL_PROVIDER: "" })).toBe("resend");
   });
 
-  it.each(["resend", "smtp", "fake"] as const)("returns %s when it is set", (provider) => {
+  it.each(["resend", "fake"] as const)("returns %s when it is set", (provider) => {
     expect(readEmailProvider({ EMAIL_PROVIDER: provider })).toBe(provider);
   });
 
@@ -65,7 +65,6 @@ describe("readEmailProvider", () => {
     expect(readEmailProvider({ EMAIL_PROVIDER: "resend", VERCEL_ENV: "production" })).toBe(
       "resend",
     );
-    expect(readEmailProvider({ EMAIL_PROVIDER: "smtp", VERCEL_ENV: "production" })).toBe("smtp");
   });
 });
 
@@ -74,9 +73,8 @@ describe("isFakeEmailProvider", () => {
     expect(isFakeEmailProvider({ EMAIL_PROVIDER: "fake" })).toBe(true);
   });
 
-  it("returns false when EMAIL_PROVIDER is resend, smtp or unset", () => {
+  it("returns false when EMAIL_PROVIDER is resend or unset", () => {
     expect(isFakeEmailProvider({ EMAIL_PROVIDER: "resend" })).toBe(false);
-    expect(isFakeEmailProvider({ EMAIL_PROVIDER: "smtp" })).toBe(false);
     expect(isFakeEmailProvider({})).toBe(false);
   });
 });
