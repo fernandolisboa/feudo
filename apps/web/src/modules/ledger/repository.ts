@@ -6,6 +6,8 @@ import type { IsoDateRange } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
+type TransactionType = (typeof bankTransaction.$inferSelect)["type"];
+
 export type LedgerAccount = { id: string; name: string; institutionName: string };
 
 export type LedgerTransaction = {
@@ -14,7 +16,7 @@ export type LedgerTransaction = {
   description: string;
   amountCentavos: number;
   currency: string;
-  type: "credit" | "debit";
+  type: TransactionType;
   accountId: string;
   accountName: string;
   institutionName: string;

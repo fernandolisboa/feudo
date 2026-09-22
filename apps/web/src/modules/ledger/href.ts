@@ -1,12 +1,12 @@
 import type { YearMonth } from "@feudo/core";
 
-export type TransactionsView = {
+export type TransactionsRoute = {
   month: YearMonth;
   accountId: string | null;
   page: number;
 };
 
-export function transactionsHref(view: TransactionsView): string {
+export function transactionsHref(view: TransactionsRoute): string {
   const params = new URLSearchParams({ mes: view.month });
   if (view.accountId) {
     params.set("conta", view.accountId);

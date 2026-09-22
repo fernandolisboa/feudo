@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   InvalidYearMonthError,
   formatYearMonth,
+  isYearMonth,
   parseYearMonth,
   shiftYearMonth,
   yearMonthDayRange,
@@ -16,6 +17,13 @@ describe("parseYearMonth", () => {
 
   it.each(["2026-9", "2026-13", "2026-00", "202609", "2026-09-01", ""])("rejects %j", (value) => {
     expect(() => parseYearMonth(value)).toThrow(InvalidYearMonthError);
+  });
+});
+
+describe("isYearMonth", () => {
+  it("agrees with parseYearMonth without throwing", () => {
+    expect(isYearMonth("2026-09")).toBe(true);
+    expect(isYearMonth("2026-9")).toBe(false);
   });
 });
 
@@ -46,11 +54,8 @@ describe("yearMonthDayRange", () => {
 });
 
 describe("formatYearMonth", () => {
-  it("formats in Brazilian Portuguese by default", () => {
+  it("formats in Brazilian Portuguese", () => {
     expect(formatYearMonth("2026-09")).toBe("setembro de 2026");
-  });
-
-  it("formats in another locale when asked", () => {
-    expect(formatYearMonth("2026-09", "en-US")).toBe("September 2026");
+    expect(formatYearMonth("2027-01")).toBe("janeiro de 2027");
   });
 });

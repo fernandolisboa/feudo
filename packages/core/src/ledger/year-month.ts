@@ -12,11 +12,15 @@ export class InvalidYearMonthError extends Error {
   }
 }
 
+export function isYearMonth(value: string): value is YearMonth {
+  return YEAR_MONTH_PATTERN.test(value);
+}
+
 export function parseYearMonth(value: string): YearMonth {
-  if (!YEAR_MONTH_PATTERN.test(value)) {
+  if (!isYearMonth(value)) {
     throw new InvalidYearMonthError(value);
   }
-  return value as YearMonth;
+  return value;
 }
 
 function parts(yearMonth: YearMonth): { year: number; month: number } {
@@ -55,9 +59,9 @@ export function yearMonthDayRange(yearMonth: YearMonth): IsoDateRange {
   return { from: `${yearMonth}-01`, to: `${yearMonth}-${pad(lastDay)}` };
 }
 
-export function formatYearMonth(yearMonth: YearMonth, locale = "pt-BR"): string {
+export function formatYearMonth(yearMonth: YearMonth): string {
   const { year, month } = parts(yearMonth);
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat("pt-BR", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",

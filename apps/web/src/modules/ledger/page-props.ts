@@ -1,6 +1,5 @@
 import {
   formatYearMonth,
-  parseYearMonth,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,
@@ -37,7 +36,8 @@ export type TransactionsPageProps = {
 
 // Everything /transacoes renders, so the page stays a composition of this
 // slice's components (ADR-0011). The month defaults to today's in the
-// household's time zone; an account id not in the household is ignored.
+// household's time zone; an account id not in the household is ignored and
+// a page past the last one lands on the last.
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
@@ -53,17 +53,19 @@ export async function getTransactionsPageProps(
     repository.listAccounts(db),
   ]);
   const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
-  const month = params.mes === undefined ? currentMonth : parseYearMonth(params.mes);
+  const month = params.mes ?? currentMonth;
   const selectedAccountId = accounts.some((account) => account.id === params.conta)
     ? (params.conta ?? null)
     : null;
-  const page = params.pagina ?? 1;
   const filter = { days: yearMonthDayRange(month), accountId: selectedAccountId };
 
-  const [total, listed] = await Promise.all([
-    repository.countTransactions(db, filter),
-    repository.listTransactions(db, filter, { number: page, size: TRANSACTIONS_PAGE_SIZE }),
-  ]);
+  const total = await repository.countTransactions(db, filter);
+  const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
+  const page = Math.min(params.pagina ?? 1, lastPage);
+  const listed = await repository.listTransactions(db, filter, {
+    number: page,
+    size: TRANSACTIONS_PAGE_SIZE,
+  });
 
   return {
     month,

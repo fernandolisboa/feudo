@@ -128,7 +128,7 @@ The mean monthly fixed cost over the last six complete months, computed with at 
 ### Market data
 
 **Market data**:
-Reference rates (CDI, Selic, IPCA) synced daily from Bacen's SGS API. Shared across every household, never scoped to one; the only domain table without a `household_id`. Feudo's own annualised CDI and 12-month accumulated IPCA are computed values, distinguished from a rate Bacen itself publishes.
+Reference rates (CDI, Selic, IPCA) synced daily from Bacen's SGS API. Shared across every household, never scoped to one; the only domain table that belongs to no household and no user. Feudo's own annualised CDI and 12-month accumulated IPCA are computed values, distinguished from a rate Bacen itself publishes.
 _Avoid_: indicators (ambiguous with dashboard stat tiles), rates table
 
 ### Banking intelligence

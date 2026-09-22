@@ -421,9 +421,6 @@ type ConnectionSyncFailure =
 
 type ConnectionSyncOutcome = SimpleOutcome<"ok" | ConnectionSyncFailure>;
 
-// One provider session per owner per run: authenticating is a request of
-// its own at the provider, and a user with several banks connected would
-// otherwise pay it once per connection.
 type ProviderSessions = Map<string, Outcome<{ client: ProviderClient }, ConnectionSyncFailure>>;
 
 async function providerSessionFor(
@@ -484,7 +481,8 @@ async function syncConnection(
       await repository.markSynced(tx, connection.id, { syncedAt: now, error: null });
     });
     return { status: "ok" };
-  } catch {
+  } catch (error) {
+    console.warn(`sync: writing a connection's snapshot failed (${errorName(error)})`);
     return { status: "failed" };
   }
 }

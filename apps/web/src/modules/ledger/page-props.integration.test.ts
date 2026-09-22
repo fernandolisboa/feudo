@@ -86,6 +86,14 @@ describe("getTransactionsPageProps (integration)", () => {
         page: 1,
         total: 0,
       });
+
+      const pastTheEnd = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-08", pagina: "7" },
+        NOW,
+      );
+      expect(pastTheEnd).toMatchObject({ page: 1, total: 2, hasMore: false });
+      expect(pastTheEnd.transactions).toHaveLength(2);
     });
   });
 });

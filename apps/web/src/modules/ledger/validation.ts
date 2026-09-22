@@ -1,12 +1,9 @@
+import { isYearMonth } from "@feudo/core";
 import { z } from "zod";
 
 export const TRANSACTIONS_PAGE_SIZE = 50;
 
-const yearMonthSchema = z
-  .string()
-  .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
-  .optional()
-  .catch(undefined);
+const yearMonthSchema = z.string().refine(isYearMonth).optional().catch(undefined);
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
