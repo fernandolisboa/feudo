@@ -75,7 +75,10 @@ answers 400, and Meu Pluggy refreshes it every 24 hours anyway (ADR-0005).
 
 - `pluggy`: `provider/pluggy-provider.ts`, `https://api.pluggy.ai`, `POST /auth` → `X-API-KEY`,
   `GET /items/{id}`, `GET /accounts?itemId`, `GET /investments?itemId`,
-  `GET /transactions?accountId&from`. Shapes in
+  `GET /v2/transactions?accountId&dateFrom`, which pages by cursor: the `after` value inside the
+  response's `next` is what the following request carries, and a cursor that repeats or is missing
+  raises `ProviderResponseShapeError`. The paged `GET /transactions` it replaces was retired by
+  Pluggy and answers 410. Shapes in
   `provider/pluggy-schemas.ts` are deliberately loose: unknown fields pass, a missing required one
   raises `ProviderResponseShapeError`. Rates arrive as percentages and are stored as ppm.
 - `fake`: `provider/fake-provider.ts`, fixtures in `provider/fake-fixtures.ts` shaped like real
