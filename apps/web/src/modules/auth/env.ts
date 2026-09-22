@@ -36,19 +36,24 @@ function readOptionalEnvValue(env: AuthEnv, key: string): string | undefined {
   return raw === undefined || raw === "" ? undefined : raw;
 }
 
-export const registrationModeSchema = z.enum(["open", "invite", "closed"]);
+const registrationModeSchema = z.enum(["open", "invite", "closed"]);
 const DEFAULT_REGISTRATION_MODE: RegistrationMode = "invite";
+
+export function parseRegistrationMode(raw: string): RegistrationMode | undefined {
+  const parsed = registrationModeSchema.safeParse(raw.trim().toLowerCase());
+  return parsed.success ? parsed.data : undefined;
+}
 
 export function readRegistrationMode(env: AuthEnv = process.env): RegistrationMode {
   const raw = readOptionalEnvValue(env, "REGISTRATION_MODE");
   if (raw === undefined) {
     return DEFAULT_REGISTRATION_MODE;
   }
-  const parsed = registrationModeSchema.safeParse(raw);
-  if (!parsed.success) {
+  const parsed = parseRegistrationMode(raw);
+  if (parsed === undefined) {
     throw new InvalidRegistrationModeError(raw);
   }
-  return parsed.data;
+  return parsed;
 }
 
 export type EmailProvider = "resend" | "fake";

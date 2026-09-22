@@ -73,12 +73,14 @@ The registration mode is resolved at request time by `resolveRegistrationMode`
    without a redeploy: edit the item in the Vercel dashboard (Storage → the store → Items) and
    it propagates within about 10 seconds. A `null` or empty item means "unset". An unreachable
    store (the read gives up after 2 seconds and never serves a stale value on upstream errors)
-   or a value outside `open | invite | closed` is logged and ignored, so a broken store can
-   never open registration by accident. Write access to the store is the authority to open
+   or a value outside `open | invite | closed` (trimmed and lower-cased before validation, so
+   `OPEN`, `open` and `Open` all resolve to `open`) is logged and ignored, so a broken store
+   can never open registration by accident. Write access to the store is the authority to open
    registration: setting the item to `open` stays subject to the gates in ADR-0005 and
    ADR-0008 and to the `/security-audit` rule in `CLAUDE.md`.
-2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, empty string treated as unset)
-   by `readRegistrationMode` (`apps/web/src/modules/auth/env.ts`).
+2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, trimmed and case-insensitive,
+   empty string treated as unset) by `readRegistrationMode`
+   (`apps/web/src/modules/auth/env.ts`).
 3. `invite`.
 
 Only the production deployment has `GLOBAL_CONFIG`; preview, CI and local runs keep using the

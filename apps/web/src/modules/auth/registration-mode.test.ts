@@ -29,6 +29,18 @@ describe("resolveRegistrationMode", () => {
     ).toBe("closed");
   });
 
+  it("prefers a stored value regardless of case", async () => {
+    expect(
+      await resolveRegistrationMode(settingsWith("OPEN"), { REGISTRATION_MODE: "closed" }),
+    ).toBe("open");
+  });
+
+  it("prefers a stored value with surrounding whitespace", async () => {
+    expect(
+      await resolveRegistrationMode(settingsWith(" closed "), { REGISTRATION_MODE: "open" }),
+    ).toBe("closed");
+  });
+
   it("falls back to the environment variable when the store has no value", async () => {
     expect(
       await resolveRegistrationMode(settingsWith(undefined), { REGISTRATION_MODE: "open" }),
@@ -63,6 +75,18 @@ describe("resolveRegistrationMode", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "registration_mode setting ignored: invalid value",
       { type: "object" },
+    );
+  });
+
+  it("ignores a stored non-string number, logs its type only and falls back to the environment", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(await resolveRegistrationMode(settingsWith(42), { REGISTRATION_MODE: "closed" })).toBe(
+      "closed",
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "registration_mode setting ignored: invalid value",
+      { type: "number" },
     );
   });
 
