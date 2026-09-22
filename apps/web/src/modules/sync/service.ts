@@ -75,7 +75,8 @@ function providerFailureDetail(error: unknown): string {
     return `${error.name} status=${error.status === undefined ? "none" : String(error.status)}`;
   }
   if (error instanceof ProviderResponseShapeError) {
-    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}`;
+    const fields = error.fields.length === 0 ? "" : ` fields=${error.fields.join(",")}`;
+    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}${fields}`;
   }
   return errorName(error);
 }
