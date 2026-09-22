@@ -99,7 +99,7 @@ jobs:
       - name: Migrate the preview project
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
-          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
+          DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
         run: pnpm --filter @feudo/web db:migrate
 
       - name: Integration tests
@@ -161,6 +161,7 @@ jobs:
       - name: Migrate production
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
         run: pnpm --filter @feudo/web db:migrate
 
   # Not yet a required check; promote once it has proven stable across a few PRs.
@@ -207,7 +208,7 @@ jobs:
       - name: Migrate the preview project
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
-          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
+          DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
         run: pnpm --filter @feudo/web db:migrate
 
       - name: Install Playwright Chromium

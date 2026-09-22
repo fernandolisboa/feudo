@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 
+import { assertDatabaseConnectionAllowed } from "./connection-guard.ts";
 import { MissingDatabaseUrlError } from "./errors.ts";
 import { attachPoolErrorLogger } from "./pool-error-logger.ts";
 import * as schema from "./schema.ts";
@@ -17,6 +18,10 @@ export function getDb(): Database {
   if (!url) {
     throw new MissingDatabaseUrlError();
   }
+  assertDatabaseConnectionAllowed(process.env, {
+    allowProduction:
+      process.env.VERCEL_ENV === "production" && process.env.NODE_ENV === "production",
+  });
 
   cachedDb = drizzle({ connection: url, schema });
   attachPoolErrorLogger(cachedDb.$client);
