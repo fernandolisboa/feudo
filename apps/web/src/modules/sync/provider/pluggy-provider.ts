@@ -10,6 +10,7 @@ import {
 import {
   pluggyAccountSchema,
   pluggyAuthResponseSchema,
+  pluggyCursorPageSchema,
   pluggyInvestmentSchema,
   pluggyItemSchema,
   pluggyPageSchema,
@@ -133,6 +134,34 @@ class PluggyClient implements ProviderClient {
     return items;
   }
 
+  private async getAllByCursor<Item>(
+    endpoint: string,
+    query: Record<string, string>,
+    itemSchema: z.ZodType<Item>,
+  ): Promise<Item[]> {
+    const pageSchema = pluggyCursorPageSchema(itemSchema);
+    const items: Item[] = [];
+    let after: string | undefined;
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const json = await this.get(endpoint, after === undefined ? query : { ...query, after });
+      const parsed = parseOrThrow(pageSchema, json, endpoint);
+      items.push(...parsed.results);
+      if (parsed.next === null) {
+        break;
+      }
+      // Pluggy documents sending only the decoded `after` from `next` rather
+      // than pasting the whole string onto the path, so nothing the provider
+      // returns can steer the request elsewhere. A cursor that does not move
+      // would page forever: that is a shape Feudo does not understand.
+      const next = new URLSearchParams(parsed.next).get("after");
+      if (next === null || next === after) {
+        throw new ProviderResponseShapeError(endpoint);
+      }
+      after = next;
+    }
+    return items;
+  }
+
   async describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome> {
     const endpoint = `items/${encodeURIComponent(providerItemId)}`;
     const json = await this.get(endpoint, {});
@@ -167,13 +196,15 @@ class PluggyClient implements ProviderClient {
       .map((investment) => normalizeInvestment(investment, this.hasher));
   }
 
+  // Pluggy retired the page-paginated GET /transactions, which now answers
+  // 410; /v2/transactions replaces it with a cursor.
   async listTransactionsSince(
     providerAccountId: string,
     sinceISODate: string,
   ): Promise<NormalizedTransaction[]> {
-    const transactions = await this.getAllPages(
-      "transactions",
-      { accountId: providerAccountId, from: sinceISODate },
+    const transactions = await this.getAllByCursor(
+      "v2/transactions",
+      { accountId: providerAccountId, dateFrom: sinceISODate },
       pluggyTransactionSchema,
     );
     return transactions.map((transaction) => normalizeTransaction(transaction, this.hasher));

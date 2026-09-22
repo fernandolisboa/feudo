@@ -78,6 +78,17 @@ export const pluggyTransactionSchema = z
   .loose();
 export type PluggyTransaction = z.infer<typeof pluggyTransactionSchema>;
 
+// The cursor-paginated shape Pluggy's /v2 listings answer with: `next` is a
+// ready-made query string for the following page, or null on the last one.
+export function pluggyCursorPageSchema<Item extends z.ZodType>(item: Item) {
+  return z
+    .object({
+      results: z.array(item),
+      next: z.string().nullable(),
+    })
+    .loose();
+}
+
 export function pluggyPageSchema<Item extends z.ZodType>(item: Item) {
   return z
     .object({
