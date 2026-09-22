@@ -228,7 +228,7 @@ describe("syncAllConnections (integration)", () => {
             status: "ok",
             client: {
               ...real.client,
-              refresh: () => Promise.reject(new ProviderUnavailableError("down", 503)),
+              listAccounts: () => Promise.reject(new ProviderUnavailableError("down", 503)),
             },
           };
         },
@@ -241,6 +241,42 @@ describe("syncAllConnections (integration)", () => {
         lastSyncError: "provider_unavailable",
       });
       expect(await transactionsOf(db, missing)).toEqual([]);
+    });
+  });
+
+  // Pluggy answers a manual update of a Meu Pluggy proxy item with a 400, so a
+  // run that asks for one syncs nothing at all (ADR-0005).
+  it("syncs through a client that exposes reads only", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+      const authenticated = await deps.provider.authenticate({
+        clientId: "id",
+        clientSecret: "client-secret",
+      });
+      if (authenticated.status !== "ok") throw new Error("fake provider refused");
+      const real = authenticated.client;
+      const readsOnly: DataProvider = {
+        name: "fake",
+        authenticate: () =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) =>
+                real.listTransactionsSince(accountId, since),
+            },
+          }),
+      };
+
+      await expect(syncAllConnections(db, { ...deps, provider: readsOnly }, NOW)).resolves.toEqual({
+        ok: true,
+        synced: 1,
+        failed: 0,
+      });
+      expect(await transactionsOf(db, connectionId)).not.toEqual([]);
     });
   });
 });

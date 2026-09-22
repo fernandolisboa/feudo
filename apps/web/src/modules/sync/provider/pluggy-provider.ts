@@ -178,30 +178,6 @@ class PluggyClient implements ProviderClient {
     );
     return transactions.map((transaction) => normalizeTransaction(transaction, this.hasher));
   }
-
-  async refresh(providerItemId: string): Promise<void> {
-    const endpoint = `items/${encodeURIComponent(providerItemId)}`;
-    const { status } = await requestJson(
-      this.fetchImpl,
-      `${this.baseUrl}/${endpoint}`,
-      {
-        method: "PATCH",
-        headers: {
-          "X-API-KEY": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: "{}",
-      },
-      endpoint,
-    );
-    if (status < 200 || status >= 300) {
-      throw new ProviderUnavailableError(
-        `unexpected status ${String(status)} from ${endpoint}`,
-        status,
-      );
-    }
-  }
 }
 
 export function createPluggyProvider(

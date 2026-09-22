@@ -13,6 +13,7 @@ import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider
 
 const hasher = createDocumentHasher("unit-test-document-hash-key-with-32-chars!!");
 const credentials = { clientId: "client-id", clientSecret: "client-secret" };
+const FIXTURE_CHECKING_ACCOUNT = "a1000000-0000-4000-8000-000000000001";
 
 type Route = (url: URL, init: RequestInit | undefined) => Response | Promise<Response>;
 
@@ -258,10 +259,16 @@ describe("createPluggyProvider", () => {
     );
   });
 
-  it("refreshes an item with a PATCH", async () => {
+  // Pluggy rejects a manual update of a Meu Pluggy proxy item with a 400: the
+  // original item is refreshed by Meu Pluggy every 24 hours and the proxy has
+  // no auto-sync of its own, so every write to it would need the user's MFA.
+  it("only ever reads from the provider, never writes", async () => {
     const client = await authenticatedClient(fakeFetch(apiRoute()));
-    await client.refresh(FAKE_ITEM_BANCO_FIXTURE);
-    const patchCall = recordedCalls.find((call) => call.method === "PATCH");
-    expect(patchCall?.url).toBe(`https://api.pluggy.ai/items/${FAKE_ITEM_BANCO_FIXTURE}`);
+    await client.describeConnection(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listAccounts(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listTransactionsSince(FIXTURE_CHECKING_ACCOUNT, "2026-09-01");
+    const afterAuth = recordedCalls.filter((call) => !call.url.endsWith("/auth"));
+    expect(afterAuth.map((call) => call.method)).toEqual(afterAuth.map(() => "GET"));
   });
 });

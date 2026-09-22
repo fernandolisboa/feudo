@@ -443,9 +443,12 @@ async function providerSessionFor(
   return outcome;
 }
 
-// Refresh first so the provider re-reads the bank, then take one snapshot
-// and commit it whole; a failure leaves the previous data and the last
-// successful sync time untouched, and only records why.
+// Take one snapshot of what the provider currently holds and commit it
+// whole; a failure leaves the previous data and the last successful sync
+// time untouched, and only records why. Feudo never asks the provider to
+// re-read the bank: Meu Pluggy refreshes the connection every 24 hours on
+// its own and a proxy item cannot be updated without the user's MFA
+// (ADR-0005).
 async function syncConnection(
   client: ProviderClient,
   repository: SyncUserRepository,
@@ -455,7 +458,6 @@ async function syncConnection(
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
   try {
-    await client.refresh(connection.providerItemId);
     snapshot = await readConnection(
       client,
       connection.providerItemId,
@@ -463,6 +465,7 @@ async function syncConnection(
     );
   } catch (error) {
     if (isProviderFailure(error)) {
+      console.warn(`sync: reading a connection from the provider failed (${errorName(error)})`);
       return { status: "provider_unavailable" };
     }
     throw error;

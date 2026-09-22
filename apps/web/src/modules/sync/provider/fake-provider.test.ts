@@ -66,6 +66,5 @@ describe("createFakeProvider", () => {
     );
     expect(all).toHaveLength(3);
     expect(later).toHaveLength(1);
-    await expect(fake.refresh(FAKE_ITEM_BANCO_FIXTURE)).resolves.toBeUndefined();
   });
 });
