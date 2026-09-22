@@ -3,7 +3,14 @@
 GitHub Actions minutes on a **private** repository are metered. The allowance resets on the first
 of the month and does not roll over: GitHub Free includes 2,000 minutes, GitHub Pro 3,000, and
 extra Linux 2-core minutes cost US$ 0.006 each. Every job is rounded **up to the whole minute**,
-so twenty jobs of ten seconds cost twenty minutes, not four.
+so twenty jobs of ten seconds cost twenty minutes, not four. Public repositories are not metered
+at all on standard runners, so nothing they run touches the allowance.
+
+**The allowance belongs to the account, not to this repository**, and every private repository the
+owner has draws on the same pool. In September 2026 Feudo billed about 1,248 minutes of roughly
+3,065 across the account, against a 3,000-minute Pro allowance — Feudo was the second-largest
+consumer, not the cause on its own. Reading this repository's usage in isolation will mislead you;
+read the account's usage grouped by repository, as step 1 below describes.
 
 Feudo runs one CI suite per pull request and a migration on every push to `main`. This runbook is
 what to do when the allowance runs out, and what keeps the burn down between months.
@@ -40,7 +47,9 @@ included minutes are gone.
 4. Budget scope: the whole account, or just `fernandolisboa/feudo` if you want the cap to apply to
    this project alone.
 5. Enter the monthly amount in US dollars. At US$ 0.006 per minute, US$ 10 buys roughly 1,600
-   extra Linux minutes.
+   extra Linux minutes. For scale: across all of 2026 the account was billed US$ 0.47 beyond the
+   included allowance, so a budget of US$ 5–10 is a stop that will almost never be reached, not a
+   recurring cost. A budget of zero is what turns a 65-minute overrun into blocked CI.
 6. Leave **Stop usage when budget limit is reached** checked. Unchecked, GitHub keeps running and
    keeps charging; checked, it stops at the cap and CI fails closed. Fail closed.
 7. Check **Receive budget threshold alerts** so the 75% / 90% / 100% emails arrive while there is
