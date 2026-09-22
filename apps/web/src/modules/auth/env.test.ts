@@ -19,6 +19,10 @@ describe("readRegistrationMode", () => {
     expect(readRegistrationMode({ REGISTRATION_MODE: "" })).toBe("invite");
   });
 
+  it("defaults to invite when the variable is whitespace only", () => {
+    expect(readRegistrationMode({ REGISTRATION_MODE: " " })).toBe("invite");
+  });
+
   it("returns the parsed value when it is valid", () => {
     expect(readRegistrationMode({ REGISTRATION_MODE: "open" })).toBe("open");
   });
@@ -26,6 +30,20 @@ describe("readRegistrationMode", () => {
   it("throws for an invalid value", () => {
     expect(() => readRegistrationMode({ REGISTRATION_MODE: "public" })).toThrow(
       InvalidRegistrationModeError,
+    );
+  });
+
+  it("accepts an uppercase value", () => {
+    expect(readRegistrationMode({ REGISTRATION_MODE: "OPEN" })).toBe("open");
+  });
+
+  it("accepts a value with surrounding whitespace", () => {
+    expect(readRegistrationMode({ REGISTRATION_MODE: " invite " })).toBe("invite");
+  });
+
+  it("throws with the raw, un-normalized value in the message when still invalid after normalizing", () => {
+    expect(() => readRegistrationMode({ REGISTRATION_MODE: " Public " })).toThrow(
+      "REGISTRATION_MODE has an invalid value:  Public ",
     );
   });
 });

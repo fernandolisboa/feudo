@@ -1,7 +1,7 @@
 import type { RegistrationMode } from "@feudo/core";
 
 import type { RuntimeSettings } from "@/platform/runtime-settings";
-import { type AuthEnv, readRegistrationMode, registrationModeSchema } from "./env";
+import { type AuthEnv, parseRegistrationMode, readRegistrationMode } from "./env";
 
 export const REGISTRATION_MODE_SETTING = "registration_mode";
 
@@ -11,9 +11,9 @@ export async function resolveRegistrationMode(
 ): Promise<RegistrationMode> {
   const stored = await settings.read(REGISTRATION_MODE_SETTING);
   if (stored !== undefined && stored !== null && stored !== "") {
-    const parsed = registrationModeSchema.safeParse(stored);
-    if (parsed.success) {
-      return parsed.data;
+    const parsed = typeof stored === "string" ? parseRegistrationMode(stored) : undefined;
+    if (parsed !== undefined) {
+      return parsed;
     }
     console.error("registration_mode setting ignored: invalid value", {
       type: typeof stored,

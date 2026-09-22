@@ -70,6 +70,25 @@ describe("sign-up reads the registration mode from the runtime settings store", 
     });
   });
 
+  it("allows sign-up when the store says OPEN in uppercase even though the environment says closed", async () => {
+    await withTestDb(async (db) => {
+      const auth = betterAuth(
+        buildAuthOptions(
+          db,
+          { ...process.env, EMAIL_PROVIDER: "fake", REGISTRATION_MODE: "closed" },
+          settingsWith("OPEN"),
+        ),
+      );
+      const email = "store-open-uppercase@example.com";
+
+      const response = await auth.handler(signUpRequest(email));
+
+      expect(response.ok).toBe(true);
+      const rows = await db.select().from(user).where(eq(user.email, email));
+      expect(rows).toHaveLength(1);
+    });
+  });
+
   it("falls back to the environment when the store has no value", async () => {
     await withTestDb(async (db) => {
       const auth = betterAuth(
