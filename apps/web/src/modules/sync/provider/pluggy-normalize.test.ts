@@ -18,6 +18,7 @@ import {
   normalizeItem,
   normalizeTransaction,
 } from "./pluggy-normalize";
+import { pluggyTransactionSchema } from "./pluggy-schemas";
 import type { PluggyInvestment } from "./pluggy-schemas";
 
 const hasher = createDocumentHasher("unit-test-document-hash-key-with-32-chars!!");
@@ -242,6 +243,34 @@ describe("normalizeTransaction", () => {
 
   it("leaves the counterpart null when there is no payment data", () => {
     expect(normalizeTransaction(requireAt(transactions, 2), hasher)).toMatchObject({
+      counterpartType: null,
+      counterpartDocumentHash: null,
+    });
+  });
+
+  // The shape production actually answers with: Pluggy nulls a counterpart it
+  // does not have rather than leaving the key out, and it nulls the document
+  // of a counterpart whose owner it could not read.
+  it.each([
+    ["a nulled payer and receiver", { payer: null, receiver: null }],
+    ["a counterpart with no document", { payer: { documentNumber: null }, receiver: null }],
+    [
+      "a document with no value",
+      { payer: { documentNumber: { value: null, type: null } }, receiver: null },
+    ],
+  ])("reads %s without refusing the transaction", (_label, paymentData) => {
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-null-counterpart",
+      accountId: "acc-1",
+      date: "2026-09-02T00:00:00.000Z",
+      description: "Compra no cartao",
+      type: "CREDIT",
+      amount: 42.5,
+      currencyCode: "BRL",
+      paymentData,
+    });
+    expect(normalizeTransaction(transaction, hasher)).toMatchObject({
+      providerTransactionId: "tx-null-counterpart",
       counterpartType: null,
       counterpartDocumentHash: null,
     });

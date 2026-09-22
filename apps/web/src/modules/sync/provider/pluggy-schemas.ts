@@ -53,11 +53,19 @@ export const pluggyInvestmentSchema = z
   .loose();
 export type PluggyInvestment = z.infer<typeof pluggyInvestmentSchema>;
 
+// Pluggy sends null, not an absent key, for a counterpart it does not have:
+// a card purchase or a fee has no payer and no receiver, and a transfer from
+// an account whose owner it could not read has no document number.
 const documentSchema = z
-  .object({ value: z.string().optional(), type: z.enum(["CPF", "CNPJ"]).optional() })
+  .object({
+    value: z.string().nullable().optional(),
+    type: z.enum(["CPF", "CNPJ"]).nullable().optional(),
+  })
   .loose();
 
-const participantSchema = z.object({ documentNumber: documentSchema.optional() }).loose();
+const participantSchema = z
+  .object({ documentNumber: documentSchema.nullable().optional() })
+  .loose();
 
 export const pluggyTransactionSchema = z
   .object({
@@ -70,7 +78,10 @@ export const pluggyTransactionSchema = z
     currencyCode: z.string().min(1),
     category: z.string().nullable().optional(),
     paymentData: z
-      .object({ payer: participantSchema.optional(), receiver: participantSchema.optional() })
+      .object({
+        payer: participantSchema.nullable().optional(),
+        receiver: participantSchema.nullable().optional(),
+      })
       .loose()
       .nullable()
       .optional(),
