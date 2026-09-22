@@ -98,8 +98,12 @@ jobs matters as much as their length.
 | `e2e`                | 1.6 min      | 17%               |
 | `migrate-production` | 0.4 min      | 1%                |
 
-A full pull-request run costs roughly **7 billed minutes**. The average pull request spent 3.9
-runs and 27 minutes.
+The average pull-request run over that window cost 7 billed minutes, but that average is pulled
+down by runs cancelled mid-flight when a new commit superseded them. A run that goes all the way
+green costs **11 to 14 billed minutes** — two consecutive measured runs came in at 11 and 14. Use
+the higher figure when deciding whether an extra push is worth it; use the totals above, which are
+real billed minutes rather than averages, when reasoning about where the month went. The average
+pull request spent 3.9 runs and 27 minutes.
 
 ## Keeping the burn down
 
@@ -119,8 +123,9 @@ full suite, so:
 - Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build` locally before pushing. CI is the
   proof, not the first check.
 - Batch review fixes into a single push instead of one push per finding. Three review rounds on
-  one pull request cost 21 minutes on their own.
-- Push documentation-only work as its own pull request; it then costs about 1 minute instead of 7.
+  one pull request cost 35 to 40 minutes on their own.
+- Push documentation-only work as its own pull request; it then costs about 1 minute instead of
+  a full run.
 
 ## Related
 
