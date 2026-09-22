@@ -24,13 +24,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      # `--no-renames` and the absence of a --diff-filter are load-bearing: a
+      # deletion, or a rename that lands on a documentation path, must still
+      # count the source path it came from, or removing code would buy a PR a
+      # skipped test suite.
       - name: Detect what changed
         id: changes
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          git diff --name-only --diff-filter=d "$BASE_SHA...HEAD" > changed-files.txt
+          git diff --name-only --no-renames "$BASE_SHA...HEAD" > changed-files.txt
+          git diff --name-only --diff-filter=d "$BASE_SHA...HEAD" > present-files.txt
           docs_only=true
           if [ ! -s changed-files.txt ]; then
             docs_only=false
@@ -38,7 +43,7 @@ jobs:
           while IFS= read -r file; do
             [ -z "$file" ] && continue
             case "$file" in
-              *.md | docs/* | .claude/*) ;;
+              *.md) ;;
               *)
                 docs_only=false
                 break
@@ -46,8 +51,7 @@ jobs:
             esac
           done < changed-files.txt
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-          echo "docs_only=$docs_only"
-          cat changed-files.txt
+          echo "docs_only=$docs_only ($(wc -l < changed-files.txt) changed paths)"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -88,13 +92,12 @@ jobs:
         if: steps.changes.outputs.docs_only != 'true'
         run: |
           set -euo pipefail
-          CHANGED=$(grep -E '^apps/web/src/.*\.(tsx|css)$' changed-files.txt || true)
-          if [ -z "$CHANGED" ]; then
+          grep -E '^apps/web/src/.*\.(tsx|css)$' present-files.txt > impeccable-files.txt || true
+          if [ ! -s impeccable-files.txt ]; then
             echo "No changed .tsx/.css files under apps/web/src; skipping Impeccable detect."
             exit 0
           fi
-          echo "$CHANGED"
-          npx --yes impeccable detect $CHANGED
+          xargs -r -d '\n' npx --yes impeccable detect < impeccable-files.txt
 
   integration:
     runs-on: ubuntu-latest

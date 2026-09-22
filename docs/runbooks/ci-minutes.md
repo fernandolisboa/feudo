@@ -71,9 +71,13 @@ until Actions runs again; the manual emergency path is in `docs/runbooks/databas
 own scheduled work is unaffected — `/api/cron/sync` and `/api/cron/daily` are Vercel Cron, not
 Actions.
 
-If something has to merge while the allowance is out, the only lever is to drop `ci` and
-`integration` from the branch's required checks in **Settings → Branches**, merge, and put them
-back. That merges code nothing validated, so it is a decision for the owner, not a routine step.
+If something has to merge while the allowance is out, the only lever is break-glass, and it is the
+owner's call alone, never an agent's: drop `ci` and `integration` from the branch's required checks
+in **Settings → Branches**, merge, restore the required checks immediately, and re-run the suite on
+`main` before anything else merges. Since `migrate-production` no longer waits on `ci` and
+`integration`, nothing else stands between a bypassed merge and the production database — the host
+guard and `drizzle-kit check` catch a wrong target and a broken journal, not broken code. Treat a
+bypassed merge as unverified until that re-run is green, and be ready to revert.
 
 ### 5. If the month simply ran out
 
@@ -114,8 +118,10 @@ The workflow files already do what configuration can do:
 - `migrate-production.yml` runs on push to `main` and does only the migration.
 - A superseded run is cancelled by the `ci-${{ github.ref }}` concurrency group as soon as a new
   commit is pushed.
-- A pull request that touches only `*.md`, `docs/**` or `.claude/**` skips the heavy steps of `ci`
-  and skips `integration` and `e2e` entirely. Skipped jobs satisfy branch protection.
+- A pull request whose every changed path ends in `.md` skips the heavy steps of `ci` and skips
+  `integration` and `e2e` entirely. Skipped jobs satisfy branch protection. The comparison counts
+  deletions and both sides of a rename, so removing or moving code never reads as documentation;
+  everything else, `.claude/` and non-Markdown files under `docs/` included, draws the full suite.
 
 What configuration cannot fix is the number of pushes. Each push to an open pull request costs a
 full suite, so:

@@ -23,7 +23,12 @@ jobs:
   migrate-production:
     name: migrate-production
     runs-on: ubuntu-latest
+    # Belt and braces with `on.push.branches`: this job holds an open
+    # connection to the production database, so a trigger added to this file
+    # later must not be able to migrate production from an arbitrary ref.
+    if: github.ref == 'refs/heads/main'
     environment: production
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
