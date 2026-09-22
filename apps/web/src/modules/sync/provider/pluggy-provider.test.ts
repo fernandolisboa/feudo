@@ -222,7 +222,20 @@ describe("createPluggyProvider", () => {
     expect(asked.searchParams.get("dateFrom")).toBe("2026-09-01");
   });
 
-  it("stops walking a transactions listing when the cursor comes back empty", async () => {
+  it("stops walking a transactions listing when the cursor is absent", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [] }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).resolves.toEqual([]);
+  });
+
+  it("refuses an empty cursor rather than reading it as the end of a listing", async () => {
     const client = await authenticatedClient(
       fakeFetch(
         apiRoute({
@@ -232,7 +245,22 @@ describe("createPluggyProvider", () => {
     );
     await expect(
       client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
-    ).resolves.toEqual([]);
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
+  it("reports a failed transactions read as the collection, not the API version", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "?page=2" }),
+        }),
+      ),
+    );
+    // The sync log keeps only what precedes the first slash, because the rest
+    // of a provider path is an item id. A versioned path would log the version.
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toMatchObject({ endpoint: "transactions" });
   });
 
   it("raises ProviderResponseShapeError when a cursor carries no after value", async () => {
