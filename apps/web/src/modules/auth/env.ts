@@ -6,6 +6,7 @@ export interface AuthEnv {
   EMAIL_PROVIDER?: string;
   BETTER_AUTH_URL?: string;
   VERCEL_URL?: string;
+  VERCEL_ENV?: string;
   [key: string]: string | undefined;
 }
 
@@ -20,6 +21,13 @@ export class InvalidEmailProviderError extends Error {
   constructor(value: string) {
     super(`EMAIL_PROVIDER has an invalid value: ${value}`);
     this.name = "InvalidEmailProviderError";
+  }
+}
+
+export class FakeEmailProviderInProductionError extends Error {
+  constructor() {
+    super("EMAIL_PROVIDER=fake is refused in production.");
+    this.name = "FakeEmailProviderInProductionError";
   }
 }
 
@@ -56,6 +64,12 @@ export function readEmailProvider(env: AuthEnv = process.env): EmailProvider {
   const parsed = emailProviderSchema.safeParse(raw);
   if (!parsed.success) {
     throw new InvalidEmailProviderError(raw);
+  }
+  // The fake sender stores every message in fake_sent_emails instead of
+  // delivering it (docs/adr/0008): in production that strands every sign-up
+  // behind a verification link nobody receives, while reporting the request ok.
+  if (parsed.data === "fake" && env.VERCEL_ENV === "production") {
+    throw new FakeEmailProviderInProductionError();
   }
   return parsed.data;
 }

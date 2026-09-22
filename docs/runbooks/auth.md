@@ -140,12 +140,32 @@ one place (`apps/web/src/modules/auth/email/select.ts`):
   always logs a rejection as "Failed to run background task" and still reports the outer request
   `ok`, so a throw from inside it can never surface as a failed sign-up. A misconfigured `resend`
   provider now fails the very first request instead of silently accepting sign-ups it cannot verify.
+  Resend only delivers to arbitrary recipients from a verified domain (a subdomain of a domain
+  already verified in the same Resend account counts, with its own three DNS records); with no
+  domain, `onboarding@resend.dev` reaches the Resend account owner's own inbox and nobody else.
 - `fake`: `FakeEmailSender` writes every message to the `fake_sent_emails` table
   (`apps/web/src/modules/auth/email/fake-email-repository.ts`) instead of an in-memory singleton.
   Vercel functions are separate processes, so a `globalThis` store would not be visible to the
   request that later reads it back through the test-only route; the database is. Used by
-  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). Never written in production —
-  see ADR-0008.
+  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). **Refused in production**:
+  `readEmailProvider` (`env.ts`) throws `FakeEmailProviderInProductionError` when
+  `EMAIL_PROVIDER=fake` and `VERCEL_ENV=production`, the same guard `sync/env.ts` applies to
+  `DATA_PROVIDER=fake` — a production deployment with the fake sender would accept every sign-up
+  and strand it behind a verification link nobody receives (ADR-0008). Because the guard runs
+  inside `buildAuthOptions`, and the root layout reads the session on every page, **every request
+  of such a deployment fails with a 500**, not just the auth endpoints: a full outage with no way
+  to sign in and fix it from the UI. The production `EMAIL_PROVIDER` must be `resend` (with
+  `RESEND_API_KEY` and `EMAIL_FROM`) **before** a build carrying this guard is deployed.
+
+### First account on a fresh environment
+
+The first person in an environment cannot be invited (an invitation needs an existing household
+and inviter), so with the registration mode at `invite` nobody can ever sign up. The procedure
+is: set the mode to `open` (the `registration_mode` Global Config item, see "Registration modes"
+above; the `REGISTRATION_MODE` env var plus a redeploy where no store is configured), sign up at
+`/registrar`, open the verification link, sign in, create the household at `/comecar`, invite the
+rest of the household from `/casa`, then set the mode back to `invite`. Invitees who already signed up while the mode was `open` find the pending invitation
+on `/comecar`'s "Tenho um convite" tab, without needing the invitation email.
 
 ## Test-only route
 
