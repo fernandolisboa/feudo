@@ -179,11 +179,11 @@ the provider call, since a hung provider would otherwise run until the function'
 ### First account on a fresh environment
 
 The first person in an environment cannot be invited (an invitation needs an existing household
-and inviter), so with `REGISTRATION_MODE=invite` nobody can ever sign up. The procedure is: set
-`REGISTRATION_MODE=open` (a runtime override without a redeploy is proposed in PR #70; until it
-lands, this is the env var plus a redeploy), sign up at `/registrar`, open the verification link, sign in, create the
-household at `/comecar`, invite the rest of the household from `/casa`, then set the mode back to
-`invite`. Invitees who already signed up while the mode was `open` find the pending invitation
+and inviter), so with the registration mode at `invite` nobody can ever sign up. The procedure
+is: set the mode to `open` (the `registration_mode` Global Config item, see "Registration modes"
+above; the `REGISTRATION_MODE` env var plus a redeploy where no store is configured), sign up at
+`/registrar`, open the verification link, sign in, create the household at `/comecar`, invite the
+rest of the household from `/casa`, then set the mode back to `invite`. Invitees who already signed up while the mode was `open` find the pending invitation
 on `/comecar`'s "Tenho um convite" tab, without needing the invitation email.
 
 ## Test-only route
