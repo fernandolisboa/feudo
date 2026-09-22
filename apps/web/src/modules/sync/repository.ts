@@ -363,10 +363,6 @@ export function createSyncUserRepository(scope: UserScope) {
       return unique.length;
     },
 
-    // The one household every account of the connection is assigned to, so
-    // an account the provider starts listing after the connection was made
-    // joins its siblings; null when they disagree or none is assigned. Built
-    // from rows already under this user's scope, never from an id handed in.
     // Whether the ledger already holds history for this connection, which is
     // what decides the backfill window: a connection can carry a successful
     // sync time and no transactions at all, because connections made before
@@ -382,6 +378,10 @@ export function createSyncUserRepository(scope: UserScope) {
       return row !== undefined;
     },
 
+    // The one household every account of the connection is assigned to, so
+    // an account the provider starts listing after the connection was made
+    // joins its siblings; null when they disagree or none is assigned. Built
+    // from rows already under this user's scope, never from an id handed in.
     async householdOfConnection(
       db: Database,
       connectionId: string,

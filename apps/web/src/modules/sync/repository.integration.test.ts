@@ -112,6 +112,9 @@ describe("sync user-scoped repository isolation (integration)", () => {
       await expect(repositoryB.householdOfConnection(db, connectionId)).rejects.toThrow(
         ConnectionNotOwnedError,
       );
+      await expect(repositoryB.hasTransactions(db, connectionId)).rejects.toThrow(
+        ConnectionNotOwnedError,
+      );
       expect(await repositoryB.deleteConnection(db, connectionId)).toBe(false);
       expect(await repositoryA.listConnections(db)).toHaveLength(1);
     });
