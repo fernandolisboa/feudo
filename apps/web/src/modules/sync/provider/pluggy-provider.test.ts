@@ -82,11 +82,10 @@ function apiRoute(overrides: Partial<Record<string, Route>> = {}): Route {
         totalPages: 1,
       });
     }
-    if (path === "/transactions") {
+    if (path === "/v2/transactions") {
       return json({
         results: FAKE_TRANSACTIONS[url.searchParams.get("accountId") ?? ""] ?? [],
-        page: 1,
-        totalPages: 1,
+        next: null,
       });
     }
     return json({ message: "unexpected" }, 500);
@@ -185,6 +184,151 @@ describe("createPluggyProvider", () => {
     );
     const positions = await client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE);
     expect(positions.map((position) => position.name)).toEqual(fixtures.map((f) => f.name));
+  });
+
+  it("follows the cursor to the end of a transactions listing", async () => {
+    const fixtures = FAKE_TRANSACTIONS[CHECKING_ACCOUNT_FIXTURE] ?? [];
+    const cursor = "2026-09-01T00:00:00.000Z";
+    const seen: (string | null)[] = [];
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": (url) => {
+            const after = url.searchParams.get("after");
+            seen.push(after);
+            return after === null
+              ? json({
+                  results: [fixtures[0]],
+                  next: `?accountId=x&after=${encodeURIComponent(cursor)}`,
+                })
+              : json({ results: fixtures.slice(1), next: null });
+          },
+        }),
+      ),
+    );
+    const transactions = await client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01");
+    expect(transactions.map((transaction) => transaction.providerTransactionId)).toEqual(
+      fixtures.map((fixture) => fixture.id),
+    );
+    expect(seen).toEqual([null, cursor]);
+  });
+
+  it("asks for transactions by date, never through the retired paged endpoint", async () => {
+    const client = await authenticatedClient(fakeFetch(apiRoute()));
+    await client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01");
+    const call = recordedCalls.find((recorded) => recorded.url.includes("transactions"));
+    const asked = new URL(call?.url ?? "https://example.invalid");
+    expect(asked.pathname).toBe("/v2/transactions");
+    expect(asked.searchParams.get("dateFrom")).toBe("2026-09-01");
+  });
+
+  it("stops walking a transactions listing when the cursor is absent", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [] }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).resolves.toEqual([]);
+  });
+
+  it("refuses an empty cursor rather than reading it as the end of a listing", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "" }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
+  it("names the fields that did not match, collapsing an array index", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () =>
+            json({
+              results: [
+                { id: "a", accountId: "b", date: "2026-09-01", description: "x", amount: 1 },
+                { id: "c", accountId: "d", date: "2026-09-02", description: "y", amount: 2 },
+              ],
+              next: null,
+            }),
+        }),
+      ),
+    );
+    const thrown: unknown = await client
+      .listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01")
+      .catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(ProviderResponseShapeError);
+    if (!(thrown instanceof ProviderResponseShapeError)) {
+      throw thrown;
+    }
+    expect(thrown.fields).toContain("results.#.type:invalid_value");
+  });
+
+  it("reports a failed transactions read as the collection, not the API version", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "?page=2" }),
+        }),
+      ),
+    );
+    // The sync log keeps only what precedes the first slash, because the rest
+    // of a provider path is an item id. A versioned path would log the version.
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toMatchObject({ endpoint: "transactions" });
+  });
+
+  it("raises ProviderResponseShapeError when a cursor carries no after value", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "?page=2" }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
+  it("raises ProviderResponseShapeError rather than truncating an endless listing", async () => {
+    let cursor = 0;
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => {
+            cursor += 1;
+            return json({ results: [], next: `?after=${String(cursor)}` });
+          },
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
+  it("raises ProviderResponseShapeError when a cursor does not move", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "?after=stuck" }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
   });
 
   it("raises ProviderResponseShapeError when the server echoes the same page", async () => {

@@ -78,6 +78,20 @@ export const pluggyTransactionSchema = z
   .loose();
 export type PluggyTransaction = z.infer<typeof pluggyTransactionSchema>;
 
+// The cursor-paginated shape Pluggy's /v2 listings answer with: `next` is a
+// ready-made query string for the following page, and null, or absent, on the
+// last one. An empty string is neither: it would read as the end of a listing
+// the provider is in fact still offering, and a walk that stops early is a
+// permanent gap in the ledger rather than a failure anyone would see.
+export function pluggyCursorPageSchema<Item extends z.ZodType>(item: Item) {
+  return z
+    .object({
+      results: z.array(item),
+      next: z.string().min(1).nullable().optional(),
+    })
+    .loose();
+}
+
 export function pluggyPageSchema<Item extends z.ZodType>(item: Item) {
   return z
     .object({

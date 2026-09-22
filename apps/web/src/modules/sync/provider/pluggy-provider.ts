@@ -10,6 +10,7 @@ import {
 import {
   pluggyAccountSchema,
   pluggyAuthResponseSchema,
+  pluggyCursorPageSchema,
   pluggyInvestmentSchema,
   pluggyItemSchema,
   pluggyPageSchema,
@@ -62,6 +63,23 @@ async function requestJson(
   return { status: response.status, json };
 }
 
+const MAX_REPORTED_FIELDS = 5;
+
+function shapeIssueFields(error: z.ZodError): string[] {
+  const fields = new Set<string>();
+  for (const issue of error.issues) {
+    // An array index says only "one of them", so it collapses to `#`: a page
+    // where every transaction misses the same field then reports that field
+    // once instead of five hundred times.
+    const path = issue.path.map((key) => (typeof key === "number" ? "#" : String(key))).join(".");
+    fields.add(`${path === "" ? "(root)" : path}:${issue.code}`);
+    if (fields.size >= MAX_REPORTED_FIELDS) {
+      break;
+    }
+  }
+  return [...fields];
+}
+
 function parseOrThrow<Schema extends z.ZodType>(
   schema: Schema,
   json: unknown,
@@ -69,7 +87,7 @@ function parseOrThrow<Schema extends z.ZodType>(
 ): z.infer<Schema> {
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    throw new ProviderResponseShapeError(endpoint);
+    throw new ProviderResponseShapeError(endpoint, shapeIssueFields(parsed.error));
   }
   return parsed.data;
 }
@@ -133,6 +151,44 @@ class PluggyClient implements ProviderClient {
     return items;
   }
 
+  // `path` is what goes on the wire; `collection` is what a failure is reported
+  // as. They are the same word for every listing but the versioned ones, and a
+  // reader of the logs wants the listing that broke, not the API version.
+  private async getAllByCursor<Item>(
+    path: string,
+    collection: string,
+    query: Record<string, string>,
+    itemSchema: z.ZodType<Item>,
+  ): Promise<Item[]> {
+    const pageSchema = pluggyCursorPageSchema(itemSchema);
+    const items: Item[] = [];
+    const seen = new Set<string>();
+    let after: string | undefined;
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const json = await this.get(path, after === undefined ? query : { ...query, after });
+      const parsed = parseOrThrow(pageSchema, json, collection);
+      items.push(...parsed.results);
+      if (parsed.next === null || parsed.next === undefined) {
+        return items;
+      }
+      // Pluggy documents sending only the decoded `after` from `next` rather
+      // than pasting the whole string onto the path, so nothing the provider
+      // returns can steer the request elsewhere. A cursor already used would
+      // page in a circle, and catching that here rather than at the cap saves
+      // the rest of the round trips.
+      const next = new URLSearchParams(parsed.next).get("after");
+      if (next === null || seen.has(next)) {
+        throw new ProviderResponseShapeError(collection);
+      }
+      seen.add(next);
+      after = next;
+    }
+    // Returning at the cap while the provider still offers a cursor would hand
+    // back a truncated window, which the caller stores and then treats as fully
+    // synced: everything past the cap would never be asked for again.
+    throw new ProviderResponseShapeError(collection);
+  }
+
   async describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome> {
     const endpoint = `items/${encodeURIComponent(providerItemId)}`;
     const json = await this.get(endpoint, {});
@@ -171,9 +227,10 @@ class PluggyClient implements ProviderClient {
     providerAccountId: string,
     sinceISODate: string,
   ): Promise<NormalizedTransaction[]> {
-    const transactions = await this.getAllPages(
+    const transactions = await this.getAllByCursor(
+      "v2/transactions",
       "transactions",
-      { accountId: providerAccountId, from: sinceISODate },
+      { accountId: providerAccountId, dateFrom: sinceISODate },
       pluggyTransactionSchema,
     );
     return transactions.map((transaction) => normalizeTransaction(transaction, this.hasher));

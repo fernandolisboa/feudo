@@ -70,11 +70,16 @@ export class ProviderUnavailableError extends Error {
 
 export class ProviderResponseShapeError extends Error {
   readonly endpoint: string;
+  // Which parts of the payload did not match, as field paths and validation
+  // codes. Never a value: what the provider sends under these fields is the
+  // household's own financial data and belongs in no log.
+  readonly fields: readonly string[];
 
-  constructor(endpoint: string) {
+  constructor(endpoint: string, fields: readonly string[] = []) {
     super(`Data provider response for ${endpoint} did not match the expected shape`);
     this.name = "ProviderResponseShapeError";
     this.endpoint = endpoint;
+    this.fields = fields;
   }
 }
 
