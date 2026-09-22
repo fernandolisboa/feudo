@@ -222,6 +222,49 @@ describe("createPluggyProvider", () => {
     expect(asked.searchParams.get("dateFrom")).toBe("2026-09-01");
   });
 
+  it("stops walking a transactions listing when the cursor comes back empty", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "" }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).resolves.toEqual([]);
+  });
+
+  it("raises ProviderResponseShapeError when a cursor carries no after value", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => json({ results: [], next: "?page=2" }),
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
+  it("raises ProviderResponseShapeError rather than truncating an endless listing", async () => {
+    let cursor = 0;
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () => {
+            cursor += 1;
+            return json({ results: [], next: `?after=${String(cursor)}` });
+          },
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).rejects.toThrow(ProviderResponseShapeError);
+  });
+
   it("raises ProviderResponseShapeError when a cursor does not move", async () => {
     const client = await authenticatedClient(
       fakeFetch(

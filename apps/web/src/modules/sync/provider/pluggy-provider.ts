@@ -141,25 +141,30 @@ class PluggyClient implements ProviderClient {
   ): Promise<Item[]> {
     const pageSchema = pluggyCursorPageSchema(itemSchema);
     const items: Item[] = [];
+    const seen = new Set<string>();
     let after: string | undefined;
     for (let page = 1; page <= MAX_PAGES; page += 1) {
       const json = await this.get(endpoint, after === undefined ? query : { ...query, after });
       const parsed = parseOrThrow(pageSchema, json, endpoint);
       items.push(...parsed.results);
-      if (parsed.next === null) {
-        break;
+      if (!parsed.next) {
+        return items;
       }
       // Pluggy documents sending only the decoded `after` from `next` rather
       // than pasting the whole string onto the path, so nothing the provider
-      // returns can steer the request elsewhere. A cursor that does not move
-      // would page forever: that is a shape Feudo does not understand.
+      // returns can steer the request elsewhere. A cursor already used would
+      // page in a circle: that is a shape Feudo does not understand.
       const next = new URLSearchParams(parsed.next).get("after");
-      if (next === null || next === after) {
+      if (next === null || seen.has(next)) {
         throw new ProviderResponseShapeError(endpoint);
       }
+      seen.add(next);
       after = next;
     }
-    return items;
+    // Returning at the cap while the provider still offers a cursor would hand
+    // back a truncated window, which the caller stores and then treats as fully
+    // synced: everything past the cap would never be asked for again.
+    throw new ProviderResponseShapeError(endpoint);
   }
 
   async describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome> {
@@ -196,8 +201,6 @@ class PluggyClient implements ProviderClient {
       .map((investment) => normalizeInvestment(investment, this.hasher));
   }
 
-  // Pluggy retired the page-paginated GET /transactions, which now answers
-  // 410; /v2/transactions replaces it with a cursor.
   async listTransactionsSince(
     providerAccountId: string,
     sinceISODate: string,
