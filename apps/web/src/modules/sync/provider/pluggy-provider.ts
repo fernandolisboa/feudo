@@ -63,6 +63,23 @@ async function requestJson(
   return { status: response.status, json };
 }
 
+const MAX_REPORTED_FIELDS = 5;
+
+function shapeIssueFields(error: z.ZodError): string[] {
+  const fields = new Set<string>();
+  for (const issue of error.issues) {
+    // An array index says only "one of them", so it collapses to `#`: a page
+    // where every transaction misses the same field then reports that field
+    // once instead of five hundred times.
+    const path = issue.path.map((key) => (typeof key === "number" ? "#" : String(key))).join(".");
+    fields.add(`${path === "" ? "(root)" : path}:${issue.code}`);
+    if (fields.size >= MAX_REPORTED_FIELDS) {
+      break;
+    }
+  }
+  return [...fields];
+}
+
 function parseOrThrow<Schema extends z.ZodType>(
   schema: Schema,
   json: unknown,
@@ -70,7 +87,7 @@ function parseOrThrow<Schema extends z.ZodType>(
 ): z.infer<Schema> {
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    throw new ProviderResponseShapeError(endpoint);
+    throw new ProviderResponseShapeError(endpoint, shapeIssueFields(parsed.error));
   }
   return parsed.data;
 }

@@ -248,6 +248,31 @@ describe("createPluggyProvider", () => {
     ).rejects.toThrow(ProviderResponseShapeError);
   });
 
+  it("names the fields that did not match, collapsing an array index", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": () =>
+            json({
+              results: [
+                { id: "a", accountId: "b", date: "2026-09-01", description: "x", amount: 1 },
+                { id: "c", accountId: "d", date: "2026-09-02", description: "y", amount: 2 },
+              ],
+              next: null,
+            }),
+        }),
+      ),
+    );
+    const thrown: unknown = await client
+      .listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01")
+      .catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(ProviderResponseShapeError);
+    if (!(thrown instanceof ProviderResponseShapeError)) {
+      throw thrown;
+    }
+    expect(thrown.fields).toContain("results.#.type:invalid_value");
+  });
+
   it("reports a failed transactions read as the collection, not the API version", async () => {
     const client = await authenticatedClient(
       fakeFetch(
