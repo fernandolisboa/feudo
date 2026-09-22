@@ -136,7 +136,16 @@ only workflow that runs on push:
 The workflow holds a `production-db` concurrency group with `cancel-in-progress: false`, separate
 from the preview project's `preview-db` group, so two pushes to `main` in quick succession queue
 and migrate production one at a time instead of racing, and a second push never kills an in-flight
-migration. Failure is visible the normal GitHub Actions way: a red check on the `main` branch's
+migration. With three or more in quick succession, GitHub cancels the run left _pending_ when a
+newer one arrives, so a middle commit can carry a cancelled `migrate-production` check; the
+migrations are cumulative, so the last run still applies everything, but do not read that cancelled
+check as a failure.
+
+Because the job no longer waits on `ci` and `integration`, the migration now starts as soon as the
+merge lands rather than a few minutes later, which usually puts it ahead of the Vercel production
+deployment instead of behind it. Schema-first is the right order for an additive migration and the
+wrong one for a destructive change, which meets the still-running old code sooner: expand first,
+contract in a later deploy. Failure is visible the normal GitHub Actions way: a red check on the `main` branch's
 commit and run history — there is no separate alerting yet.
 
 Nothing else runs on push. `main` moves only through a squash-merge of a pull request whose `ci`

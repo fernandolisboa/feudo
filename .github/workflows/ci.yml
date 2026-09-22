@@ -34,14 +34,17 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          git diff --name-only --no-renames "$BASE_SHA...HEAD" > changed-files.txt
-          git diff --name-only --diff-filter=d "$BASE_SHA...HEAD" > present-files.txt
+          git -c core.quotePath=false diff --name-only --no-renames "$BASE_SHA...HEAD" > changed-files.txt
+          git -c core.quotePath=false diff --name-only --diff-filter=d "$BASE_SHA...HEAD" > present-files.txt
           docs_only=true
           if [ ! -s changed-files.txt ]; then
             docs_only=false
           fi
           while IFS= read -r file; do
             [ -z "$file" ] && continue
+            # Any Markdown a test reads (prompt fixtures, for one) has to come
+            # out of this pattern, or the tests that validate it stop running
+            # on the very pull request that changes it.
             case "$file" in
               *.md) ;;
               *)
