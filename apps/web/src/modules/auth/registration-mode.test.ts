@@ -57,32 +57,45 @@ describe("resolveRegistrationMode", () => {
     expect(await resolveRegistrationMode(settingsWith(undefined), {})).toBe("invite");
   });
 
-  it("ignores an invalid stored value, logs its type only and falls back to the environment", async () => {
+  it("ignores an invalid short stored string, logs its type and value and falls back to the environment", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     expect(
-      await resolveRegistrationMode(settingsWith("public"), { REGISTRATION_MODE: "closed" }),
+      await resolveRegistrationMode(settingsWith("opne"), { REGISTRATION_MODE: "closed" }),
     ).toBe("closed");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "registration_mode setting ignored: invalid value",
+      { type: "string", value: "opne" },
+    );
+  });
+
+  it("logs only the type and length of a stored string longer than the threshold, never its content", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const longValue = "a".repeat(50);
+
+    expect(
+      await resolveRegistrationMode(settingsWith(longValue), { REGISTRATION_MODE: "closed" }),
+    ).toBe("closed");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "registration_mode setting ignored: invalid value",
+      { type: "string", length: 50 },
+    );
+  });
+
+  it("ignores a non-string stored value, logs its type only and falls back to the environment", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
     expect(
       await resolveRegistrationMode(settingsWith({ mode: "open" }), {
         REGISTRATION_MODE: "closed",
       }),
     ).toBe("closed");
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "registration_mode setting ignored: invalid value",
-      { type: "string" },
+    expect(await resolveRegistrationMode(settingsWith(42), { REGISTRATION_MODE: "closed" })).toBe(
+      "closed",
     );
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "registration_mode setting ignored: invalid value",
       { type: "object" },
-    );
-  });
-
-  it("ignores a stored non-string number, logs its type only and falls back to the environment", async () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    expect(await resolveRegistrationMode(settingsWith(42), { REGISTRATION_MODE: "closed" })).toBe(
-      "closed",
     );
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "registration_mode setting ignored: invalid value",
