@@ -224,6 +224,10 @@ numbers follow Brazilian conventions.
   anything that touches bank consents.
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, the Impeccable detect pass and `/review` must be
   green before any PR.
+- **CI minutes are metered and have run out mid-month.** A push to an open PR costs a full suite,
+  about 7 billed minutes. Run the local gate above before pushing, and land review fixes in one
+  push rather than one push per finding. `docs/runbooks/ci-minutes.md` has the numbers and how the
+  owner raises the budget.
 - Full `/security-audit` (repo-wide) after any ticket touching auth, tenancy or data access, before
   `REGISTRATION_MODE=open`, and monthly as a floor.
 - Product uncertainty → ask the owner. Technical uncertainty → one-paragraph ADR draft, then ask.

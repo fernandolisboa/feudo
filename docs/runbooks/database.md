@@ -111,17 +111,20 @@ them, not at job level.
 
 ## Production migrations
 
-CI owns applying committed migrations to production. On every push to `main` (after `ci` and
-`integration` both succeed), the `migrate-production` job in `.github/workflows/ci.yml`:
+CI owns applying committed migrations to production. On every push to `main`, the
+`migrate-production` job — the only job in `.github/workflows/migrate-production.yml`, which is the
+only workflow that runs on push:
 
-1. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname, normalises it
+1. Runs `drizzle-kit check`, so a journal or snapshot the merge left inconsistent stops the job
+   before it opens a connection to production.
+2. Guards the target: a small Node one-liner parses `DATABASE_URL`'s hostname, normalises it
    (lowercase, strip a trailing dot, strip a `-pooler` suffix from the first label — the same
    normalisation `databaseHost()` in `apps/web/src/platform/db/host-policy.ts` applies) and fails the job —
    printing only `PASS` or `FAIL`, never the URL — unless the normalised host equals the normalised
    `vars.DATABASE_PRODUCTION_HOST`. This is what stops a mispointed or stale
    `DATABASE_URL_PRODUCTION` secret, or a merely differently-cased or pooler/direct variant of the
    same host, from migrating the wrong database.
-2. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
+3. Runs `pnpm --filter @feudo/web db:migrate` (`drizzle-kit migrate`) against
    `secrets.DATABASE_URL_PRODUCTION`, with `DATABASE_PRODUCTION_HOST` set so the connection guard
    in `drizzle.config.ts` admits the production host, which it does for the `migrate` command
    only. Nothing resets or drops anything — `db:reset` and `db:reset-schema` never appear in this
@@ -130,15 +133,19 @@ CI owns applying committed migrations to production. On every push to `main` (af
    from the `integration` job would fail closed instead
    of dropping the production schema.
 
-The job holds a `production-db` concurrency group (`cancel-in-progress: false`), separate from the
-preview project's `preview-db` group, so two pushes to `main` in quick succession queue and migrate
-production one at a time instead of racing. This depends on the workflow-level `ci-${{
-github.ref }}` group never cancelling a run on `main` — its `cancel-in-progress` is
-`github.ref != 'refs/heads/main'`, `false` for `main` and `true` for pull requests — because
-`github.ref` is the same `refs/heads/main` for every push to `main`, and an unconditional
-`cancel-in-progress: true` there would kill an in-flight `migrate-production` job outright before
-the job-level group ever got to serialize anything. Failure is visible the normal GitHub Actions
-way: a red check on the `main` branch's commit and run history — there is no separate alerting yet.
+The workflow holds a `production-db` concurrency group with `cancel-in-progress: false`, separate
+from the preview project's `preview-db` group, so two pushes to `main` in quick succession queue
+and migrate production one at a time instead of racing, and a second push never kills an in-flight
+migration. Failure is visible the normal GitHub Actions way: a red check on the `main` branch's
+commit and run history — there is no separate alerting yet.
+
+Nothing else runs on push. `main` moves only through a squash-merge of a pull request whose `ci`
+and `integration` checks were green and up to date with `main`, so the tree that lands here has
+already been built, linted, typechecked and tested; re-running that suite on push cost roughly 18%
+of the repository's Actions minutes to re-prove a known result (`docs/runbooks/ci-minutes.md`). The
+consequence to keep in mind: if branch protection on `main` is ever relaxed to allow a direct push
+or a merge with stale checks, an unverified tree reaches `migrate-production`. The `drizzle-kit
+check` step and the host guard are the only gates left at that point.
 
 **By hand, in an emergency only** (CI down, or a migration needs to land before the next push to
 `main`) — never with a reset script, and only from the repo root:
