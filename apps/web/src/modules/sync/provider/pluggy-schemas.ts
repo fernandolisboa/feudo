@@ -59,7 +59,10 @@ export type PluggyInvestment = z.infer<typeof pluggyInvestmentSchema>;
 const documentSchema = z
   .object({
     value: z.string().nullable().optional(),
-    type: z.enum(["CPF", "CNPJ"]).nullable().optional(),
+    // Any string, not an enum: the counterpart is enrichment Feudo can live
+    // without, and refusing a document type nobody listed would cost the whole
+    // connection's sync. The normalizer keeps CPF and CNPJ and drops the rest.
+    type: z.string().nullable().optional(),
   })
   .loose();
 

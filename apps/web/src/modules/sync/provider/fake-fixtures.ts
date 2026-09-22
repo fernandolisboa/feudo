@@ -153,6 +153,7 @@ export const FAKE_TRANSACTIONS: Record<string, PluggyTransaction[]> = {
       category: "Salary",
       paymentData: {
         payer: { documentNumber: { value: "12.345.678/0001-95", type: "CNPJ" } },
+        receiver: null,
       },
     },
     {
@@ -165,6 +166,7 @@ export const FAKE_TRANSACTIONS: Record<string, PluggyTransaction[]> = {
       currencyCode: "BRL",
       category: "Housing",
       paymentData: {
+        payer: null,
         receiver: { documentNumber: { value: "98.765.432/0001-10", type: "CNPJ" } },
       },
     },

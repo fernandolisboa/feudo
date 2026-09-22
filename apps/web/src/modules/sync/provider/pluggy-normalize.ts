@@ -174,7 +174,10 @@ function counterpartOf(
       ? transaction.paymentData?.receiver
       : transaction.paymentData?.payer;
   const document = participant?.documentNumber;
-  if (!document?.value || !document.type) {
+  if (!document?.value) {
+    return null;
+  }
+  if (document.type !== "CPF" && document.type !== "CNPJ") {
     return null;
   }
   return { type: document.type === "CPF" ? "cpf" : "cnpj", value: document.value };

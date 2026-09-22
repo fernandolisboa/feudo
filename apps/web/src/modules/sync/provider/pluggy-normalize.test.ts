@@ -251,28 +251,43 @@ describe("normalizeTransaction", () => {
   // The shape production actually answers with: Pluggy nulls a counterpart it
   // does not have rather than leaving the key out, and it nulls the document
   // of a counterpart whose owner it could not read.
-  it.each([
-    ["a nulled payer and receiver", { payer: null, receiver: null }],
-    ["a counterpart with no document", { payer: { documentNumber: null }, receiver: null }],
+  const discardedCounterparts: [string, "CREDIT" | "DEBIT", unknown][] = [
+    ["a nulled payer and receiver", "CREDIT", { payer: null, receiver: null }],
+    [
+      "a counterpart with no document",
+      "DEBIT",
+      { payer: null, receiver: { documentNumber: null } },
+    ],
     [
       "a document with no value",
+      "CREDIT",
       { payer: { documentNumber: { value: null, type: null } }, receiver: null },
     ],
-  ])("reads %s without refusing the transaction", (_label, paymentData) => {
-    const transaction = pluggyTransactionSchema.parse({
-      id: "tx-null-counterpart",
-      accountId: "acc-1",
-      date: "2026-09-02T00:00:00.000Z",
-      description: "Compra no cartao",
-      type: "CREDIT",
-      amount: 42.5,
-      currencyCode: "BRL",
-      paymentData,
-    });
-    expect(normalizeTransaction(transaction, hasher)).toMatchObject({
-      providerTransactionId: "tx-null-counterpart",
-      counterpartType: null,
-      counterpartDocumentHash: null,
-    });
-  });
+    [
+      "a document type it does not know",
+      "DEBIT",
+      { payer: null, receiver: { documentNumber: { value: "X1234567", type: "PASSPORT" } } },
+    ],
+  ];
+
+  it.each(discardedCounterparts)(
+    "reads %s without refusing the transaction",
+    (_label, transactionType, paymentData) => {
+      const transaction = pluggyTransactionSchema.parse({
+        id: "tx-null-counterpart",
+        accountId: "acc-1",
+        date: "2026-09-02T00:00:00.000Z",
+        description: "Compra no cartao",
+        type: transactionType,
+        amount: 42.5,
+        currencyCode: "BRL",
+        paymentData,
+      });
+      expect(normalizeTransaction(transaction, hasher)).toMatchObject({
+        providerTransactionId: "tx-null-counterpart",
+        counterpartType: null,
+        counterpartDocumentHash: null,
+      });
+    },
+  );
 });
