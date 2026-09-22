@@ -36,5 +36,5 @@ Sync runs automatically once a day and can be triggered manually up to three tim
 
 - The wizard must be honest with the user: they are handing Feudo a secret that can read all their accounts, and they can revoke it at Pluggy or delete it in Feudo at any time.
 - End-to-end tests run against an in-repo fake `DataProvider` with Pluggy-shaped fixtures; Meu Pluggy has no sandbox, so the real provider is exercised by a manual smoke test on the owner's own credentials.
-- A manual refresh triggered by household A refreshes every connection with an account in A, so other households sharing one of those connections get fresh data without spending their own quota. Accepted.
+- A manual trigger from household A re-reads every connection with an account in A, so other households sharing one of those connections get an up-to-date read without spending their own quota; how fresh that read is still depends on Meu Pluggy's own daily refresh, not on the trigger. Accepted.
 - CLAUDE.md's stack section (Connect widget, "MeuPluggy only for local development", billing per item) was aligned with this ADR in the same PR.
