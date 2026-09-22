@@ -13,6 +13,7 @@ import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider
 
 const hasher = createDocumentHasher("unit-test-document-hash-key-with-32-chars!!");
 const credentials = { clientId: "client-id", clientSecret: "client-secret" };
+const CHECKING_ACCOUNT_FIXTURE = "a1000000-0000-4000-8000-000000000001";
 
 type Route = (url: URL, init: RequestInit | undefined) => Response | Promise<Response>;
 
@@ -62,9 +63,7 @@ function apiRoute(overrides: Partial<Record<string, Route>> = {}): Route {
         : json({ apiKey: "jwt" });
     }
     if (path === `/items/${FAKE_ITEM_BANCO_FIXTURE}`) {
-      return init?.method === "PATCH"
-        ? json(FAKE_ITEMS[FAKE_ITEM_BANCO_FIXTURE])
-        : json(FAKE_ITEMS[FAKE_ITEM_BANCO_FIXTURE]);
+      return json(FAKE_ITEMS[FAKE_ITEM_BANCO_FIXTURE]);
     }
     if (path.startsWith("/items/")) {
       return json({ message: "not found" }, 404);
@@ -258,10 +257,16 @@ describe("createPluggyProvider", () => {
     );
   });
 
-  it("refreshes an item with a PATCH", async () => {
+  // Pluggy rejects a manual update of a Meu Pluggy proxy item with a 400: the
+  // original item is refreshed by Meu Pluggy every 24 hours and the proxy has
+  // no auto-sync of its own, so every write to it would need the user's MFA.
+  it("only ever reads from the provider, never writes", async () => {
     const client = await authenticatedClient(fakeFetch(apiRoute()));
-    await client.refresh(FAKE_ITEM_BANCO_FIXTURE);
-    const patchCall = recordedCalls.find((call) => call.method === "PATCH");
-    expect(patchCall?.url).toBe(`https://api.pluggy.ai/items/${FAKE_ITEM_BANCO_FIXTURE}`);
+    await client.describeConnection(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listAccounts(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE);
+    await client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01");
+    const afterAuth = recordedCalls.filter((call) => !call.url.endsWith("/auth"));
+    expect(afterAuth.map((call) => call.method)).toEqual(afterAuth.map(() => "GET"));
   });
 });

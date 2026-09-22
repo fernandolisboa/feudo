@@ -57,8 +57,8 @@ An account the household treats as one member's own, for reporting purposes. Eve
 _Avoid_: private account, personal account
 
 **Sync**:
-The daily read of every bank connection with its owner's own credentials, one connection at a time: the provider is asked to refresh the connection, then its accounts, positions and transactions are re-read and stored. The first sync of a connection reads from the first day of the month twelve months back; later ones re-read from a week before the last successful sync, so late or revised postings are picked up without duplicates. A failed sync records why on the connection and leaves its data and last sync time untouched.
-_Avoid_: refresh (that is the provider-side step), import
+The daily read of every bank connection with its owner's own credentials, one connection at a time: its accounts, positions and transactions are read from the provider and stored. Feudo never asks the provider to re-read the bank; Meu Pluggy does that on its own every 24 hours (ADR-0005). The first sync of a connection reads from the first day of the month twelve months back; later ones re-read from a week before the last successful sync, so late or revised postings are picked up without duplicates. A failed sync records why on the connection and leaves its data and last sync time untouched.
+_Avoid_: refresh (that is Meu Pluggy's own step, outside Feudo), import
 
 **Institution**:
 A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation.

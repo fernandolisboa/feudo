@@ -63,10 +63,6 @@ class FakeClient implements ProviderClient {
         .filter((transaction) => transaction.date >= sinceISODate),
     );
   }
-
-  refresh(): Promise<void> {
-    return Promise.resolve();
-  }
 }
 
 export function createFakeProvider(hasher: DocumentHasher): DataProvider {

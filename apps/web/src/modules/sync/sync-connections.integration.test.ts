@@ -52,6 +52,31 @@ async function seedBancoNeverSynced(db: Database, user: TwoUsers["userA"]): Prom
   return connectionId;
 }
 
+function recordingProvider(windows: string[]): DataProvider {
+  return {
+    name: "fake",
+    async authenticate(credentials) {
+      const real = await deps.provider.authenticate(credentials);
+      if (real.status !== "ok") {
+        return real;
+      }
+      const client = real.client;
+      return {
+        status: "ok",
+        client: {
+          describeConnection: (itemId) => client.describeConnection(itemId),
+          listAccounts: (itemId) => client.listAccounts(itemId),
+          listInvestmentPositions: (itemId) => client.listInvestmentPositions(itemId),
+          listTransactionsSince: (accountId, since) => {
+            windows.push(since);
+            return client.listTransactionsSince(accountId, since);
+          },
+        },
+      };
+    },
+  };
+}
+
 async function transactionsOf(db: Database, connectionId: string) {
   return db
     .select({
@@ -135,19 +160,51 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
-  it("reads only from a week before the last sync on later runs", async () => {
+  it("reads only from a week before the last sync once the ledger holds history", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
-      const lastSyncedAt = new Date("2026-09-30T06:00:00.000Z");
+      await syncAllConnections(db, deps, NOW);
       await db
         .update(bankConnection)
-        .set({ lastSyncedAt })
+        .set({ lastSyncedAt: new Date("2026-09-30T06:00:00.000Z") })
         .where(eq(bankConnection.id, connectionId));
 
-      await syncAllConnections(db, deps, new Date("2026-10-01T06:00:00.000Z"));
+      const windows: string[] = [];
+      await syncAllConnections(
+        db,
+        { ...deps, provider: recordingProvider(windows) },
+        new Date("2026-10-01T06:00:00.000Z"),
+      );
 
-      expect(await transactionsOf(db, connectionId)).toEqual([]);
+      expect(windows).toContain("2026-09-23");
+      expect(windows).not.toContain("2025-10-01");
+    });
+  });
+
+  // The connections made before the transactions table shipped carry a
+  // successful sync time and no transactions; keying the backfill on the last
+  // sync time alone would leave their history permanently unreachable.
+  it("pulls twelve months for a connection synced before transactions were stored", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncedAt: new Date("2026-09-30T06:00:00.000Z") })
+        .where(eq(bankConnection.id, connectionId));
+
+      const windows: string[] = [];
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          new Date("2026-10-01T06:00:00.000Z"),
+        ),
+      ).resolves.toMatchObject({ synced: 1 });
+
+      expect(windows).toContain("2025-10-01");
+      expect(await transactionsOf(db, connectionId)).toHaveLength(3);
     });
   });
 
@@ -227,8 +284,11 @@ describe("syncAllConnections (integration)", () => {
           return {
             status: "ok",
             client: {
-              ...real.client,
-              refresh: () => Promise.reject(new ProviderUnavailableError("down", 503)),
+              describeConnection: (itemId) => real.client.describeConnection(itemId),
+              listInvestmentPositions: (itemId) => real.client.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) =>
+                real.client.listTransactionsSince(accountId, since),
+              listAccounts: () => Promise.reject(new ProviderUnavailableError("down", 503)),
             },
           };
         },
@@ -241,6 +301,42 @@ describe("syncAllConnections (integration)", () => {
         lastSyncError: "provider_unavailable",
       });
       expect(await transactionsOf(db, missing)).toEqual([]);
+    });
+  });
+
+  // Pluggy answers a manual update of a Meu Pluggy proxy item with a 400, so a
+  // run that asks for one syncs nothing at all (ADR-0005).
+  it("syncs through a client that exposes reads only", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+      const authenticated = await deps.provider.authenticate({
+        clientId: "id",
+        clientSecret: "client-secret",
+      });
+      if (authenticated.status !== "ok") throw new Error("fake provider refused");
+      const real = authenticated.client;
+      const readsOnly: DataProvider = {
+        name: "fake",
+        authenticate: () =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) =>
+                real.listTransactionsSince(accountId, since),
+            },
+          }),
+      };
+
+      await expect(syncAllConnections(db, { ...deps, provider: readsOnly }, NOW)).resolves.toEqual({
+        ok: true,
+        synced: 1,
+        failed: 0,
+      });
+      expect(await transactionsOf(db, connectionId)).not.toEqual([]);
     });
   });
 });

@@ -66,6 +66,20 @@ function deserializeCredentials(ciphertext: string, encryptionKey: string): Prov
   return storedCredentialsSchema.parse(JSON.parse(decryptSecret(ciphertext, encryptionKey)));
 }
 
+// The provider's own status and endpoint are the two facts that say whether a
+// failed read is an outage, a rejected request or a payload Feudo cannot read.
+// Only the endpoint's collection is kept: the rest of the path is a provider
+// item id, which belongs in no log.
+function providerFailureDetail(error: unknown): string {
+  if (error instanceof ProviderUnavailableError) {
+    return `${error.name} status=${error.status === undefined ? "none" : String(error.status)}`;
+  }
+  if (error instanceof ProviderResponseShapeError) {
+    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}`;
+  }
+  return errorName(error);
+}
+
 function isProviderFailure(error: unknown): boolean {
   return error instanceof ProviderUnavailableError || error instanceof ProviderResponseShapeError;
 }
@@ -443,9 +457,12 @@ async function providerSessionFor(
   return outcome;
 }
 
-// Refresh first so the provider re-reads the bank, then take one snapshot
-// and commit it whole; a failure leaves the previous data and the last
-// successful sync time untouched, and only records why.
+// Feudo never asks the provider to re-read the bank: Meu Pluggy refreshes
+// the connection every 24 hours on its own and a proxy item cannot be
+// updated without the user's MFA (ADR-0005). The backfill window is decided
+// by whether the ledger already holds history for this connection, not by
+// its last sync time: a connection made before the transactions table
+// shipped carries a successful sync and no transactions at all.
 async function syncConnection(
   client: ProviderClient,
   repository: SyncUserRepository,
@@ -455,14 +472,19 @@ async function syncConnection(
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
   try {
-    await client.refresh(connection.providerItemId);
+    const history = (await repository.hasTransactions(db, connection.id))
+      ? connection.lastSyncedAt
+      : null;
     snapshot = await readConnection(
       client,
       connection.providerItemId,
-      transactionsSince(now, connection.lastSyncedAt),
+      transactionsSince(now, history),
     );
   } catch (error) {
     if (isProviderFailure(error)) {
+      console.warn(
+        `sync: reading connection ${connection.id} from the provider failed (${providerFailureDetail(error)})`,
+      );
       return { status: "provider_unavailable" };
     }
     throw error;

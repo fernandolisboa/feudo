@@ -80,10 +80,12 @@ export class ProviderResponseShapeError extends Error {
 
 export type DescribeConnectionOutcome = Outcome<{ connection: ProviderConnection }, "not_found">;
 
-// One authenticated session against the provider, for the four operations
+// One authenticated session against the provider, for the three reads
 // ADR-0005 names plus the "which institution is this item" read the wizard
-// needs before it creates a connection. Every method may throw
-// ProviderUnavailableError or ProviderResponseShapeError.
+// needs before it creates a connection. Reading is all Feudo does: the
+// provider owns when a connection is re-read from the bank (ADR-0005).
+// Every method may throw ProviderUnavailableError or
+// ProviderResponseShapeError.
 export interface ProviderClient {
   describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome>;
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]>;
@@ -92,7 +94,6 @@ export interface ProviderClient {
     providerAccountId: string,
     sinceISODate: string,
   ): Promise<NormalizedTransaction[]>;
-  refresh(providerItemId: string): Promise<void>;
 }
 
 export type AuthenticateOutcome = Outcome<{ client: ProviderClient }, "invalid_credentials">;

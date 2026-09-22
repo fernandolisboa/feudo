@@ -363,6 +363,21 @@ export function createSyncUserRepository(scope: UserScope) {
       return unique.length;
     },
 
+    // Whether the ledger already holds history for this connection, which is
+    // what decides the backfill window: a connection can carry a successful
+    // sync time and no transactions at all, because connections made before
+    // the transactions table shipped stored only accounts.
+    async hasTransactions(db: Database, connectionId: string): Promise<boolean> {
+      await requireOwnedConnection(db, connectionId);
+      const [row] = await db
+        .select({ id: bankTransaction.id })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(eq(bankAccount.connectionId, connectionId))
+        .limit(1);
+      return row !== undefined;
+    },
+
     // The one household every account of the connection is assigned to, so
     // an account the provider starts listing after the connection was made
     // joins its siblings; null when they disagree or none is assigned. Built

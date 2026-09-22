@@ -243,7 +243,6 @@ describe("connectProvider (integration)", () => {
               listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
               listTransactionsSince: (accountId, since) =>
                 real.listTransactionsSince(accountId, since),
-              refresh: (itemId) => real.refresh(itemId),
               listAccounts,
             },
           }),

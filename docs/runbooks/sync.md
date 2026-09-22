@@ -67,14 +67,15 @@ concurrent submit of the same Item ID is reported as already connected.
 ## Providers (ADR-0005)
 
 `DataProvider` (`provider/provider.ts`) has one method, `authenticate(credentials)`, returning a
-`ProviderClient` with `describeConnection`, `listAccounts`, `listInvestmentPositions`,
-`listTransactionsSince` and `refresh`; every payload is normalized into `normalizedAccountSchema` /
+`ProviderClient` with `describeConnection`, `listAccounts`, `listInvestmentPositions` and
+`listTransactionsSince`; every payload is normalized into `normalizedAccountSchema` /
 `normalizedTransactionSchema` before anything else touches it. Investment positions are accounts
-of type `investment`. Transactions are normalized but not persisted yet (#14).
+of type `investment`. The interface reads only: asking Pluggy to update a Meu Pluggy connection
+answers 400, and Meu Pluggy refreshes it every 24 hours anyway (ADR-0005).
 
 - `pluggy`: `provider/pluggy-provider.ts`, `https://api.pluggy.ai`, `POST /auth` → `X-API-KEY`,
   `GET /items/{id}`, `GET /accounts?itemId`, `GET /investments?itemId`,
-  `GET /transactions?accountId&from`, `PATCH /items/{id}` (refresh). Shapes in
+  `GET /transactions?accountId&from`. Shapes in
   `provider/pluggy-schemas.ts` are deliberately loose: unknown fields pass, a missing required one
   raises `ProviderResponseShapeError`. Rates arrive as percentages and are stored as ppm.
 - `fake`: `provider/fake-provider.ts`, fixtures in `provider/fake-fixtures.ts` shaped like real
