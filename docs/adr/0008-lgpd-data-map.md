@@ -5,7 +5,7 @@ date: 2026-09-02
 
 # LGPD data map: what Feudo stores, why, for how long, and how it is protected
 
-Feudo is a data controller under LGPD regardless of being free or small, and it processes the most sensitive category of personal data an ordinary person has: their bank movements and the secret that grants access to them. We therefore fix the data map up front, minimize by default, and make export and deletion first-class flows. These ship before registration opens beyond the owner's household; `REGISTRATION_MODE=open` is blocked until they do (together with ADR-0005 step 3).
+Feudo is a data controller under LGPD regardless of being free or small, and it processes the most sensitive category of personal data an ordinary person has: their bank movements and the secret that grants access to them. We therefore fix the data map up front, minimize by default, and make export and deletion first-class flows. These ship before registration opens beyond the owner's household; the registration mode `open` (resolved as in ADR-0001) is blocked until they do (together with ADR-0005 step 3).
 
 ## Principles
 

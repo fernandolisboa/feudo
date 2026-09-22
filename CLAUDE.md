@@ -13,8 +13,9 @@ and `docs/adr/`. Visual truth lives in `DESIGN.md`. When this file and those dis
 - **Multi-tenant from day one.** The first household is the owner's, but strangers will register,
   connect their own banks and invite their partners. Nothing in schema, queries or copy assumes a
   specific user.
-- Self-registration is the product default. `REGISTRATION_MODE=open|invite|closed` is an
-  operational switch for private beta, never a design constraint.
+- Self-registration is the product default. The registration mode (`open|invite|closed`) is an
+  operational switch for private beta, never a design constraint; production reads it from the
+  Vercel Global Config store (`registration_mode`), falling back to `REGISTRATION_MODE`.
 - The owner does not read code. Tests and the review pipeline are their eyes. Optimize for
   verifiability, not readability by a human.
 - Language: talk to the owner in Portuguese (pt-BR). Think, code, name things, write commits,
