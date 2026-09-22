@@ -13,8 +13,9 @@ and `docs/adr/`. Visual truth lives in `DESIGN.md`. When this file and those dis
 - **Multi-tenant from day one.** The first household is the owner's, but strangers will register,
   connect their own banks and invite their partners. Nothing in schema, queries or copy assumes a
   specific user.
-- Self-registration is the product default. `REGISTRATION_MODE=open|invite|closed` is an
-  operational switch for private beta, never a design constraint.
+- Self-registration is the product default. The registration mode (`open|invite|closed`) is an
+  operational switch for private beta, never a design constraint; production reads it from the
+  Vercel Global Config store (`registration_mode`), falling back to `REGISTRATION_MODE`.
 - The owner does not read code. Tests and the review pipeline are their eyes. Optimize for
   verifiability, not readability by a human.
 - Language: talk to the owner in Portuguese (pt-BR). Think, code, name things, write commits,
@@ -50,7 +51,7 @@ Handlers.
   verification, magic link, password reset, sessions, rate-limited auth endpoints. **Household** is
   the tenant: roles `owner` (exactly one), `admin` and `member`; a user can belong to several
   households and works in one active household at a time; invite by email (24h expiry),
-  leave/transfer ownership. Emails via Resend.
+  leave/transfer ownership. Emails via Resend; the fake sender is refused in production.
 - **Jobs**: Vercel Cron hitting bearer-protected Route Handlers for bank-connection sync (the unit
   of work is the user-owned connection; manual triggers are limited per household, ADR-0005) and
   indicator refresh. No queue or worker until a measured need appears.

@@ -16,6 +16,7 @@ import {
 } from "./schema";
 
 import type { Database } from "@/platform/db/client";
+import { createRuntimeSettings, type RuntimeSettings } from "@/platform/runtime-settings";
 import { scheduleBackgroundTask } from "./background-tasks";
 import { clearActiveHouseholdOnSessions } from "./clear-active-household";
 import { buildInvitationEmail } from "./email/invitation-email";
@@ -23,8 +24,9 @@ import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
-import { readAuthBaseUrl, readRegistrationMode } from "./env";
+import { readAuthBaseUrl } from "./env";
 import { hasPendingInvitation } from "./invitations";
+import { resolveRegistrationMode } from "./registration-mode";
 import { TERMS_VERSION } from "./terms";
 import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
 import {
@@ -149,7 +151,11 @@ async function deleteOtherPasswordResetTokens(db: Database, userId: string): Pro
     );
 }
 
-export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.env) {
+export function buildAuthOptions(
+  db: Database,
+  env: NodeJS.ProcessEnv = process.env,
+  runtimeSettings: RuntimeSettings = createRuntimeSettings(env),
+) {
   const baseURL = readAuthBaseUrl(env);
   // Built eagerly, not inside sendVerificationEmail below: Better Auth swallows
   // that callback's rejection into a logged "background task" failure and still
@@ -354,7 +360,7 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
           return;
         }
 
-        const mode = readRegistrationMode(env);
+        const mode = await resolveRegistrationMode(runtimeSettings, env);
         const email = readEmail(ctx.body);
         const hasPendingInvite =
           mode === "invite" && email !== undefined ? await hasPendingInvitation(db, email) : false;
@@ -525,7 +531,7 @@ export function buildAuthOptions(db: Database, env: NodeJS.ProcessEnv = process.
         },
       }),
       magicLink({
-        // Sign-up policy (REGISTRATION_MODE, terms acceptance) is enforced
+        // Sign-up policy (registration mode, terms acceptance) is enforced
         // only on /sign-up/email's hooks.before; letting magic link mint new
         // accounts would bypass both. It only ever signs in an existing user.
         disableSignUp: true,

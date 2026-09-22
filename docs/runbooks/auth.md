@@ -40,12 +40,12 @@ this (active-household resolution, single-owner enforcement, the isolation-test 
 
 ## Policy enforcement lives in Better Auth, not in the server action
 
-`REGISTRATION_MODE` and the terms-version match are enforced in exactly one place: a Better Auth
+The registration mode and the terms-version match are enforced in exactly one place: a Better Auth
 `hooks.before` on `/sign-up/email` (`apps/web/src/modules/auth/options.ts`), which throws an
 `APIError` before any user is created. This is what actually protects the system — it runs for
 every request to the route, including one that bypasses the server action entirely (a direct
 `POST /api/auth/sign-up/email`). `signUp` (`apps/web/src/modules/auth/service.ts`) does not
-re-check `REGISTRATION_MODE`; it only maps the hook's `APIError` message back to a typed
+re-check the registration mode; it only maps the hook's `APIError` message back to a typed
 `SignUpOutcome`, and still short-circuits locally on the terms checkbox
 (`input.termsAccepted`) for no-round-trip form feedback, since that flag never reaches the hook.
 
@@ -64,10 +64,26 @@ helper treats that as a no-op rather than failing the call.
 
 ## Registration modes
 
-`REGISTRATION_MODE` is read at request time (Zod-validated: `open | invite | closed`, default
-`invite`, empty string treated as unset) by `readRegistrationMode`
-(`apps/web/src/modules/auth/env.ts`) and enforced by `evaluateRegistrationMode`
-(`packages/core/src/auth/registration-policy.ts`).
+The registration mode is resolved at request time by `resolveRegistrationMode`
+(`apps/web/src/modules/auth/registration-mode.ts`) and enforced by `evaluateRegistrationMode`
+(`packages/core/src/auth/registration-policy.ts`). Resolution order:
+
+1. The `registration_mode` item of the Vercel Global Config store whose connection string is in
+   `GLOBAL_CONFIG` (`apps/web/src/platform/runtime-settings.ts`). This is how the mode changes
+   without a redeploy: edit the item in the Vercel dashboard (Storage → the store → Items) and
+   it propagates within about 10 seconds. A `null` or empty item means "unset". An unreachable
+   store (the read gives up after 2 seconds and never serves a stale value on upstream errors)
+   or a value outside `open | invite | closed` is logged and ignored, so a broken store can
+   never open registration by accident. Write access to the store is the authority to open
+   registration: setting the item to `open` stays subject to the gates in ADR-0005 and
+   ADR-0008 and to the `/security-audit` rule in `CLAUDE.md`.
+2. `REGISTRATION_MODE` (Zod-validated: `open | invite | closed`, empty string treated as unset)
+   by `readRegistrationMode` (`apps/web/src/modules/auth/env.ts`).
+3. `invite`.
+
+Only the production deployment has `GLOBAL_CONFIG`; preview, CI and local runs keep using the
+environment variable. A malformed `GLOBAL_CONFIG` is logged and ignored (the environment
+variable decides) rather than failing every auth endpoint.
 
 - `closed`: sign-up always refused.
 - `invite`: sign-up refused unless the email holds a pending invitation. `hasPendingInvitation`
@@ -124,12 +140,32 @@ one place (`apps/web/src/modules/auth/email/select.ts`):
   always logs a rejection as "Failed to run background task" and still reports the outer request
   `ok`, so a throw from inside it can never surface as a failed sign-up. A misconfigured `resend`
   provider now fails the very first request instead of silently accepting sign-ups it cannot verify.
+  Resend only delivers to arbitrary recipients from a verified domain (a subdomain of a domain
+  already verified in the same Resend account counts, with its own three DNS records); with no
+  domain, `onboarding@resend.dev` reaches the Resend account owner's own inbox and nobody else.
 - `fake`: `FakeEmailSender` writes every message to the `fake_sent_emails` table
   (`apps/web/src/modules/auth/email/fake-email-repository.ts`) instead of an in-memory singleton.
   Vercel functions are separate processes, so a `globalThis` store would not be visible to the
   request that later reads it back through the test-only route; the database is. Used by
-  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). Never written in production —
-  see ADR-0008.
+  integration tests and by Vercel Preview (`EMAIL_PROVIDER=fake`). **Refused in production**:
+  `readEmailProvider` (`env.ts`) throws `FakeEmailProviderInProductionError` when
+  `EMAIL_PROVIDER=fake` and `VERCEL_ENV=production`, the same guard `sync/env.ts` applies to
+  `DATA_PROVIDER=fake` — a production deployment with the fake sender would accept every sign-up
+  and strand it behind a verification link nobody receives (ADR-0008). Because the guard runs
+  inside `buildAuthOptions`, and the root layout reads the session on every page, **every request
+  of such a deployment fails with a 500**, not just the auth endpoints: a full outage with no way
+  to sign in and fix it from the UI. The production `EMAIL_PROVIDER` must be `resend` (with
+  `RESEND_API_KEY` and `EMAIL_FROM`) **before** a build carrying this guard is deployed.
+
+### First account on a fresh environment
+
+The first person in an environment cannot be invited (an invitation needs an existing household
+and inviter), so with the registration mode at `invite` nobody can ever sign up. The procedure
+is: set the mode to `open` (the `registration_mode` Global Config item, see "Registration modes"
+above; the `REGISTRATION_MODE` env var plus a redeploy where no store is configured), sign up at
+`/registrar`, open the verification link, sign in, create the household at `/comecar`, invite the
+rest of the household from `/casa`, then set the mode back to `invite`. Invitees who already signed up while the mode was `open` find the pending invitation
+on `/comecar`'s "Tenho um convite" tab, without needing the invitation email.
 
 ## Test-only route
 
@@ -276,7 +312,7 @@ is set explicitly instead of relying on the ambient default either way.
 
 ## Magic link never signs up
 
-`magicLink({ disableSignUp: true, ... })` in `options.ts` is deliberate: `REGISTRATION_MODE` and
+`magicLink({ disableSignUp: true, ... })` in `options.ts` is deliberate: the registration mode and
 terms acceptance are enforced only by the `hooks.before` on `/sign-up/email` ("Policy enforcement"
 above), and the magic-link plugin's own sign-in endpoint would otherwise mint a brand-new,
 unverified-policy account for any email a requester types in, bypassing both checks entirely. With

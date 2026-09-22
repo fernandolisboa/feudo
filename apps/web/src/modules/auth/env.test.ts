@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FakeEmailProviderInProductionError,
   InvalidEmailProviderError,
   InvalidRegistrationModeError,
   isFakeEmailProvider,
@@ -38,13 +39,31 @@ describe("readEmailProvider", () => {
     expect(readEmailProvider({ EMAIL_PROVIDER: "" })).toBe("resend");
   });
 
-  it("returns the parsed value when it is valid", () => {
-    expect(readEmailProvider({ EMAIL_PROVIDER: "fake" })).toBe("fake");
+  it.each(["resend", "fake"] as const)("returns %s when it is set", (provider) => {
+    expect(readEmailProvider({ EMAIL_PROVIDER: provider })).toBe(provider);
   });
 
   it("throws for an invalid value", () => {
     expect(() => readEmailProvider({ EMAIL_PROVIDER: "sendgrid" })).toThrow(
       InvalidEmailProviderError,
+    );
+  });
+
+  it("refuses the fake provider in production", () => {
+    expect(() => readEmailProvider({ EMAIL_PROVIDER: "fake", VERCEL_ENV: "production" })).toThrow(
+      FakeEmailProviderInProductionError,
+    );
+  });
+
+  it("accepts the fake provider in preview and development", () => {
+    expect(readEmailProvider({ EMAIL_PROVIDER: "fake", VERCEL_ENV: "preview" })).toBe("fake");
+    expect(readEmailProvider({ EMAIL_PROVIDER: "fake", VERCEL_ENV: "development" })).toBe("fake");
+    expect(readEmailProvider({ EMAIL_PROVIDER: "fake" })).toBe("fake");
+  });
+
+  it("accepts a real provider in production", () => {
+    expect(readEmailProvider({ EMAIL_PROVIDER: "resend", VERCEL_ENV: "production" })).toBe(
+      "resend",
     );
   });
 });
