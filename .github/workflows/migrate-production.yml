@@ -1,0 +1,77 @@
+name: Migrate production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-db
+  cancel-in-progress: false
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  # `main` only ever moves through a squash-merge of a pull request whose CI was
+  # green and up to date with `main`, so the tree landing here has already been
+  # built, linted, typechecked and tested. Re-running that suite on push is pure
+  # duplicate spend; only the migration itself is new work.
+  migrate-production:
+    name: migrate-production
+    runs-on: ubuntu-latest
+    # Belt and braces with `on.push.branches`: this job holds an open
+    # connection to the production database, so a trigger added to this file
+    # later must not be able to migrate production from an arbitrary ref.
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Drizzle check
+        run: pnpm --filter @feudo/web exec drizzle-kit check
+
+      - name: Guard the production database host
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
+        run: |
+          node -e '
+            const normalise = (host) => host.toLowerCase().replace(/\.$/, "").replace(/^([^.]+)-pooler(\.|$)/, "$1$2");
+            let actual;
+            try {
+              actual = normalise(new URL(process.env.DATABASE_URL ?? "").hostname);
+            } catch {
+              console.error("FAIL");
+              process.exit(1);
+            }
+            const expected = process.env.DATABASE_PRODUCTION_HOST ? normalise(process.env.DATABASE_PRODUCTION_HOST) : "";
+            if (!expected || actual !== expected) {
+              console.error("FAIL");
+              process.exit(1);
+            }
+            console.log("PASS");
+          '
+
+      - name: Migrate production
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
+        run: pnpm --filter @feudo/web db:migrate
