@@ -71,6 +71,13 @@
       "when": 1789829768368,
       "tag": "0009_sync_connections_and_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790081601075,
+      "tag": "0010_transactions",
+      "breakpoints": true
     }
   ]
 }

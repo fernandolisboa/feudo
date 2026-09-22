@@ -26,6 +26,7 @@
 | Provider credentials                        | credenciais do provedor                        |                                                                              |
 | Item ID                                     | Item ID                                        | Meu Pluggy's identifier of one connected bank; kept in English in copy       |
 | Bank-connection consent                     | consentimento                                  | the recorded acceptance that precedes every connection                       |
+| Sync                                        | sincronização                                  | "sincronizar" as the verb; never "importar"                                  |
 | Account                                     | conta                                          | bank account only                                                            |
 | Shared account                              | conta da casa                                  |                                                                              |
 | Individual account                          | conta individual                               |                                                                              |

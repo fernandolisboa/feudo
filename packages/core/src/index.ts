@@ -24,3 +24,13 @@ export {
 } from "./market-data/rates";
 export { accumulate12MonthIpca, InvalidMonthlyRatesCountError } from "./market-data/ipca";
 export { parsePercentToRatePpm, InvalidPercentStringError } from "./market-data/parse";
+
+export type { IsoDateRange, YearMonth } from "./ledger/year-month";
+export {
+  InvalidYearMonthError,
+  formatYearMonth,
+  parseYearMonth,
+  shiftYearMonth,
+  yearMonthDayRange,
+  yearMonthOf,
+} from "./ledger/year-month";

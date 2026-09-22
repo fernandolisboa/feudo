@@ -1,15 +1,17 @@
-import { PageHeader } from "@/ui/page-header";
+import { requireHouseholdSession } from "@/modules/households";
+import {
+  getTransactionsPageProps,
+  TransactionsView,
+  type TransactionsSearchParams,
+} from "@/modules/ledger";
 
-import { t } from "@/modules/shell";
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<TransactionsSearchParams>;
+}) {
+  const session = await requireHouseholdSession();
+  const props = await getTransactionsPageProps(session, await searchParams);
 
-export default function TransactionsPage() {
-  return (
-    <>
-      <PageHeader
-        overline={t.comingSoon.transactions.overline}
-        title={t.comingSoon.transactions.title}
-      />
-      <p className="font-heading text-foreground text-[18px]">{t.comingSoon.transactions.body}</p>
-    </>
-  );
+  return <TransactionsView {...props} />;
 }

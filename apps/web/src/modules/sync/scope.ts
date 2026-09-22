@@ -9,7 +9,9 @@ export function userScope(session: CurrentSession): UserScope {
   return { userId: session.userId };
 }
 
-// Module-private: only this module's own tests seed users directly.
+// Module-private: the daily sync job, which has no session and works each
+// connection under its owner's id, and this module's own tests, which seed
+// users directly.
 export function scopeForUser(userId: string): UserScope {
   return { userId };
 }
