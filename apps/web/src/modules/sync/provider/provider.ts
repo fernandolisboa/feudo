@@ -83,6 +83,33 @@ export class ProviderResponseShapeError extends Error {
   }
 }
 
+// A listing that still offers more pages once MAX_PAGES is reached: returning
+// what was read so far would store a truncated window and never ask for the
+// rest again, so both paginators throw instead of silently truncating.
+export class ProviderListingTooLongError extends Error {
+  readonly endpoint: string;
+
+  constructor(endpoint: string) {
+    super(`Data provider listing for ${endpoint} exceeded the page cap`);
+    this.name = "ProviderListingTooLongError";
+    this.endpoint = endpoint;
+  }
+}
+
+// Thrown by a provider client when a read is cut short by the run's own
+// AbortSignal (the sync job's deadline), as opposed to a per-request timeout
+// or an outage: the service resumes this connection next run instead of
+// treating it as a provider failure.
+export class ProviderReadAbortedError extends Error {
+  readonly endpoint: string;
+
+  constructor(endpoint: string) {
+    super(`Data provider read for ${endpoint} was aborted by the run deadline`);
+    this.name = "ProviderReadAbortedError";
+    this.endpoint = endpoint;
+  }
+}
+
 export type DescribeConnectionOutcome = Outcome<{ connection: ProviderConnection }, "not_found">;
 
 // One authenticated session against the provider, for the three reads
@@ -105,5 +132,10 @@ export type AuthenticateOutcome = Outcome<{ client: ProviderClient }, "invalid_c
 
 export interface DataProvider {
   readonly name: "pluggy" | "fake";
-  authenticate(credentials: ProviderCredentials): Promise<AuthenticateOutcome>;
+  // `signal`, when given, is the sync run's own deadline (ADR-0005): every
+  // read the returned client performs for the rest of the run honours it.
+  authenticate(
+    credentials: ProviderCredentials,
+    options?: { signal?: AbortSignal },
+  ): Promise<AuthenticateOutcome>;
 }

@@ -18,3 +18,13 @@ export function transactionsSince(now: Date, lastSyncedAt: Date | null): string 
   }
   return isoDateOnly(new Date(lastSyncedAt.getTime() - RESYNC_OVERLAP_DAYS * 24 * 60 * 60 * 1000));
 }
+
+// A first sync that kept failing on the twelve-month window (a listing too
+// long to page through, or one that never finished before the run's
+// deadline) asks for one narrow month instead: enough to make progress and
+// clear the error, trading older history for finishing at all (ADR-0005). A
+// successful sync clears the error and the incremental window applies from
+// then on.
+export function narrowedFirstSyncSince(now: Date): string {
+  return isoDateOnly(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)));
+}

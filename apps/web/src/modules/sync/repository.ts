@@ -477,11 +477,14 @@ export type ConnectionToSync = {
   userId: string;
   providerItemId: string;
   lastSyncedAt: Date | null;
+  lastSyncError: string | null;
 };
 
-// Not scoped: the daily job's work list (ADR-0005). Each connection is then
-// synced under its own owner's scope, and the never-synced ones go first so a
-// run cut short by the function's time limit still reaches them.
+// Not scoped: the daily job's work list (ADR-0005). Healthy connections (no
+// last_sync_error) go first, never-synced ones ahead of the rest among them,
+// so a run cut short by the deadline (#75) still reaches them; a connection
+// that failed last time sorts to the back, so one that times out every day
+// cannot starve the healthy ones ahead of it.
 export async function listConnectionsToSync(db: Database): Promise<ConnectionToSync[]> {
   return db
     .select({
@@ -489,9 +492,14 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
       userId: bankConnection.userId,
       providerItemId: bankConnection.providerItemId,
       lastSyncedAt: bankConnection.lastSyncedAt,
+      lastSyncError: bankConnection.lastSyncError,
     })
     .from(bankConnection)
-    .orderBy(sql`${bankConnection.lastSyncedAt} asc nulls first`, asc(bankConnection.createdAt));
+    .orderBy(
+      sql`(${bankConnection.lastSyncError} is null) desc`,
+      sql`${bankConnection.lastSyncedAt} asc nulls first`,
+      asc(bankConnection.createdAt),
+    );
 }
 
 export type AccountLabel = "individual" | "shared";

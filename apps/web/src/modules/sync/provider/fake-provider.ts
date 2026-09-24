@@ -12,23 +12,34 @@ import {
   normalizeItem,
   normalizeTransaction,
 } from "./pluggy-normalize";
-import type {
-  AuthenticateOutcome,
-  DataProvider,
-  DescribeConnectionOutcome,
-  NormalizedAccount,
-  NormalizedTransaction,
-  ProviderClient,
-  ProviderCredentials,
+import {
+  ProviderReadAbortedError,
+  type AuthenticateOutcome,
+  type DataProvider,
+  type DescribeConnectionOutcome,
+  type NormalizedAccount,
+  type NormalizedTransaction,
+  type ProviderClient,
+  type ProviderCredentials,
 } from "./provider";
 
 // Runs the same normalizer as the Pluggy provider over Pluggy-shaped
 // fixtures, so a preview or a test exercises every byte of the pipeline
 // except the HTTP call. Meu Pluggy has no sandbox (ADR-0005).
 class FakeClient implements ProviderClient {
-  constructor(private readonly hasher: DocumentHasher) {}
+  constructor(
+    private readonly hasher: DocumentHasher,
+    private readonly runSignal?: AbortSignal,
+  ) {}
+
+  private ensureNotAborted(endpoint: string): void {
+    if (this.runSignal?.aborted) {
+      throw new ProviderReadAbortedError(endpoint);
+    }
+  }
 
   describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome> {
+    this.ensureNotAborted("items");
     const item = FAKE_ITEMS[providerItemId];
     if (!item) {
       return Promise.resolve({ status: "not_found" });
@@ -37,6 +48,7 @@ class FakeClient implements ProviderClient {
   }
 
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]> {
+    this.ensureNotAborted("accounts");
     const accounts = FAKE_ACCOUNTS[providerItemId] ?? [];
     return Promise.resolve(
       accounts
@@ -46,6 +58,7 @@ class FakeClient implements ProviderClient {
   }
 
   listInvestmentPositions(providerItemId: string): Promise<NormalizedAccount[]> {
+    this.ensureNotAborted("investments");
     const investments = FAKE_INVESTMENTS[providerItemId] ?? [];
     return Promise.resolve(
       investments.map((investment) => normalizeInvestment(investment, this.hasher)),
@@ -56,6 +69,7 @@ class FakeClient implements ProviderClient {
     providerAccountId: string,
     sinceISODate: string,
   ): Promise<NormalizedTransaction[]> {
+    this.ensureNotAborted("transactions");
     const transactions = FAKE_TRANSACTIONS[providerAccountId] ?? [];
     return Promise.resolve(
       transactions
@@ -68,11 +82,14 @@ class FakeClient implements ProviderClient {
 export function createFakeProvider(hasher: DocumentHasher): DataProvider {
   return {
     name: "fake",
-    authenticate(credentials: ProviderCredentials): Promise<AuthenticateOutcome> {
+    authenticate(
+      credentials: ProviderCredentials,
+      options?: { signal?: AbortSignal },
+    ): Promise<AuthenticateOutcome> {
       if (credentials.clientSecret === FAKE_INVALID_CLIENT_SECRET) {
         return Promise.resolve({ status: "invalid_credentials" });
       }
-      return Promise.resolve({ status: "ok", client: new FakeClient(hasher) });
+      return Promise.resolve({ status: "ok", client: new FakeClient(hasher, options?.signal) });
     },
   };
 }

@@ -17,6 +17,8 @@ import {
   pluggyTransactionSchema,
 } from "./pluggy-schemas";
 import {
+  ProviderListingTooLongError,
+  ProviderReadAbortedError,
   ProviderResponseShapeError,
   ProviderUnavailableError,
   type AuthenticateOutcome,
@@ -45,11 +47,20 @@ async function requestJson(
   url: string,
   init: RequestInit,
   endpoint: string,
+  runSignal?: AbortSignal,
 ): Promise<{ status: number; json: unknown }> {
   let response: Response;
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const signal = runSignal ? AbortSignal.any([timeoutSignal, runSignal]) : timeoutSignal;
   try {
-    response = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    response = await fetchImpl(url, { ...init, signal });
   } catch {
+    // AbortSignal.any does not say which of its signals fired, so the run's
+    // own signal is checked directly: still aborted means the deadline cut
+    // this read, not the per-request timeout.
+    if (runSignal?.aborted) {
+      throw new ProviderReadAbortedError(endpoint);
+    }
     throw new ProviderUnavailableError(`network request to ${endpoint} failed`);
   }
   let json: unknown = null;
@@ -98,6 +109,7 @@ class PluggyClient implements ProviderClient {
     private readonly baseUrl: string,
     private readonly fetchImpl: typeof fetch,
     private readonly hasher: DocumentHasher,
+    private readonly runSignal?: AbortSignal,
   ) {}
 
   private async get(endpoint: string, query: Record<string, string>): Promise<unknown> {
@@ -110,6 +122,7 @@ class PluggyClient implements ProviderClient {
       url.toString(),
       { headers: { "X-API-KEY": this.apiKey, Accept: "application/json" } },
       endpoint,
+      this.runSignal,
     );
     if (status === 404) {
       return null;
@@ -145,10 +158,12 @@ class PluggyClient implements ProviderClient {
       }
       items.push(...parsed.results);
       if (parsed.page >= parsed.totalPages) {
-        break;
+        return items;
       }
     }
-    return items;
+    // A listing whose last page is exactly MAX_PAGES already returned above;
+    // reaching here means the provider still has more to offer past the cap.
+    throw new ProviderListingTooLongError(endpoint);
   }
 
   // `path` is what goes on the wire; `collection` is what a failure is reported
@@ -186,7 +201,7 @@ class PluggyClient implements ProviderClient {
     // Returning at the cap while the provider still offers a cursor would hand
     // back a truncated window, which the caller stores and then treats as fully
     // synced: everything past the cap would never be asked for again.
-    throw new ProviderResponseShapeError(collection);
+    throw new ProviderListingTooLongError(collection);
   }
 
   async describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome> {
@@ -246,7 +261,10 @@ export function createPluggyProvider(
 
   return {
     name: "pluggy",
-    async authenticate(credentials: ProviderCredentials): Promise<AuthenticateOutcome> {
+    async authenticate(
+      credentials: ProviderCredentials,
+      options?: { signal?: AbortSignal },
+    ): Promise<AuthenticateOutcome> {
       const { status, json } = await requestJson(
         fetchImpl,
         `${baseUrl}/auth`,
@@ -260,6 +278,7 @@ export function createPluggyProvider(
           }),
         },
         "auth",
+        options?.signal,
       );
       if (status === 401 || status === 403) {
         return { status: "invalid_credentials" };
@@ -268,7 +287,10 @@ export function createPluggyProvider(
         throw new ProviderUnavailableError(`unexpected status ${String(status)} from auth`, status);
       }
       const { apiKey } = parseOrThrow(pluggyAuthResponseSchema, json, "auth");
-      return { status: "ok", client: new PluggyClient(apiKey, baseUrl, fetchImpl, hasher) };
+      return {
+        status: "ok",
+        client: new PluggyClient(apiKey, baseUrl, fetchImpl, hasher, options?.signal),
+      };
     },
   };
 }

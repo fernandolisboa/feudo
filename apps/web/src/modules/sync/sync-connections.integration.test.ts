@@ -8,14 +8,18 @@ import { createDocumentHasher } from "./document-hash";
 import { FAKE_INVALID_CLIENT_SECRET, FAKE_ITEM_BANCO_FIXTURE } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
 import { ProviderUnavailableError } from "./provider/provider";
-import { createHouseholdAccountsRepository, createSyncUserRepository } from "./repository";
+import {
+  createHouseholdAccountsRepository,
+  createSyncUserRepository,
+  listConnectionsToSync,
+} from "./repository";
 import { bankAccount, bankConnection, bankTransaction } from "./schema";
 import { syncAllConnections, type SyncDeps } from "./service";
 import { seedAccount, seedSyncedConnection } from "./test/seed-synced-connection";
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
 
 import type { Database } from "@/platform/db/client";
-import type { DataProvider } from "./provider/provider";
+import type { AuthenticateOutcome, DataProvider, ProviderCredentials } from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -24,6 +28,8 @@ const deps: SyncDeps = {
 };
 const NOW = new Date("2026-09-22T06:00:00.000Z");
 const FIXTURE_CHECKING = "a1000000-0000-4000-8000-000000000001";
+const OTHER_ITEM = "other-item-fixture";
+const OTHER_ACCOUNT = "other-account-fixture";
 
 async function saveCredentials(
   db: Database,
@@ -37,13 +43,16 @@ async function saveCredentials(
   });
 }
 
-async function seedBancoNeverSynced(db: Database, user: TwoUsers["userA"]): Promise<string> {
+async function seedNeverSynced(
+  db: Database,
+  user: TwoUsers["userA"],
+  itemId: string,
+  accountId: string,
+): Promise<string> {
   const { connectionId } = await seedSyncedConnection(db, user, {
     assignTo: householdScope(user.session),
-    itemId: FAKE_ITEM_BANCO_FIXTURE,
-    accounts: [
-      seedAccount({ providerAccountId: FIXTURE_CHECKING, providerItemId: FAKE_ITEM_BANCO_FIXTURE }),
-    ],
+    itemId,
+    accounts: [seedAccount({ providerAccountId: accountId, providerItemId: itemId })],
   });
   await db
     .update(bankConnection)
@@ -52,11 +61,15 @@ async function seedBancoNeverSynced(db: Database, user: TwoUsers["userA"]): Prom
   return connectionId;
 }
 
+async function seedBancoNeverSynced(db: Database, user: TwoUsers["userA"]): Promise<string> {
+  return seedNeverSynced(db, user, FAKE_ITEM_BANCO_FIXTURE, FIXTURE_CHECKING);
+}
+
 function recordingProvider(windows: string[]): DataProvider {
   return {
     name: "fake",
-    async authenticate(credentials) {
-      const real = await deps.provider.authenticate(credentials);
+    async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+      const real = await deps.provider.authenticate(credentials, options);
       if (real.status !== "ok") {
         return real;
       }
@@ -104,10 +117,12 @@ async function connectionRow(db: Database, connectionId: string) {
 describe("syncAllConnections (integration)", () => {
   it("does nothing, successfully, when no connection exists", async () => {
     await withTwoUsers(async ({ db }) => {
-      await expect(syncAllConnections(db, deps, NOW)).resolves.toEqual({
+      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
         ok: true,
         synced: 0,
         failed: 0,
+        gone: 0,
+        unreached: 0,
       });
     });
   });
@@ -117,10 +132,12 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
 
-      await expect(syncAllConnections(db, deps, NOW)).resolves.toEqual({
+      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
         ok: true,
         synced: 1,
         failed: 0,
+        gone: 0,
+        unreached: 0,
       });
 
       expect(await transactionsOf(db, connectionId)).toEqual([
@@ -154,7 +171,9 @@ describe("syncAllConnections (integration)", () => {
       );
 
       const later = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
-      await expect(syncAllConnections(db, deps, later)).resolves.toMatchObject({ synced: 1 });
+      await expect(syncAllConnections(db, deps, { now: later })).resolves.toMatchObject({
+        synced: 1,
+      });
       expect(await transactionsOf(db, connectionId)).toHaveLength(3);
       expect((await connectionRow(db, connectionId))?.lastSyncedAt).toEqual(later);
     });
@@ -164,7 +183,7 @@ describe("syncAllConnections (integration)", () => {
     await withTwoUsers(async ({ db, userA }) => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
-      await syncAllConnections(db, deps, NOW);
+      await syncAllConnections(db, deps, { now: NOW });
       await db
         .update(bankConnection)
         .set({ lastSyncedAt: new Date("2026-09-30T06:00:00.000Z") })
@@ -174,7 +193,7 @@ describe("syncAllConnections (integration)", () => {
       await syncAllConnections(
         db,
         { ...deps, provider: recordingProvider(windows) },
-        new Date("2026-10-01T06:00:00.000Z"),
+        { now: new Date("2026-10-01T06:00:00.000Z") },
       );
 
       expect(windows).toContain("2026-09-23");
@@ -199,7 +218,7 @@ describe("syncAllConnections (integration)", () => {
         syncAllConnections(
           db,
           { ...deps, provider: recordingProvider(windows) },
-          new Date("2026-10-01T06:00:00.000Z"),
+          { now: new Date("2026-10-01T06:00:00.000Z") },
         ),
       ).resolves.toMatchObject({ synced: 1 });
 
@@ -208,12 +227,29 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
+  it("asks for a narrowed window on a first sync retried after a too-long listing", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncError: "listing_too_long" })
+        .where(eq(bankConnection.id, connectionId));
+
+      const windows: string[] = [];
+      await syncAllConnections(db, { ...deps, provider: recordingProvider(windows) }, { now: NOW });
+
+      expect(windows).toContain("2026-08-01");
+      expect(windows).not.toContain("2025-09-01");
+    });
+  });
+
   it("assigns an account the provider starts listing to the household of its siblings", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await saveCredentials(db, userA);
       await seedBancoNeverSynced(db, userA);
 
-      await syncAllConnections(db, deps, NOW);
+      await syncAllConnections(db, deps, { now: NOW });
 
       const visibleToA = await createHouseholdAccountsRepository(
         householdScope(userA.session),
@@ -235,10 +271,12 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userB, FAKE_INVALID_CLIENT_SECRET);
       const rejected = await seedBancoNeverSynced(db, userB);
 
-      await expect(syncAllConnections(db, deps, NOW)).resolves.toEqual({
+      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
         ok: true,
         synced: 1,
         failed: 1,
+        gone: 0,
+        unreached: 0,
       });
 
       expect(await connectionRow(db, rejected)).toEqual({
@@ -260,10 +298,12 @@ describe("syncAllConnections (integration)", () => {
       });
       const unreadable = await seedBancoNeverSynced(db, userB);
 
-      await expect(syncAllConnections(db, deps, NOW)).resolves.toEqual({
+      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
         ok: false,
         synced: 0,
         failed: 2,
+        gone: 0,
+        unreached: 0,
       });
       expect((await connectionRow(db, missing))?.lastSyncError).toBe("no_credentials");
       expect((await connectionRow(db, unreadable))?.lastSyncError).toBe("credentials_unreadable");
@@ -276,8 +316,8 @@ describe("syncAllConnections (integration)", () => {
         .where(eq(bankConnection.id, missing));
       const offline: DataProvider = {
         name: "fake",
-        async authenticate(credentials) {
-          const real = await deps.provider.authenticate(credentials);
+        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+          const real = await deps.provider.authenticate(credentials, options);
           if (real.status !== "ok") {
             return real;
           }
@@ -294,7 +334,7 @@ describe("syncAllConnections (integration)", () => {
         },
       };
 
-      await syncAllConnections(db, { ...deps, provider: offline }, NOW);
+      await syncAllConnections(db, { ...deps, provider: offline }, { now: NOW });
 
       expect(await connectionRow(db, missing)).toEqual({
         lastSyncedAt: previousSync,
@@ -331,12 +371,146 @@ describe("syncAllConnections (integration)", () => {
           }),
       };
 
-      await expect(syncAllConnections(db, { ...deps, provider: readsOnly }, NOW)).resolves.toEqual({
-        ok: true,
-        synced: 1,
-        failed: 0,
-      });
+      await expect(
+        syncAllConnections(db, { ...deps, provider: readsOnly }, { now: NOW }),
+      ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 0, unreached: 0 });
       expect(await transactionsOf(db, connectionId)).not.toEqual([]);
+    });
+  });
+
+  it("counts a connection deleted mid-run as gone and still syncs the next one", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await saveCredentials(db, userA);
+      const goneConnection = await seedBancoNeverSynced(db, userA);
+      await saveCredentials(db, userB);
+      const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      const deletingProvider: DataProvider = {
+        name: "fake",
+        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+          const real = await deps.provider.authenticate(credentials, options);
+          if (real.status !== "ok") {
+            return real;
+          }
+          const client = real.client;
+          return {
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => client.describeConnection(itemId),
+              listAccounts: async (itemId) => {
+                if (itemId === FAKE_ITEM_BANCO_FIXTURE) {
+                  await db.delete(bankConnection).where(eq(bankConnection.id, goneConnection));
+                }
+                return client.listAccounts(itemId);
+              },
+              listInvestmentPositions: (itemId) => client.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) =>
+                client.listTransactionsSince(accountId, since),
+            },
+          };
+        },
+      };
+
+      await expect(
+        syncAllConnections(db, { ...deps, provider: deletingProvider }, { now: NOW }),
+      ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 1, unreached: 0 });
+
+      expect(await connectionRow(db, healthy)).toMatchObject({ lastSyncedAt: NOW });
+    });
+  });
+
+  it("stops before the deadline and reports the rest unreached, without touching them", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await saveCredentials(db, userA);
+      const first = await seedBancoNeverSynced(db, userA);
+      await saveCredentials(db, userB);
+      const second = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      // The deadline and clock are wall-clock concepts, independent of `now`
+      // (the fixed anchor for the sync window): a real, generous deadline
+      // keeps the run's own AbortController from firing, while the fake
+      // clock alone drives the per-connection "is there still room" check.
+      let calls = 0;
+      const clock = () => {
+        calls += 1;
+        return calls === 1 ? new Date(0) : new Date(8_640_000_000_000_000);
+      };
+
+      await expect(
+        syncAllConnections(db, deps, {
+          now: NOW,
+          deadline: new Date(Date.now() + 60_000),
+          clock,
+        }),
+      ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 0, unreached: 1 });
+
+      expect((await connectionRow(db, first))?.lastSyncedAt).toEqual(NOW);
+      expect(await connectionRow(db, second)).toEqual({ lastSyncedAt: null, lastSyncError: null });
+    });
+  });
+
+  it("stops an in-flight read at the deadline, recording it as timed_out and writing nothing", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+
+      const abortingSoon: DataProvider = {
+        name: "fake",
+        async authenticate(
+          credentials: ProviderCredentials,
+          options?: { signal?: AbortSignal },
+        ): Promise<AuthenticateOutcome> {
+          const real = await deps.provider.authenticate(credentials, options);
+          if (real.status !== "ok") {
+            return real;
+          }
+          const client = real.client;
+          return {
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => client.describeConnection(itemId),
+              listAccounts: (itemId) => client.listAccounts(itemId),
+              listInvestmentPositions: async (itemId) => {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                return client.listInvestmentPositions(itemId);
+              },
+              listTransactionsSince: (accountId, since) =>
+                client.listTransactionsSince(accountId, since),
+            },
+          };
+        },
+      };
+
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: abortingSoon },
+          { now: NOW, deadline: new Date(Date.now() + 50), clock: () => new Date(0) },
+        ),
+      ).resolves.toEqual({ ok: false, synced: 0, failed: 1, gone: 0, unreached: 0 });
+
+      expect(await connectionRow(db, connectionId)).toEqual({
+        lastSyncedAt: null,
+        lastSyncError: "timed_out",
+      });
+      expect(await transactionsOf(db, connectionId)).toEqual([]);
+    });
+  });
+});
+
+describe("listConnectionsToSync ordering (integration)", () => {
+  it("lists a connection that failed last time after the healthy ones", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const failing = await seedBancoNeverSynced(db, userA);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncError: "provider_unavailable" })
+        .where(eq(bankConnection.id, failing));
+      const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      const ordered = await listConnectionsToSync(db);
+
+      expect(ordered.map((connection) => connection.id)).toEqual([healthy, failing]);
     });
   });
 });

@@ -22,9 +22,15 @@ import type {
   ProviderClient,
   ProviderCredentials,
 } from "./provider/provider";
-import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider/provider";
+import {
+  ProviderListingTooLongError,
+  ProviderReadAbortedError,
+  ProviderResponseShapeError,
+  ProviderUnavailableError,
+} from "./provider/provider";
 import { getDataProvider } from "./provider/select";
 import {
+  ConnectionNotOwnedError,
   createHouseholdAccountsRepository,
   createSyncUserRepository,
   listConnectionsToSync,
@@ -33,7 +39,7 @@ import {
   type SyncUserRepository,
 } from "./repository";
 import { scopeForUser, userScope } from "./scope";
-import { transactionsSince } from "./transactions-window";
+import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
   ConnectProviderFormInput,
@@ -78,11 +84,18 @@ function providerFailureDetail(error: unknown): string {
     const fields = error.fields.length === 0 ? "" : ` fields=${error.fields.join(",")}`;
     return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}${fields}`;
   }
+  if (error instanceof ProviderListingTooLongError) {
+    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}`;
+  }
   return errorName(error);
 }
 
 function isProviderFailure(error: unknown): boolean {
-  return error instanceof ProviderUnavailableError || error instanceof ProviderResponseShapeError;
+  return (
+    error instanceof ProviderUnavailableError ||
+    error instanceof ProviderResponseShapeError ||
+    error instanceof ProviderListingTooLongError
+  );
 }
 
 function isUnreadableCredentialsFailure(error: unknown): boolean {
@@ -271,9 +284,10 @@ type ProviderSessionOutcome = Outcome<
 async function openProviderSession(
   provider: DataProvider,
   credentials: ProviderCredentials,
+  options?: { signal?: AbortSignal },
 ): Promise<ProviderSessionOutcome> {
   try {
-    return await provider.authenticate(credentials);
+    return await provider.authenticate(credentials, options);
   } catch (error) {
     if (isProviderFailure(error)) {
       return { status: "provider_unavailable" };
@@ -432,6 +446,8 @@ type ConnectionSyncFailure =
   | "credentials_unreadable"
   | "invalid_credentials"
   | "provider_unavailable"
+  | "listing_too_long"
+  | "timed_out"
   | "failed";
 
 type ConnectionSyncOutcome = SimpleOutcome<"ok" | ConnectionSyncFailure>;
@@ -444,6 +460,7 @@ async function providerSessionFor(
   userId: string,
   db: Database,
   deps: SyncDeps,
+  signal: AbortSignal,
 ): Promise<Outcome<{ client: ProviderClient }, ConnectionSyncFailure>> {
   const cached = sessions.get(userId);
   if (cached) {
@@ -452,10 +469,17 @@ async function providerSessionFor(
   const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
   const outcome =
     stored.status === "ok"
-      ? await openProviderSession(deps.provider, stored.credentials)
+      ? await openProviderSession(deps.provider, stored.credentials, { signal })
       : { status: stored.status };
   sessions.set(userId, outcome);
   return outcome;
+}
+
+// A first sync that failed this way left no data at all, so the next attempt
+// narrows the window instead of asking for twelve months again (#84):
+// finishing a small window beats retrying the same window forever.
+function isExtremeFirstSyncFailure(error: string | null): boolean {
+  return error === "listing_too_long" || error === "timed_out";
 }
 
 // Feudo never asks the provider to re-read the bank: Meu Pluggy refreshes
@@ -473,15 +497,27 @@ async function syncConnection(
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
   try {
-    const history = (await repository.hasTransactions(db, connection.id))
-      ? connection.lastSyncedAt
-      : null;
-    snapshot = await readConnection(
-      client,
-      connection.providerItemId,
-      transactionsSince(now, history),
-    );
+    const hasHistory = await repository.hasTransactions(db, connection.id);
+    const since = hasHistory
+      ? transactionsSince(now, connection.lastSyncedAt)
+      : isExtremeFirstSyncFailure(connection.lastSyncError)
+        ? narrowedFirstSyncSince(now)
+        : transactionsSince(now, null);
+    snapshot = await readConnection(client, connection.providerItemId, since);
   } catch (error) {
+    if (error instanceof ConnectionNotOwnedError) {
+      throw error;
+    }
+    if (error instanceof ProviderReadAbortedError) {
+      console.warn(`sync: reading connection ${connection.id} was aborted by the run deadline`);
+      return { status: "timed_out" };
+    }
+    if (error instanceof ProviderListingTooLongError) {
+      console.warn(
+        `sync: connection ${connection.id}'s ${error.endpoint.split("/")[0] ?? ""} listing exceeded the page cap`,
+      );
+      return { status: "listing_too_long" };
+    }
     if (isProviderFailure(error)) {
       console.warn(
         `sync: reading connection ${connection.id} from the provider failed (${providerFailureDetail(error)})`,
@@ -505,41 +541,115 @@ async function syncConnection(
     });
     return { status: "ok" };
   } catch (error) {
+    if (error instanceof ConnectionNotOwnedError) {
+      throw error;
+    }
     console.warn(`sync: writing a connection's snapshot failed (${errorName(error)})`);
     return { status: "failed" };
   }
 }
 
-export type ConnectionsSyncResult = { ok: boolean; synced: number; failed: number };
+export type ConnectionsSyncResult = {
+  ok: boolean;
+  synced: number;
+  failed: number;
+  gone: number;
+  unreached: number;
+};
+
+// The route's Vercel maxDuration is 60s (route.ts). 45s leaves the in-flight
+// connection's write (which does not observe the deadline, so it must be
+// short) and the JSON response about 15s of headroom, comfortably inside the
+// function's own limit even when the last connection started right at the
+// edge of its slice.
+export const RUN_BUDGET_MS = 45_000;
+
+// About one provider request timeout (pluggy-provider.ts's
+// REQUEST_TIMEOUT_MS): starting a connection with less than this left on the
+// clock would almost certainly time it out before its first read returns, so
+// it is better left for the next run.
+export const MIN_CONNECTION_SLICE_MS = 15_000;
 
 // The daily job (ADR-0005): every connection, under its owner's own scope and
-// credentials, one after the other. The run is reported as failed only when
-// nothing could be synced, so one member's revoked credentials do not turn
-// every household's daily run red.
+// credentials, one after the other, until the run's deadline. The run is
+// reported as failed only when at least one connection was attempted and
+// none of them synced, so one member's revoked credentials — or everything
+// being deleted or unreached — does not turn every household's daily run
+// red. `now` anchors the sync windows; `deadline` and `clock` are the run's
+// own wall-clock budget and both default off the real clock regardless of
+// `now`, so a test can hold `now` on a fixed date for window assertions
+// without also having to fake the deadline check on every call.
 export async function syncAllConnections(
   db: Database,
   deps: SyncDeps,
-  now: Date = new Date(),
+  options: { now?: Date; deadline?: Date; clock?: () => Date } = {},
 ): Promise<ConnectionsSyncResult> {
+  const now = options.now ?? new Date();
+  const clock = options.clock ?? (() => new Date());
+  const deadline = options.deadline ?? new Date(Date.now() + RUN_BUDGET_MS);
+
   const connections = await listConnectionsToSync(db);
   const sessions: ProviderSessions = new Map();
+  const controller = new AbortController();
+  const remainingAtStartMs = deadline.getTime() - Date.now();
+  const timer =
+    remainingAtStartMs > 0
+      ? setTimeout(() => {
+          controller.abort();
+        }, remainingAtStartMs)
+      : undefined;
+  if (remainingAtStartMs <= 0) {
+    controller.abort();
+  }
+
   let synced = 0;
   let failed = 0;
-  for (const connection of connections) {
-    const repository = createSyncUserRepository(scopeForUser(connection.userId));
-    const session = await providerSessionFor(sessions, repository, connection.userId, db, deps);
-    const outcome =
-      session.status === "ok"
-        ? await syncConnection(session.client, repository, db, connection, now)
-        : session;
-    if (outcome.status === "ok") {
-      synced += 1;
-    } else {
-      failed += 1;
-      await repository.recordSyncFailure(db, connection.id, outcome.status);
+  let gone = 0;
+  let unreached = 0;
+  try {
+    for (let index = 0; index < connections.length; index += 1) {
+      if (deadline.getTime() - clock().getTime() < MIN_CONNECTION_SLICE_MS) {
+        unreached += connections.length - index;
+        break;
+      }
+      const connection = connections[index];
+      if (!connection) {
+        continue;
+      }
+      const repository = createSyncUserRepository(scopeForUser(connection.userId));
+      try {
+        const session = await providerSessionFor(
+          sessions,
+          repository,
+          connection.userId,
+          db,
+          deps,
+          controller.signal,
+        );
+        const outcome =
+          session.status === "ok"
+            ? await syncConnection(session.client, repository, db, connection, now)
+            : session;
+        if (outcome.status === "ok") {
+          synced += 1;
+        } else {
+          failed += 1;
+          await repository.recordSyncFailure(db, connection.id, outcome.status);
+        }
+      } catch (error) {
+        if (error instanceof ConnectionNotOwnedError) {
+          gone += 1;
+          continue;
+        }
+        throw error;
+      }
+    }
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
     }
   }
-  return { ok: connections.length === 0 || synced > 0, synced, failed };
+  return { ok: synced > 0 || failed === 0, synced, failed, gone, unreached };
 }
 
 export type ConnectionsSyncStep = ConnectionsSyncResult | { error: string };

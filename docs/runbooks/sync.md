@@ -89,6 +89,32 @@ answers 400, and Meu Pluggy refreshes it every 24 hours anyway (ADR-0005).
 `DATA_PROVIDER=pluggy|fake` (default `pluggy`) selects the implementation; `fake` is refused when
 `VERCEL_ENV=production` (`env.ts`).
 
+## The daily run (`/api/cron/sync`, `syncAllConnections`)
+
+The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, gone, unreached } } }`
+(or `{ error }` if the step itself threw before returning a count). Reading the counts:
+
+- `synced` / `failed`: connections attempted this run and how each ended; a failed one's
+  `bank_connection.last_sync_error` names why (`provider_unavailable`, `listing_too_long`,
+  `timed_out`, `invalid_credentials`, `no_credentials`, `credentials_unreadable`, `failed`).
+- `gone`: the connection was deleted (by its owner, through the app) while this run was reading it;
+  nothing was recorded for it, nothing to act on.
+- `unreached`: the run's deadline (`RUN_BUDGET_MS`, ADR-0005) left too little time to start it; it
+  is untouched and picked up by tomorrow's run, sooner if it is one of the healthy ones (see
+  ordering below).
+- `ok` is true unless at least one connection was attempted and every attempted one failed — a run
+  that only found deleted or unreached connections is not an incident.
+
+Two statuses are about running out of time or bandwidth, not the bank: `timed_out` (the run's
+deadline cut an in-flight read) and `listing_too_long` (a listing kept offering more pages than the
+provider paginators' cap). Both clear on the next successful sync like any other error, and a first
+sync retried after either narrows its window to the previous month instead of the usual twelve
+(`transactions-window.ts`), so it can finish at all.
+
+`listConnectionsToSync` reads connections with no `last_sync_error` first (never-synced ones first
+among them), and ones that failed last time last: a connection stuck on `timed_out` or
+`listing_too_long` every day sorts to the back instead of crowding out the healthy ones ahead of it.
+
 ## Environment
 
 | variable            | where                                        | notes                                                                                                                                              |
