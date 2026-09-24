@@ -7,7 +7,11 @@ import { encryptSecret } from "./crypto";
 import { createDocumentHasher } from "./document-hash";
 import { FAKE_INVALID_CLIENT_SECRET, FAKE_ITEM_BANCO_FIXTURE } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
-import { ProviderReadAbortedError, ProviderUnavailableError } from "./provider/provider";
+import {
+  ProviderListingTooLongError,
+  ProviderReadAbortedError,
+  ProviderUnavailableError,
+} from "./provider/provider";
 import {
   createHouseholdAccountsRepository,
   createSyncUserRepository,
@@ -17,9 +21,10 @@ import { bankAccount, bankConnection, bankTransaction } from "./schema";
 import { syncAllConnections, type SyncDeps } from "./service";
 import { seedAccount, seedSyncedConnection } from "./test/seed-synced-connection";
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
+import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 
 import type { Database } from "@/platform/db/client";
-import type { AuthenticateOutcome, DataProvider, ProviderCredentials } from "./provider/provider";
+import type { AuthenticateOutcome, DataProvider } from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -34,6 +39,8 @@ const AMPLE_DEADLINE = new Date(Date.now() + 5 * 60_000);
 const FIXTURE_CHECKING = "a1000000-0000-4000-8000-000000000001";
 const OTHER_ITEM = "other-item-fixture";
 const OTHER_ACCOUNT = "other-account-fixture";
+const STUCK_ITEM_B = "stuck-item-b-fixture";
+const STUCK_ACCOUNT_B = "stuck-account-b-fixture";
 
 async function saveCredentials(
   db: Database,
@@ -94,6 +101,88 @@ function recordingProvider(windows: string[]): DataProvider {
   };
 }
 
+// Every read on a matched item waits precisely until the caller's own
+// AbortController fires, instead of a fixed sleep: the abort is then exactly
+// what ends the read, so the test cannot flake on how long a real provider
+// call happens to take relative to a guessed sleep duration (advisory from
+// round 3's review).
+function slowOnItems(itemIds: ReadonlySet<string>): DataProvider {
+  return {
+    name: "fake",
+    async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+      const real = await deps.provider.authenticate(credentials, options);
+      if (real.status !== "ok") {
+        return real;
+      }
+      const client = real.client;
+      const signal = options?.signal;
+      const waitForAbort = (): Promise<void> =>
+        new Promise((resolve) => {
+          if (signal?.aborted) {
+            resolve();
+            return;
+          }
+          signal?.addEventListener(
+            "abort",
+            () => {
+              resolve();
+            },
+            { once: true },
+          );
+        });
+      return {
+        status: "ok",
+        client: {
+          describeConnection: (itemId) => client.describeConnection(itemId),
+          listAccounts: (itemId) => client.listAccounts(itemId),
+          listInvestmentPositions: async (itemId) => {
+            if (itemIds.has(itemId)) {
+              await waitForAbort();
+            }
+            return client.listInvestmentPositions(itemId);
+          },
+          listTransactionsSince: (accountId, since) =>
+            client.listTransactionsSince(accountId, since),
+        },
+      };
+    },
+  };
+}
+
+// A first sync's listing that never stops offering pages, regardless of the
+// window asked for: exercises the sticky-narrowing write on the
+// ProviderListingTooLongError path (as opposed to slowOnItems, which
+// exercises it on the ProviderReadAbortedError path).
+const alwaysTooLong: DataProvider = {
+  name: "fake",
+  async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+    const real = await deps.provider.authenticate(credentials, options);
+    if (real.status !== "ok") {
+      return real;
+    }
+    const client = real.client;
+    return {
+      status: "ok",
+      client: {
+        describeConnection: (itemId) => client.describeConnection(itemId),
+        listAccounts: (itemId) => client.listAccounts(itemId),
+        listInvestmentPositions: (itemId) => client.listInvestmentPositions(itemId),
+        listTransactionsSince: (): Promise<never> => {
+          throw new ProviderListingTooLongError("transactions");
+        },
+      },
+    };
+  },
+};
+
+// Rejects every authenticate() call outright: used to drive a plain
+// timed_out (no in-flight read to abort, the connection's slice runs out
+// before it is even attempted).
+const abortingDuringAuth: DataProvider = {
+  name: "fake",
+  authenticate: () => Promise.reject(new ProviderReadAbortedError("auth")),
+};
+
 async function transactionsOf(db: Database, connectionId: string) {
   return db
     .select({
@@ -116,6 +205,22 @@ async function connectionRow(db: Database, connectionId: string) {
     .from(bankConnection)
     .where(eq(bankConnection.id, connectionId));
   return row;
+}
+
+async function firstSyncSinceOf(db: Database, connectionId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ firstSyncSince: bankConnection.firstSyncSince })
+    .from(bankConnection)
+    .where(eq(bankConnection.id, connectionId));
+  return row?.firstSyncSince ?? null;
+}
+
+async function lastSyncAttemptedAtOf(db: Database, connectionId: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ lastSyncAttemptedAt: bankConnection.lastSyncAttemptedAt })
+    .from(bankConnection)
+    .where(eq(bankConnection.id, connectionId));
+  return row?.lastSyncAttemptedAt ?? null;
 }
 
 describe("syncAllConnections (integration)", () => {
@@ -169,6 +274,7 @@ describe("syncAllConnections (integration)", () => {
         lastSyncedAt: NOW,
         lastSyncError: null,
       });
+      expect(await lastSyncAttemptedAtOf(db, connectionId)).toEqual(NOW);
       const accounts = await createHouseholdAccountsRepository(
         householdScope(userA.session),
         userA.scope,
@@ -237,27 +343,6 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
-  it("asks for a narrowed window on a first sync retried after a too-long listing", async () => {
-    await withTwoUsers(async ({ db, userA }) => {
-      await saveCredentials(db, userA);
-      const connectionId = await seedBancoNeverSynced(db, userA);
-      await db
-        .update(bankConnection)
-        .set({ lastSyncError: "listing_too_long" })
-        .where(eq(bankConnection.id, connectionId));
-
-      const windows: string[] = [];
-      await syncAllConnections(
-        db,
-        { ...deps, provider: recordingProvider(windows) },
-        { now: NOW, deadline: AMPLE_DEADLINE },
-      );
-
-      expect(windows).toContain("2026-08-01");
-      expect(windows).not.toContain("2025-09-01");
-    });
-  });
-
   it("assigns an account the provider starts listing to the household of its siblings", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await saveCredentials(db, userA);
@@ -301,6 +386,36 @@ describe("syncAllConnections (integration)", () => {
       });
       expect(await transactionsOf(db, rejected)).toEqual([]);
       expect(await transactionsOf(db, healthy)).toHaveLength(3);
+    });
+  });
+
+  // Once the provider has rejected a user's secret this run, every other
+  // connection under the same user skips straight to invalid_credentials
+  // rather than paying for another POST /auth that cannot end differently.
+  it("asks the provider for invalid credentials only once per user, even with two connections", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA, FAKE_INVALID_CLIENT_SECRET);
+      await seedBancoNeverSynced(db, userA);
+      await seedNeverSynced(db, userA, OTHER_ITEM, OTHER_ACCOUNT);
+
+      let authenticateCalls = 0;
+      const countingProvider: DataProvider = {
+        name: "fake",
+        authenticate(credentials, options) {
+          authenticateCalls += 1;
+          return deps.provider.authenticate(credentials, options);
+        },
+      };
+
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: countingProvider },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        ),
+      ).resolves.toEqual({ ok: false, synced: 0, failed: 2, gone: 0, unreached: 0 });
+
+      expect(authenticateCalls).toBe(1);
     });
   });
 
@@ -516,41 +631,14 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
 
-      let slowReadStarted = false;
-      const abortingSoon: DataProvider = {
-        name: "fake",
-        async authenticate(
-          credentials: ProviderCredentials,
-          options?: { signal?: AbortSignal },
-        ): Promise<AuthenticateOutcome> {
-          const real = await deps.provider.authenticate(credentials, options);
-          if (real.status !== "ok") {
-            return real;
-          }
-          const client = real.client;
-          return {
-            status: "ok",
-            client: {
-              describeConnection: (itemId) => client.describeConnection(itemId),
-              listAccounts: (itemId) => client.listAccounts(itemId),
-              listInvestmentPositions: async (itemId) => {
-                slowReadStarted = true;
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                return client.listInvestmentPositions(itemId);
-              },
-              listTransactionsSince: (accountId, since) =>
-                client.listTransactionsSince(accountId, since),
-            },
-          };
-        },
-      };
-
       // Real time only decides when this connection's own AbortController
-      // fires (half of totalBudgetMs, a comfortable 150ms above ordinary
-      // setup latency, so a real 75ms slice); the fake clock reports this
-      // connection as starting with the whole run budget still ahead of it,
-      // so the abort is on its own slow read (too_slow), not on where it
-      // landed in the queue.
+      // fires (half of totalBudgetMs, a 1000ms slice — ample margin over a
+      // couple of Neon round trips so ordinary CI latency cannot flip the
+      // classification); the fake clock reports this connection as starting
+      // with the whole run budget still ahead of it, so the abort is on its
+      // own slow read (too_slow), not on where it landed in the queue. The
+      // read itself waits on the abort signal rather than a fixed sleep, so
+      // it ends exactly when the timer fires, never sooner or later.
       const realStart = Date.now();
       let calls = 0;
       const clock = () => {
@@ -561,12 +649,11 @@ describe("syncAllConnections (integration)", () => {
       await expect(
         syncAllConnections(
           db,
-          { ...deps, provider: abortingSoon },
-          { now: NOW, deadline: new Date(realStart + 150), clock },
+          { ...deps, provider: slowOnItems(new Set([FAKE_ITEM_BANCO_FIXTURE])) },
+          { now: NOW, deadline: new Date(realStart + 2000), clock },
         ),
       ).resolves.toEqual({ ok: false, synced: 0, failed: 1, gone: 0, unreached: 0 });
 
-      expect(slowReadStarted).toBe(true);
       expect(await connectionRow(db, connectionId)).toEqual({
         lastSyncedAt: null,
         lastSyncError: "too_slow",
@@ -585,11 +672,6 @@ describe("syncAllConnections (integration)", () => {
     await withTwoUsers(async ({ db, userA }) => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
-
-      const abortingDuringAuth: DataProvider = {
-        name: "fake",
-        authenticate: () => Promise.reject(new ProviderReadAbortedError("auth")),
-      };
 
       let calls = 0;
       const clock = () => {
@@ -612,55 +694,33 @@ describe("syncAllConnections (integration)", () => {
         lastSyncedAt: null,
         lastSyncError: "timed_out",
       });
+      expect(await firstSyncSinceOf(db, connectionId)).toBeNull();
     });
   });
 
-  // Round-2 fix for the starvation regression: a connection that goes slow at
-  // the provider sorts first every day (its last sync time stops moving), so
-  // without a per-connection bound it could hold the whole run's clock and
-  // starve everything behind it forever (#75). Bounding each connection to at
-  // most half the run means a stuck connection costs at most half a run.
-  it("does not let a connection that is too slow two runs in a row block a healthy one behind it", async () => {
+  // Round-3 fix for the deeper starvation regression: ordering by
+  // last_sync_error/last_synced_at never advances on a repeated failure, so
+  // even two stuck connections at the head of the queue could take the
+  // whole run every day. Ordering by last_sync_attempted_at instead means
+  // every connection rotates regardless of how its last attempt ended, and
+  // each stuck connection still costs at most half the run's budget.
+  it("does not let two connections that are too slow, two runs in a row, block a healthy one behind them", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await saveCredentials(db, userA);
-      const slow = await seedBancoNeverSynced(db, userA);
+      const stuckA = await seedBancoNeverSynced(db, userA);
+      const stuckB = await seedNeverSynced(db, userA, STUCK_ITEM_B, STUCK_ACCOUNT_B);
       await saveCredentials(db, userB);
       const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
 
-      const slowOnBanco: DataProvider = {
-        name: "fake",
-        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
-          const real = await deps.provider.authenticate(credentials, options);
-          if (real.status !== "ok") {
-            return real;
-          }
-          const client = real.client;
-          return {
-            status: "ok",
-            client: {
-              describeConnection: (itemId) => client.describeConnection(itemId),
-              listAccounts: (itemId) => client.listAccounts(itemId),
-              listInvestmentPositions: async (itemId) => {
-                if (itemId === FAKE_ITEM_BANCO_FIXTURE) {
-                  await new Promise((resolve) => setTimeout(resolve, 300));
-                }
-                return client.listInvestmentPositions(itemId);
-              },
-              listTransactionsSince: (accountId, since) =>
-                client.listTransactionsSince(accountId, since),
-            },
-          };
-        },
-      };
+      const bothStuck = slowOnItems(new Set([FAKE_ITEM_BANCO_FIXTURE, STUCK_ITEM_B]));
 
-      // A small, self-consistent fake axis: a 300ms total budget makes each
-      // connection's own slice a real 150ms, well under the slow
-      // connection's 300ms read, so it is reliably too_slow without the
-      // test waiting on the run's actual deadline. The fake clock reports
-      // plenty of runway left on every per-connection floor check
-      // (MIN_CONNECTION_SLICE_MS is about queue position, not this run's
-      // small budget), which is what lets the healthy connection behind the
-      // slow one still be attempted in the same run.
+      // A small, self-consistent fake axis: a 2000ms total budget gives each
+      // connection its own 1000ms slice, ample margin over a couple of Neon
+      // round trips. The fake clock reports plenty of runway left on every
+      // per-connection floor check (MIN_CONNECTION_SLICE_MS is about queue
+      // position, not this run's small budget), which is what lets the
+      // healthy connection behind two stuck ones still be attempted in the
+      // same run.
       function runOnce() {
         const axisStart = 1_000_000;
         let calls = 0;
@@ -670,47 +730,209 @@ describe("syncAllConnections (integration)", () => {
         };
         return syncAllConnections(
           db,
-          { ...deps, provider: slowOnBanco },
-          { now: NOW, deadline: new Date(axisStart + 300), clock },
+          { ...deps, provider: bothStuck },
+          { now: NOW, deadline: new Date(axisStart + 2000), clock },
         );
       }
 
       await expect(runOnce()).resolves.toEqual({
         ok: true,
         synced: 1,
-        failed: 1,
+        failed: 2,
         gone: 0,
         unreached: 0,
       });
-      expect((await connectionRow(db, slow))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, stuckA))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, stuckB))?.lastSyncError).toBe("too_slow");
       expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
 
       await expect(runOnce()).resolves.toEqual({
         ok: true,
         synced: 1,
-        failed: 1,
+        failed: 2,
         gone: 0,
         unreached: 0,
       });
-      expect((await connectionRow(db, slow))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, stuckA))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, stuckB))?.lastSyncError).toBe("too_slow");
       expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
+    });
+  });
+
+  describe("sticky narrowing memory (#84)", () => {
+    it("narrows a first sync's window after it was too_slow", async () => {
+      await withTwoUsers(async ({ db, userA }) => {
+        await saveCredentials(db, userA);
+        const connectionId = await seedBancoNeverSynced(db, userA);
+
+        const realStart = Date.now();
+        let calls = 0;
+        const clock = () => {
+          calls += 1;
+          return calls === 1 ? new Date(realStart) : new Date(realStart - 20_000);
+        };
+        await expect(
+          syncAllConnections(
+            db,
+            { ...deps, provider: slowOnItems(new Set([FAKE_ITEM_BANCO_FIXTURE])) },
+            { now: NOW, deadline: new Date(realStart + 2000), clock },
+          ),
+        ).resolves.toMatchObject({ failed: 1 });
+        expect((await connectionRow(db, connectionId))?.lastSyncError).toBe("too_slow");
+        expect(await firstSyncSinceOf(db, connectionId)).toBe(narrowedFirstSyncSince(NOW));
+
+        const windows: string[] = [];
+        const later = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
+        await syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          { now: later, deadline: AMPLE_DEADLINE },
+        );
+
+        expect(windows).toContain(narrowedFirstSyncSince(NOW));
+        expect(windows).not.toContain(transactionsSince(later, null));
+      });
+    });
+
+    it("narrows a first sync's window after a listing too long to page through", async () => {
+      await withTwoUsers(async ({ db, userA }) => {
+        await saveCredentials(db, userA);
+        const connectionId = await seedBancoNeverSynced(db, userA);
+
+        await expect(
+          syncAllConnections(
+            db,
+            { ...deps, provider: alwaysTooLong },
+            { now: NOW, deadline: AMPLE_DEADLINE },
+          ),
+        ).resolves.toMatchObject({ failed: 1 });
+        expect((await connectionRow(db, connectionId))?.lastSyncError).toBe("listing_too_long");
+        expect(await firstSyncSinceOf(db, connectionId)).toBe(narrowedFirstSyncSince(NOW));
+
+        const windows: string[] = [];
+        await syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        );
+
+        expect(windows).toContain(narrowedFirstSyncSince(NOW));
+      });
+    });
+
+    it("does not narrow a first sync's window after a plain timed_out", async () => {
+      await withTwoUsers(async ({ db, userA }) => {
+        await saveCredentials(db, userA);
+        const connectionId = await seedBancoNeverSynced(db, userA);
+
+        let calls = 0;
+        const clock = () => {
+          calls += 1;
+          return calls === 1 ? new Date(0) : new Date(80_000);
+        };
+        await expect(
+          syncAllConnections(
+            db,
+            { ...deps, provider: abortingDuringAuth },
+            { now: NOW, deadline: new Date(100_000), clock },
+          ),
+        ).resolves.toMatchObject({ failed: 1 });
+        expect((await connectionRow(db, connectionId))?.lastSyncError).toBe("timed_out");
+        expect(await firstSyncSinceOf(db, connectionId)).toBeNull();
+
+        const windows: string[] = [];
+        await syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        );
+
+        expect(windows).toContain(transactionsSince(NOW, null));
+      });
+    });
+
+    it("keeps a first sync narrowed even after a later plain timed_out", async () => {
+      await withTwoUsers(async ({ db, userA }) => {
+        await saveCredentials(db, userA);
+        const connectionId = await seedBancoNeverSynced(db, userA);
+
+        const realStart = Date.now();
+        let slowCalls = 0;
+        const slowClock = () => {
+          slowCalls += 1;
+          return slowCalls === 1 ? new Date(realStart) : new Date(realStart - 20_000);
+        };
+        await syncAllConnections(
+          db,
+          { ...deps, provider: slowOnItems(new Set([FAKE_ITEM_BANCO_FIXTURE])) },
+          { now: NOW, deadline: new Date(realStart + 2000), clock: slowClock },
+        );
+        expect(await firstSyncSinceOf(db, connectionId)).toBe(narrowedFirstSyncSince(NOW));
+
+        let timedOutCalls = 0;
+        const timedOutClock = () => {
+          timedOutCalls += 1;
+          return timedOutCalls === 1 ? new Date(0) : new Date(80_000);
+        };
+        await expect(
+          syncAllConnections(
+            db,
+            { ...deps, provider: abortingDuringAuth },
+            { now: NOW, deadline: new Date(100_000), clock: timedOutClock },
+          ),
+        ).resolves.toMatchObject({ failed: 1 });
+        expect((await connectionRow(db, connectionId))?.lastSyncError).toBe("timed_out");
+        expect(await firstSyncSinceOf(db, connectionId)).toBe(narrowedFirstSyncSince(NOW));
+
+        const windows: string[] = [];
+        await syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        );
+
+        expect(windows).toContain(narrowedFirstSyncSince(NOW));
+      });
     });
   });
 });
 
 describe("listConnectionsToSync ordering (integration)", () => {
-  it("lists a connection that failed last time after the healthy ones", async () => {
+  it("orders by when a connection was last attempted, not by its last outcome", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
-      const failing = await seedBancoNeverSynced(db, userA);
+      const attemptedLongAgo = await seedBancoNeverSynced(db, userA);
       await db
         .update(bankConnection)
-        .set({ lastSyncError: "provider_unavailable" })
-        .where(eq(bankConnection.id, failing));
-      const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+        .set({
+          lastSyncError: "provider_unavailable",
+          lastSyncAttemptedAt: new Date("2026-09-01T00:00:00.000Z"),
+        })
+        .where(eq(bankConnection.id, attemptedLongAgo));
+      const attemptedRecently = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncAttemptedAt: new Date("2026-09-20T00:00:00.000Z") })
+        .where(eq(bankConnection.id, attemptedRecently));
+      const neverAttempted = await seedNeverSynced(db, userA, STUCK_ITEM_B, STUCK_ACCOUNT_B);
 
       const ordered = await listConnectionsToSync(db);
 
-      expect(ordered.map((connection) => connection.id)).toEqual([healthy, failing]);
+      expect(ordered.map((connection) => connection.id)).toEqual([
+        neverAttempted,
+        attemptedLongAgo,
+        attemptedRecently,
+      ]);
+    });
+  });
+
+  it("falls back to creation order among connections never attempted", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const first = await seedBancoNeverSynced(db, userA);
+      const second = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      const ordered = await listConnectionsToSync(db);
+
+      expect(ordered.map((connection) => connection.id)).toEqual([first, second]);
     });
   });
 });

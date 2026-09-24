@@ -108,37 +108,51 @@ The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, 
 - `ok` is true unless at least one connection was attempted and every attempted one failed — a run
   that only found deleted or unreached connections is not an incident.
 
-Every connection gets its own abort budget, at most half the run's total: `MAX_CONNECTION_SLICE_MS`
-(derived from the run's own deadline, not a second hard-coded number) caps how long any single
-connection's reads — including authenticating, itself a provider read — can run before that
-connection's own `AbortController` cuts it. Without this bound, a connection that has gone slow at
-the provider sorts first every day (its last sync time stops moving), and could hold the whole run's
-clock, starving everything behind it forever. Bounded per connection, a stuck connection costs at
-most half a run — the other half still rotates through the rest by `lastSyncedAt`, so throughput
-degrades when one connection is stuck, it does not stop.
+`bank_connection` carries two columns just for the daily job (migration
+`0011_sync_connection_attempt_and_narrowing.sql`, additive, both nullable), neither ever read
+anywhere else: `last_sync_attempted_at`, stamped at the start of every attempt — before any provider
+call, so even a connection that fails before it gets that far still moves — and `first_sync_since`,
+the sticky narrowing memory described below.
+
+`listConnectionsToSync` orders strictly by `last_sync_attempted_at asc nulls first, created_at asc`
+and nothing else. Every connection rotates round-robin regardless of how its last attempt ended:
+ordering by `last_sync_error` / `last_synced_at` (the earlier design) never advances on a repeated
+failure, so a connection stuck failing the same way every day would sort first forever and could
+take the whole run by itself. Attempt-time ordering fixes that structurally, and combines with the
+per-connection slice below so that even several stuck connections at the head of the queue cost the
+rest of it at most half a run each, not a turn that never comes.
+
+Every connection also gets its own abort budget, at most half the run's total (a local
+`maxConnectionSliceMs`, derived from the run's own deadline, not a second hard-coded number): it caps
+how long any single connection's reads — including authenticating, itself a provider read — can run
+before that connection's own `AbortController` cuts it. Without this bound a single slow connection
+could hold the whole run's clock by itself. Bounded per connection, a stuck connection costs at most
+half a run — the other half still rotates through the rest, so throughput degrades when one or more
+connections are stuck, it does not stop; every connection still gets its own turn on the next run,
+and the one after that.
 
 Three statuses are about running out of time or bandwidth, not the bank, and each means something
 different for what to do next:
 
-- `too_slow`: this connection's own abort budget ran out before its read finished, and it got the
-  full `MAX_CONNECTION_SLICE_MS` slice to itself — its own listing is the likely reason.
+- `too_slow`: this connection's own abort budget ran out before its read finished, and it got its
+  full slice (half the run) to itself — its own listing is the likely reason.
 - `timed_out`: the same cut, but the run itself was close enough to its deadline that this
   connection got less than its full slice — about where it landed in the queue, not its own size.
 - `listing_too_long`: a listing kept offering more pages than the provider paginators' cap.
 
-All three clear on the next successful sync like any other error. A first sync with no data yet
-that last failed `listing_too_long` or `too_slow` narrows its window to the previous month instead
-of the usual twelve (`transactions-window.ts`), so it can finish at all; `timed_out` does not
-narrow, since it says nothing about this connection's own size and narrowing it would cost history
-for no reason. The wizard's own first sync (`connectProvider`/`addConnection`) gets the same
-narrowed retry inline on `listing_too_long`, once, before giving up as `provider_unavailable`.
-
-`listConnectionsToSync` reads connections with no `last_sync_error`, or one of `too_slow` /
-`timed_out` / `listing_too_long`, first (never-synced ones first among them); only a connection
-that failed for a reason of its own — bad credentials, an outage, a write failure — sorts to the
-back. The other three are not demoted: narrowing or an earlier queue slot is their fix, not being
-read last; combined with the per-connection slice above, one of those three costs the rest of the
-queue at most half a run, not the whole one.
+All three clear `last_sync_error` on the next successful sync like any other error. A first sync
+(no transactions in the ledger yet for this connection) that fails `listing_too_long` or `too_slow`
+sets `first_sync_since` to the previous month once, the first time it happens — sticky: an
+intervening `timed_out` or provider outage, or even a narrowed sync that succeeds with zero new
+transactions, does not clear it, since none of those say the connection's history has gotten any
+smaller. It only stops mattering once the ledger actually holds a transaction for this connection,
+at which point the incremental window applies and `first_sync_since` is never read again. `timed_out`
+alone never sets it, since it says nothing about this connection's own size and narrowing would cost
+history for no reason. A connection whose first sync is already narrowed and still comes back
+`too_slow` keeps failing visibly and keeps rotating through the queue every run — an operator signal
+that its own history, not the run's clock, is the problem. The wizard's own first sync
+(`connectProvider`/`addConnection`) gets a one-shot narrowed retry inline on `listing_too_long`,
+independent of this column, since it runs before a connection row (and so `first_sync_since`) exists.
 
 ## Environment
 

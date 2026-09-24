@@ -112,6 +112,8 @@ export const bankConnection = pgTable(
       .references(() => bankConnectionConsent.id, { onDelete: "restrict" }),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastSyncError: text("last_sync_error"),
+    lastSyncAttemptedAt: timestamp("last_sync_attempted_at", { withTimezone: true }),
+    firstSyncSince: date("first_sync_since", { mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

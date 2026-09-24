@@ -78,6 +78,13 @@
       "when": 1790081601075,
       "tag": "0010_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790278523016,
+      "tag": "0011_sync_connection_attempt_and_narrowing",
+      "breakpoints": true
     }
   ]
 }

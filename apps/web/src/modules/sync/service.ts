@@ -42,7 +42,7 @@ import {
 } from "./repository";
 import { scopeForUser, userScope } from "./scope";
 import type { ConnectionSyncFailure } from "./sync-status";
-import { shouldNarrowFirstSync } from "./sync-status";
+import { isNarrowingFailure } from "./sync-status";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
@@ -461,11 +461,12 @@ export async function relabelAccount(
 }
 
 // Whether a deadline abort is the connection's own fault: `too_slow` when it
-// got its full per-connection slice (see MAX_CONNECTION_SLICE_MS) and still
-// didn't finish, so its own listing is likely the reason and narrowing its
-// next first sync helps; `timed_out` when the run itself ran out before the
-// connection got its full slice, which is about where it landed in the
-// queue, not its size.
+// got its own full per-connection slice (the run's abort fired no sooner
+// than that slice was scheduled to) and still didn't finish, so its own
+// listing is likely the reason and narrowing its next first sync helps;
+// `timed_out` when the run itself was close enough to its deadline that the
+// connection's own slice was cut short before it started, which is about
+// where it landed in the queue, not its size.
 function abortedFailureStatus(hadFullSlice: boolean): "too_slow" | "timed_out" {
   return hadFullSlice ? "too_slow" : "timed_out";
 }
@@ -478,9 +479,10 @@ type CredentialsCache = Map<string, CredentialsOutcome>;
 
 // Only the decrypted credentials are cached per user: a run's connections
 // share one owner's secret but each gets its own abort signal (see
-// MAX_CONNECTION_SLICE_MS), so authenticating happens fresh per connection
-// rather than once per user. One extra POST to the provider per connection
-// is the cost of a signal that actually bounds that connection alone.
+// syncAllConnections's maxConnectionSliceMs), so authenticating happens
+// fresh per connection rather than once per user. One extra POST to the
+// provider per connection is the cost of a signal that actually bounds that
+// connection alone.
 async function credentialsFor(
   cache: CredentialsCache,
   repository: SyncUserRepository,
@@ -497,12 +499,19 @@ async function credentialsFor(
   return outcome;
 }
 
+// A rejected secret is a fact about the user, not the connection: once the
+// provider has said so once this run, every other connection under the same
+// user is skipped straight to the same status, saving a POST per connection
+// for a secret that isn't going to become valid mid-run.
+type InvalidCredentialsCache = Set<string>;
+
 // Authenticating is itself a provider read and can be the one a connection's
 // own slice catches in flight, so it is classified the same way a read is
 // rather than through openProviderSession (which the wizard, never subject
 // to a run deadline, still uses unchanged).
 async function providerSessionFor(
-  cache: CredentialsCache,
+  credentials: CredentialsCache,
+  invalidCredentials: InvalidCredentialsCache,
   repository: SyncUserRepository,
   userId: string,
   db: Database,
@@ -510,12 +519,19 @@ async function providerSessionFor(
   signal: AbortSignal,
   hadFullSlice: boolean,
 ): Promise<Outcome<{ client: ProviderClient }, ConnectionSyncFailure>> {
-  const stored = await credentialsFor(cache, repository, userId, db, deps);
+  const stored = await credentialsFor(credentials, repository, userId, db, deps);
   if (stored.status !== "ok") {
     return stored;
   }
+  if (invalidCredentials.has(userId)) {
+    return { status: "invalid_credentials" };
+  }
   try {
-    return await deps.provider.authenticate(stored.credentials, { signal });
+    const outcome = await deps.provider.authenticate(stored.credentials, { signal });
+    if (outcome.status === "invalid_credentials") {
+      invalidCredentials.add(userId);
+    }
+    return outcome;
   } catch (error) {
     if (error instanceof ProviderReadAbortedError) {
       return { status: abortedFailureStatus(hadFullSlice) };
@@ -542,13 +558,12 @@ async function syncConnection(
   hadFullSlice: boolean,
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
+  let hasHistory = false;
   try {
-    const hasHistory = await repository.hasTransactions(db, connection.id);
+    hasHistory = await repository.hasTransactions(db, connection.id);
     const since = hasHistory
       ? transactionsSince(now, connection.lastSyncedAt)
-      : shouldNarrowFirstSync(connection.lastSyncError)
-        ? narrowedFirstSyncSince(now)
-        : transactionsSince(now, null);
+      : (connection.firstSyncSince ?? transactionsSince(now, null));
     snapshot = await readConnection(client, connection.providerItemId, since);
   } catch (error) {
     if (error instanceof ConnectionNotOwnedError) {
@@ -559,12 +574,18 @@ async function syncConnection(
       console.warn(
         `sync: reading connection ${connection.id} was aborted by the run deadline (${status})`,
       );
+      if (!hasHistory && isNarrowingFailure(status)) {
+        await repository.narrowFirstSync(db, connection.id, narrowedFirstSyncSince(now));
+      }
       return { status };
     }
     if (error instanceof ProviderListingTooLongError) {
       console.warn(
         `sync: connection ${connection.id}'s ${endpointCollection(error.endpoint)} listing exceeded the page cap`,
       );
+      if (!hasHistory) {
+        await repository.narrowFirstSync(db, connection.id, narrowedFirstSyncSince(now));
+      }
       return { status: "listing_too_long" };
     }
     if (isProviderFailure(error)) {
@@ -626,13 +647,13 @@ const MIN_CONNECTION_SLICE_MS = PROVIDER_REQUEST_TIMEOUT_MS;
 // directly.
 //
 // Each connection gets its own AbortController, timed to at most half the
-// run's total budget (MAX_CONNECTION_SLICE_MS below): a single connection
-// that has gone slow at the provider sorts first every day (its last sync
-// time stops moving), so without a per-connection bound it could hold the
-// whole run's clock and starve every connection behind it forever. Bounding
-// each connection to at most half the run means a stuck connection costs at
-// most half a run; the other half still rotates through the rest by
-// lastSyncedAt.
+// run's total budget (maxConnectionSliceMs below): a single connection that
+// has gone slow at the provider would otherwise sort first every run (see
+// listConnectionsToSync) and could hold the whole run's clock, starving
+// every connection behind it forever. Bounding each connection to at most
+// half the run means a stuck connection costs at most half a run; the other
+// half still rotates through the rest, since listConnectionsToSync orders by
+// when a connection was last attempted, not by whether it last succeeded.
 export async function syncAllConnections(
   db: Database,
   deps: SyncDeps,
@@ -647,6 +668,7 @@ export async function syncAllConnections(
 
   const connections = await listConnectionsToSync(db);
   const credentials: CredentialsCache = new Map();
+  const invalidCredentials: InvalidCredentialsCache = new Set();
 
   let synced = 0;
   let failed = 0;
@@ -662,19 +684,26 @@ export async function syncAllConnections(
     if (!connection) {
       continue;
     }
-    // Whether this connection is getting its full per-connection slice, or
-    // less because the run itself is close to its deadline: see
-    // abortedFailureStatus.
-    const hadFullSlice = remainingMs >= maxConnectionSliceMs;
     const sliceMs = Math.min(remainingMs, maxConnectionSliceMs);
+    // Whether this connection got its own full slice, or less because the
+    // run itself was close to its deadline when its turn came: see
+    // abortedFailureStatus. Computed against the slice it actually got, not
+    // the raw time left, so the two can never drift apart.
+    const hadFullSlice = sliceMs === maxConnectionSliceMs;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       controller.abort();
     }, sliceMs);
     const repository = createSyncUserRepository(scopeForUser(connection.userId));
     try {
+      // Stamped before any provider call: this is what rotates the queue
+      // (listConnectionsToSync), so every connection gets a turn regardless
+      // of how this one ends. A delete racing this write is the same
+      // ConnectionNotOwnedError as any other write here, caught below.
+      await repository.recordSyncAttempt(db, connection.id, now);
       const session = await providerSessionFor(
         credentials,
+        invalidCredentials,
         repository,
         connection.userId,
         db,

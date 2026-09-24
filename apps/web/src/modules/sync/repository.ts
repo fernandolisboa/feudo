@@ -1,18 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  exists,
-  gte,
-  inArray,
-  isNull,
-  lt,
-  notExists,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, eq, exists, gte, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
 
 import { user } from "@/modules/auth/schema";
 
@@ -34,7 +20,7 @@ import type {
   RateType,
 } from "./provider/provider";
 import type { UserScope } from "./scope";
-import { VOLUME_OR_TIME_FAILURES } from "./sync-status";
+import type { ConnectionSyncFailure } from "./sync-status";
 
 // Every method runs equally on the pooled connection or inside a transaction
 // it opened, so a service can group several writes into one commit.
@@ -471,12 +457,47 @@ export function createSyncUserRepository(scope: UserScope) {
       return rows.length;
     },
 
-    async recordSyncFailure(db: Database, connectionId: string, error: string): Promise<void> {
+    async recordSyncFailure(
+      db: Database,
+      connectionId: string,
+      error: ConnectionSyncFailure,
+    ): Promise<void> {
       await requireOwnedConnection(db, connectionId);
       await db
         .update(bankConnection)
         .set({ lastSyncError: error })
         .where(eq(bankConnection.id, connectionId));
+    },
+
+    // Stamped at the start of every attempt, before any provider call, so
+    // the daily job's queue (listConnectionsToSync) rotates by who was tried
+    // least recently rather than by last_sync_error/last_synced_at, which a
+    // repeatedly failing connection never advances (round-robin fix for the
+    // starvation regression: ordering by outcome let a connection stuck
+    // failing the same way every day sort first forever). A delete racing
+    // this write surfaces as ConnectionNotOwnedError and is counted `gone`
+    // by the caller, same as any other write in this repository.
+    async recordSyncAttempt(db: Database, connectionId: string, attemptedAt: Date): Promise<void> {
+      await requireOwnedConnection(db, connectionId);
+      await db
+        .update(bankConnection)
+        .set({ lastSyncAttemptedAt: attemptedAt })
+        .where(eq(bankConnection.id, connectionId));
+    },
+
+    // Sticky narrowing memory (#84): set once, the first time a first sync
+    // (no history yet) fails `too_slow` or `listing_too_long`, and never
+    // cleared by an intervening failure of another kind or by a successful
+    // sync that still has no transactions to show for it — only clearing on
+    // a successful sync that actually has history (hasTransactions becomes
+    // true, so first_sync_since is never read again). Idempotent: a
+    // connection that already has a narrowed window keeps it.
+    async narrowFirstSync(db: Database, connectionId: string, since: string): Promise<void> {
+      await requireOwnedConnection(db, connectionId);
+      await db
+        .update(bankConnection)
+        .set({ firstSyncSince: since })
+        .where(and(eq(bankConnection.id, connectionId), isNull(bankConnection.firstSyncSince)));
     },
   };
 }
@@ -492,15 +513,17 @@ export type ConnectionToSync = {
   userId: string;
   providerItemId: string;
   lastSyncedAt: Date | null;
-  lastSyncError: string | null;
+  firstSyncSince: string | null;
 };
 
-// Not scoped: the daily job's work list (ADR-0005). Connections with no
-// last_sync_error, or one of VOLUME_OR_TIME_FAILURES, go first (never-synced
-// ones ahead of the rest among them), so a run cut short by the deadline
-// (#75) still reaches them; only a connection that failed for another
-// reason (bad credentials, an outage, a write failure) sorts to the back, so
-// one of those cannot starve the rest ahead of it every day.
+// Not scoped: the daily job's work list (ADR-0005). Ordered only by when a
+// connection was last attempted — succeeding or failing, it doesn't matter
+// — so every connection rotates round-robin regardless of its last outcome.
+// Ordering by last_sync_error/last_synced_at instead let a repeatedly
+// failing connection sort first forever, since neither advances on failure.
+// Combined with each connection's own abort slice (service.ts), a stuck
+// connection costs the rest of the queue at most half a run, not a turn
+// that never comes.
 export async function listConnectionsToSync(db: Database): Promise<ConnectionToSync[]> {
   return db
     .select({
@@ -508,17 +531,11 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
       userId: bankConnection.userId,
       providerItemId: bankConnection.providerItemId,
       lastSyncedAt: bankConnection.lastSyncedAt,
-      lastSyncError: bankConnection.lastSyncError,
+      firstSyncSince: bankConnection.firstSyncSince,
     })
     .from(bankConnection)
     .orderBy(
-      desc(
-        sql`${or(
-          isNull(bankConnection.lastSyncError),
-          inArray(bankConnection.lastSyncError, VOLUME_OR_TIME_FAILURES),
-        )}`,
-      ),
-      sql`${bankConnection.lastSyncedAt} asc nulls first`,
+      sql`${bankConnection.lastSyncAttemptedAt} asc nulls first`,
       asc(bankConnection.createdAt),
     );
 }
