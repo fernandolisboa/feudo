@@ -115,12 +115,10 @@ call, so even a connection that fails before it gets that far still moves — an
 the sticky narrowing memory described below.
 
 `listConnectionsToSync` orders strictly by `last_sync_attempted_at asc nulls first, created_at asc`
-and nothing else. Every connection rotates round-robin regardless of how its last attempt ended:
-ordering by `last_sync_error` / `last_synced_at` (the earlier design) never advances on a repeated
-failure, so a connection stuck failing the same way every day would sort first forever and could
-take the whole run by itself. Attempt-time ordering fixes that structurally, and combines with the
-per-connection slice below so that even several stuck connections at the head of the queue cost the
-rest of it at most half a run each, not a turn that never comes.
+and nothing else. Every connection rotates round-robin regardless of how its last attempt ended.
+Attempt-time ordering ensures this structurally and combines with the per-connection slice below so
+that even several stuck connections at the head of the queue cost the rest of it at most half a run
+each, not a turn that never comes.
 
 Every connection also gets its own abort budget, at most half the run's total (a local
 `maxConnectionSliceMs`, derived from the run's own deadline, not a second hard-coded number): it caps
