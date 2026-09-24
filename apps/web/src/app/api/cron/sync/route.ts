@@ -11,7 +11,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const connections = await runConnectionsSyncStep(getDb());
+  const connections = await runConnectionsSyncStep(getDb(), { budgetMs: maxDuration * 1000 });
   const ok = "error" in connections ? false : connections.ok;
 
   return NextResponse.json({ ok, steps: { connections } }, { status: ok ? 200 : 500 });

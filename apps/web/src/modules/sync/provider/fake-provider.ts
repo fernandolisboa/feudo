@@ -86,6 +86,9 @@ export function createFakeProvider(hasher: DocumentHasher): DataProvider {
       credentials: ProviderCredentials,
       options?: { signal?: AbortSignal },
     ): Promise<AuthenticateOutcome> {
+      if (options?.signal?.aborted) {
+        return Promise.reject(new ProviderReadAbortedError("auth"));
+      }
       if (credentials.clientSecret === FAKE_INVALID_CLIENT_SECRET) {
         return Promise.resolve({ status: "invalid_credentials" });
       }

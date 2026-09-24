@@ -96,24 +96,40 @@ The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, 
 
 - `synced` / `failed`: connections attempted this run and how each ended; a failed one's
   `bank_connection.last_sync_error` names why (`provider_unavailable`, `listing_too_long`,
-  `timed_out`, `invalid_credentials`, `no_credentials`, `credentials_unreadable`, `failed`).
+  `too_slow`, `timed_out`, `invalid_credentials`, `no_credentials`, `credentials_unreadable`,
+  `failed`).
 - `gone`: the connection was deleted (by its owner, through the app) while this run was reading it;
-  nothing was recorded for it, nothing to act on.
-- `unreached`: the run's deadline (`RUN_BUDGET_MS`, ADR-0005) left too little time to start it; it
-  is untouched and picked up by tomorrow's run, sooner if it is one of the healthy ones (see
-  ordering below).
+  nothing was recorded for it, nothing to act on. Recording a failure and counting a connection as
+  `failed` happen in that order, so a delete racing the failure write is counted `gone`, never both.
+- `unreached`: the run's deadline (`runConnectionsSyncStep`'s `budgetMs`, from the route's own
+  `maxDuration`, minus `RUN_HEADROOM_MS`; ADR-0005) left too little time to start it; it is
+  untouched and picked up by tomorrow's run, sooner if it is one of the connections ordering keeps
+  near the front (see below).
 - `ok` is true unless at least one connection was attempted and every attempted one failed — a run
   that only found deleted or unreached connections is not an incident.
 
-Two statuses are about running out of time or bandwidth, not the bank: `timed_out` (the run's
-deadline cut an in-flight read) and `listing_too_long` (a listing kept offering more pages than the
-provider paginators' cap). Both clear on the next successful sync like any other error, and a first
-sync retried after either narrows its window to the previous month instead of the usual twelve
-(`transactions-window.ts`), so it can finish at all.
+Three statuses are about running out of time or bandwidth, not the bank, and each means something
+different for what to do next:
 
-`listConnectionsToSync` reads connections with no `last_sync_error` first (never-synced ones first
-among them), and ones that failed last time last: a connection stuck on `timed_out` or
-`listing_too_long` every day sorts to the back instead of crowding out the healthy ones ahead of it.
+- `too_slow`: the run's deadline cut an in-flight read, and this connection still had at least half
+  the run's own budget left over when it started — a fair chance on its own clock, so its own
+  listing is the likely reason.
+- `timed_out`: the same cut, but this connection started with less than half the budget left — about
+  where it landed in the queue, not its own size.
+- `listing_too_long`: a listing kept offering more pages than the provider paginators' cap.
+
+All three clear on the next successful sync like any other error. A first sync with no data yet
+that last failed `listing_too_long` or `too_slow` narrows its window to the previous month instead
+of the usual twelve (`transactions-window.ts`), so it can finish at all; `timed_out` does not
+narrow, since it says nothing about this connection's own size and narrowing it would cost history
+for no reason. The wizard's own first sync (`connectProvider`/`addConnection`) gets the same
+narrowed retry inline on `listing_too_long`, once, before giving up as `provider_unavailable`.
+
+`listConnectionsToSync` reads connections with no `last_sync_error`, or one of `too_slow` /
+`timed_out` / `listing_too_long`, first (never-synced ones first among them); only a connection
+that failed for a reason of its own — bad credentials, an outage, a write failure — sorts to the
+back, so one of those cannot starve the rest every day. The other three are not demoted: narrowing
+or an earlier queue slot is their fix, not being read last.
 
 ## Environment
 

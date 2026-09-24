@@ -69,14 +69,26 @@ describe("createFakeProvider", () => {
     expect(later).toHaveLength(1);
   });
 
-  it("throws when the run's own signal is already aborted", async () => {
+  it("rejects authenticate itself when the run's own signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort();
+
+    await expect(
+      provider.authenticate(
+        { clientId: "any", clientSecret: "any" },
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow(ProviderReadAbortedError);
+  });
+
+  it("throws from a client read once the run's own signal aborts after authenticating", async () => {
+    const controller = new AbortController();
     const outcome = await provider.authenticate(
       { clientId: "any", clientSecret: "any" },
       { signal: controller.signal },
     );
     if (outcome.status !== "ok") throw new Error("expected ok");
+    controller.abort();
 
     expect(() => outcome.client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).toThrow(
       ProviderReadAbortedError,

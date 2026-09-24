@@ -23,6 +23,8 @@ import type {
   ProviderCredentials,
 } from "./provider/provider";
 import {
+  endpointCollection,
+  PROVIDER_REQUEST_TIMEOUT_MS,
   ProviderListingTooLongError,
   ProviderReadAbortedError,
   ProviderResponseShapeError,
@@ -82,10 +84,10 @@ function providerFailureDetail(error: unknown): string {
   }
   if (error instanceof ProviderResponseShapeError) {
     const fields = error.fields.length === 0 ? "" : ` fields=${error.fields.join(",")}`;
-    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}${fields}`;
+    return `${error.name} endpoint=${endpointCollection(error.endpoint)}${fields}`;
   }
   if (error instanceof ProviderListingTooLongError) {
-    return `${error.name} endpoint=${error.endpoint.split("/")[0] ?? ""}`;
+    return `${error.name} endpoint=${endpointCollection(error.endpoint)}`;
   }
   return errorName(error);
 }
@@ -213,11 +215,27 @@ async function establishConnection(
     if (described.status === "not_found") {
       return { status: "item_not_found" };
     }
-    snapshot = await readConnection(
-      client,
-      input.providerItemId,
-      transactionsSince(syncedAt, null),
-    );
+    try {
+      snapshot = await readConnection(
+        client,
+        input.providerItemId,
+        transactionsSince(syncedAt, null),
+      );
+    } catch (error) {
+      // A listing too long to page through on the usual twelve-month window
+      // is retried once, narrowed to the previous month (#84): without this,
+      // an item with a very long transaction history could never be
+      // connected at all.
+      if (error instanceof ProviderListingTooLongError) {
+        snapshot = await readConnection(
+          client,
+          input.providerItemId,
+          narrowedFirstSyncSince(syncedAt),
+        );
+      } else {
+        throw error;
+      }
+    }
   } catch (error) {
     if (isProviderFailure(error)) {
       return { status: "provider_unavailable" };
@@ -448,12 +466,41 @@ type ConnectionSyncFailure =
   | "provider_unavailable"
   | "listing_too_long"
   | "timed_out"
+  | "too_slow"
   | "failed";
+
+// A first sync that failed one of these ways left no data at all and would
+// hit the same wall again on the usual twelve-month window, so the next
+// attempt narrows it instead (#84). `timed_out` is deliberately excluded:
+// it means this connection simply landed late in the run's queue, not that
+// its own listing is too big, so narrowing it would not help and would cost
+// history for no reason.
+const NARROWING_FAILURES = [
+  "listing_too_long",
+  "too_slow",
+] as const satisfies readonly ConnectionSyncFailure[];
+
+function shouldNarrowFirstSync(error: string | null): boolean {
+  return error !== null && (NARROWING_FAILURES as readonly string[]).includes(error);
+}
+
+// Whether a deadline abort is the connection's own fault: `too_slow` when it
+// still had at least half the run's total budget to itself when it started
+// (a fair chance on its own clock, so its listing is likely the reason and
+// narrowing its next first sync helps); `timed_out` when it started with
+// less than that, which is about where it landed in the queue, not its size.
+function abortedFailureStatus(hadFairChance: boolean): "too_slow" | "timed_out" {
+  return hadFairChance ? "too_slow" : "timed_out";
+}
 
 type ConnectionSyncOutcome = SimpleOutcome<"ok" | ConnectionSyncFailure>;
 
 type ProviderSessions = Map<string, Outcome<{ client: ProviderClient }, ConnectionSyncFailure>>;
 
+// Authenticating is itself a provider read and can be the one an aborted run
+// catches in flight, so it is classified the same way a read is rather than
+// through openProviderSession (which the wizard, never subject to a run
+// deadline, still uses unchanged).
 async function providerSessionFor(
   sessions: ProviderSessions,
   repository: SyncUserRepository,
@@ -461,25 +508,31 @@ async function providerSessionFor(
   db: Database,
   deps: SyncDeps,
   signal: AbortSignal,
+  hadFairChance: boolean,
 ): Promise<Outcome<{ client: ProviderClient }, ConnectionSyncFailure>> {
   const cached = sessions.get(userId);
   if (cached) {
     return cached;
   }
   const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
-  const outcome =
-    stored.status === "ok"
-      ? await openProviderSession(deps.provider, stored.credentials, { signal })
-      : { status: stored.status };
+  let outcome: Outcome<{ client: ProviderClient }, ConnectionSyncFailure>;
+  if (stored.status !== "ok") {
+    outcome = { status: stored.status };
+  } else {
+    try {
+      outcome = await deps.provider.authenticate(stored.credentials, { signal });
+    } catch (error) {
+      if (error instanceof ProviderReadAbortedError) {
+        outcome = { status: abortedFailureStatus(hadFairChance) };
+      } else if (isProviderFailure(error)) {
+        outcome = { status: "provider_unavailable" };
+      } else {
+        throw error;
+      }
+    }
+  }
   sessions.set(userId, outcome);
   return outcome;
-}
-
-// A first sync that failed this way left no data at all, so the next attempt
-// narrows the window instead of asking for twelve months again (#84):
-// finishing a small window beats retrying the same window forever.
-function isExtremeFirstSyncFailure(error: string | null): boolean {
-  return error === "listing_too_long" || error === "timed_out";
 }
 
 // Feudo never asks the provider to re-read the bank: Meu Pluggy refreshes
@@ -494,13 +547,14 @@ async function syncConnection(
   db: Database,
   connection: ConnectionToSync,
   now: Date,
+  hadFairChance: boolean,
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
   try {
     const hasHistory = await repository.hasTransactions(db, connection.id);
     const since = hasHistory
       ? transactionsSince(now, connection.lastSyncedAt)
-      : isExtremeFirstSyncFailure(connection.lastSyncError)
+      : shouldNarrowFirstSync(connection.lastSyncError)
         ? narrowedFirstSyncSince(now)
         : transactionsSince(now, null);
     snapshot = await readConnection(client, connection.providerItemId, since);
@@ -509,12 +563,15 @@ async function syncConnection(
       throw error;
     }
     if (error instanceof ProviderReadAbortedError) {
-      console.warn(`sync: reading connection ${connection.id} was aborted by the run deadline`);
-      return { status: "timed_out" };
+      const status = abortedFailureStatus(hadFairChance);
+      console.warn(
+        `sync: reading connection ${connection.id} was aborted by the run deadline (${status})`,
+      );
+      return { status };
     }
     if (error instanceof ProviderListingTooLongError) {
       console.warn(
-        `sync: connection ${connection.id}'s ${error.endpoint.split("/")[0] ?? ""} listing exceeded the page cap`,
+        `sync: connection ${connection.id}'s ${endpointCollection(error.endpoint)} listing exceeded the page cap`,
       );
       return { status: "listing_too_long" };
     }
@@ -557,18 +614,17 @@ export type ConnectionsSyncResult = {
   unreached: number;
 };
 
-// The route's Vercel maxDuration is 60s (route.ts). 45s leaves the in-flight
-// connection's write (which does not observe the deadline, so it must be
-// short) and the JSON response about 15s of headroom, comfortably inside the
-// function's own limit even when the last connection started right at the
-// edge of its slice.
-export const RUN_BUDGET_MS = 45_000;
+// Only used when a caller does not provide its own deadline. route.ts always
+// does (runConnectionsSyncStep's budgetMs, derived from its own maxDuration):
+// this is a sensible standalone default for any other caller, direct or in a
+// test, that does not want to think about the run's clock at all.
+const DEFAULT_RUN_BUDGET_MS = 45_000;
 
-// About one provider request timeout (pluggy-provider.ts's
-// REQUEST_TIMEOUT_MS): starting a connection with less than this left on the
-// clock would almost certainly time it out before its first read returns, so
-// it is better left for the next run.
-export const MIN_CONNECTION_SLICE_MS = 15_000;
+// About one provider request timeout (PROVIDER_REQUEST_TIMEOUT_MS): starting
+// a connection with less than this left on the clock would almost certainly
+// time it out before its first read returns, so it is better left for the
+// next run.
+const MIN_CONNECTION_SLICE_MS = PROVIDER_REQUEST_TIMEOUT_MS;
 
 // The daily job (ADR-0005): every connection, under its owner's own scope and
 // credentials, one after the other, until the run's deadline. The run is
@@ -578,7 +634,9 @@ export const MIN_CONNECTION_SLICE_MS = 15_000;
 // red. `now` anchors the sync windows; `deadline` and `clock` are the run's
 // own wall-clock budget and both default off the real clock regardless of
 // `now`, so a test can hold `now` on a fixed date for window assertions
-// without also having to fake the deadline check on every call.
+// without also having to fake the deadline check on every call. Every
+// wall-clock reading in the run — the abort timer, every per-connection
+// check — comes from this one `clock`, never `Date.now()` directly.
 export async function syncAllConnections(
   db: Database,
   deps: SyncDeps,
@@ -586,19 +644,20 @@ export async function syncAllConnections(
 ): Promise<ConnectionsSyncResult> {
   const now = options.now ?? new Date();
   const clock = options.clock ?? (() => new Date());
-  const deadline = options.deadline ?? new Date(Date.now() + RUN_BUDGET_MS);
+  const runStartedAt = clock();
+  const deadline = options.deadline ?? new Date(runStartedAt.getTime() + DEFAULT_RUN_BUDGET_MS);
+  const totalBudgetMs = deadline.getTime() - runStartedAt.getTime();
 
   const connections = await listConnectionsToSync(db);
   const sessions: ProviderSessions = new Map();
   const controller = new AbortController();
-  const remainingAtStartMs = deadline.getTime() - Date.now();
   const timer =
-    remainingAtStartMs > 0
+    totalBudgetMs > 0
       ? setTimeout(() => {
           controller.abort();
-        }, remainingAtStartMs)
+        }, totalBudgetMs)
       : undefined;
-  if (remainingAtStartMs <= 0) {
+  if (totalBudgetMs <= 0) {
     controller.abort();
   }
 
@@ -608,7 +667,8 @@ export async function syncAllConnections(
   let unreached = 0;
   try {
     for (let index = 0; index < connections.length; index += 1) {
-      if (deadline.getTime() - clock().getTime() < MIN_CONNECTION_SLICE_MS) {
+      const remainingMs = deadline.getTime() - clock().getTime();
+      if (remainingMs < MIN_CONNECTION_SLICE_MS) {
         unreached += connections.length - index;
         break;
       }
@@ -616,6 +676,9 @@ export async function syncAllConnections(
       if (!connection) {
         continue;
       }
+      // Whether this connection still had at least half the run's total
+      // budget to itself when it started: see abortedFailureStatus.
+      const hadFairChance = remainingMs >= totalBudgetMs / 2;
       const repository = createSyncUserRepository(scopeForUser(connection.userId));
       try {
         const session = await providerSessionFor(
@@ -625,19 +688,24 @@ export async function syncAllConnections(
           db,
           deps,
           controller.signal,
+          hadFairChance,
         );
         const outcome =
           session.status === "ok"
-            ? await syncConnection(session.client, repository, db, connection, now)
+            ? await syncConnection(session.client, repository, db, connection, now, hadFairChance)
             : session;
         if (outcome.status === "ok") {
           synced += 1;
         } else {
-          failed += 1;
+          // Recorded before counting it as failed: a delete racing this
+          // write (#79) throws ConnectionNotOwnedError, and the connection
+          // belongs in `gone`, not double-counted here too.
           await repository.recordSyncFailure(db, connection.id, outcome.status);
+          failed += 1;
         }
       } catch (error) {
         if (error instanceof ConnectionNotOwnedError) {
+          console.warn(`sync: connection ${connection.id} was deleted mid-run`);
           gone += 1;
           continue;
         }
@@ -654,9 +722,20 @@ export async function syncAllConnections(
 
 export type ConnectionsSyncStep = ConnectionsSyncResult | { error: string };
 
-export async function runConnectionsSyncStep(db: Database): Promise<ConnectionsSyncStep> {
+// Route.ts owns the function's real time limit (`maxDuration`) and passes it
+// down as `budgetMs`; this is what the in-flight connection's write (which
+// does not observe the deadline, so it must be short) and the JSON response
+// need back once the last connection's read returns.
+const RUN_HEADROOM_MS = 15_000;
+
+export async function runConnectionsSyncStep(
+  db: Database,
+  options: { budgetMs: number },
+): Promise<ConnectionsSyncStep> {
   try {
-    return await syncAllConnections(db, createSyncDeps());
+    return await syncAllConnections(db, createSyncDeps(), {
+      deadline: new Date(Date.now() + options.budgetMs - RUN_HEADROOM_MS),
+    });
   } catch (error) {
     return { error: errorName(error) };
   }

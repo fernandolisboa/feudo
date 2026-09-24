@@ -49,6 +49,11 @@ export const normalizedTransactionSchema = z.object({
 });
 export type NormalizedTransaction = z.infer<typeof normalizedTransactionSchema>;
 
+// Shared with the sync service (service.ts's MIN_CONNECTION_SLICE_MS): a
+// connection with less time than one request timeout left on the run's
+// clock is not worth starting.
+export const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
+
 export type ProviderCredentials = { clientId: string; clientSecret: string };
 
 export type ProviderConnection = {
@@ -110,14 +115,24 @@ export class ProviderReadAbortedError extends Error {
   }
 }
 
+// An endpoint or collection name, as logged: the rest of a provider path is
+// an item id, which belongs in no log (used by both the Pluggy client and
+// the sync service's own failure logging).
+export function endpointCollection(endpoint: string): string {
+  return endpoint.split("/")[0] ?? "";
+}
+
 export type DescribeConnectionOutcome = Outcome<{ connection: ProviderConnection }, "not_found">;
 
 // One authenticated session against the provider, for the three reads
 // ADR-0005 names plus the "which institution is this item" read the wizard
 // needs before it creates a connection. Reading is all Feudo does: the
 // provider owns when a connection is re-read from the bank (ADR-0005).
-// Every method may throw ProviderUnavailableError or
-// ProviderResponseShapeError.
+// Every method may throw ProviderUnavailableError (an outage or a rejected
+// request), ProviderResponseShapeError (a payload Feudo cannot read),
+// ProviderListingTooLongError (a listing with more pages than the paginator
+// caps at) or, when authenticate() was given a signal, ProviderReadAbortedError
+// (the run's own deadline cut the read short).
 export interface ProviderClient {
   describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome>;
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]>;

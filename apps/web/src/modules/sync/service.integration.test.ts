@@ -31,7 +31,12 @@ import {
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
 
 import type { Database } from "@/platform/db/client";
-import type { DataProvider, ProviderClient } from "./provider/provider";
+import {
+  ProviderListingTooLongError,
+  type AuthenticateOutcome,
+  type DataProvider,
+  type ProviderClient,
+} from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -307,6 +312,92 @@ describe("connectProvider (integration)", () => {
 
       expect((await connectBanco(db, userA)).status).toBe("ok");
       expect((await connectBanco(db, userA)).status).toBe("already_connected");
+    });
+  });
+
+  // A first sync's usual twelve-month window can be too long to page
+  // through for an item with a lot of history (#84); the wizard retries
+  // once, narrowed to the previous month, rather than reporting the
+  // connection unreachable.
+  it("retries a first sync once with a narrowed window after a too-long listing", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const windows: string[] = [];
+      let calls = 0;
+      const tooLongOnce: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) => {
+                windows.push(since);
+                calls += 1;
+                if (calls === 1) {
+                  throw new ProviderListingTooLongError("transactions");
+                }
+                return real.listTransactionsSince(accountId, since);
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: tooLongOnce },
+      );
+
+      expect(outcome.status).toBe("ok");
+      expect(windows.length).toBeGreaterThanOrEqual(2);
+      expect((windows[0] ?? "") < (windows[windows.length - 1] ?? "")).toBe(true);
+    });
+  });
+
+  it("still reports provider_unavailable when the narrowed retry is also too long", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const alwaysTooLong: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: () => {
+                throw new ProviderListingTooLongError("transactions");
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: alwaysTooLong },
+      );
+
+      expect(outcome).toEqual({ status: "provider_unavailable" });
+      expect(await db.select().from(bankConnection)).toEqual([]);
     });
   });
 });

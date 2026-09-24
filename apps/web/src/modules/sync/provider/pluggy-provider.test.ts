@@ -343,6 +343,24 @@ describe("createPluggyProvider", () => {
     ).rejects.toThrow(ProviderResponseShapeError);
   });
 
+  it("succeeds when a cursor listing ends exactly at the cap", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": (url) => {
+            const after = url.searchParams.get("after");
+            const page = after === null ? 1 : Number(after);
+            const next = page < 40 ? `?after=${String(page + 1)}` : null;
+            return json({ results: [], next });
+          },
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).resolves.toEqual([]);
+  });
+
   it("raises ProviderListingTooLongError rather than truncating an endless listing", async () => {
     let cursor = 0;
     const client = await authenticatedClient(
@@ -446,6 +464,31 @@ describe("createPluggyProvider", () => {
   it("raises ProviderReadAbortedError, not a generic outage, when the run's own signal fires", async () => {
     const controller = new AbortController();
     const provider = createPluggyProvider(hasher, { fetchImpl: fakeFetch(apiRoute()) });
+    const authenticated = await provider.authenticate(credentials, { signal: controller.signal });
+    if (authenticated.status !== "ok") throw new Error("expected ok");
+    controller.abort();
+
+    await expect(authenticated.client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
+      ProviderReadAbortedError,
+    );
+  });
+
+  it("raises ProviderReadAbortedError, not a shape error, when the run signal fires while the body is still parsing", async () => {
+    const controller = new AbortController();
+    const customFetch: typeof fetch = (input) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input : input.url,
+      );
+      if (url.pathname === "/auth") {
+        return Promise.resolve(json({ apiKey: "jwt" }));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(new Error("body stream aborted")),
+      } as unknown as Response);
+    };
+    const provider = createPluggyProvider(hasher, { fetchImpl: customFetch });
     const authenticated = await provider.authenticate(credentials, { signal: controller.signal });
     if (authenticated.status !== "ok") throw new Error("expected ok");
     controller.abort();

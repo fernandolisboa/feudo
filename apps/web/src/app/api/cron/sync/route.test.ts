@@ -61,6 +61,12 @@ describe("GET /api/cron/sync", () => {
     });
   });
 
+  it("derives the step's budget from the route's own maxDuration", async () => {
+    await callCronRoute();
+
+    expect(runConnectionsSyncStep).toHaveBeenCalledWith(expect.anything(), { budgetMs: 60_000 });
+  });
+
   it("reports 200 when a run only deleted or unreached connections, never failed one", async () => {
     vi.mocked(runConnectionsSyncStep).mockResolvedValueOnce({
       ok: true,

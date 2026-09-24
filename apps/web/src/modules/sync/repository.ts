@@ -1,4 +1,18 @@
-import { and, asc, count, eq, exists, gte, inArray, lt, notExists, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { user } from "@/modules/auth/schema";
 
@@ -480,11 +494,17 @@ export type ConnectionToSync = {
   lastSyncError: string | null;
 };
 
-// Not scoped: the daily job's work list (ADR-0005). Healthy connections (no
-// last_sync_error) go first, never-synced ones ahead of the rest among them,
-// so a run cut short by the deadline (#75) still reaches them; a connection
-// that failed last time sorts to the back, so one that times out every day
-// cannot starve the healthy ones ahead of it.
+// A run's own time or volume, not something about the connection itself: the
+// daily job's window-narrowing (service.ts's NARROWING_FAILURES) is the fix
+// for these, not the back of tomorrow's queue.
+const VOLUME_OR_TIME_FAILURES = ["timed_out", "too_slow", "listing_too_long"];
+
+// Not scoped: the daily job's work list (ADR-0005). Connections with no
+// last_sync_error, or one of VOLUME_OR_TIME_FAILURES, go first (never-synced
+// ones ahead of the rest among them), so a run cut short by the deadline
+// (#75) still reaches them; only a connection that failed for another
+// reason (bad credentials, an outage, a write failure) sorts to the back, so
+// one of those cannot starve the rest ahead of it every day.
 export async function listConnectionsToSync(db: Database): Promise<ConnectionToSync[]> {
   return db
     .select({
@@ -496,7 +516,12 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
     })
     .from(bankConnection)
     .orderBy(
-      sql`(${bankConnection.lastSyncError} is null) desc`,
+      desc(
+        sql`${or(
+          isNull(bankConnection.lastSyncError),
+          inArray(bankConnection.lastSyncError, VOLUME_OR_TIME_FAILURES),
+        )}`,
+      ),
       sql`${bankConnection.lastSyncedAt} asc nulls first`,
       asc(bankConnection.createdAt),
     );

@@ -7,7 +7,7 @@ import { encryptSecret } from "./crypto";
 import { createDocumentHasher } from "./document-hash";
 import { FAKE_INVALID_CLIENT_SECRET, FAKE_ITEM_BANCO_FIXTURE } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
-import { ProviderUnavailableError } from "./provider/provider";
+import { ProviderReadAbortedError, ProviderUnavailableError } from "./provider/provider";
 import {
   createHouseholdAccountsRepository,
   createSyncUserRepository,
@@ -419,6 +419,31 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
+  it("counts a connection as gone, not also failed, when the delete races the failure write", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA, FAKE_INVALID_CLIENT_SECRET);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+
+      const deletingOnRejection: DataProvider = {
+        name: "fake",
+        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+          const outcome = await deps.provider.authenticate(credentials, options);
+          if (outcome.status !== "ok") {
+            // The row is gone by the time the loop gets to record the
+            // failure it is about to return: recordSyncFailure must not have
+            // already counted it as `failed` first (#79 x #75 interaction).
+            await db.delete(bankConnection).where(eq(bankConnection.id, connectionId));
+          }
+          return outcome;
+        },
+      };
+
+      await expect(
+        syncAllConnections(db, { ...deps, provider: deletingOnRejection }, { now: NOW }),
+      ).resolves.toEqual({ ok: true, synced: 0, failed: 0, gone: 1, unreached: 0 });
+    });
+  });
+
   it("stops before the deadline and reports the rest unreached, without touching them", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await saveCredentials(db, userA);
@@ -426,20 +451,22 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userB);
       const second = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
 
-      // The deadline and clock are wall-clock concepts, independent of `now`
-      // (the fixed anchor for the sync window): a real, generous deadline
-      // keeps the run's own AbortController from firing, while the fake
-      // clock alone drives the per-connection "is there still room" check.
+      // The deadline and clock share one made-up axis, unrelated to real
+      // time: a 60000ms total budget schedules the run's own AbortController
+      // for a real 60s, comfortably longer than this test takes (the
+      // `finally` clears it before it ever fires), while the fake clock
+      // alone drives the per-connection "is there still room" check.
       let calls = 0;
       const clock = () => {
         calls += 1;
-        return calls === 1 ? new Date(0) : new Date(8_640_000_000_000_000);
+        if (calls <= 2) return new Date(0); // run start, then connection 1's check: full budget left
+        return new Date(50_000); // connection 2's check: only 10000ms left, below MIN_CONNECTION_SLICE_MS
       };
 
       await expect(
         syncAllConnections(db, deps, {
           now: NOW,
-          deadline: new Date(Date.now() + 60_000),
+          deadline: new Date(60_000),
           clock,
         }),
       ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 0, unreached: 1 });
@@ -449,11 +476,12 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
-  it("stops an in-flight read at the deadline, recording it as timed_out and writing nothing", async () => {
+  it("stops an in-flight read at the deadline, recording it as too_slow and writing nothing", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
 
+      let slowReadStarted = false;
       const abortingSoon: DataProvider = {
         name: "fake",
         async authenticate(
@@ -471,7 +499,8 @@ describe("syncAllConnections (integration)", () => {
               describeConnection: (itemId) => client.describeConnection(itemId),
               listAccounts: (itemId) => client.listAccounts(itemId),
               listInvestmentPositions: async (itemId) => {
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                slowReadStarted = true;
+                await new Promise((resolve) => setTimeout(resolve, 500));
                 return client.listInvestmentPositions(itemId);
               },
               listTransactionsSince: (accountId, since) =>
@@ -481,11 +510,65 @@ describe("syncAllConnections (integration)", () => {
         },
       };
 
+      // Real time only decides when the run's own AbortController fires
+      // (totalBudgetMs, a comfortable 150ms above ordinary setup latency);
+      // the fake clock reports this connection as starting with the whole
+      // budget still ahead of it, so the abort is on its own slow read
+      // (too_slow), not on where it landed in the queue.
+      const realStart = Date.now();
+      let calls = 0;
+      const clock = () => {
+        calls += 1;
+        return calls === 1 ? new Date(realStart) : new Date(realStart - 20_000);
+      };
+
       await expect(
         syncAllConnections(
           db,
           { ...deps, provider: abortingSoon },
-          { now: NOW, deadline: new Date(Date.now() + 50), clock: () => new Date(0) },
+          { now: NOW, deadline: new Date(realStart + 150), clock },
+        ),
+      ).resolves.toEqual({ ok: false, synced: 0, failed: 1, gone: 0, unreached: 0 });
+
+      expect(slowReadStarted).toBe(true);
+      expect(await connectionRow(db, connectionId)).toEqual({
+        lastSyncedAt: null,
+        lastSyncError: "too_slow",
+      });
+      expect(await transactionsOf(db, connectionId)).toEqual([]);
+    });
+  });
+
+  // providerSessionFor's authenticate() is itself a provider read: this
+  // proves the service classifies an aborted one the same way as an aborted
+  // in-flight read (recording a status, not letting the error escape into
+  // runConnectionsSyncStep's `{ error }` shape) rather than exercising the
+  // real AbortController's timing, which fake-provider.test.ts already
+  // covers at the provider layer.
+  it("counts a run aborted during authenticate as timed_out, without crashing the run", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedBancoNeverSynced(db, userA);
+
+      const abortingDuringAuth: DataProvider = {
+        name: "fake",
+        authenticate: () => Promise.reject(new ProviderReadAbortedError("auth")),
+      };
+
+      let calls = 0;
+      const clock = () => {
+        calls += 1;
+        // Run start, then this connection's check: 20000ms left out of a
+        // 100000ms total budget — less than half, so on its own this is
+        // timed_out (where it landed in the queue), not too_slow.
+        return calls === 1 ? new Date(0) : new Date(80_000);
+      };
+
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: abortingDuringAuth },
+          { now: NOW, deadline: new Date(100_000), clock },
         ),
       ).resolves.toEqual({ ok: false, synced: 0, failed: 1, gone: 0, unreached: 0 });
 
@@ -493,7 +576,6 @@ describe("syncAllConnections (integration)", () => {
         lastSyncedAt: null,
         lastSyncError: "timed_out",
       });
-      expect(await transactionsOf(db, connectionId)).toEqual([]);
     });
   });
 });

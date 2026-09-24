@@ -17,6 +17,7 @@ import {
   pluggyTransactionSchema,
 } from "./pluggy-schemas";
 import {
+  PROVIDER_REQUEST_TIMEOUT_MS,
   ProviderListingTooLongError,
   ProviderReadAbortedError,
   ProviderResponseShapeError,
@@ -31,7 +32,6 @@ import {
 } from "./provider";
 
 const PLUGGY_BASE_URL = "https://api.pluggy.ai";
-const REQUEST_TIMEOUT_MS = 15_000;
 const PAGE_SIZE = 500;
 // Bounds the number of pages one sync walks so a provider that never reports
 // a last page cannot keep a serverless function alive indefinitely.
@@ -50,7 +50,7 @@ async function requestJson(
   runSignal?: AbortSignal,
 ): Promise<{ status: number; json: unknown }> {
   let response: Response;
-  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const timeoutSignal = AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS);
   const signal = runSignal ? AbortSignal.any([timeoutSignal, runSignal]) : timeoutSignal;
   try {
     response = await fetchImpl(url, { ...init, signal });
@@ -67,6 +67,12 @@ async function requestJson(
   try {
     json = await response.json();
   } catch {
+    // The run's own signal can also fire while the body is still streaming
+    // in, after the headers already came back: still the deadline, not a
+    // shape the response actually sent.
+    if (runSignal?.aborted) {
+      throw new ProviderReadAbortedError(endpoint);
+    }
     if (response.ok) {
       throw new ProviderResponseShapeError(endpoint);
     }
