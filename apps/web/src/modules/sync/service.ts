@@ -41,6 +41,8 @@ import {
   type SyncUserRepository,
 } from "./repository";
 import { scopeForUser, userScope } from "./scope";
+import type { ConnectionSyncFailure } from "./sync-status";
+import { shouldNarrowFirstSync } from "./sync-status";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
@@ -302,10 +304,9 @@ type ProviderSessionOutcome = Outcome<
 async function openProviderSession(
   provider: DataProvider,
   credentials: ProviderCredentials,
-  options?: { signal?: AbortSignal },
 ): Promise<ProviderSessionOutcome> {
   try {
-    return await provider.authenticate(credentials, options);
+    return await provider.authenticate(credentials);
   } catch (error) {
     if (isProviderFailure(error)) {
       return { status: "provider_unavailable" };
@@ -459,80 +460,71 @@ export async function relabelAccount(
   }
 }
 
-type ConnectionSyncFailure =
-  | "no_credentials"
-  | "credentials_unreadable"
-  | "invalid_credentials"
-  | "provider_unavailable"
-  | "listing_too_long"
-  | "timed_out"
-  | "too_slow"
-  | "failed";
-
-// A first sync that failed one of these ways left no data at all and would
-// hit the same wall again on the usual twelve-month window, so the next
-// attempt narrows it instead (#84). `timed_out` is deliberately excluded:
-// it means this connection simply landed late in the run's queue, not that
-// its own listing is too big, so narrowing it would not help and would cost
-// history for no reason.
-const NARROWING_FAILURES = [
-  "listing_too_long",
-  "too_slow",
-] as const satisfies readonly ConnectionSyncFailure[];
-
-function shouldNarrowFirstSync(error: string | null): boolean {
-  return error !== null && (NARROWING_FAILURES as readonly string[]).includes(error);
-}
-
 // Whether a deadline abort is the connection's own fault: `too_slow` when it
-// still had at least half the run's total budget to itself when it started
-// (a fair chance on its own clock, so its listing is likely the reason and
-// narrowing its next first sync helps); `timed_out` when it started with
-// less than that, which is about where it landed in the queue, not its size.
-function abortedFailureStatus(hadFairChance: boolean): "too_slow" | "timed_out" {
-  return hadFairChance ? "too_slow" : "timed_out";
+// got its full per-connection slice (see MAX_CONNECTION_SLICE_MS) and still
+// didn't finish, so its own listing is likely the reason and narrowing its
+// next first sync helps; `timed_out` when the run itself ran out before the
+// connection got its full slice, which is about where it landed in the
+// queue, not its size.
+function abortedFailureStatus(hadFullSlice: boolean): "too_slow" | "timed_out" {
+  return hadFullSlice ? "too_slow" : "timed_out";
 }
 
 type ConnectionSyncOutcome = SimpleOutcome<"ok" | ConnectionSyncFailure>;
 
-type ProviderSessions = Map<string, Outcome<{ client: ProviderClient }, ConnectionSyncFailure>>;
+type CredentialsOutcome = Outcome<{ credentials: ProviderCredentials }, ConnectionSyncFailure>;
 
-// Authenticating is itself a provider read and can be the one an aborted run
-// catches in flight, so it is classified the same way a read is rather than
-// through openProviderSession (which the wizard, never subject to a run
-// deadline, still uses unchanged).
+type CredentialsCache = Map<string, CredentialsOutcome>;
+
+// Only the decrypted credentials are cached per user: a run's connections
+// share one owner's secret but each gets its own abort signal (see
+// MAX_CONNECTION_SLICE_MS), so authenticating happens fresh per connection
+// rather than once per user. One extra POST to the provider per connection
+// is the cost of a signal that actually bounds that connection alone.
+async function credentialsFor(
+  cache: CredentialsCache,
+  repository: SyncUserRepository,
+  userId: string,
+  db: Database,
+  deps: SyncDeps,
+): Promise<CredentialsOutcome> {
+  const cached = cache.get(userId);
+  if (cached) {
+    return cached;
+  }
+  const outcome = await loadStoredCredentials(repository, db, deps.encryptionKey);
+  cache.set(userId, outcome);
+  return outcome;
+}
+
+// Authenticating is itself a provider read and can be the one a connection's
+// own slice catches in flight, so it is classified the same way a read is
+// rather than through openProviderSession (which the wizard, never subject
+// to a run deadline, still uses unchanged).
 async function providerSessionFor(
-  sessions: ProviderSessions,
+  cache: CredentialsCache,
   repository: SyncUserRepository,
   userId: string,
   db: Database,
   deps: SyncDeps,
   signal: AbortSignal,
-  hadFairChance: boolean,
+  hadFullSlice: boolean,
 ): Promise<Outcome<{ client: ProviderClient }, ConnectionSyncFailure>> {
-  const cached = sessions.get(userId);
-  if (cached) {
-    return cached;
-  }
-  const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
-  let outcome: Outcome<{ client: ProviderClient }, ConnectionSyncFailure>;
+  const stored = await credentialsFor(cache, repository, userId, db, deps);
   if (stored.status !== "ok") {
-    outcome = { status: stored.status };
-  } else {
-    try {
-      outcome = await deps.provider.authenticate(stored.credentials, { signal });
-    } catch (error) {
-      if (error instanceof ProviderReadAbortedError) {
-        outcome = { status: abortedFailureStatus(hadFairChance) };
-      } else if (isProviderFailure(error)) {
-        outcome = { status: "provider_unavailable" };
-      } else {
-        throw error;
-      }
-    }
+    return stored;
   }
-  sessions.set(userId, outcome);
-  return outcome;
+  try {
+    return await deps.provider.authenticate(stored.credentials, { signal });
+  } catch (error) {
+    if (error instanceof ProviderReadAbortedError) {
+      return { status: abortedFailureStatus(hadFullSlice) };
+    }
+    if (isProviderFailure(error)) {
+      return { status: "provider_unavailable" };
+    }
+    throw error;
+  }
 }
 
 // Feudo never asks the provider to re-read the bank: Meu Pluggy refreshes
@@ -547,7 +539,7 @@ async function syncConnection(
   db: Database,
   connection: ConnectionToSync,
   now: Date,
-  hadFairChance: boolean,
+  hadFullSlice: boolean,
 ): Promise<ConnectionSyncOutcome> {
   let snapshot;
   try {
@@ -563,7 +555,7 @@ async function syncConnection(
       throw error;
     }
     if (error instanceof ProviderReadAbortedError) {
-      const status = abortedFailureStatus(hadFairChance);
+      const status = abortedFailureStatus(hadFullSlice);
       console.warn(
         `sync: reading connection ${connection.id} was aborted by the run deadline (${status})`,
       );
@@ -614,12 +606,6 @@ export type ConnectionsSyncResult = {
   unreached: number;
 };
 
-// Only used when a caller does not provide its own deadline. route.ts always
-// does (runConnectionsSyncStep's budgetMs, derived from its own maxDuration):
-// this is a sensible standalone default for any other caller, direct or in a
-// test, that does not want to think about the run's clock at all.
-const DEFAULT_RUN_BUDGET_MS = 45_000;
-
 // About one provider request timeout (PROVIDER_REQUEST_TIMEOUT_MS): starting
 // a connection with less than this left on the clock would almost certainly
 // time it out before its first read returns, so it is better left for the
@@ -635,85 +621,88 @@ const MIN_CONNECTION_SLICE_MS = PROVIDER_REQUEST_TIMEOUT_MS;
 // own wall-clock budget and both default off the real clock regardless of
 // `now`, so a test can hold `now` on a fixed date for window assertions
 // without also having to fake the deadline check on every call. Every
-// wall-clock reading in the run — the abort timer, every per-connection
-// check — comes from this one `clock`, never `Date.now()` directly.
+// wall-clock reading in the run — every connection's own timer, every
+// per-connection check — comes from this one `clock`, never `Date.now()`
+// directly.
+//
+// Each connection gets its own AbortController, timed to at most half the
+// run's total budget (MAX_CONNECTION_SLICE_MS below): a single connection
+// that has gone slow at the provider sorts first every day (its last sync
+// time stops moving), so without a per-connection bound it could hold the
+// whole run's clock and starve every connection behind it forever. Bounding
+// each connection to at most half the run means a stuck connection costs at
+// most half a run; the other half still rotates through the rest by
+// lastSyncedAt.
 export async function syncAllConnections(
   db: Database,
   deps: SyncDeps,
-  options: { now?: Date; deadline?: Date; clock?: () => Date } = {},
+  options: { now?: Date; deadline: Date; clock?: () => Date },
 ): Promise<ConnectionsSyncResult> {
   const now = options.now ?? new Date();
   const clock = options.clock ?? (() => new Date());
+  const deadline = options.deadline;
   const runStartedAt = clock();
-  const deadline = options.deadline ?? new Date(runStartedAt.getTime() + DEFAULT_RUN_BUDGET_MS);
   const totalBudgetMs = deadline.getTime() - runStartedAt.getTime();
+  const maxConnectionSliceMs = totalBudgetMs / 2;
 
   const connections = await listConnectionsToSync(db);
-  const sessions: ProviderSessions = new Map();
-  const controller = new AbortController();
-  const timer =
-    totalBudgetMs > 0
-      ? setTimeout(() => {
-          controller.abort();
-        }, totalBudgetMs)
-      : undefined;
-  if (totalBudgetMs <= 0) {
-    controller.abort();
-  }
+  const credentials: CredentialsCache = new Map();
 
   let synced = 0;
   let failed = 0;
   let gone = 0;
   let unreached = 0;
-  try {
-    for (let index = 0; index < connections.length; index += 1) {
-      const remainingMs = deadline.getTime() - clock().getTime();
-      if (remainingMs < MIN_CONNECTION_SLICE_MS) {
-        unreached += connections.length - index;
-        break;
+  for (let index = 0; index < connections.length; index += 1) {
+    const remainingMs = deadline.getTime() - clock().getTime();
+    if (remainingMs < MIN_CONNECTION_SLICE_MS) {
+      unreached += connections.length - index;
+      break;
+    }
+    const connection = connections[index];
+    if (!connection) {
+      continue;
+    }
+    // Whether this connection is getting its full per-connection slice, or
+    // less because the run itself is close to its deadline: see
+    // abortedFailureStatus.
+    const hadFullSlice = remainingMs >= maxConnectionSliceMs;
+    const sliceMs = Math.min(remainingMs, maxConnectionSliceMs);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, sliceMs);
+    const repository = createSyncUserRepository(scopeForUser(connection.userId));
+    try {
+      const session = await providerSessionFor(
+        credentials,
+        repository,
+        connection.userId,
+        db,
+        deps,
+        controller.signal,
+        hadFullSlice,
+      );
+      const outcome =
+        session.status === "ok"
+          ? await syncConnection(session.client, repository, db, connection, now, hadFullSlice)
+          : session;
+      if (outcome.status === "ok") {
+        synced += 1;
+      } else {
+        // Recorded before counting it as failed: a delete racing this
+        // write (#79) throws ConnectionNotOwnedError, and the connection
+        // belongs in `gone`, not double-counted here too.
+        await repository.recordSyncFailure(db, connection.id, outcome.status);
+        failed += 1;
       }
-      const connection = connections[index];
-      if (!connection) {
+    } catch (error) {
+      if (error instanceof ConnectionNotOwnedError) {
+        console.warn(`sync: connection ${connection.id} was deleted mid-run`);
+        gone += 1;
         continue;
       }
-      // Whether this connection still had at least half the run's total
-      // budget to itself when it started: see abortedFailureStatus.
-      const hadFairChance = remainingMs >= totalBudgetMs / 2;
-      const repository = createSyncUserRepository(scopeForUser(connection.userId));
-      try {
-        const session = await providerSessionFor(
-          sessions,
-          repository,
-          connection.userId,
-          db,
-          deps,
-          controller.signal,
-          hadFairChance,
-        );
-        const outcome =
-          session.status === "ok"
-            ? await syncConnection(session.client, repository, db, connection, now, hadFairChance)
-            : session;
-        if (outcome.status === "ok") {
-          synced += 1;
-        } else {
-          // Recorded before counting it as failed: a delete racing this
-          // write (#79) throws ConnectionNotOwnedError, and the connection
-          // belongs in `gone`, not double-counted here too.
-          await repository.recordSyncFailure(db, connection.id, outcome.status);
-          failed += 1;
-        }
-      } catch (error) {
-        if (error instanceof ConnectionNotOwnedError) {
-          console.warn(`sync: connection ${connection.id} was deleted mid-run`);
-          gone += 1;
-          continue;
-        }
-        throw error;
-      }
-    }
-  } finally {
-    if (timer) {
+      throw error;
+    } finally {
       clearTimeout(timer);
     }
   }

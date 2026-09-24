@@ -108,14 +108,22 @@ The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, 
 - `ok` is true unless at least one connection was attempted and every attempted one failed — a run
   that only found deleted or unreached connections is not an incident.
 
+Every connection gets its own abort budget, at most half the run's total: `MAX_CONNECTION_SLICE_MS`
+(derived from the run's own deadline, not a second hard-coded number) caps how long any single
+connection's reads — including authenticating, itself a provider read — can run before that
+connection's own `AbortController` cuts it. Without this bound, a connection that has gone slow at
+the provider sorts first every day (its last sync time stops moving), and could hold the whole run's
+clock, starving everything behind it forever. Bounded per connection, a stuck connection costs at
+most half a run — the other half still rotates through the rest by `lastSyncedAt`, so throughput
+degrades when one connection is stuck, it does not stop.
+
 Three statuses are about running out of time or bandwidth, not the bank, and each means something
 different for what to do next:
 
-- `too_slow`: the run's deadline cut an in-flight read, and this connection still had at least half
-  the run's own budget left over when it started — a fair chance on its own clock, so its own
-  listing is the likely reason.
-- `timed_out`: the same cut, but this connection started with less than half the budget left — about
-  where it landed in the queue, not its own size.
+- `too_slow`: this connection's own abort budget ran out before its read finished, and it got the
+  full `MAX_CONNECTION_SLICE_MS` slice to itself — its own listing is the likely reason.
+- `timed_out`: the same cut, but the run itself was close enough to its deadline that this
+  connection got less than its full slice — about where it landed in the queue, not its own size.
 - `listing_too_long`: a listing kept offering more pages than the provider paginators' cap.
 
 All three clear on the next successful sync like any other error. A first sync with no data yet
@@ -128,8 +136,9 @@ narrowed retry inline on `listing_too_long`, once, before giving up as `provider
 `listConnectionsToSync` reads connections with no `last_sync_error`, or one of `too_slow` /
 `timed_out` / `listing_too_long`, first (never-synced ones first among them); only a connection
 that failed for a reason of its own — bad credentials, an outage, a write failure — sorts to the
-back, so one of those cannot starve the rest every day. The other three are not demoted: narrowing
-or an earlier queue slot is their fix, not being read last.
+back. The other three are not demoted: narrowing or an earlier queue slot is their fix, not being
+read last; combined with the per-connection slice above, one of those three costs the rest of the
+queue at most half a run, not the whole one.
 
 ## Environment
 

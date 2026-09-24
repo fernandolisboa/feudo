@@ -27,6 +27,10 @@ const deps: SyncDeps = {
   encryptionKey: ENCRYPTION_KEY,
 };
 const NOW = new Date("2026-09-22T06:00:00.000Z");
+// Real time, not NOW: syncAllConnections defaults its clock to the real one
+// whenever a test doesn't inject its own, and only the timing-focused tests
+// below care about the deadline at all.
+const AMPLE_DEADLINE = new Date(Date.now() + 5 * 60_000);
 const FIXTURE_CHECKING = "a1000000-0000-4000-8000-000000000001";
 const OTHER_ITEM = "other-item-fixture";
 const OTHER_ACCOUNT = "other-account-fixture";
@@ -117,7 +121,9 @@ async function connectionRow(db: Database, connectionId: string) {
 describe("syncAllConnections (integration)", () => {
   it("does nothing, successfully, when no connection exists", async () => {
     await withTwoUsers(async ({ db }) => {
-      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
+      await expect(
+        syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE }),
+      ).resolves.toEqual({
         ok: true,
         synced: 0,
         failed: 0,
@@ -132,7 +138,9 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
 
-      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
+      await expect(
+        syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE }),
+      ).resolves.toEqual({
         ok: true,
         synced: 1,
         failed: 0,
@@ -171,7 +179,9 @@ describe("syncAllConnections (integration)", () => {
       );
 
       const later = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
-      await expect(syncAllConnections(db, deps, { now: later })).resolves.toMatchObject({
+      await expect(
+        syncAllConnections(db, deps, { now: later, deadline: AMPLE_DEADLINE }),
+      ).resolves.toMatchObject({
         synced: 1,
       });
       expect(await transactionsOf(db, connectionId)).toHaveLength(3);
@@ -183,7 +193,7 @@ describe("syncAllConnections (integration)", () => {
     await withTwoUsers(async ({ db, userA }) => {
       await saveCredentials(db, userA);
       const connectionId = await seedBancoNeverSynced(db, userA);
-      await syncAllConnections(db, deps, { now: NOW });
+      await syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE });
       await db
         .update(bankConnection)
         .set({ lastSyncedAt: new Date("2026-09-30T06:00:00.000Z") })
@@ -193,7 +203,7 @@ describe("syncAllConnections (integration)", () => {
       await syncAllConnections(
         db,
         { ...deps, provider: recordingProvider(windows) },
-        { now: new Date("2026-10-01T06:00:00.000Z") },
+        { now: new Date("2026-10-01T06:00:00.000Z"), deadline: AMPLE_DEADLINE },
       );
 
       expect(windows).toContain("2026-09-23");
@@ -218,7 +228,7 @@ describe("syncAllConnections (integration)", () => {
         syncAllConnections(
           db,
           { ...deps, provider: recordingProvider(windows) },
-          { now: new Date("2026-10-01T06:00:00.000Z") },
+          { now: new Date("2026-10-01T06:00:00.000Z"), deadline: AMPLE_DEADLINE },
         ),
       ).resolves.toMatchObject({ synced: 1 });
 
@@ -237,7 +247,11 @@ describe("syncAllConnections (integration)", () => {
         .where(eq(bankConnection.id, connectionId));
 
       const windows: string[] = [];
-      await syncAllConnections(db, { ...deps, provider: recordingProvider(windows) }, { now: NOW });
+      await syncAllConnections(
+        db,
+        { ...deps, provider: recordingProvider(windows) },
+        { now: NOW, deadline: AMPLE_DEADLINE },
+      );
 
       expect(windows).toContain("2026-08-01");
       expect(windows).not.toContain("2025-09-01");
@@ -249,7 +263,7 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userA);
       await seedBancoNeverSynced(db, userA);
 
-      await syncAllConnections(db, deps, { now: NOW });
+      await syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE });
 
       const visibleToA = await createHouseholdAccountsRepository(
         householdScope(userA.session),
@@ -271,7 +285,9 @@ describe("syncAllConnections (integration)", () => {
       await saveCredentials(db, userB, FAKE_INVALID_CLIENT_SECRET);
       const rejected = await seedBancoNeverSynced(db, userB);
 
-      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
+      await expect(
+        syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE }),
+      ).resolves.toEqual({
         ok: true,
         synced: 1,
         failed: 1,
@@ -298,7 +314,9 @@ describe("syncAllConnections (integration)", () => {
       });
       const unreadable = await seedBancoNeverSynced(db, userB);
 
-      await expect(syncAllConnections(db, deps, { now: NOW })).resolves.toEqual({
+      await expect(
+        syncAllConnections(db, deps, { now: NOW, deadline: AMPLE_DEADLINE }),
+      ).resolves.toEqual({
         ok: false,
         synced: 0,
         failed: 2,
@@ -334,7 +352,11 @@ describe("syncAllConnections (integration)", () => {
         },
       };
 
-      await syncAllConnections(db, { ...deps, provider: offline }, { now: NOW });
+      await syncAllConnections(
+        db,
+        { ...deps, provider: offline },
+        { now: NOW, deadline: AMPLE_DEADLINE },
+      );
 
       expect(await connectionRow(db, missing)).toEqual({
         lastSyncedAt: previousSync,
@@ -372,7 +394,11 @@ describe("syncAllConnections (integration)", () => {
       };
 
       await expect(
-        syncAllConnections(db, { ...deps, provider: readsOnly }, { now: NOW }),
+        syncAllConnections(
+          db,
+          { ...deps, provider: readsOnly },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        ),
       ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 0, unreached: 0 });
       expect(await transactionsOf(db, connectionId)).not.toEqual([]);
     });
@@ -412,7 +438,11 @@ describe("syncAllConnections (integration)", () => {
       };
 
       await expect(
-        syncAllConnections(db, { ...deps, provider: deletingProvider }, { now: NOW }),
+        syncAllConnections(
+          db,
+          { ...deps, provider: deletingProvider },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        ),
       ).resolves.toEqual({ ok: true, synced: 1, failed: 0, gone: 1, unreached: 0 });
 
       expect(await connectionRow(db, healthy)).toMatchObject({ lastSyncedAt: NOW });
@@ -439,7 +469,11 @@ describe("syncAllConnections (integration)", () => {
       };
 
       await expect(
-        syncAllConnections(db, { ...deps, provider: deletingOnRejection }, { now: NOW }),
+        syncAllConnections(
+          db,
+          { ...deps, provider: deletingOnRejection },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        ),
       ).resolves.toEqual({ ok: true, synced: 0, failed: 0, gone: 1, unreached: 0 });
     });
   });
@@ -452,10 +486,11 @@ describe("syncAllConnections (integration)", () => {
       const second = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
 
       // The deadline and clock share one made-up axis, unrelated to real
-      // time: a 60000ms total budget schedules the run's own AbortController
-      // for a real 60s, comfortably longer than this test takes (the
-      // `finally` clears it before it ever fires), while the fake clock
-      // alone drives the per-connection "is there still room" check.
+      // time: a 60000ms total budget gives the first connection its own
+      // 30000ms slice (half the run), scheduling a real 30s AbortController
+      // comfortably longer than this test takes (the `finally` clears it
+      // before it ever fires), while the fake clock alone drives the
+      // per-connection "is there still room" check.
       let calls = 0;
       const clock = () => {
         calls += 1;
@@ -510,11 +545,12 @@ describe("syncAllConnections (integration)", () => {
         },
       };
 
-      // Real time only decides when the run's own AbortController fires
-      // (totalBudgetMs, a comfortable 150ms above ordinary setup latency);
-      // the fake clock reports this connection as starting with the whole
-      // budget still ahead of it, so the abort is on its own slow read
-      // (too_slow), not on where it landed in the queue.
+      // Real time only decides when this connection's own AbortController
+      // fires (half of totalBudgetMs, a comfortable 150ms above ordinary
+      // setup latency, so a real 75ms slice); the fake clock reports this
+      // connection as starting with the whole run budget still ahead of it,
+      // so the abort is on its own slow read (too_slow), not on where it
+      // landed in the queue.
       const realStart = Date.now();
       let calls = 0;
       const clock = () => {
@@ -576,6 +612,88 @@ describe("syncAllConnections (integration)", () => {
         lastSyncedAt: null,
         lastSyncError: "timed_out",
       });
+    });
+  });
+
+  // Round-2 fix for the starvation regression: a connection that goes slow at
+  // the provider sorts first every day (its last sync time stops moving), so
+  // without a per-connection bound it could hold the whole run's clock and
+  // starve everything behind it forever (#75). Bounding each connection to at
+  // most half the run means a stuck connection costs at most half a run.
+  it("does not let a connection that is too slow two runs in a row block a healthy one behind it", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await saveCredentials(db, userA);
+      const slow = await seedBancoNeverSynced(db, userA);
+      await saveCredentials(db, userB);
+      const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      const slowOnBanco: DataProvider = {
+        name: "fake",
+        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+          const real = await deps.provider.authenticate(credentials, options);
+          if (real.status !== "ok") {
+            return real;
+          }
+          const client = real.client;
+          return {
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => client.describeConnection(itemId),
+              listAccounts: (itemId) => client.listAccounts(itemId),
+              listInvestmentPositions: async (itemId) => {
+                if (itemId === FAKE_ITEM_BANCO_FIXTURE) {
+                  await new Promise((resolve) => setTimeout(resolve, 300));
+                }
+                return client.listInvestmentPositions(itemId);
+              },
+              listTransactionsSince: (accountId, since) =>
+                client.listTransactionsSince(accountId, since),
+            },
+          };
+        },
+      };
+
+      // A small, self-consistent fake axis: a 300ms total budget makes each
+      // connection's own slice a real 150ms, well under the slow
+      // connection's 300ms read, so it is reliably too_slow without the
+      // test waiting on the run's actual deadline. The fake clock reports
+      // plenty of runway left on every per-connection floor check
+      // (MIN_CONNECTION_SLICE_MS is about queue position, not this run's
+      // small budget), which is what lets the healthy connection behind the
+      // slow one still be attempted in the same run.
+      function runOnce() {
+        const axisStart = 1_000_000;
+        let calls = 0;
+        const clock = () => {
+          calls += 1;
+          return calls === 1 ? new Date(axisStart) : new Date(axisStart - 20_000);
+        };
+        return syncAllConnections(
+          db,
+          { ...deps, provider: slowOnBanco },
+          { now: NOW, deadline: new Date(axisStart + 300), clock },
+        );
+      }
+
+      await expect(runOnce()).resolves.toEqual({
+        ok: true,
+        synced: 1,
+        failed: 1,
+        gone: 0,
+        unreached: 0,
+      });
+      expect((await connectionRow(db, slow))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
+
+      await expect(runOnce()).resolves.toEqual({
+        ok: true,
+        synced: 1,
+        failed: 1,
+        gone: 0,
+        unreached: 0,
+      });
+      expect((await connectionRow(db, slow))?.lastSyncError).toBe("too_slow");
+      expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
     });
   });
 });

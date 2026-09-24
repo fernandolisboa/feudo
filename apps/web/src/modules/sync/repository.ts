@@ -34,6 +34,7 @@ import type {
   RateType,
 } from "./provider/provider";
 import type { UserScope } from "./scope";
+import { VOLUME_OR_TIME_FAILURES } from "./sync-status";
 
 // Every method runs equally on the pooled connection or inside a transaction
 // it opened, so a service can group several writes into one commit.
@@ -493,11 +494,6 @@ export type ConnectionToSync = {
   lastSyncedAt: Date | null;
   lastSyncError: string | null;
 };
-
-// A run's own time or volume, not something about the connection itself: the
-// daily job's window-narrowing (service.ts's NARROWING_FAILURES) is the fix
-// for these, not the back of tomorrow's queue.
-const VOLUME_OR_TIME_FAILURES = ["timed_out", "too_slow", "listing_too_long"];
 
 // Not scoped: the daily job's work list (ADR-0005). Connections with no
 // last_sync_error, or one of VOLUME_OR_TIME_FAILURES, go first (never-synced
