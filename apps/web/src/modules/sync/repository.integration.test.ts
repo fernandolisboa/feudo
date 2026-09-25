@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { bankConnectionConsent } from "./schema";
+import { bankConnection, bankConnectionConsent } from "./schema";
 import {
   ConnectionNotOwnedError,
   createHouseholdAccountsRepository,
@@ -109,6 +109,20 @@ describe("sync user-scoped repository isolation (integration)", () => {
       await expect(repositoryB.recordSyncFailure(db, connectionId, "failed")).rejects.toThrow(
         ConnectionNotOwnedError,
       );
+      await expect(repositoryB.recordSyncAttempt(db, connectionId, new Date())).rejects.toThrow(
+        ConnectionNotOwnedError,
+      );
+      await expect(repositoryB.narrowFirstSync(db, connectionId, "2026-08-01")).rejects.toThrow(
+        ConnectionNotOwnedError,
+      );
+      const [rowAfterRejectedWrites] = await db
+        .select({
+          lastSyncAttemptedAt: bankConnection.lastSyncAttemptedAt,
+          firstSyncSince: bankConnection.firstSyncSince,
+        })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(rowAfterRejectedWrites).toEqual({ lastSyncAttemptedAt: null, firstSyncSince: null });
       await expect(repositoryB.householdOfConnection(db, connectionId)).rejects.toThrow(
         ConnectionNotOwnedError,
       );

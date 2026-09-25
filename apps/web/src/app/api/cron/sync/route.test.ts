@@ -24,7 +24,13 @@ async function callCronRoute(): Promise<Response> {
 describe("GET /api/cron/sync", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
-    vi.mocked(runConnectionsSyncStep).mockResolvedValue({ ok: true, synced: 2, failed: 0 });
+    vi.mocked(runConnectionsSyncStep).mockResolvedValue({
+      ok: true,
+      synced: 2,
+      failed: 0,
+      gone: 0,
+      unreached: 0,
+    });
   });
 
   afterEach(() => {
@@ -51,12 +57,42 @@ describe("GET /api/cron/sync", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       ok: true,
-      steps: { connections: { ok: true, synced: 2, failed: 0 } },
+      steps: { connections: { ok: true, synced: 2, failed: 0, gone: 0, unreached: 0 } },
+    });
+  });
+
+  it("derives the step's budget from the route's own maxDuration", async () => {
+    await callCronRoute();
+
+    expect(runConnectionsSyncStep).toHaveBeenCalledWith(expect.anything(), { budgetMs: 60_000 });
+  });
+
+  it("reports 200 when a run only deleted or unreached connections, never failed one", async () => {
+    vi.mocked(runConnectionsSyncStep).mockResolvedValueOnce({
+      ok: true,
+      synced: 0,
+      failed: 0,
+      gone: 2,
+      unreached: 1,
+    });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      steps: { connections: { ok: true, synced: 0, failed: 0, gone: 2, unreached: 1 } },
     });
   });
 
   it("returns 500 when nothing could be synced or the step itself errored", async () => {
-    vi.mocked(runConnectionsSyncStep).mockResolvedValueOnce({ ok: false, synced: 0, failed: 3 });
+    vi.mocked(runConnectionsSyncStep).mockResolvedValueOnce({
+      ok: false,
+      synced: 0,
+      failed: 3,
+      gone: 0,
+      unreached: 0,
+    });
     const allFailed = await callCronRoute();
     vi.mocked(runConnectionsSyncStep).mockResolvedValueOnce({ error: "MissingSecretError" });
     const errored = await callCronRoute();

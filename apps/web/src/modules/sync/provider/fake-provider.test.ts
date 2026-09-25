@@ -7,6 +7,7 @@ import {
   FAKE_ITEM_CORRETORA_FIXTURE,
 } from "./fake-fixtures";
 import { createFakeProvider } from "./fake-provider";
+import { ProviderReadAbortedError } from "./provider";
 
 const provider = createFakeProvider(
   createDocumentHasher("unit-test-document-hash-key-with-32-chars!!"),
@@ -66,5 +67,31 @@ describe("createFakeProvider", () => {
     );
     expect(all).toHaveLength(3);
     expect(later).toHaveLength(1);
+  });
+
+  it("rejects authenticate itself when the run's own signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      provider.authenticate(
+        { clientId: "any", clientSecret: "any" },
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow(ProviderReadAbortedError);
+  });
+
+  it("throws from a client read once the run's own signal aborts after authenticating", async () => {
+    const controller = new AbortController();
+    const outcome = await provider.authenticate(
+      { clientId: "any", clientSecret: "any" },
+      { signal: controller.signal },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    controller.abort();
+
+    expect(() => outcome.client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).toThrow(
+      ProviderReadAbortedError,
+    );
   });
 });

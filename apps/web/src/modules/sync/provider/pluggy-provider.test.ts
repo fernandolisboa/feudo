@@ -9,7 +9,12 @@ import {
   FAKE_TRANSACTIONS,
 } from "./fake-fixtures";
 import { createPluggyProvider } from "./pluggy-provider";
-import { ProviderResponseShapeError, ProviderUnavailableError } from "./provider";
+import {
+  ProviderListingTooLongError,
+  ProviderReadAbortedError,
+  ProviderResponseShapeError,
+  ProviderUnavailableError,
+} from "./provider";
 
 const hasher = createDocumentHasher("unit-test-document-hash-key-with-32-chars!!");
 const credentials = { clientId: "client-id", clientSecret: "client-secret" };
@@ -35,6 +40,10 @@ function requestBody(init: RequestInit | undefined): string {
 function fakeFetch(route: Route): typeof fetch {
   recordedCalls.length = 0;
   const impl = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const signal = init?.signal;
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted", "AbortError");
+    }
     const url = new URL(
       typeof input === "string" ? input : input instanceof URL ? input : input.url,
     );
@@ -186,6 +195,39 @@ describe("createPluggyProvider", () => {
     expect(positions.map((position) => position.name)).toEqual(fixtures.map((f) => f.name));
   });
 
+  it("succeeds when a paged listing's last page is exactly the cap", async () => {
+    const fixture = FAKE_INVESTMENTS[FAKE_ITEM_BANCO_FIXTURE]?.[0];
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/investments": (url) => {
+            const page = Number(url.searchParams.get("page"));
+            return json({ results: [fixture], page, totalPages: 40 });
+          },
+        }),
+      ),
+    );
+    const positions = await client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE);
+    expect(positions).toHaveLength(40);
+  });
+
+  it("raises ProviderListingTooLongError when a paged listing still offers more past the cap", async () => {
+    const fixture = FAKE_INVESTMENTS[FAKE_ITEM_BANCO_FIXTURE]?.[0];
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/investments": (url) => {
+            const page = Number(url.searchParams.get("page"));
+            return json({ results: [fixture], page, totalPages: 41 });
+          },
+        }),
+      ),
+    );
+    await expect(client.listInvestmentPositions(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
+      ProviderListingTooLongError,
+    );
+  });
+
   it("follows the cursor to the end of a transactions listing", async () => {
     const fixtures = FAKE_TRANSACTIONS[CHECKING_ACCOUNT_FIXTURE] ?? [];
     const cursor = "2026-09-01T00:00:00.000Z";
@@ -301,7 +343,25 @@ describe("createPluggyProvider", () => {
     ).rejects.toThrow(ProviderResponseShapeError);
   });
 
-  it("raises ProviderResponseShapeError rather than truncating an endless listing", async () => {
+  it("succeeds when a cursor listing ends exactly at the cap", async () => {
+    const client = await authenticatedClient(
+      fakeFetch(
+        apiRoute({
+          "/v2/transactions": (url) => {
+            const after = url.searchParams.get("after");
+            const page = after === null ? 1 : Number(after);
+            const next = page < 40 ? `?after=${String(page + 1)}` : null;
+            return json({ results: [], next });
+          },
+        }),
+      ),
+    );
+    await expect(
+      client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
+    ).resolves.toEqual([]);
+  });
+
+  it("raises ProviderListingTooLongError rather than truncating an endless listing", async () => {
     let cursor = 0;
     const client = await authenticatedClient(
       fakeFetch(
@@ -315,7 +375,7 @@ describe("createPluggyProvider", () => {
     );
     await expect(
       client.listTransactionsSince(CHECKING_ACCOUNT_FIXTURE, "2026-09-01"),
-    ).rejects.toThrow(ProviderResponseShapeError);
+    ).rejects.toThrow(ProviderListingTooLongError);
   });
 
   it("raises ProviderResponseShapeError when a cursor does not move", async () => {
@@ -398,6 +458,43 @@ describe("createPluggyProvider", () => {
     );
     await expect(client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
       ProviderUnavailableError,
+    );
+  });
+
+  it("raises ProviderReadAbortedError, not a generic outage, when the run's own signal fires", async () => {
+    const controller = new AbortController();
+    const provider = createPluggyProvider(hasher, { fetchImpl: fakeFetch(apiRoute()) });
+    const authenticated = await provider.authenticate(credentials, { signal: controller.signal });
+    if (authenticated.status !== "ok") throw new Error("expected ok");
+    controller.abort();
+
+    await expect(authenticated.client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
+      ProviderReadAbortedError,
+    );
+  });
+
+  it("raises ProviderReadAbortedError, not a shape error, when the run signal fires while the body is still parsing", async () => {
+    const controller = new AbortController();
+    const customFetch: typeof fetch = (input) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input : input.url,
+      );
+      if (url.pathname === "/auth") {
+        return Promise.resolve(json({ apiKey: "jwt" }));
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(new Error("body stream aborted")),
+      } as unknown as Response);
+    };
+    const provider = createPluggyProvider(hasher, { fetchImpl: customFetch });
+    const authenticated = await provider.authenticate(credentials, { signal: controller.signal });
+    if (authenticated.status !== "ok") throw new Error("expected ok");
+    controller.abort();
+
+    await expect(authenticated.client.listAccounts(FAKE_ITEM_BANCO_FIXTURE)).rejects.toThrow(
+      ProviderReadAbortedError,
     );
   });
 

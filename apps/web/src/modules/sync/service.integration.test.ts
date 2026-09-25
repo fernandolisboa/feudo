@@ -26,12 +26,19 @@ import {
   deleteConnection,
   relabelAccount,
   removeCredentials,
+  syncAllConnections,
   type SyncDeps,
 } from "./service";
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
+import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 
 import type { Database } from "@/platform/db/client";
-import type { DataProvider, ProviderClient } from "./provider/provider";
+import {
+  ProviderListingTooLongError,
+  type AuthenticateOutcome,
+  type DataProvider,
+  type ProviderClient,
+} from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -307,6 +314,173 @@ describe("connectProvider (integration)", () => {
 
       expect((await connectBanco(db, userA)).status).toBe("ok");
       expect((await connectBanco(db, userA)).status).toBe("already_connected");
+    });
+  });
+
+  // A first sync's usual twelve-month window can be too long to page
+  // through for an item with a lot of history (#84); the wizard retries
+  // once, narrowed to the previous month, rather than reporting the
+  // connection unreachable.
+  it("retries a first sync once with a narrowed window after a too-long listing", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const windows: string[] = [];
+      let calls = 0;
+      const tooLongOnce: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (accountId, since) => {
+                windows.push(since);
+                calls += 1;
+                if (calls === 1) {
+                  throw new ProviderListingTooLongError("transactions");
+                }
+                return real.listTransactionsSince(accountId, since);
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: tooLongOnce },
+      );
+
+      expect(outcome.status).toBe("ok");
+      expect(windows.length).toBeGreaterThanOrEqual(2);
+      expect((windows[0] ?? "") < (windows[windows.length - 1] ?? "")).toBe(true);
+
+      const connectionId = outcome.status === "ok" ? outcome.connectionId : "";
+      const [row] = await db
+        .select({ firstSyncSince: bankConnection.firstSyncSince })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(row?.firstSyncSince).toBe(windows[windows.length - 1]);
+    });
+  });
+
+  // #84's narrowed retry (above) is persisted in the same transaction that
+  // creates the connection, so the daily job's own first attempt starts from
+  // that narrowed date rather than the usual twelve months: without this, a
+  // month with no transactions would send the daily job right back to the
+  // listing that was already too long to page through once.
+  it("has the daily job read from the wizard's narrowed date, not the usual twelve months, even when that month had no transactions", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const windows: string[] = [];
+      let calls = 0;
+      // The narrowed window is empty on purpose: this is the case the fix
+      // targets. If the daily job fell back to `firstSyncSince ??
+      // transactionsSince(now, null)`'s twelve-month default whenever
+      // `hasHistory` is still false, an empty narrowed month would send it
+      // straight back to the listing the wizard already found too long.
+      const emptyAfterNarrowing: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (_accountId, since) => {
+                windows.push(since);
+                calls += 1;
+                if (calls === 1) {
+                  throw new ProviderListingTooLongError("transactions");
+                }
+                return Promise.resolve([]);
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: emptyAfterNarrowing },
+      );
+      expect(outcome.status).toBe("ok");
+      const connectionId = outcome.status === "ok" ? outcome.connectionId : "";
+      const narrowedSince = narrowedFirstSyncSince(new Date());
+      const twelveMonthSince = transactionsSince(new Date(), null);
+      expect(windows[0]).toBe(twelveMonthSince);
+      expect(windows.slice(1)).toEqual(windows.slice(1).map(() => narrowedSince));
+      const windowsAfterConnect = windows.length;
+
+      const [afterConnect] = await db
+        .select({ firstSyncSince: bankConnection.firstSyncSince })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(afterConnect?.firstSyncSince).toBe(narrowedSince);
+
+      await syncAllConnections(
+        db,
+        { ...deps, provider: emptyAfterNarrowing },
+        { now: new Date(), deadline: new Date(Date.now() + 60_000) },
+      );
+
+      const windowsFromDailyJob = windows.slice(windowsAfterConnect);
+      expect(windowsFromDailyJob.length).toBeGreaterThan(0);
+      expect(windowsFromDailyJob).toEqual(windowsFromDailyJob.map(() => narrowedSince));
+    });
+  });
+
+  it("still reports provider_unavailable when the narrowed retry is also too long", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const alwaysTooLong: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: () => {
+                throw new ProviderListingTooLongError("transactions");
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: alwaysTooLong },
+      );
+
+      expect(outcome).toEqual({ status: "provider_unavailable" });
+      expect(await db.select().from(bankConnection)).toEqual([]);
     });
   });
 });

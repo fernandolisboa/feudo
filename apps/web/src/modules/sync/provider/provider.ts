@@ -49,6 +49,11 @@ export const normalizedTransactionSchema = z.object({
 });
 export type NormalizedTransaction = z.infer<typeof normalizedTransactionSchema>;
 
+// Shared with the sync service (service.ts's MIN_CONNECTION_SLICE_MS): a
+// connection with less time than one request timeout left on the run's
+// clock is not worth starting.
+export const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
+
 export type ProviderCredentials = { clientId: string; clientSecret: string };
 
 export type ProviderConnection = {
@@ -83,14 +88,51 @@ export class ProviderResponseShapeError extends Error {
   }
 }
 
+// A listing that still offers more pages once MAX_PAGES is reached: returning
+// what was read so far would store a truncated window and never ask for the
+// rest again, so both paginators throw instead of silently truncating.
+export class ProviderListingTooLongError extends Error {
+  readonly endpoint: string;
+
+  constructor(endpoint: string) {
+    super(`Data provider listing for ${endpoint} exceeded the page cap`);
+    this.name = "ProviderListingTooLongError";
+    this.endpoint = endpoint;
+  }
+}
+
+// Thrown by a provider client when a read is cut short by the run's own
+// AbortSignal (the sync job's deadline), as opposed to a per-request timeout
+// or an outage: the service resumes this connection next run instead of
+// treating it as a provider failure.
+export class ProviderReadAbortedError extends Error {
+  readonly endpoint: string;
+
+  constructor(endpoint: string) {
+    super(`Data provider read for ${endpoint} was aborted by the run deadline`);
+    this.name = "ProviderReadAbortedError";
+    this.endpoint = endpoint;
+  }
+}
+
+// An endpoint or collection name, as logged: the rest of a provider path is
+// an item id, which belongs in no log (used by both the Pluggy client and
+// the sync service's own failure logging).
+export function endpointCollection(endpoint: string): string {
+  return endpoint.split("/")[0] ?? "";
+}
+
 export type DescribeConnectionOutcome = Outcome<{ connection: ProviderConnection }, "not_found">;
 
 // One authenticated session against the provider, for the three reads
 // ADR-0005 names plus the "which institution is this item" read the wizard
 // needs before it creates a connection. Reading is all Feudo does: the
 // provider owns when a connection is re-read from the bank (ADR-0005).
-// Every method may throw ProviderUnavailableError or
-// ProviderResponseShapeError.
+// Every method may throw ProviderUnavailableError (an outage or a rejected
+// request), ProviderResponseShapeError (a payload Feudo cannot read),
+// ProviderListingTooLongError (a listing with more pages than the paginator
+// caps at) or, when authenticate() was given a signal, ProviderReadAbortedError
+// (the run's own deadline cut the read short).
 export interface ProviderClient {
   describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome>;
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]>;
@@ -105,5 +147,10 @@ export type AuthenticateOutcome = Outcome<{ client: ProviderClient }, "invalid_c
 
 export interface DataProvider {
   readonly name: "pluggy" | "fake";
-  authenticate(credentials: ProviderCredentials): Promise<AuthenticateOutcome>;
+  // `signal`, when given, is the sync run's own deadline (ADR-0005): every
+  // read the returned client performs for the rest of the run honours it.
+  authenticate(
+    credentials: ProviderCredentials,
+    options?: { signal?: AbortSignal },
+  ): Promise<AuthenticateOutcome>;
 }

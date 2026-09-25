@@ -89,6 +89,84 @@ answers 400, and Meu Pluggy refreshes it every 24 hours anyway (ADR-0005).
 `DATA_PROVIDER=pluggy|fake` (default `pluggy`) selects the implementation; `fake` is refused when
 `VERCEL_ENV=production` (`env.ts`).
 
+## The daily run (`/api/cron/sync`, `syncAllConnections`)
+
+The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, gone, unreached } } }`
+(or `{ error }` if the step itself threw before returning a count). Reading the counts:
+
+- `synced` / `failed`: connections attempted this run and how each ended; a failed one's
+  `bank_connection.last_sync_error` names why (`provider_unavailable`, `listing_too_long`,
+  `too_slow`, `timed_out`, `invalid_credentials`, `no_credentials`, `credentials_unreadable`,
+  `failed`).
+- `gone`: the connection was deleted (by its owner, through the app) while this run was reading it;
+  nothing was recorded for it, nothing to act on. Recording a failure and counting a connection as
+  `failed` happen in that order, so a delete racing the failure write is counted `gone`, never both.
+- `unreached`: the run's deadline (`runConnectionsSyncStep`'s `budgetMs`, from the route's own
+  `maxDuration`, minus `RUN_HEADROOM_MS`; ADR-0005) left too little time to start it; it is
+  untouched and picked up by tomorrow's run, sooner if it is one of the connections ordering keeps
+  near the front (see below).
+- `ok` is true unless at least one connection was attempted and every attempted one failed — a run
+  that only found deleted or unreached connections is not an incident.
+- An error other than `ConnectionNotOwnedError` raised while a connection is being attempted (a
+  transient database failure, a bug in a provider implementation) is caught for that connection
+  alone: counted `failed` and logged (`console.warn`) with the error's name and the connection's id
+  only, nothing else. The run moves on to the next connection instead of the whole step coming back
+  as `{ error }` for every connection in it.
+
+`bank_connection` carries two columns just for the daily job (migration
+`0011_sync_connection_attempt_and_narrowing.sql`, additive, both nullable), neither ever read
+anywhere else: `last_sync_attempted_at`, stamped at the start of every attempt — before any provider
+call, so even a connection that fails before it gets that far still moves — from that connection's
+own reading of the run's clock rather than the run's one shared instant, so two connections attempted
+in the same run keep their real order — and `first_sync_since`, the sticky narrowing memory described
+below.
+
+`listConnectionsToSync` orders strictly by `last_sync_attempted_at asc nulls first, created_at asc`
+and nothing else. Every connection rotates round-robin regardless of how its last attempt ended.
+Attempt-time ordering ensures this structurally and combines with the per-connection slice below so
+that even several stuck connections at the head of the queue cost the rest of it at most half a run
+each, not a turn that never comes.
+
+Every connection also gets its own abort budget, at most half the run's total (a local
+`maxConnectionSliceMs`, derived from the run's own deadline, not a second hard-coded number): it caps
+how long any single connection's reads — including authenticating, itself a provider read — can run
+before that connection's own `AbortController` cuts it. Without this bound a single slow connection
+could hold the whole run's clock by itself. Bounded per connection, a stuck connection costs at most
+half a run — the other half still rotates through the rest, so throughput degrades when one or more
+connections are stuck, it does not stop; every connection still gets its own turn on the next run,
+and the one after that.
+
+Three statuses are about running out of time or bandwidth, not the bank, and each means something
+different for what to do next:
+
+- `too_slow`: this connection's own abort budget ran out before its read finished, and it got its
+  full slice (half the run) to itself — its own listing is the likely reason.
+- `timed_out`: the same cut, but the run itself was close enough to its deadline that this
+  connection got less than its full slice — about where it landed in the queue, not its own size.
+- `listing_too_long`: a listing kept offering more pages than the provider paginators' cap.
+
+All three clear `last_sync_error` on the next successful sync like any other error. A first sync
+(no transactions in the ledger yet for this connection) that fails `listing_too_long` or `too_slow`
+sets `first_sync_since` to the previous month once, the first time it happens, if still unset. A lone
+`timed_out` does not narrow by itself, since on its own it says nothing about this connection's own
+size; but two deadline aborts in a row for the same connection, this run's `timed_out` following a
+`too_slow` or `timed_out` read off the row before this run's own outcome overwrites it, do narrow,
+since that pattern means the connection keeps losing its slice to something else in the queue rather
+than to its own history — otherwise a first sync queued behind a stuck connection would land just
+under its slice every single run and never make progress. Once set, `first_sync_since` is not touched
+again: an intervening `timed_out` or provider outage, or even a narrowed sync that succeeds with zero
+new transactions, leaves it as is. It only stops mattering once the ledger actually holds a
+transaction for this connection, at which point the incremental window applies and `first_sync_since`
+is never read again. A connection whose first sync is already narrowed and still comes back
+`too_slow` or `listing_too_long` cannot narrow any further: there is no month narrower than the one
+already set, so it keeps failing visibly at up to half the run's budget every run and needs a human,
+not another retry — an operator signal that its own history, not the run's clock, is the problem. The
+wizard's own first sync
+(`connectProvider`/`addConnection`) gets a one-shot narrowed retry inline on `listing_too_long`; on
+success it persists that narrowed date as `first_sync_since` in the same transaction that creates the
+connection, so the daily job starts from it too instead of reverting to the full twelve months if the
+narrowed month turns out to have had no transactions.
+
 ## Environment
 
 | variable            | where                                        | notes                                                                                                                                              |
