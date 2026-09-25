@@ -39,6 +39,10 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
     "href",
     "https://meu.pluggy.ai",
   );
+  await expect(page.getByRole("link", { name: "Abrir o Pluggy Dashboard" })).toHaveAttribute(
+    "href",
+    "https://dashboard.pluggy.ai",
+  );
   await page.getByRole("button", { name: "Já tenho minhas credenciais" }).click();
 
   await expect(page.getByRole("heading", { name: "Cole suas credenciais" })).toBeVisible();

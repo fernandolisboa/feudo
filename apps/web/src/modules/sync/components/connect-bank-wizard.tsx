@@ -14,7 +14,7 @@ import { interpolate } from "@/lib/interpolate";
 
 import { acceptConsentAction, connectProviderAction, type AcceptConsentState } from "../actions";
 import { CONSENT_SCOPE_VERSION } from "../consent-text";
-import { MEU_PLUGGY_URL, t } from "../strings";
+import { MEU_PLUGGY_URL, PLUGGY_DASHBOARD_URL, t } from "../strings";
 
 type Step =
   { kind: "consent" } | { kind: "guide"; consentId: string } | { kind: "form"; consentId: string };
@@ -79,14 +79,22 @@ function GuideStep({ onBack, onContinue }: { onBack: () => void; onContinue: () 
           <li key={step}>{step}</li>
         ))}
       </ol>
-      <Button
-        variant="outline"
-        className="self-start"
-        render={<Link href={MEU_PLUGGY_URL} target="_blank" rel="noopener noreferrer" />}
-      >
-        {t.guide.link}
-        <ExternalLink className="size-4" />
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          render={<Link href={MEU_PLUGGY_URL} target="_blank" rel="noopener noreferrer" />}
+        >
+          {t.guide.link}
+          <ExternalLink className="size-4" />
+        </Button>
+        <Button
+          variant="outline"
+          render={<Link href={PLUGGY_DASHBOARD_URL} target="_blank" rel="noopener noreferrer" />}
+        >
+          {t.guide.dashboardLink}
+          <ExternalLink className="size-4" />
+        </Button>
+      </div>
       <div className="flex justify-between">
         <Button type="button" variant="ghost" onClick={onBack}>
           {t.guide.back}

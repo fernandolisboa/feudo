@@ -16,14 +16,15 @@ const en = {
     overline: "Step 2 of 3",
     title: "Set up Meu Pluggy",
     intro:
-      "Meu Pluggy is the free personal Open Finance service Feudo reads from. You create the account yourself, with your own CPF, and Feudo only receives what you connect there.",
+      "Meu Pluggy is the free personal Open Finance service Feudo reads from. It takes two Pluggy sites: Meu Pluggy, where you connect your banks, and the Pluggy Dashboard, where you get the credentials Feudo asks for next. Both accounts are yours, and Feudo only receives what you connect there.",
     steps: [
-      "Create an account at Meu Pluggy with your email and CPF.",
-      "In Meu Pluggy, connect the banks and brokers you want to see in Feudo.",
-      "Open the developer section and generate an API client. Copy the client id and the client secret.",
-      "Copy the Item ID of the connection you want to bring into Feudo. Each connected bank has one.",
+      "At Meu Pluggy, create an account with your email and CPF and connect the banks and brokers you want to see in Feudo.",
+      "At the Pluggy Dashboard, create a separate account, preferably with the same email. Ignore the 15-day trial notice: it does not apply to personal use.",
+      "In the Dashboard, create an application. Its Application tab shows the client id and the client secret.",
+      "Inside the application, create a connection with the MeuPluggy connector (not your bank's) and sign in with your Meu Pluggy account. Each bank becomes one connection, and its Item ID is in the connection details.",
     ],
     link: "Open Meu Pluggy",
+    dashboardLink: "Open the Pluggy Dashboard",
     continue: "I have my credentials",
     back: "Back",
   },
@@ -35,7 +36,8 @@ const en = {
     clientIdLabel: "Client id",
     clientSecretLabel: "Client secret",
     itemIdLabel: "Item ID of the connection",
-    itemIdHelp: "The identifier of one bank connected in Meu Pluggy, in the 8-4-4-4-12 format.",
+    itemIdHelp:
+      "The Item ID of one MeuPluggy connection in the Pluggy Dashboard, in the 8-4-4-4-12 format.",
     submit: "Connect and sync",
     submitting: "Connecting…",
     back: "Back",
@@ -92,7 +94,7 @@ const en = {
     addDialog: {
       title: "Add a connection",
       description:
-        "Paste the Item ID of another bank connected in Meu Pluggy. Your saved credentials are reused.",
+        "Paste the Item ID of another MeuPluggy connection from the Pluggy Dashboard. Your saved credentials are reused.",
       itemIdLabel: "Item ID of the connection",
       submit: "Add and sync",
       cancel: "Cancel",
@@ -123,7 +125,8 @@ const en = {
     itemNotFound: "No connection with this Item ID was found in your Meu Pluggy account.",
     alreadyConnected: "This connection is already in Feudo.",
     providerUnavailable: "Meu Pluggy did not answer. Try again in a few minutes.",
-    rateLimited: "Too many connection attempts. Wait a few minutes and try again.",
+    rateLimited:
+      "Too many connection attempts. Wait 15 minutes before trying again: every attempt in the meantime restarts the wait.",
     noCredentials: "Save your Meu Pluggy credentials first.",
     credentialsUnreadable:
       "We could not read your saved credentials. Remove them and enter them again.",
@@ -152,14 +155,15 @@ const ptBR = {
     overline: "Passo 2 de 3",
     title: "Configure o Meu Pluggy",
     intro:
-      "O Meu Pluggy é o serviço gratuito de Open Finance pessoal de onde o Feudo lê seus dados. Você cria a conta por conta própria, com o seu CPF, e o Feudo só recebe o que você conectar lá.",
+      "O Meu Pluggy é o serviço gratuito de Open Finance pessoal de onde o Feudo lê seus dados. São dois sites da Pluggy: o Meu Pluggy, onde você conecta seus bancos, e o Pluggy Dashboard, onde você pega as credenciais que o Feudo pede no próximo passo. As duas contas são suas, e o Feudo só recebe o que você conectar lá.",
     steps: [
-      "Crie uma conta no Meu Pluggy com seu e-mail e CPF.",
-      "No Meu Pluggy, conecte os bancos e corretoras que você quer ver no Feudo.",
-      "Abra a área de desenvolvedor e gere um client de API. Copie o client id e o client secret.",
-      "Copie o Item ID da conexão que você quer trazer para o Feudo. Cada banco conectado tem um.",
+      "No Meu Pluggy, crie uma conta com seu e-mail e CPF e conecte os bancos e corretoras que você quer ver no Feudo.",
+      "No Pluggy Dashboard, crie outra conta, de preferência com o mesmo e-mail. Pode ignorar o aviso de teste de 15 dias: ele não vale para uso pessoal.",
+      "No Dashboard, crie uma aplicação. O client id e o client secret ficam na aba Aplicação.",
+      "Dentro da aplicação, crie uma conexão com o conector MeuPluggy (não com o do seu banco) e entre com sua conta do Meu Pluggy. Cada banco vira uma conexão, e o Item ID aparece nos detalhes dela.",
     ],
     link: "Abrir o Meu Pluggy",
+    dashboardLink: "Abrir o Pluggy Dashboard",
     continue: "Já tenho minhas credenciais",
     back: "Voltar",
   },
@@ -171,7 +175,7 @@ const ptBR = {
     clientIdLabel: "Client id",
     clientSecretLabel: "Client secret",
     itemIdLabel: "Item ID da conexão",
-    itemIdHelp: "O identificador de um banco conectado no Meu Pluggy, no formato 8-4-4-4-12.",
+    itemIdHelp: "O Item ID de uma conexão MeuPluggy no Pluggy Dashboard, no formato 8-4-4-4-12.",
     submit: "Conectar e sincronizar",
     submitting: "Conectando…",
     back: "Voltar",
@@ -228,7 +232,7 @@ const ptBR = {
     addDialog: {
       title: "Adicionar conexão",
       description:
-        "Cole o Item ID de outro banco conectado no Meu Pluggy. Suas credenciais salvas são reaproveitadas.",
+        "Cole o Item ID de outra conexão MeuPluggy do Pluggy Dashboard. Suas credenciais salvas são reaproveitadas.",
       itemIdLabel: "Item ID da conexão",
       submit: "Adicionar e sincronizar",
       cancel: "Cancelar",
@@ -258,7 +262,8 @@ const ptBR = {
     itemNotFound: "Nenhuma conexão com esse Item ID foi encontrada na sua conta do Meu Pluggy.",
     alreadyConnected: "Essa conexão já está no Feudo.",
     providerUnavailable: "O Meu Pluggy não respondeu. Tente de novo em alguns minutos.",
-    rateLimited: "Muitas tentativas de conexão. Espere alguns minutos e tente de novo.",
+    rateLimited:
+      "Muitas tentativas de conexão. Espere 15 minutos antes de tentar de novo: cada tentativa nesse meio-tempo recomeça a espera.",
     noCredentials: "Salve suas credenciais do Meu Pluggy primeiro.",
     credentialsUnreadable:
       "Não foi possível ler as credenciais salvas. Remova as credenciais e informe-as de novo.",
@@ -274,3 +279,4 @@ const syncStrings = { en, ptBR };
 export const t = syncStrings.ptBR;
 
 export const MEU_PLUGGY_URL = "https://meu.pluggy.ai";
+export const PLUGGY_DASHBOARD_URL = "https://dashboard.pluggy.ai";

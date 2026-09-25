@@ -37,9 +37,12 @@ credential, consent or connection; household A never lists or relabels household
    belongs to the session's user, is at most 24h old (`CONSENT_MAX_AGE_MS`) and does not already
    back a connection (one consent, one connection). Consents that never backed a connection are
    pruned daily once older than that.
-2. **Guide**: the steps to create a Meu Pluggy account, connect banks there, generate an API client
-   and copy the Item ID of one connection. Pluggy's API has no list-items endpoint, so the wizard
-   asks for the Item ID instead of listing the user's connections.
+2. **Guide**: the two Pluggy sites the member uses. At `meu.pluggy.ai` they create the account and
+   connect their banks. At `dashboard.pluggy.ai` (a separate signup) they create an application,
+   whose Application tab holds the client id and secret, then create one connection per bank with
+   the **MeuPluggy** connector; that connection's Item ID is what Feudo asks for. Meu Pluggy itself
+   has no developer area. Pluggy's API has no list-items endpoint, so the wizard asks for the Item
+   ID instead of listing the user's connections.
 3. **Credentials** (`connectProviderAction` → `sync.connectProvider`): authenticates against the
    provider first (`invalid_credentials` saves nothing), stores the credentials as one AES-256-GCM
    envelope (`enc:v1:<keyId>:…`, `crypto.ts`), reads the item and its accounts and investment
@@ -183,5 +186,5 @@ the preview deployment.
 
 Meu Pluggy has no sandbox, so the real provider is checked by hand on a preview or production
 deployment with `DATA_PROVIDER` unset: sign in, `/conectar-banco`, accept the consent, paste the
-client id, client secret and one Item ID from the Meu Pluggy dashboard, and confirm the accounts
+client id, client secret and one MeuPluggy Item ID from `dashboard.pluggy.ai`, and confirm the accounts
 land in the overview with the right balances. Record the result in the PR that changes the provider.
