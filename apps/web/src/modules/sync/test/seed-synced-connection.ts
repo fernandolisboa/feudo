@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 import type { NormalizedAccount, NormalizedTransaction } from "../provider/provider";
-import { createSyncUserRepository } from "../repository";
+import { createSyncUserRepository, type MoveAccountResult } from "../repository";
 import { bankAccount } from "../schema";
 import type { SeededUser } from "./with-two-users";
 
@@ -57,7 +57,7 @@ export async function seedSyncedConnection(
   db: Database,
   owner: SeededUser,
   options: {
-    assignTo: HouseholdScope | null;
+    household: HouseholdScope;
     itemId?: string;
     accounts?: NormalizedAccount[];
     transactions?: NormalizedTransaction[];
@@ -73,9 +73,9 @@ export async function seedSyncedConnection(
     institutionName: "Banco Fixture",
     institutionProviderId: "601",
     consentId,
+    defaultHousehold: options.household,
   });
   await repository.upsertAccounts(db, connectionId, options.accounts ?? [seedAccount()], {
-    assignTo: options.assignTo,
     syncedAt,
   });
   await repository.upsertTransactions(db, connectionId, options.transactions ?? [], { syncedAt });
@@ -91,4 +91,13 @@ export async function seedSyncedConnection(
       accounts.map((account) => [account.providerAccountId, account.id]),
     ),
   };
+}
+
+export async function moveSeededAccount(
+  db: Database,
+  owner: SeededUser,
+  accountId: string,
+  householdId: string,
+): Promise<MoveAccountResult> {
+  return createSyncUserRepository(owner.scope).moveAccount(db, { accountId, householdId });
 }

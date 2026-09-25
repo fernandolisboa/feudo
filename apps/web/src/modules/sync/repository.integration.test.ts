@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import { bankConnection, bankConnectionConsent } from "./schema";
+import { bankAccount, bankConnection, bankConnectionConsent } from "./schema";
 import {
   ConnectionNotOwnedError,
   createHouseholdAccountsRepository,
@@ -9,8 +9,9 @@ import {
   pruneOldAuthAttempts,
   pruneOrphanConsents,
 } from "./repository";
-import { householdScope } from "@/modules/households";
-import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
+import { member } from "@/modules/auth/schema";
+import { householdScope, type HouseholdScope } from "@/modules/households";
+import { joinHousehold, withTwoUsers, type TwoUsers } from "./test/with-two-users";
 
 import type { NormalizedAccount } from "./provider/provider";
 import type { Database } from "@/platform/db/client";
@@ -38,22 +39,26 @@ function account(overrides: Partial<NormalizedAccount> = {}): NormalizedAccount 
 async function connectFor(
   db: Database,
   owner: TwoUsers["userA"],
-  itemId = ITEM_ID,
+  options: { itemId?: string; household?: HouseholdScope; accounts?: NormalizedAccount[] } = {},
 ): Promise<string> {
   const repository = createSyncUserRepository(owner.scope);
   const consentId = await repository.createConsent(db, { scopeVersion: "v", scopeText: "text" });
   const connectionId = await repository.createConnection(db, {
     provider: "pluggy",
-    providerItemId: itemId,
+    providerItemId: options.itemId ?? ITEM_ID,
     institutionName: "Banco Fixture",
     institutionProviderId: "601",
     consentId,
+    defaultHousehold: options.household ?? householdScope(owner.session),
   });
-  await repository.upsertAccounts(db, connectionId, [account()], {
-    assignTo: householdScope(owner.session),
+  await repository.upsertAccounts(db, connectionId, options.accounts ?? [account()], {
     syncedAt: new Date(),
   });
   return connectionId;
+}
+
+function householdAccounts(household: string, viewer: TwoUsers["userA"]) {
+  return createHouseholdAccountsRepository({ householdId: household }, viewer.scope);
 }
 
 describe("sync user-scoped repository isolation (integration)", () => {
@@ -92,16 +97,14 @@ describe("sync user-scoped repository isolation (integration)", () => {
           institutionName: "x",
           institutionProviderId: "1",
           consentId: (await repositoryA.findConnection(db, connectionId))?.consentId ?? "",
+          defaultHousehold: householdScope(userB.session),
         }),
       ).rejects.toThrow();
       await expect(
         repositoryB.markSynced(db, connectionId, { syncedAt: new Date(), error: null }),
       ).rejects.toThrow(ConnectionNotOwnedError);
       await expect(
-        repositoryB.upsertAccounts(db, connectionId, [account()], {
-          assignTo: null,
-          syncedAt: new Date(),
-        }),
+        repositoryB.upsertAccounts(db, connectionId, [account()], { syncedAt: new Date() }),
       ).rejects.toThrow(ConnectionNotOwnedError);
       await expect(
         repositoryB.upsertTransactions(db, connectionId, [], { syncedAt: new Date() }),
@@ -123,9 +126,14 @@ describe("sync user-scoped repository isolation (integration)", () => {
         .from(bankConnection)
         .where(eq(bankConnection.id, connectionId));
       expect(rowAfterRejectedWrites).toEqual({ lastSyncAttemptedAt: null, firstSyncSince: null });
-      await expect(repositoryB.householdOfConnection(db, connectionId)).rejects.toThrow(
-        ConnectionNotOwnedError,
-      );
+      expect(await repositoryB.listOwnedAccounts(db)).toEqual([]);
+      const [accountOfA] = await repositoryA.listOwnedAccounts(db);
+      expect(
+        await repositoryB.moveAccount(db, {
+          accountId: accountOfA?.id ?? "",
+          householdId: userB.session.householdId,
+        }),
+      ).toBe("not_found");
       await expect(repositoryB.hasTransactions(db, connectionId)).rejects.toThrow(
         ConnectionNotOwnedError,
       );
@@ -163,7 +171,6 @@ describe("sync user-scoped repository isolation (integration)", () => {
       await accounts.relabel(db, { accountId: first?.id ?? "", label: "shared" });
 
       await repository.upsertAccounts(db, connectionId, [account({ balanceCentavos: 1 })], {
-        assignTo: null,
         syncedAt: new Date(),
       });
 
@@ -289,6 +296,151 @@ describe("pruneOrphanConsents (integration)", () => {
       expect(await repository.findConsent(db, oldOrphan)).toBeUndefined();
       expect(await repository.findConsent(db, freshOrphan)).toBeDefined();
       expect(await repository.findConsent(db, backing)).toBeDefined();
+    });
+  });
+});
+
+describe("a member leaving a household (integration, #74)", () => {
+  it("unassigns the leaver's accounts there, keeps them elsewhere, and assigns nothing new", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      const repositoryB = createSyncUserRepository(userB.scope);
+      const membershipInA = await joinHousehold(db, userB.id, householdA);
+      const intoA = await connectFor(db, userB, { household: { householdId: householdA } });
+      await connectFor(db, userB, { itemId: "item-in-b", household: { householdId: householdB } });
+      expect(await householdAccounts(householdA, userA).list(db)).toHaveLength(1);
+
+      await db.delete(member).where(eq(member.id, membershipInA));
+
+      expect(await householdAccounts(householdA, userA).list(db)).toEqual([]);
+      expect(await householdAccounts(householdB, userB).list(db)).toHaveLength(1);
+      await repositoryB.upsertAccounts(
+        db,
+        intoA,
+        [account(), account({ providerAccountId: "acc-new", name: "Nova" })],
+        { syncedAt: new Date() },
+      );
+      expect(await householdAccounts(householdA, userA).list(db)).toEqual([]);
+      const owned = await repositoryB.listOwnedAccounts(db);
+      expect(
+        owned.filter((row) => row.connectionId === intoA).map((row) => [row.name, row.householdId]),
+      ).toEqual([
+        ["Conta corrente", null],
+        ["Nova", null],
+      ]);
+      const [connection] = await db
+        .select({ defaultHouseholdId: bankConnection.defaultHouseholdId })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, intoA));
+      expect(connection?.defaultHouseholdId).toBeNull();
+    });
+  });
+
+  it("leaves the other members' accounts in the household", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
+      const membershipInA = await joinHousehold(db, userB.id, householdA);
+      await connectFor(db, userA);
+      await connectFor(db, userB, { household: { householdId: householdA } });
+
+      await db.delete(member).where(eq(member.id, membershipInA));
+
+      const remaining = await householdAccounts(householdA, userA).list(db);
+      expect(remaining.map((row) => row.connectedByUserId)).toEqual([userA.id]);
+    });
+  });
+});
+
+describe("the household new accounts land in (integration, #76)", () => {
+  it("assigns accounts listed after a connection started empty to the household chosen at connect time", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createSyncUserRepository(userA.scope);
+      const connectionId = await connectFor(db, userA, { accounts: [] });
+      expect(await repository.listOwnedAccounts(db)).toEqual([]);
+
+      await repository.upsertAccounts(db, connectionId, [account()], { syncedAt: new Date() });
+
+      const [row] = await repository.listOwnedAccounts(db);
+      expect(row).toMatchObject({
+        householdId: userA.session.householdId,
+        householdName: "Household A",
+      });
+    });
+  });
+});
+
+describe("moveAccount (integration, #13)", () => {
+  it("moves an owned account to another household of the owner, and later accounts follow it", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      const repositoryB = createSyncUserRepository(userB.scope);
+      await joinHousehold(db, userB.id, householdA);
+      const connectionId = await connectFor(db, userB, { household: { householdId: householdA } });
+      const [owned] = await repositoryB.listOwnedAccounts(db);
+
+      expect(
+        await repositoryB.moveAccount(db, { accountId: owned?.id ?? "", householdId: householdB }),
+      ).toBe("ok");
+
+      expect(await householdAccounts(householdA, userA).list(db)).toEqual([]);
+      expect((await householdAccounts(householdB, userB).list(db)).map((row) => row.id)).toEqual([
+        owned?.id,
+      ]);
+      await repositoryB.upsertAccounts(
+        db,
+        connectionId,
+        [account({ providerAccountId: "acc-later", name: "Depois" })],
+        { syncedAt: new Date() },
+      );
+      const [later] = await db
+        .select({ householdId: bankAccount.householdId })
+        .from(bankAccount)
+        .where(
+          and(
+            eq(bankAccount.connectionId, connectionId),
+            eq(bankAccount.providerAccountId, "acc-later"),
+          ),
+        );
+      expect(later?.householdId).toBe(householdB);
+    });
+  });
+
+  it("brings an unassigned account back into a household of its owner", async () => {
+    await withTwoUsers(async ({ db, userB, householdA, householdB }) => {
+      const repositoryB = createSyncUserRepository(userB.scope);
+      const membershipInA = await joinHousehold(db, userB.id, householdA);
+      await connectFor(db, userB, { household: { householdId: householdA } });
+      await db.delete(member).where(eq(member.id, membershipInA));
+      const [unassigned] = await repositoryB.listOwnedAccounts(db);
+      expect(unassigned?.householdId).toBeNull();
+
+      expect(
+        await repositoryB.moveAccount(db, {
+          accountId: unassigned?.id ?? "",
+          householdId: householdB,
+        }),
+      ).toBe("ok");
+
+      expect(await householdAccounts(householdB, userB).list(db)).toHaveLength(1);
+    });
+  });
+
+  it("refuses a household the owner does not belong to, and an account someone else owns", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      const repositoryA = createSyncUserRepository(userA.scope);
+      const repositoryB = createSyncUserRepository(userB.scope);
+      await joinHousehold(db, userA.id, householdB);
+      await connectFor(db, userB);
+      const [ofB] = await repositoryB.listOwnedAccounts(db);
+      const accountId = ofB?.id ?? "";
+
+      expect(await repositoryB.moveAccount(db, { accountId, householdId: householdA })).toBe(
+        "not_member",
+      );
+      expect(await repositoryA.moveAccount(db, { accountId, householdId: householdB })).toBe(
+        "not_found",
+      );
+      expect(await repositoryA.moveAccount(db, { accountId, householdId: householdA })).toBe(
+        "not_found",
+      );
+      expect((await repositoryB.listOwnedAccounts(db))[0]?.householdId).toBe(householdB);
     });
   });
 });

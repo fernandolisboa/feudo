@@ -94,6 +94,9 @@ export const bankConnectionConsent = pgTable(
 // User-scoped (ADR-0001): one row per institution the user connected at the
 // provider (a Pluggy "item"). Belongs to the user who authorized it, never to
 // a household; its accounts carry the household assignment instead.
+// default_household_id is not a scope: it only says where an account the
+// provider starts listing later lands (#76), and is cleared by the database
+// the moment its owner stops being a member there (member_departure_trigger).
 export const bankConnection = pgTable(
   "bank_connection",
   {
@@ -114,6 +117,9 @@ export const bankConnection = pgTable(
     lastSyncError: text("last_sync_error"),
     lastSyncAttemptedAt: timestamp("last_sync_attempted_at", { withTimezone: true }),
     firstSyncSince: date("first_sync_since", { mode: "string" }),
+    defaultHouseholdId: text("default_household_id").references(() => organization.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

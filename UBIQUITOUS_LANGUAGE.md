@@ -30,6 +30,7 @@
 | Account                                     | conta                                          | bank account only                                                            |
 | Shared account                              | conta da casa                                  |                                                                              |
 | Individual account                          | conta individual                               |                                                                              |
+| Unassigned account                          | sem casa                                       | shown to the owner only, e.g. "Sem casa"                                     |
 | Institution                                 | instituição                                    | "banco" is acceptable in copy                                                |
 | Transaction                                 | transação                                      | never "lançamento"                                                           |
 | Internal transfer                           | transferência interna                          |                                                                              |

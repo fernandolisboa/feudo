@@ -47,6 +47,7 @@ import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window
 import type {
   AddConnectionFormInput,
   ConnectProviderFormInput,
+  MoveAccountFormInput,
   RelabelAccountFormInput,
   RenameConnectionFormInput,
 } from "./validation";
@@ -206,7 +207,7 @@ async function establishConnection(
   input: {
     providerItemId: string;
     consentId: string;
-    assignTo: HouseholdScope;
+    household: HouseholdScope;
     institutionName?: string;
   },
 ): Promise<Outcome<EstablishedConnection, ConnectionFailure>> {
@@ -260,9 +261,9 @@ async function establishConnection(
         institutionName: input.institutionName ?? institution.institutionName,
         institutionProviderId: institution.institutionProviderId,
         consentId: input.consentId,
+        defaultHousehold: input.household,
       });
       const accountsCount = await repository.upsertAccounts(tx, connectionId, snapshot.accounts, {
-        assignTo: input.assignTo,
         syncedAt,
       });
       await repository.upsertTransactions(tx, connectionId, snapshot.transactions, { syncedAt });
@@ -369,7 +370,7 @@ export async function connectProvider(
   return establishConnection(authenticated.client, repository, db, {
     providerItemId: input.providerItemId,
     consentId: input.consentId,
-    assignTo: householdScope(session),
+    household: householdScope(session),
     institutionName: input.institutionName,
   });
 }
@@ -414,7 +415,7 @@ export async function addConnection(
   return establishConnection(authenticated.client, repository, db, {
     providerItemId: input.providerItemId,
     consentId: consent.consentId,
-    assignTo: householdScope(session),
+    household: householdScope(session),
     institutionName: input.institutionName,
   });
 }
@@ -488,6 +489,24 @@ export async function relabelAccount(
       userScope(session),
     ).relabel(db, { accountId: input.accountId, label: input.label });
     return { status: updated ? "ok" : "not_found" };
+  } catch {
+    return { status: "failed" };
+  }
+}
+
+export type MoveAccountOutcome = SimpleOutcome<"ok" | "not_found" | "not_member" | "failed">;
+
+// Any household the owner belongs to, not only the active one: an account
+// left without a household when its owner departed has to be reachable from
+// wherever that owner works now (#13).
+export async function moveAccount(
+  input: MoveAccountFormInput,
+  session: CurrentSession,
+  db: Database,
+): Promise<MoveAccountOutcome> {
+  try {
+    const status = await createSyncUserRepository(userScope(session)).moveAccount(db, input);
+    return { status };
   } catch {
     return { status: "failed" };
   }
@@ -631,12 +650,8 @@ async function syncConnection(
   }
 
   try {
-    const assignTo = await repository.householdOfConnection(db, connection.id);
     await db.transaction(async (tx) => {
-      await repository.upsertAccounts(tx, connection.id, snapshot.accounts, {
-        assignTo,
-        syncedAt: now,
-      });
+      await repository.upsertAccounts(tx, connection.id, snapshot.accounts, { syncedAt: now });
       await repository.upsertTransactions(tx, connection.id, snapshot.transactions, {
         syncedAt: now,
       });

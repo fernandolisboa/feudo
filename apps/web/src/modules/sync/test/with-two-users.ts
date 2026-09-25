@@ -1,4 +1,4 @@
-import { organization, user } from "@/modules/auth/schema";
+import { member, organization, user } from "@/modules/auth/schema";
 import { withTestDb } from "@/platform/db/test/harness";
 
 import type { Database } from "@/platform/db/client";
@@ -31,11 +31,27 @@ async function seedUser(db: Database, name: string, householdId: string): Promis
     termsVersion: "test",
     termsAcceptedAt: new Date(),
   });
+  await joinHousehold(db, id, householdId, "owner");
   return {
     id,
     scope: scopeForUser(id),
     session: { userId: id, name, email: `${id}@example.com`, householdId, theme: "caderno" },
   };
+}
+
+// A member row, as Better Auth writes one: new accounts only land in a
+// household their connection's owner belongs to (#74).
+export async function joinHousehold(
+  db: Database,
+  userId: string,
+  householdId: string,
+  role: "owner" | "admin" | "member" = "member",
+): Promise<string> {
+  const id = crypto.randomUUID();
+  await db
+    .insert(member)
+    .values({ id, organizationId: householdId, userId, role, createdAt: new Date() });
+  return id;
 }
 
 // Isolation-test helper for the user-scoped and household-scoped tables of

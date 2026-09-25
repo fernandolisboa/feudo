@@ -46,8 +46,12 @@ _Avoid_: aggregator (in user-facing text), Pluggy (as a generic term)
 The secret a user obtains from the data provider and hands to Feudo so it can read that user's data. Stored encrypted, shown to nobody, removable by the user at any time.
 
 **Account**:
-A checking, savings, credit-card or investment position that a bank connection exposes. An account is assigned to exactly one household and is visible to every member of that household.
+A checking, savings, credit-card or investment position that a bank connection exposes. An account is assigned to at most one household, always one its connection's owner belongs to, and is visible to every member of that household. The owner can move it, with its transactions, to any other household they belong to. New accounts a connection starts listing land in the connection's household: the owner's active household when connecting, then wherever the owner last moved one of its accounts.
 _Avoid_: wallet, balance
+
+**Unassigned account**:
+An account in no household, visible only to its connection's owner, who sees it flagged under "Suas conexões" and can move it into a household. An account becomes unassigned when its household is deleted, or when its connection's owner leaves or is removed from that household: the household stops seeing it, and its transactions, in the same transaction that ends the membership (ADR-0001).
+_Avoid_: orphan account, hidden account
 
 **Shared account**:
 An account the household treats as the household's own, for reporting purposes. The label never restricts visibility.

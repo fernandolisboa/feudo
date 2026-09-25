@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 
+import { member } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
 import {
+  moveSeededAccount,
   seedAccount,
   seedSyncedConnection,
   seedTransaction,
 } from "@/modules/sync/test/seed-synced-connection";
-import { withTwoUsers, type TwoUsers } from "@/modules/sync/test/with-two-users";
+import { joinHousehold, withTwoUsers, type TwoUsers } from "@/modules/sync/test/with-two-users";
 
 import { createHouseholdLedgerRepository } from "./repository";
 
@@ -17,7 +20,7 @@ const AUGUST = { from: "2026-08-01", to: "2026-08-31" };
 
 async function seedHouseholdLedger(db: Database, owner: TwoUsers["userA"], prefix: string) {
   return seedSyncedConnection(db, owner, {
-    assignTo: householdScope(owner.session),
+    household: householdScope(owner.session),
     itemId: `${prefix}-item`,
     accounts: [
       seedAccount({ providerAccountId: `${prefix}-checking`, name: "Conta corrente" }),
@@ -125,15 +128,39 @@ describe("household ledger repository (integration)", () => {
   it("shows an unassigned account's transactions to nobody", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await seedSyncedConnection(db, userA, {
-        assignTo: null,
+        household: householdScope(userA.session),
         transactions: [seedTransaction()],
       });
+      await db.delete(member).where(eq(member.userId, userA.id));
 
       for (const user of [userA, userB]) {
         const ledger = createHouseholdLedgerRepository(householdScope(user.session));
         expect(await ledger.listAccounts(db)).toEqual([]);
         expect(await ledger.countTransactions(db, { days: SEPTEMBER, accountId: null })).toBe(0);
       }
+    });
+  });
+
+  it("stops showing a departed member's transactions and shows them where the account moves", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      const membershipInA = await joinHousehold(db, userB.id, householdA);
+      const seeded = await seedSyncedConnection(db, userB, {
+        household: { householdId: householdA },
+        transactions: [seedTransaction()],
+      });
+      const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
+      const ledgerB = createHouseholdLedgerRepository(householdScope(userB.session));
+      const all = { days: SEPTEMBER, accountId: null };
+      expect(await ledgerA.countTransactions(db, all)).toBe(1);
+
+      await db.delete(member).where(eq(member.id, membershipInA));
+      expect(await ledgerA.countTransactions(db, all)).toBe(0);
+      expect(await ledgerB.countTransactions(db, all)).toBe(0);
+
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      expect(await moveSeededAccount(db, userB, accountId, householdB)).toBe("ok");
+      expect(await ledgerA.countTransactions(db, all)).toBe(0);
+      expect(await ledgerB.countTransactions(db, all)).toBe(1);
     });
   });
 

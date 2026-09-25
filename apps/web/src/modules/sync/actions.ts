@@ -14,6 +14,7 @@ import {
   connectProvider,
   createSyncDeps,
   deleteConnection,
+  moveAccount,
   relabelAccount,
   removeCredentials,
   renameConnection,
@@ -24,6 +25,7 @@ import {
   addConnectionFormSchema,
   connectionIdFormSchema,
   connectProviderFormSchema,
+  moveAccountFormSchema,
   relabelAccountFormSchema,
   renameConnectionFormSchema,
 } from "./validation";
@@ -241,6 +243,34 @@ export async function relabelAccountAction(
       return { status: "success", message: t.accounts.relabelled };
     case "not_found":
       return { status: "error", message: t.errors.accountNotFound };
+    case "failed":
+      return { status: "error", message: t.errors.connectFailed };
+  }
+}
+
+export async function moveAccountAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = moveAccountFormSchema.safeParse({
+    accountId: formData.get("accountId"),
+    householdId: formData.get("householdId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+
+  const session = await requireHouseholdSession();
+  const outcome = await moveAccount(parsed.data, session, getDb());
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/", "layout");
+      return { status: "success", message: t.connections.moveDialog.moved };
+    case "not_found":
+      return { status: "error", message: t.errors.accountNotMovable };
+    case "not_member":
+      return { status: "error", message: t.errors.notAMember };
     case "failed":
       return { status: "error", message: t.errors.connectFailed };
   }

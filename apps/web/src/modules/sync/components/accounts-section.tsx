@@ -13,6 +13,8 @@ export function AccountsSection({
   domesticAccounts,
   foreignAccounts,
   connections,
+  ownedAccounts,
+  ownHouseholds,
   hasCredentials,
   credentialsSavedAt,
   viewerUserId,
@@ -59,6 +61,8 @@ export function AccountsSection({
         <SectionHeader title={t.connections.sectionTitle} />
         <ConnectionsPanel
           connections={connections}
+          ownedAccounts={ownedAccounts}
+          ownHouseholds={ownHouseholds}
           hasCredentials={hasCredentials}
           credentialsSavedAt={credentialsSavedAt}
           timeZone={timeZone}

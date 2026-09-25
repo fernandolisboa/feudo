@@ -7,6 +7,8 @@ import {
   createSyncUserRepository,
   type ConnectionSummary,
   type HouseholdAccount,
+  type OwnedAccount,
+  type OwnHousehold,
 } from "./repository";
 import { userScope } from "./scope";
 
@@ -18,6 +20,8 @@ export type AccountsSectionProps = {
   domesticAccounts: HouseholdAccount[];
   foreignAccounts: HouseholdAccount[];
   connections: ConnectionSummary[];
+  ownedAccounts: OwnedAccount[];
+  ownHouseholds: OwnHousehold[];
   hasCredentials: boolean;
   credentialsSavedAt: Date | null;
   viewerUserId: string;
@@ -31,17 +35,22 @@ export async function getAccountsSectionProps(
 ): Promise<AccountsSectionProps> {
   const db = getDb();
   const userRepository = createSyncUserRepository(userScope(session));
-  const [accounts, connections, credential, settings] = await Promise.all([
-    createHouseholdAccountsRepository(householdScope(session), userScope(session)).list(db),
-    userRepository.listConnections(db),
-    userRepository.getCredential(db),
-    getHouseholdSettings(householdScope(session), db),
-  ]);
+  const [accounts, connections, ownedAccounts, ownHouseholds, credential, settings] =
+    await Promise.all([
+      createHouseholdAccountsRepository(householdScope(session), userScope(session)).list(db),
+      userRepository.listConnections(db),
+      userRepository.listOwnedAccounts(db),
+      userRepository.listOwnHouseholds(db),
+      userRepository.getCredential(db),
+      getHouseholdSettings(householdScope(session), db),
+    ]);
 
   return {
     domesticAccounts: accounts.filter((account) => account.currency === HOUSEHOLD_CURRENCY),
     foreignAccounts: accounts.filter((account) => account.currency !== HOUSEHOLD_CURRENCY),
     connections,
+    ownedAccounts,
+    ownHouseholds,
     hasCredentials: credential !== undefined,
     credentialsSavedAt: credential?.lastValidatedAt ?? null,
     viewerUserId: session.userId,

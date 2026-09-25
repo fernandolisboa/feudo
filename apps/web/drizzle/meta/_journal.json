@@ -85,6 +85,13 @@
       "when": 1790278523016,
       "tag": "0011_sync_connection_attempt_and_narrowing",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790352884015,
+      "tag": "0012_connection_default_household",
+      "breakpoints": true
     }
   ]
 }
