@@ -107,12 +107,19 @@ The cron route's response is `{ ok, steps: { connections: { ok, synced, failed, 
   near the front (see below).
 - `ok` is true unless at least one connection was attempted and every attempted one failed — a run
   that only found deleted or unreached connections is not an incident.
+- An error other than `ConnectionNotOwnedError` raised while a connection is being attempted (a
+  transient database failure, a bug in a provider implementation) is caught for that connection
+  alone: counted `failed` and logged (`console.warn`) with the error's name and the connection's id
+  only, nothing else. The run moves on to the next connection instead of the whole step coming back
+  as `{ error }` for every connection in it.
 
 `bank_connection` carries two columns just for the daily job (migration
 `0011_sync_connection_attempt_and_narrowing.sql`, additive, both nullable), neither ever read
 anywhere else: `last_sync_attempted_at`, stamped at the start of every attempt — before any provider
-call, so even a connection that fails before it gets that far still moves — and `first_sync_since`,
-the sticky narrowing memory described below.
+call, so even a connection that fails before it gets that far still moves — from that connection's
+own reading of the run's clock rather than the run's one shared instant, so two connections attempted
+in the same run keep their real order — and `first_sync_since`, the sticky narrowing memory described
+below.
 
 `listConnectionsToSync` orders strictly by `last_sync_attempted_at asc nulls first, created_at asc`
 and nothing else. Every connection rotates round-robin regardless of how its last attempt ended.
@@ -140,17 +147,23 @@ different for what to do next:
 
 All three clear `last_sync_error` on the next successful sync like any other error. A first sync
 (no transactions in the ledger yet for this connection) that fails `listing_too_long` or `too_slow`
-sets `first_sync_since` to the previous month once, the first time it happens — sticky: an
-intervening `timed_out` or provider outage, or even a narrowed sync that succeeds with zero new
-transactions, does not clear it, since none of those say the connection's history has gotten any
-smaller. It only stops mattering once the ledger actually holds a transaction for this connection,
-at which point the incremental window applies and `first_sync_since` is never read again. `timed_out`
-alone never sets it, since it says nothing about this connection's own size and narrowing would cost
-history for no reason. A connection whose first sync is already narrowed and still comes back
+sets `first_sync_since` to the previous month once, the first time it happens, if still unset. A lone
+`timed_out` does not narrow by itself, since on its own it says nothing about this connection's own
+size; but two deadline aborts in a row for the same connection, this run's `timed_out` following a
+`too_slow` or `timed_out` read off the row before this run's own outcome overwrites it, do narrow,
+since that pattern means the connection keeps losing its slice to something else in the queue rather
+than to its own history — otherwise a first sync queued behind a stuck connection would land just
+under its slice every single run and never make progress. Once set, `first_sync_since` is not touched
+again: an intervening `timed_out` or provider outage, or even a narrowed sync that succeeds with zero
+new transactions, leaves it as is. It only stops mattering once the ledger actually holds a
+transaction for this connection, at which point the incremental window applies and `first_sync_since`
+is never read again. A connection whose first sync is already narrowed and still comes back
 `too_slow` keeps failing visibly and keeps rotating through the queue every run — an operator signal
 that its own history, not the run's clock, is the problem. The wizard's own first sync
-(`connectProvider`/`addConnection`) gets a one-shot narrowed retry inline on `listing_too_long`,
-independent of this column, since it runs before a connection row (and so `first_sync_since`) exists.
+(`connectProvider`/`addConnection`) gets a one-shot narrowed retry inline on `listing_too_long`; on
+success it persists that narrowed date as `first_sync_since` in the same transaction that creates the
+connection, so the daily job starts from it too instead of reverting to the full twelve months if the
+narrowed month turns out to have had no transactions.
 
 ## Environment
 

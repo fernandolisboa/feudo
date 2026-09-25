@@ -42,7 +42,7 @@ import {
 } from "./repository";
 import { scopeForUser, userScope } from "./scope";
 import type { ConnectionSyncFailure } from "./sync-status";
-import { isNarrowingFailure } from "./sync-status";
+import { shouldNarrowFirstSync } from "./sync-status";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
@@ -212,6 +212,7 @@ async function establishConnection(
   const syncedAt = new Date();
   let described;
   let snapshot;
+  let narrowedSince: string | null = null;
   try {
     described = await client.describeConnection(input.providerItemId);
     if (described.status === "not_found") {
@@ -227,13 +228,12 @@ async function establishConnection(
       // A listing too long to page through on the usual twelve-month window
       // is retried once, narrowed to the previous month (#84): without this,
       // an item with a very long transaction history could never be
-      // connected at all.
+      // connected at all. The narrowed date is persisted below so the daily
+      // job's own first sync starts there too, rather than retrying twelve
+      // months and hitting the same wall on its own first run.
       if (error instanceof ProviderListingTooLongError) {
-        snapshot = await readConnection(
-          client,
-          input.providerItemId,
-          narrowedFirstSyncSince(syncedAt),
-        );
+        narrowedSince = narrowedFirstSyncSince(syncedAt);
+        snapshot = await readConnection(client, input.providerItemId, narrowedSince);
       } else {
         throw error;
       }
@@ -261,6 +261,9 @@ async function establishConnection(
       });
       await repository.upsertTransactions(tx, connectionId, snapshot.transactions, { syncedAt });
       await repository.markSynced(tx, connectionId, { syncedAt, error: null });
+      if (narrowedSince) {
+        await repository.narrowFirstSync(tx, connectionId, narrowedSince);
+      }
       return { status: "ok", connectionId, accountsCount };
     });
   } catch {
@@ -574,7 +577,7 @@ async function syncConnection(
       console.warn(
         `sync: reading connection ${connection.id} was aborted by the run deadline (${status})`,
       );
-      if (!hasHistory && isNarrowingFailure(status)) {
+      if (!hasHistory && shouldNarrowFirstSync(status, connection.lastSyncError)) {
         await repository.narrowFirstSync(db, connection.id, narrowedFirstSyncSince(now));
       }
       return { status };
@@ -583,7 +586,7 @@ async function syncConnection(
       console.warn(
         `sync: connection ${connection.id}'s ${endpointCollection(error.endpoint)} listing exceeded the page cap`,
       );
-      if (!hasHistory) {
+      if (!hasHistory && shouldNarrowFirstSync("listing_too_long", connection.lastSyncError)) {
         await repository.narrowFirstSync(db, connection.id, narrowedFirstSyncSince(now));
       }
       return { status: "listing_too_long" };
@@ -675,7 +678,11 @@ export async function syncAllConnections(
   let gone = 0;
   let unreached = 0;
   for (let index = 0; index < connections.length; index += 1) {
-    const remainingMs = deadline.getTime() - clock().getTime();
+    // This connection's own reading of the clock, reused below to stamp
+    // last_sync_attempted_at: two connections attempted in the same run get
+    // their real, distinct order rather than the run's one shared instant.
+    const attemptedAt = clock();
+    const remainingMs = deadline.getTime() - attemptedAt.getTime();
     if (remainingMs < MIN_CONNECTION_SLICE_MS) {
       unreached += connections.length - index;
       break;
@@ -700,7 +707,7 @@ export async function syncAllConnections(
       // (listConnectionsToSync), so every connection gets a turn regardless
       // of how this one ends. A delete racing this write is the same
       // ConnectionNotOwnedError as any other write here, caught below.
-      await repository.recordSyncAttempt(db, connection.id, now);
+      await repository.recordSyncAttempt(db, connection.id, attemptedAt);
       const session = await providerSessionFor(
         credentials,
         invalidCredentials,
@@ -728,9 +735,15 @@ export async function syncAllConnections(
       if (error instanceof ConnectionNotOwnedError) {
         console.warn(`sync: connection ${connection.id} was deleted mid-run`);
         gone += 1;
-        continue;
+      } else {
+        // Anything else — a transient DB error on either write above, a bug
+        // in a provider implementation — is this one connection's problem,
+        // not the run's: counted and logged by id only, so the rest of the
+        // queue still gets its turn instead of the whole run coming back as
+        // one opaque `{ error }` (runConnectionsSyncStep).
+        console.warn(`sync: connection ${connection.id} failed unexpectedly (${errorName(error)})`);
+        failed += 1;
       }
-      throw error;
     } finally {
       clearTimeout(timer);
     }

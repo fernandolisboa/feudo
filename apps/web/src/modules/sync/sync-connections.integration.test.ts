@@ -19,7 +19,7 @@ import {
 } from "./repository";
 import { bankAccount, bankConnection, bankTransaction } from "./schema";
 import { syncAllConnections, type SyncDeps } from "./service";
-import { seedAccount, seedSyncedConnection } from "./test/seed-synced-connection";
+import { seedAccount, seedSyncedConnection, seedTransaction } from "./test/seed-synced-connection";
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 
@@ -183,6 +183,65 @@ const abortingDuringAuth: DataProvider = {
   authenticate: () => Promise.reject(new ProviderReadAbortedError("auth")),
 };
 
+// Rejects a first read outright, with no real wait: classification is driven
+// purely by the fake clock's hadFullSlice for whichever connection is being
+// synced. Unlike abortingDuringAuth (aborting inside authenticate, before
+// syncConnection is ever reached), the abort happens inside the read itself,
+// so hasHistory is known and the narrowing decision (shouldNarrowFirstSync)
+// actually runs — needed for any test that checks first_sync_since.
+const immediatelyAbortedRead: DataProvider = {
+  name: "fake",
+  async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+    const real = await deps.provider.authenticate(credentials, options);
+    if (real.status !== "ok") {
+      return real;
+    }
+    const client = real.client;
+    return {
+      status: "ok",
+      client: {
+        describeConnection: (itemId) => client.describeConnection(itemId),
+        listAccounts: (): Promise<never> =>
+          Promise.reject(new ProviderReadAbortedError("accounts")),
+        listInvestmentPositions: (itemId) => client.listInvestmentPositions(itemId),
+        listTransactionsSince: (accountId, since) => client.listTransactionsSince(accountId, since),
+      },
+    };
+  },
+};
+
+// Throws a plain, uncategorized error from a read: none of syncConnection's
+// specific catches match, so it is the kind of unexpected failure (a bug, a
+// transient error the code doesn't have a name for) that per-connection
+// containment must still turn into `failed` rather than let escape the run.
+function throwingOnItem(itemId: string): DataProvider {
+  return {
+    name: "fake",
+    async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+      const real = await deps.provider.authenticate(credentials, options);
+      if (real.status !== "ok") {
+        return real;
+      }
+      const client = real.client;
+      return {
+        status: "ok",
+        client: {
+          describeConnection: (id) => client.describeConnection(id),
+          listAccounts: (id) => {
+            if (id === itemId) {
+              return Promise.reject(new Error("boom"));
+            }
+            return client.listAccounts(id);
+          },
+          listInvestmentPositions: (id) => client.listInvestmentPositions(id),
+          listTransactionsSince: (accountId, since) =>
+            client.listTransactionsSince(accountId, since),
+        },
+      };
+    },
+  };
+}
+
 async function transactionsOf(db: Database, connectionId: string) {
   return db
     .select({
@@ -274,7 +333,12 @@ describe("syncAllConnections (integration)", () => {
         lastSyncedAt: NOW,
         lastSyncError: null,
       });
-      expect(await lastSyncAttemptedAtOf(db, connectionId)).toEqual(NOW);
+      // Stamped from the run's own clock, not `now` (which only anchors the
+      // sync windows): with no clock injected here that's the real one, so
+      // it lands near the moment this test ran, not on NOW's fixed date.
+      const attemptedAt = await lastSyncAttemptedAtOf(db, connectionId);
+      expect(attemptedAt).not.toBeNull();
+      expect(Math.abs((attemptedAt?.getTime() ?? 0) - Date.now())).toBeLessThan(30_000);
       const accounts = await createHouseholdAccountsRepository(
         householdScope(userA.session),
         userA.scope,
@@ -759,6 +823,31 @@ describe("syncAllConnections (integration)", () => {
     });
   });
 
+  // Round-4 fix: an unexpected error (a bug, a transient failure the code
+  // has no name for) inside one connection's turn used to escape all the way
+  // out of syncAllConnections and turn the whole run into runConnectionsSyncStep's
+  // opaque `{ error }`, hiding every connection that would otherwise have
+  // synced fine. It is now this one connection's problem alone.
+  it("contains an unexpected per-connection error, counts it failed, and still syncs the others", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await saveCredentials(db, userA);
+      const buggy = await seedBancoNeverSynced(db, userA);
+      await saveCredentials(db, userB);
+      const healthy = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: throwingOnItem(FAKE_ITEM_BANCO_FIXTURE) },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        ),
+      ).resolves.toEqual({ ok: true, synced: 1, failed: 1, gone: 0, unreached: 0 });
+
+      expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
+      expect(await connectionRow(db, buggy)).toEqual({ lastSyncedAt: null, lastSyncError: null });
+    });
+  });
+
   describe("sticky narrowing memory (#84)", () => {
     it("narrows a first sync's window after it was too_slow", async () => {
       await withTwoUsers(async ({ db, userA }) => {
@@ -833,7 +922,7 @@ describe("syncAllConnections (integration)", () => {
         await expect(
           syncAllConnections(
             db,
-            { ...deps, provider: abortingDuringAuth },
+            { ...deps, provider: immediatelyAbortedRead },
             { now: NOW, deadline: new Date(100_000), clock },
           ),
         ).resolves.toMatchObject({ failed: 1 });
@@ -877,7 +966,7 @@ describe("syncAllConnections (integration)", () => {
         await expect(
           syncAllConnections(
             db,
-            { ...deps, provider: abortingDuringAuth },
+            { ...deps, provider: immediatelyAbortedRead },
             { now: NOW, deadline: new Date(100_000), clock: timedOutClock },
           ),
         ).resolves.toMatchObject({ failed: 1 });
@@ -892,6 +981,73 @@ describe("syncAllConnections (integration)", () => {
         );
 
         expect(windows).toContain(narrowedFirstSyncSince(NOW));
+      });
+    });
+
+    // Round-4 fix: a first sync queued behind a stuck connection got
+    // slightly less than a full slice every run — too_slow was excluded from
+    // that budget by definition, so it was always classified timed_out, and
+    // a lone timed_out never narrowed. The run then repeated identically
+    // forever. Two consecutive deadline aborts (this one timed_out, the
+    // previous one too_slow or timed_out, read off the row before this run's
+    // own outcome overwrites it) now narrow, breaking the loop.
+    it("narrows a first sync after two consecutive deadline aborts, even when it is never too_slow itself", async () => {
+      await withTwoUsers(async ({ db, userA, userB }) => {
+        await saveCredentials(db, userA);
+        const stuck = await seedSyncedConnection(db, userA, {
+          assignTo: householdScope(userA.session),
+          itemId: FAKE_ITEM_BANCO_FIXTURE,
+          accounts: [
+            seedAccount({
+              providerAccountId: FIXTURE_CHECKING,
+              providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+            }),
+          ],
+          transactions: [seedTransaction()],
+        }).then(({ connectionId }) => connectionId);
+        await saveCredentials(db, userB);
+        const firstSync = await seedNeverSynced(db, userB, OTHER_ITEM, OTHER_ACCOUNT);
+
+        // Both connections' reads abort immediately, so no real time is
+        // spent waiting: classification is decided entirely by the fake
+        // clock. `stuck` (has history) always gets the full slice
+        // (too_slow); `firstSync` always gets slightly less (timed_out) —
+        // exactly the trace the finding describes, with no dependence on
+        // real scheduling overhead to reproduce it.
+        function runOnce() {
+          const axisStart = 1_000_000;
+          let calls = 0;
+          const clock = () => {
+            calls += 1;
+            if (calls === 1) return new Date(axisStart);
+            if (calls === 2) return new Date(axisStart); // stuck: full 100000ms budget left
+            return new Date(axisStart + 60_000); // firstSync: 40000ms left, under the 50000ms half
+          };
+          return syncAllConnections(
+            db,
+            { ...deps, provider: immediatelyAbortedRead },
+            { now: NOW, deadline: new Date(axisStart + 100_000), clock },
+          );
+        }
+
+        await runOnce();
+        expect((await connectionRow(db, stuck))?.lastSyncError).toBe("too_slow");
+        expect((await connectionRow(db, firstSync))?.lastSyncError).toBe("timed_out");
+        expect(await firstSyncSinceOf(db, firstSync)).toBeNull();
+
+        await runOnce();
+        expect((await connectionRow(db, firstSync))?.lastSyncError).toBe("timed_out");
+        expect(await firstSyncSinceOf(db, firstSync)).toBe(narrowedFirstSyncSince(NOW));
+
+        const windows: string[] = [];
+        await syncAllConnections(
+          db,
+          { ...deps, provider: recordingProvider(windows) },
+          { now: NOW, deadline: AMPLE_DEADLINE },
+        );
+
+        expect(windows).toContain(narrowedFirstSyncSince(NOW));
+        expect(windows).not.toContain(transactionsSince(NOW, null));
       });
     });
   });

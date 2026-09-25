@@ -486,12 +486,12 @@ export function createSyncUserRepository(scope: UserScope) {
     },
 
     // Sticky narrowing memory (#84): set once, the first time a first sync
-    // (no history yet) fails `too_slow` or `listing_too_long`, and never
-    // cleared by an intervening failure of another kind or by a successful
-    // sync that still has no transactions to show for it — only clearing on
-    // a successful sync that actually has history (hasTransactions becomes
-    // true, so first_sync_since is never read again). Idempotent: a
-    // connection that already has a narrowed window keeps it.
+    // (no history yet) qualifies (sync-status.ts's shouldNarrowFirstSync),
+    // and never overwritten again: an intervening failure of another kind, or
+    // a narrowed sync that succeeds with no new transactions, leaves it in
+    // place. It simply stops being read once the ledger actually holds a
+    // transaction for this connection (hasTransactions becomes true).
+    // Idempotent: a connection that already has a narrowed window keeps it.
     async narrowFirstSync(db: Database, connectionId: string, since: string): Promise<void> {
       await requireOwnedConnection(db, connectionId);
       await db
@@ -514,6 +514,7 @@ export type ConnectionToSync = {
   providerItemId: string;
   lastSyncedAt: Date | null;
   firstSyncSince: string | null;
+  lastSyncError: string | null;
 };
 
 // Not scoped: the daily job's work list (ADR-0005). Ordered only by when a
@@ -524,6 +525,10 @@ export type ConnectionToSync = {
 // Combined with each connection's own abort slice (service.ts), a stuck
 // connection costs the rest of the queue at most half a run, not a turn
 // that never comes.
+// lastSyncError here is this run's snapshot of the connection's *previous*
+// attempt, read before this run's own outcome overwrites it: service.ts's
+// shouldNarrowFirstSync needs it to tell a lone timed_out from two
+// consecutive deadline aborts.
 export async function listConnectionsToSync(db: Database): Promise<ConnectionToSync[]> {
   return db
     .select({
@@ -532,6 +537,7 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
       providerItemId: bankConnection.providerItemId,
       lastSyncedAt: bankConnection.lastSyncedAt,
       firstSyncSince: bankConnection.firstSyncSince,
+      lastSyncError: bankConnection.lastSyncError,
     })
     .from(bankConnection)
     .orderBy(

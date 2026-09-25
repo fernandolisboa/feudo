@@ -26,9 +26,11 @@ import {
   deleteConnection,
   relabelAccount,
   removeCredentials,
+  syncAllConnections,
   type SyncDeps,
 } from "./service";
 import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
+import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 
 import type { Database } from "@/platform/db/client";
 import {
@@ -361,6 +363,87 @@ describe("connectProvider (integration)", () => {
       expect(outcome.status).toBe("ok");
       expect(windows.length).toBeGreaterThanOrEqual(2);
       expect((windows[0] ?? "") < (windows[windows.length - 1] ?? "")).toBe(true);
+
+      const connectionId = outcome.status === "ok" ? outcome.connectionId : "";
+      const [row] = await db
+        .select({ firstSyncSince: bankConnection.firstSyncSince })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(row?.firstSyncSince).toBe(windows[windows.length - 1]);
+    });
+  });
+
+  // #84's narrowed retry (above) is persisted in the same transaction that
+  // creates the connection, so the daily job's own first attempt starts from
+  // that narrowed date rather than the usual twelve months: without this, a
+  // month with no transactions would send the daily job right back to the
+  // listing that was already too long to page through once.
+  it("has the daily job read from the wizard's narrowed date, not the usual twelve months, even when that month had no transactions", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const okOutcome = await deps.provider.authenticate(credentials);
+      if (okOutcome.status !== "ok") throw new Error("fake provider refused");
+      const real = okOutcome.client;
+      const windows: string[] = [];
+      let calls = 0;
+      // The narrowed window is empty on purpose: this is the case the fix
+      // targets. If the daily job fell back to `firstSyncSince ??
+      // transactionsSince(now, null)`'s twelve-month default whenever
+      // `hasHistory` is still false, an empty narrowed month would send it
+      // straight back to the listing the wizard already found too long.
+      const emptyAfterNarrowing: DataProvider = {
+        name: "fake",
+        authenticate: (): Promise<AuthenticateOutcome> =>
+          Promise.resolve({
+            status: "ok",
+            client: {
+              describeConnection: (itemId) => real.describeConnection(itemId),
+              listAccounts: (itemId) => real.listAccounts(itemId),
+              listInvestmentPositions: (itemId) => real.listInvestmentPositions(itemId),
+              listTransactionsSince: (_accountId, since) => {
+                windows.push(since);
+                calls += 1;
+                if (calls === 1) {
+                  throw new ProviderListingTooLongError("transactions");
+                }
+                return Promise.resolve([]);
+              },
+            },
+          }),
+      };
+
+      const outcome = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        },
+        userA.session,
+        db,
+        { ...deps, provider: emptyAfterNarrowing },
+      );
+      expect(outcome.status).toBe("ok");
+      const connectionId = outcome.status === "ok" ? outcome.connectionId : "";
+      const narrowedSince = narrowedFirstSyncSince(new Date());
+      const twelveMonthSince = transactionsSince(new Date(), null);
+      expect(windows[0]).toBe(twelveMonthSince);
+      expect(windows.slice(1)).toEqual(windows.slice(1).map(() => narrowedSince));
+      const windowsAfterConnect = windows.length;
+
+      const [afterConnect] = await db
+        .select({ firstSyncSince: bankConnection.firstSyncSince })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(afterConnect?.firstSyncSince).toBe(narrowedSince);
+
+      await syncAllConnections(
+        db,
+        { ...deps, provider: emptyAfterNarrowing },
+        { now: new Date(), deadline: new Date(Date.now() + 60_000) },
+      );
+
+      const windowsFromDailyJob = windows.slice(windowsAfterConnect);
+      expect(windowsFromDailyJob.length).toBeGreaterThan(0);
+      expect(windowsFromDailyJob).toEqual(windowsFromDailyJob.map(() => narrowedSince));
     });
   });
 
