@@ -18,7 +18,7 @@ describe("getTransactionsPageProps (integration)", () => {
   it("defaults to the current month in the household's time zone and never moves past it", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, {
-        assignTo: householdScope(userA.session),
+        household: householdScope(userA.session),
         transactions: [seedTransaction({ date: "2026-09-30" })],
       });
 
@@ -42,7 +42,7 @@ describe("getTransactionsPageProps (integration)", () => {
   it("reads the month, account and page from the URL and drops what it cannot use", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const seeded = await seedSyncedConnection(db, userA, {
-        assignTo: householdScope(userA.session),
+        household: householdScope(userA.session),
         accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
         transactions: [
           seedTransaction({ providerTransactionId: "t1", date: "2026-08-10" }),
@@ -54,7 +54,7 @@ describe("getTransactionsPageProps (integration)", () => {
         ],
       });
       const other = await seedSyncedConnection(db, userB, {
-        assignTo: householdScope(userB.session),
+        household: householdScope(userB.session),
         itemId: "other-item",
       });
       const savings = seeded.accountIdsByProvider.get("acc-2") ?? "";

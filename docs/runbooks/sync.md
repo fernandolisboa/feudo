@@ -20,9 +20,13 @@ Everything else (`service.ts`, `repository.ts`, `actions.ts`, `validation.ts`, `
   user id and a connection id is honoured only after the row is re-read under that scope.
 - **Household-scoped**: `bank_account` (read through
   `createHouseholdAccountsRepository(householdScope(session))`). `household_id` is nullable only to
-  mean "unassigned" (the household was deleted); an unassigned account is visible only to its
-  owner until reassigned (ADR-0001). Household deletion is not implemented yet, so no code path
-  produces such a row today. Writes to `bank_account` go only through the user-scoped
+  mean "unassigned": its household was deleted (foreign key `on delete set null`), or its
+  connection's owner left or was removed from it (`member_departure_trigger` on `member`, migration
+  `0012`, same transaction as the delete). An unassigned account is visible only to its owner, flagged
+  under "Suas conexões", until they move it (`moveAccount`) to a household they belong to (ADR-0001,
+  2026-09-25). New accounts land in `bank_connection.default_household_id` only while the owner is
+  still a member there (`households.lockMembershipScope`, share-locked in the insert's transaction);
+  the trigger clears that default too. Writes to `bank_account` go only through the user-scoped
   connection repository (`upsertAccounts`), and the label is changed only by the household member
   who owns the connection.
 

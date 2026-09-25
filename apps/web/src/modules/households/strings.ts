@@ -70,15 +70,17 @@ const en = {
     deliveryFailed: "Email not sent",
     removeDialog: {
       title: "Remove {name} from the household?",
-      description: "{name} loses access to this household's financial data immediately.",
+      description:
+        "{name} loses access to this household's financial data immediately, and the accounts this person connected leave the household.",
       confirm: "Remove",
       cancel: "Cancel",
     },
     leaveDialog: {
       title: "Leave the household?",
-      description: "You lose access to this household's financial data.",
+      description:
+        "You lose access to this household's financial data, and the accounts you connected leave it. They stay yours, and you can move them to another household.",
       lastMemberDescription:
-        "You are the last person in this household: leaving deletes it and everything in it.",
+        "You are the last person in this household: leaving deletes it and everything in it. The accounts you connected stay yours, with no household, until you move them.",
       confirm: "Leave",
       cancel: "Cancel",
     },
@@ -195,15 +197,17 @@ const ptBR = {
     deliveryFailed: "E-mail não enviado",
     removeDialog: {
       title: "Remover {name} da casa?",
-      description: "{name} perde acesso aos dados financeiros desta casa imediatamente.",
+      description:
+        "{name} perde acesso aos dados financeiros desta casa imediatamente, e as contas que essa pessoa conectou saem da casa.",
       confirm: "Remover",
       cancel: "Cancelar",
     },
     leaveDialog: {
       title: "Sair da casa?",
-      description: "Você perde acesso aos dados financeiros desta casa.",
+      description:
+        "Você perde acesso aos dados financeiros desta casa, e as contas que você conectou saem dela. Elas continuam suas, e você pode movê-las para outra casa.",
       lastMemberDescription:
-        "Você é a última pessoa na casa: sair vai excluir a casa e tudo o que está nela.",
+        "Você é a última pessoa na casa: sair vai excluir a casa e tudo o que está nela. As contas que você conectou continuam suas, sem casa, até você movê-las.",
       confirm: "Sair",
       cancel: "Cancelar",
     },

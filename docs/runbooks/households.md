@@ -239,7 +239,9 @@ and "the last member leaving deletes the household"):
 - **Remove** (`removeMember`): owner or admin only, never the owner (the plugin's own
   `removeMember` endpoint already refuses removing the sole owner — Feudo always has exactly one —
   and the household-A/household-B isolation the endpoint gives for free is exercised by
-  `membership.integration.test.ts`'s cross-household describe block).
+  `membership.integration.test.ts`'s cross-household describe block). Removing a member also
+  unassigns the accounts of their bank connections in this household, in the same transaction, through
+  `member_departure_trigger` (ADR-0001, 2026-09-25; `docs/runbooks/sync.md`).
 - **Change role** (`updateMemberRole`): owner or admin only, `admin` ↔ `member` only — the
   single-owner enforcement above blocks any attempt to route through it to `owner`.
 - **Leave** (`leaveHousehold`): refuses an owner with other members present
@@ -251,7 +253,8 @@ and "the last member leaving deletes the household"):
   are also the household's only member (`isSelf && (!isOwnerRow || isLastMember)`), and
   `LeaveHouseholdDialog` shows the "this deletes the household" copy in that case. A non-owner
   leaving calls `leaveOrganization` and then clears the user's other sessions' stale
-  `activeOrganizationId` itself (see "Active household resolution" above).
+  `activeOrganizationId` itself (see "Active household resolution" above). Leaving unassigns the
+  leaver's accounts in this household through the same `member_departure_trigger` as removal.
 - **Transfer ownership** (`transferOwnership`): owner only, one database transaction, described
   above.
 

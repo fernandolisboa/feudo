@@ -65,7 +65,7 @@ async function seedNeverSynced(
   accountId: string,
 ): Promise<string> {
   const { connectionId } = await seedSyncedConnection(db, user, {
-    assignTo: householdScope(user.session),
+    household: householdScope(user.session),
     itemId,
     accounts: [seedAccount({ providerAccountId: accountId, providerItemId: itemId })],
   });
@@ -1008,7 +1008,7 @@ describe("syncAllConnections (integration)", () => {
       await withTwoUsers(async ({ db, userA, userB }) => {
         await saveCredentials(db, userA);
         const stuck = await seedSyncedConnection(db, userA, {
-          assignTo: householdScope(userA.session),
+          household: householdScope(userA.session),
           itemId: FAKE_ITEM_BANCO_FIXTURE,
           accounts: [
             seedAccount({

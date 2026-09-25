@@ -51,7 +51,7 @@ describe("MemberRowActions", () => {
     fireEvent.click(leaveItem);
 
     const warning = await screen.findByText(t.casa.leaveDialog.lastMemberDescription);
-    expect(warning).not.toBeNull();
+    expect(warning.textContent).toContain("As contas que você conectou continuam suas, sem casa");
   });
 
   it("hides every action for the owner when another member is still present", () => {

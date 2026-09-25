@@ -48,7 +48,7 @@ sRGB hex; text tokens meet 4.5:1 on both `bg` and `surface`, chart fills meet 3:
 | `--accent-soft`  | `#e2ebe0`                                            | "conta da casa" tag background                   |
 | `--chart-1`      | `#3d8756`                                            | income, category bars, progress                  |
 | `--chart-2`      | `#6a63c9`                                            | spending series                                  |
-| `--warning`      | `#7a5f18`                                            | uncategorized notice icon/text                   |
+| `--warning`      | `#7a5f18`                                            | uncategorized notice, unassigned-account flag    |
 | `--danger`       | `#a33a2e`                                            | destructive actions, errors                      |
 | `--font-display` | `"Source Serif 4", Georgia, serif`                   | headlines, section titles, money                 |
 | `--font-body`    | `"Source Sans 3", "Segoe UI", system-ui, sans-serif` | everything else                                  |

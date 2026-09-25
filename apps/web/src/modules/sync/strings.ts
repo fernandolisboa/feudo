@@ -90,6 +90,10 @@ const en = {
     removeCredentialsAction: "Remove credentials",
     deleteAction: "Delete connection",
     renameAction: "Rename",
+    moveAction: "Move",
+    moveActionFor: "Move {account}",
+    accountInHousehold: "In {household}",
+    accountUnassigned: "No household: nobody sees this account until you move it to one.",
     accountsCount: "{count} accounts",
     syncedAt: "Synced {date}",
     neverSynced: "Never synced",
@@ -120,6 +124,15 @@ const en = {
       cancel: "Cancel",
       renamed: "Connection renamed.",
     },
+    moveDialog: {
+      title: "Move {account} to another household",
+      description:
+        "Its balance and transaction history go with it. Accounts this connection lists later go to the same household.",
+      label: "Household",
+      submit: "Move",
+      cancel: "Cancel",
+      moved: "Account moved.",
+    },
     removeCredentialsDialog: {
       title: "Remove your Meu Pluggy credentials?",
       description:
@@ -144,6 +157,9 @@ const en = {
       "We could not read your saved credentials. Remove them and enter them again.",
     connectionNotFound: "This connection no longer exists.",
     accountNotFound: "This account no longer exists or is not yours to relabel.",
+    accountNotMovable: "This account no longer exists or is not yours to move.",
+    notAMember: "You are no longer a member of that household.",
+    moveFailed: "We could not move this account. Try again.",
     connectFailed: "We could not save this connection. Try again.",
     misconfigured: "The server is not configured for bank connections yet.",
   },
@@ -240,6 +256,10 @@ const ptBR = {
     removeCredentialsAction: "Remover credenciais",
     deleteAction: "Excluir conexão",
     renameAction: "Renomear",
+    moveAction: "Mover",
+    moveActionFor: "Mover {account}",
+    accountInHousehold: "Em {household}",
+    accountUnassigned: "Sem casa: ninguém vê esta conta até você movê-la para uma casa.",
     accountsCount: "{count} contas",
     syncedAt: "Sincronizada em {date}",
     neverSynced: "Nunca sincronizada",
@@ -269,6 +289,15 @@ const ptBR = {
       cancel: "Cancelar",
       renamed: "Conexão renomeada.",
     },
+    moveDialog: {
+      title: "Mover {account} para outra casa",
+      description:
+        "O saldo e o histórico de transações vão junto. As contas que essa conexão passar a listar depois também vão para essa casa.",
+      label: "Casa",
+      submit: "Mover",
+      cancel: "Cancelar",
+      moved: "Conta movida.",
+    },
     removeCredentialsDialog: {
       title: "Remover suas credenciais do Meu Pluggy?",
       description:
@@ -293,6 +322,9 @@ const ptBR = {
       "Não foi possível ler as credenciais salvas. Remova as credenciais e informe-as de novo.",
     connectionNotFound: "Essa conexão não existe mais.",
     accountNotFound: "Essa conta não existe mais ou não é sua para rotular.",
+    accountNotMovable: "Essa conta não existe mais ou não é sua para mover.",
+    notAMember: "Você não faz mais parte dessa casa.",
+    moveFailed: "Não foi possível mover essa conta. Tente novamente.",
     connectFailed: "Não foi possível salvar essa conexão. Tente novamente.",
     misconfigured: "O servidor ainda não está configurado para conexões bancárias.",
   },

@@ -1,20 +1,27 @@
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 
-import type { ConnectionSummary } from "../repository";
+import type { HouseholdSummary } from "@/modules/households";
+
+import type { ConnectionSummary, OwnedAccount } from "../repository";
 import { AddConnectionDialog } from "./add-connection-dialog";
 import { DeleteConnectionDialog } from "./delete-connection-dialog";
+import { MoveAccountDialog } from "./move-account-dialog";
 import { RemoveCredentialsDialog } from "./remove-credentials-dialog";
 import { RenameConnectionDialog } from "./rename-connection-dialog";
 import { t } from "../strings";
 
 export function ConnectionsPanel({
   connections,
+  ownedAccounts,
+  ownHouseholds,
   hasCredentials,
   credentialsSavedAt,
   timeZone,
 }: {
   connections: ConnectionSummary[];
+  ownedAccounts: OwnedAccount[];
+  ownHouseholds: HouseholdSummary[];
   hasCredentials: boolean;
   credentialsSavedAt: Date | null;
   timeZone: string;
@@ -71,6 +78,12 @@ export function ConnectionsPanel({
                 {connection.lastSyncError ? (
                   <span className="text-destructive text-xs">{t.accounts.syncFailed}</span>
                 ) : null}
+                <ConnectionAccounts
+                  accounts={ownedAccounts.filter(
+                    (account) => account.connectionId === connection.id,
+                  )}
+                  ownHouseholds={ownHouseholds}
+                />
               </div>
               <div className="flex items-center gap-1">
                 <RenameConnectionDialog
@@ -87,5 +100,49 @@ export function ConnectionsPanel({
         </ul>
       )}
     </div>
+  );
+}
+
+function ConnectionAccounts({
+  accounts,
+  ownHouseholds,
+}: {
+  accounts: OwnedAccount[];
+  ownHouseholds: HouseholdSummary[];
+}) {
+  if (accounts.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="mt-1 flex flex-col">
+      {accounts.map((account) => {
+        const destinations = ownHouseholds.filter(
+          (household) => household.id !== account.householdId,
+        );
+        return (
+          <li key={account.id} className="flex flex-wrap items-center gap-x-2 text-xs">
+            <span>{account.name}</span>
+            {account.householdName ? (
+              <span className="text-muted-foreground">
+                {interpolate(
+                  t.connections.accountInHousehold,
+                  "{household}",
+                  account.householdName,
+                )}
+              </span>
+            ) : (
+              <span className="text-warning">{t.connections.accountUnassigned}</span>
+            )}
+            {destinations.length > 0 ? (
+              <MoveAccountDialog
+                accountId={account.id}
+                accountName={account.name}
+                destinations={destinations}
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

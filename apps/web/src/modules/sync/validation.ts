@@ -46,3 +46,9 @@ export const relabelAccountFormSchema = z.object({
   label: z.enum(ACCOUNT_LABELS),
 });
 export type RelabelAccountFormInput = z.infer<typeof relabelAccountFormSchema>;
+
+export const moveAccountFormSchema = z.object({
+  accountId: idSchema,
+  householdId: idSchema,
+});
+export type MoveAccountFormInput = z.infer<typeof moveAccountFormSchema>;
