@@ -19,9 +19,14 @@ import {
   MIN_RESERVE_MULTIPLE,
 } from "../validation";
 
-const RESERVE_MULTIPLE_OPTIONS = Array.from(
+const TIME_ZONE_ITEMS = IANA_TIME_ZONES.map((timeZone) => ({ value: timeZone, label: timeZone }));
+
+const RESERVE_MULTIPLE_ITEMS = Array.from(
   { length: MAX_RESERVE_MULTIPLE - MIN_RESERVE_MULTIPLE + 1 },
-  (_, index) => MIN_RESERVE_MULTIPLE + index,
+  (_, index) => {
+    const months = String(MIN_RESERVE_MULTIPLE + index);
+    return { value: months, label: months };
+  },
 );
 
 export function OnboardingForm() {
@@ -48,14 +53,14 @@ export function OnboardingForm() {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="timeZone">{t.onboarding.timeZoneLabel}</Label>
-        <Select name="timeZone" defaultValue={DEFAULT_TIME_ZONE}>
+        <Select name="timeZone" items={TIME_ZONE_ITEMS} defaultValue={DEFAULT_TIME_ZONE}>
           <SelectTrigger id="timeZone">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {IANA_TIME_ZONES.map((timeZone) => (
-              <SelectItem key={timeZone} value={timeZone}>
-                {timeZone}
+            {TIME_ZONE_ITEMS.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -64,14 +69,18 @@ export function OnboardingForm() {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="reserveMultiple">{t.onboarding.reserveMultipleLabel}</Label>
-        <Select name="reserveMultiple" defaultValue={String(DEFAULT_RESERVE_MULTIPLE)}>
+        <Select
+          name="reserveMultiple"
+          items={RESERVE_MULTIPLE_ITEMS}
+          defaultValue={String(DEFAULT_RESERVE_MULTIPLE)}
+        >
           <SelectTrigger id="reserveMultiple">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {RESERVE_MULTIPLE_OPTIONS.map((months) => (
-              <SelectItem key={months} value={String(months)}>
-                {months}
+            {RESERVE_MULTIPLE_ITEMS.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
               </SelectItem>
             ))}
           </SelectContent>

@@ -5,7 +5,19 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react";
 
-const Select = SelectPrimitive.Root;
+// Without `items`, Select.Value renders the raw value (an id or key) until the popup mounts.
+type SelectProps<Value, Multiple extends boolean | undefined = false> = SelectPrimitive.Root.Props<
+  Value,
+  Multiple
+> & {
+  items: NonNullable<SelectPrimitive.Root.Props<Value, Multiple>["items"]>;
+};
+
+function Select<Value, Multiple extends boolean | undefined = false>(
+  props: SelectProps<Value, Multiple>,
+) {
+  return <SelectPrimitive.Root {...props} />;
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

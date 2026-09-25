@@ -30,16 +30,27 @@ export function AccountFilterSelect({
     router.push(transactionsHref({ month, accountId, page: 1 }));
   }
 
+  const items = [
+    { value: ALL_ACCOUNTS, label: t.accountFilter.all },
+    ...accounts.map((account) => ({
+      value: account.id,
+      label: `${account.institutionName} · ${account.name}`,
+    })),
+  ];
+
   return (
-    <Select value={selectedAccountId ?? ALL_ACCOUNTS} onValueChange={handleValueChange}>
+    <Select
+      items={items}
+      value={selectedAccountId ?? ALL_ACCOUNTS}
+      onValueChange={handleValueChange}
+    >
       <SelectTrigger aria-label={t.accountFilter.label} className="max-w-64">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL_ACCOUNTS}>{t.accountFilter.all}</SelectItem>
-        {accounts.map((account) => (
-          <SelectItem key={account.id} value={account.id}>
-            {account.institutionName} · {account.name}
+        {items.map((item) => (
+          <SelectItem key={item.value} value={item.value}>
+            {item.label}
           </SelectItem>
         ))}
       </SelectContent>
