@@ -742,6 +742,15 @@ export async function syncAllConnections(
         // queue still gets its turn instead of the whole run coming back as
         // one opaque `{ error }` (runConnectionsSyncStep).
         console.warn(`sync: connection ${connection.id} failed unexpectedly (${errorName(error)})`);
+        try {
+          // Best-effort, so the row says why on the next look (CONTEXT.md):
+          // if this write itself fails too — including a delete racing it —
+          // the connection is still counted failed, once, below; it is
+          // never also counted gone for a race on this recovery write.
+          await repository.recordSyncFailure(db, connection.id, "failed");
+        } catch {
+          // Swallowed: already logged above, and failed is counted either way.
+        }
         failed += 1;
       }
     } finally {

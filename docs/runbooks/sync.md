@@ -158,8 +158,10 @@ again: an intervening `timed_out` or provider outage, or even a narrowed sync th
 new transactions, leaves it as is. It only stops mattering once the ledger actually holds a
 transaction for this connection, at which point the incremental window applies and `first_sync_since`
 is never read again. A connection whose first sync is already narrowed and still comes back
-`too_slow` keeps failing visibly and keeps rotating through the queue every run — an operator signal
-that its own history, not the run's clock, is the problem. The wizard's own first sync
+`too_slow` or `listing_too_long` cannot narrow any further: there is no month narrower than the one
+already set, so it keeps failing visibly at up to half the run's budget every run and needs a human,
+not another retry — an operator signal that its own history, not the run's clock, is the problem. The
+wizard's own first sync
 (`connectProvider`/`addConnection`) gets a one-shot narrowed retry inline on `listing_too_long`; on
 success it persists that narrowed date as `first_sync_since` in the same transaction that creates the
 connection, so the daily job starts from it too instead of reverting to the full twelve months if the
