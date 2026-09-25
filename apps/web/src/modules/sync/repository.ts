@@ -294,6 +294,25 @@ export function createSyncUserRepository(scope: UserScope) {
       return true;
     },
 
+    // Feudo's own label for the connection, never sent to Meu Pluggy: the
+    // ownership check is the same re-read as every other write here, so a
+    // connection of another user is left untouched.
+    async renameConnection(
+      db: Database,
+      connectionId: string,
+      institutionName: string,
+    ): Promise<boolean> {
+      const connection = await findConnection(db, connectionId);
+      if (!connection) {
+        return false;
+      }
+      await db
+        .update(bankConnection)
+        .set({ institutionName })
+        .where(eq(bankConnection.id, connectionId));
+      return true;
+    },
+
     async markSynced(
       db: Database,
       connectionId: string,

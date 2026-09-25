@@ -152,6 +152,11 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
         />
         <p className="text-muted-foreground text-xs">{t.form.itemIdHelp}</p>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="institutionName">{t.form.institutionNameLabel}</Label>
+        <Input id="institutionName" name="institutionName" autoComplete="off" maxLength={80} />
+        <p className="text-muted-foreground text-xs">{t.form.institutionNameHelp}</p>
+      </div>
 
       <div className="flex justify-between">
         <Button type="button" variant="ghost" onClick={onBack} disabled={isPending}>

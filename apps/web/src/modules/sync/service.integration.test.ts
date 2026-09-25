@@ -26,6 +26,7 @@ import {
   deleteConnection,
   relabelAccount,
   removeCredentials,
+  renameConnection,
   syncAllConnections,
   type SyncDeps,
 } from "./service";
@@ -173,6 +174,41 @@ describe("connectProvider (integration)", () => {
       ]);
       expect(transactions[0]?.hash).toMatch(/^[0-9a-f]{64}$/);
       expect(transactions[2]?.hash).toBeNull();
+    });
+  });
+
+  it("stores the typed institution name, or the provider's connector name when none was typed", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const named = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+          institutionName: "Itaú",
+        },
+        userA.session,
+        db,
+        deps,
+      );
+      expect(named.status).toBe("ok");
+      const [connection] = await createSyncUserRepository(userA.scope).listConnections(db);
+      expect(connection?.institutionName).toBe("Itaú");
+
+      const unnamed = await connectProvider(
+        {
+          ...credentials,
+          consentId: await consentFor(db, userA),
+          providerItemId: FAKE_ITEM_CORRETORA_FIXTURE,
+        },
+        userA.session,
+        db,
+        deps,
+      );
+      expect(unnamed.status).toBe("ok");
+      const connections = await createSyncUserRepository(userA.scope).listConnections(db);
+      expect(connections.find((row) => row.id !== connection?.id)?.institutionName).toBe(
+        "Corretora Fixture",
+      );
     });
   });
 
@@ -517,6 +553,26 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
     });
   });
 
+  it("adds a second item with the typed institution name, overriding the provider's own", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await connectBanco(db, userA);
+
+      const outcome = await addConnection(
+        { providerItemId: FAKE_ITEM_CORRETORA_FIXTURE, institutionName: "Corretora Apelidada" },
+        userA.session,
+        db,
+        deps,
+      );
+
+      expect(outcome.status).toBe("ok");
+      const connections = await createSyncUserRepository(userA.scope).listConnections(db);
+      expect(connections.map((connection) => connection.institutionName)).toEqual([
+        "Banco Fixture",
+        "Corretora Apelidada",
+      ]);
+    });
+  });
+
   it("reports unreadable credentials without calling the provider, e.g. after a key rotation", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await connectBanco(db, userA);
@@ -571,6 +627,29 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
       expect(await deleteConnection(connection?.id ?? "", userA.session, db)).toEqual({
         status: "not_found",
       });
+    });
+  });
+
+  it("lets a user rename their own connection but not another user's", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await connectBanco(db, userA);
+      const [connection] = await createSyncUserRepository(userA.scope).listConnections(db);
+      const connectionId = connection?.id ?? "";
+
+      expect(
+        await renameConnection({ connectionId, institutionName: "Itaú" }, userA.session, db),
+      ).toEqual({ status: "ok" });
+      expect(
+        (await createSyncUserRepository(userA.scope).listConnections(db))[0]?.institutionName,
+      ).toBe("Itaú");
+
+      expect(
+        await renameConnection({ connectionId, institutionName: "Nubank" }, userB.session, db),
+      ).toEqual({ status: "not_found" });
+      expect(
+        (await createSyncUserRepository(userA.scope).listConnections(db))[0]?.institutionName,
+      ).toBe("Itaú");
+      expect(await createSyncUserRepository(userB.scope).listConnections(db)).toEqual([]);
     });
   });
 

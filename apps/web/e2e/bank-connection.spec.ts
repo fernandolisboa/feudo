@@ -49,10 +49,12 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
   await page.getByLabel("Client id").fill("e2e-client-id");
   await page.getByLabel("Client secret").fill("e2e-client-secret");
   await page.getByLabel("Item ID da conexão").fill(FAKE_ITEM_BANCO_FIXTURE);
+  await page.getByLabel("Nome do banco").fill("Banco E2E");
   await page.getByRole("button", { name: "Conectar e sincronizar" }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { name: "Contas", exact: true })).toBeVisible();
+  await expect(page.getByText("Banco E2E").first()).toBeVisible();
   const contaCorrente = page
     .getByRole("row")
     .filter({ has: page.getByRole("button", { name: "Ações: Conta corrente" }) });
@@ -69,6 +71,11 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
   await contaCorrente.getByRole("button", { name: "Ações: Conta corrente" }).click();
   await page.getByRole("menuitem", { name: "Marcar como conta da casa" }).click();
   await expect(contaCorrente).toContainText("Conta da casa");
+
+  await page.getByRole("button", { name: "Renomear" }).click();
+  await page.getByLabel("Nome do banco").fill("Banco E2E Renomeado");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText("Banco E2E Renomeado").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Remover credenciais" }).click();
   await page.getByRole("button", { name: "Remover", exact: true }).click();

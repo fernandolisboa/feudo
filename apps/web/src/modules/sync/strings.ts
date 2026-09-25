@@ -38,6 +38,9 @@ const en = {
     itemIdLabel: "Item ID of the connection",
     itemIdHelp:
       "The Item ID of one MeuPluggy connection in the Pluggy Dashboard, in the 8-4-4-4-12 format.",
+    institutionNameLabel: "Bank name",
+    institutionNameHelp:
+      "How this connection shows in Feudo, for example Itaú. Left blank, Feudo uses the name Pluggy reports, which is MeuPluggy for every Meu Pluggy connection.",
     submit: "Connect and sync",
     submitting: "Connecting…",
     back: "Back",
@@ -86,6 +89,7 @@ const en = {
     addAction: "Add connection",
     removeCredentialsAction: "Remove credentials",
     deleteAction: "Delete connection",
+    renameAction: "Rename",
     accountsCount: "{count} accounts",
     syncedAt: "Synced {date}",
     neverSynced: "Never synced",
@@ -107,6 +111,14 @@ const en = {
       confirm: "Delete",
       cancel: "Cancel",
       deleted: "Connection deleted.",
+    },
+    renameDialog: {
+      title: "Rename the {institution} connection",
+      description: "Only the name Feudo shows changes. Nothing changes in Meu Pluggy.",
+      label: "Bank name",
+      submit: "Save",
+      cancel: "Cancel",
+      renamed: "Connection renamed.",
     },
     removeCredentialsDialog: {
       title: "Remove your Meu Pluggy credentials?",
@@ -176,6 +188,9 @@ const ptBR = {
     clientSecretLabel: "Client secret",
     itemIdLabel: "Item ID da conexão",
     itemIdHelp: "O Item ID de uma conexão MeuPluggy no Pluggy Dashboard, no formato 8-4-4-4-12.",
+    institutionNameLabel: "Nome do banco",
+    institutionNameHelp:
+      "Como a conexão aparece no Feudo, por exemplo Itaú. Se ficar em branco, o Feudo usa o nome que a Pluggy informa, que é MeuPluggy em toda conexão do Meu Pluggy.",
     submit: "Conectar e sincronizar",
     submitting: "Conectando…",
     back: "Voltar",
@@ -224,6 +239,7 @@ const ptBR = {
     addAction: "Adicionar conexão",
     removeCredentialsAction: "Remover credenciais",
     deleteAction: "Excluir conexão",
+    renameAction: "Renomear",
     accountsCount: "{count} contas",
     syncedAt: "Sincronizada em {date}",
     neverSynced: "Nunca sincronizada",
@@ -244,6 +260,14 @@ const ptBR = {
       confirm: "Excluir",
       cancel: "Cancelar",
       deleted: "Conexão excluída.",
+    },
+    renameDialog: {
+      title: "Renomear a conexão {institution}",
+      description: "Muda só o nome que o Feudo mostra. Nada muda no Meu Pluggy.",
+      label: "Nome do banco",
+      submit: "Salvar",
+      cancel: "Cancelar",
+      renamed: "Conexão renomeada.",
     },
     removeCredentialsDialog: {
       title: "Remover suas credenciais do Meu Pluggy?",

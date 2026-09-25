@@ -16,6 +16,7 @@ import {
   deleteConnection,
   relabelAccount,
   removeCredentials,
+  renameConnection,
   type SyncDeps,
 } from "./service";
 import { t } from "./strings";
@@ -24,7 +25,16 @@ import {
   connectionIdFormSchema,
   connectProviderFormSchema,
   relabelAccountFormSchema,
+  renameConnectionFormSchema,
 } from "./validation";
+
+// formData.get returns null for a field the form never sent; the schema
+// itself treats a blank institution name as absent, so null collapses to the
+// same empty string rather than needing its own branch.
+function institutionNameInput(formData: FormData): string {
+  const value = formData.get("institutionName");
+  return typeof value === "string" ? value : "";
+}
 
 export type AcceptConsentState = ActionState | { status: "accepted"; consentId: string };
 
@@ -70,6 +80,7 @@ export async function connectProviderAction(
     clientId: formData.get("clientId"),
     clientSecret: formData.get("clientSecret"),
     providerItemId: formData.get("providerItemId"),
+    institutionName: institutionNameInput(formData),
   });
   if (!parsed.success) {
     return { status: "error", message: t.errors.invalidInput };
@@ -109,6 +120,7 @@ export async function addConnectionAction(
 ): Promise<ActionState> {
   const parsed = addConnectionFormSchema.safeParse({
     providerItemId: formData.get("providerItemId"),
+    institutionName: institutionNameInput(formData),
   });
   if (!parsed.success || formData.get("accepted") !== "on") {
     return { status: "error", message: t.errors.invalidInput };
@@ -175,6 +187,32 @@ export async function deleteConnectionAction(
     case "ok":
       revalidatePath("/");
       return { status: "success", message: t.connections.deleteDialog.deleted };
+    case "not_found":
+      return { status: "error", message: t.errors.connectionNotFound };
+    case "failed":
+      return { status: "error", message: t.errors.connectFailed };
+  }
+}
+
+export async function renameConnectionAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = renameConnectionFormSchema.safeParse({
+    connectionId: formData.get("connectionId"),
+    institutionName: formData.get("institutionName"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+
+  const session = await requireHouseholdSession();
+  const outcome = await renameConnection(parsed.data, session, getDb());
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/");
+      return { status: "success", message: t.connections.renameDialog.renamed };
     case "not_found":
       return { status: "error", message: t.errors.connectionNotFound };
     case "failed":

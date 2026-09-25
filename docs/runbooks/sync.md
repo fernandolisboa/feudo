@@ -48,10 +48,13 @@ credential, consent or connection; household A never lists or relabels household
    envelope (`enc:v1:<keyId>:…`, `crypto.ts`), reads the item and its accounts and investment
    positions, then creates the connection and upserts the accounts into the active household with
    the default label `individual`. Every provider read happens before the first write, so a
-   provider failure after the credential check leaves no half-synced connection.
+   provider failure after the credential check leaves no half-synced connection. Pluggy exposes no
+   field with the underlying bank for a MeuPluggy item — every real connection's connector name is
+   "MeuPluggy" — so this step's optional "Nome do banco" field lets the member type the actual bank;
+   left blank, the connection is stored under the provider's own name (#69).
 
 More banks: "Adicionar conexão" (`addConnectionAction`) reuses the stored credentials and records a
-fresh consent row for the new connection.
+fresh consent row for the new connection; it takes the same optional bank name.
 
 Both entry points that reach the provider are rate-limited per user, since Server Actions never pass
 through Better Auth's limiter: at most `AUTH_ATTEMPTS_PER_WINDOW` (5) attempts per
@@ -66,6 +69,9 @@ concurrent submit of the same Item ID is reported as already connected.
   else. Sync stops (nothing left to authenticate with); connections and accounts stay until deleted.
 - **Excluir conexão** (`deleteConnection`): deletes the connection, its accounts (cascade) and, in
   the same transaction, its consent row (a consent backs exactly one connection).
+- **Renomear** (`renameConnection`): "Suas conexões" also offers a rename action at any time, for
+  the same reason the wizard offers the field: a MeuPluggy connection's own name is never the bank.
+  Only `bank_connection.institution_name` changes; nothing is sent to Meu Pluggy.
 
 ## Providers (ADR-0005)
 
