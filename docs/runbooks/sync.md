@@ -37,18 +37,24 @@ credential, consent or connection; household A never lists or relabels household
    belongs to the session's user, is at most 24h old (`CONSENT_MAX_AGE_MS`) and does not already
    back a connection (one consent, one connection). Consents that never backed a connection are
    pruned daily once older than that.
-2. **Guide**: the steps to create a Meu Pluggy account, connect banks there, generate an API client
-   and copy the Item ID of one connection. Pluggy's API has no list-items endpoint, so the wizard
-   asks for the Item ID instead of listing the user's connections.
+2. **Guide**: the two Pluggy sites the member uses. At `meu.pluggy.ai` they create the account and
+   connect their banks. At `dashboard.pluggy.ai` (a separate signup) they create an application,
+   whose Application tab holds the client id and secret, then create one connection per bank with
+   the **MeuPluggy** connector; that connection's Item ID is what Feudo asks for. Meu Pluggy itself
+   has no developer area. Pluggy's API has no list-items endpoint, so the wizard asks for the Item
+   ID instead of listing the user's connections.
 3. **Credentials** (`connectProviderAction` → `sync.connectProvider`): authenticates against the
    provider first (`invalid_credentials` saves nothing), stores the credentials as one AES-256-GCM
    envelope (`enc:v1:<keyId>:…`, `crypto.ts`), reads the item and its accounts and investment
    positions, then creates the connection and upserts the accounts into the active household with
    the default label `individual`. Every provider read happens before the first write, so a
-   provider failure after the credential check leaves no half-synced connection.
+   provider failure after the credential check leaves no half-synced connection. Pluggy exposes no
+   field with the underlying bank for a MeuPluggy item — every real connection's connector name is
+   "MeuPluggy" — so this step's optional "Nome do banco" field lets the member type the actual bank;
+   left blank, the connection is stored under the provider's own name (#69).
 
 More banks: "Adicionar conexão" (`addConnectionAction`) reuses the stored credentials and records a
-fresh consent row for the new connection.
+fresh consent row for the new connection; it takes the same optional bank name.
 
 Both entry points that reach the provider are rate-limited per user, since Server Actions never pass
 through Better Auth's limiter: at most `AUTH_ATTEMPTS_PER_WINDOW` (5) attempts per
@@ -63,6 +69,9 @@ concurrent submit of the same Item ID is reported as already connected.
   else. Sync stops (nothing left to authenticate with); connections and accounts stay until deleted.
 - **Excluir conexão** (`deleteConnection`): deletes the connection, its accounts (cascade) and, in
   the same transaction, its consent row (a consent backs exactly one connection).
+- **Renomear** (`renameConnection`): "Suas conexões" also offers a rename action at any time, for
+  the same reason the wizard offers the field: a MeuPluggy connection's own name is never the bank.
+  Only `bank_connection.institution_name` changes; nothing is sent to Meu Pluggy.
 
 ## Providers (ADR-0005)
 
@@ -183,5 +192,5 @@ the preview deployment.
 
 Meu Pluggy has no sandbox, so the real provider is checked by hand on a preview or production
 deployment with `DATA_PROVIDER` unset: sign in, `/conectar-banco`, accept the consent, paste the
-client id, client secret and one Item ID from the Meu Pluggy dashboard, and confirm the accounts
+client id, client secret and one MeuPluggy Item ID from `dashboard.pluggy.ai`, and confirm the accounts
 land in the overview with the right balances. Record the result in the PR that changes the provider.

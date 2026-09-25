@@ -173,6 +173,33 @@ describe("sync user-scoped repository isolation (integration)", () => {
   });
 });
 
+describe("renameConnection (integration)", () => {
+  it("renames the scoped user's own connection", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createSyncUserRepository(userA.scope);
+      const connectionId = await connectFor(db, userA);
+
+      expect(await repository.renameConnection(db, connectionId, "Itaú")).toBe(true);
+
+      const [connection] = await repository.listConnections(db);
+      expect(connection?.institutionName).toBe("Itaú");
+    });
+  });
+
+  it("does not let another user rename a connection that is not theirs", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const repositoryA = createSyncUserRepository(userA.scope);
+      const repositoryB = createSyncUserRepository(userB.scope);
+      const connectionId = await connectFor(db, userA);
+
+      expect(await repositoryB.renameConnection(db, connectionId, "Nubank")).toBe(false);
+
+      const [connection] = await repositoryA.listConnections(db);
+      expect(connection?.institutionName).toBe("Banco Fixture");
+    });
+  });
+});
+
 describe("household accounts repository isolation (integration)", () => {
   it("lists only the scoped household's accounts", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {

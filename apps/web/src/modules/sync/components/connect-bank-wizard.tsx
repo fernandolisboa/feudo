@@ -14,7 +14,8 @@ import { interpolate } from "@/lib/interpolate";
 
 import { acceptConsentAction, connectProviderAction, type AcceptConsentState } from "../actions";
 import { CONSENT_SCOPE_VERSION } from "../consent-text";
-import { MEU_PLUGGY_URL, t } from "../strings";
+import { MEU_PLUGGY_URL, PLUGGY_DASHBOARD_URL, t } from "../strings";
+import { INSTITUTION_NAME_MAX_LENGTH } from "../validation";
 
 type Step =
   { kind: "consent" } | { kind: "guide"; consentId: string } | { kind: "form"; consentId: string };
@@ -79,14 +80,22 @@ function GuideStep({ onBack, onContinue }: { onBack: () => void; onContinue: () 
           <li key={step}>{step}</li>
         ))}
       </ol>
-      <Button
-        variant="outline"
-        className="self-start"
-        render={<Link href={MEU_PLUGGY_URL} target="_blank" rel="noopener noreferrer" />}
-      >
-        {t.guide.link}
-        <ExternalLink className="size-4" />
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          render={<Link href={MEU_PLUGGY_URL} target="_blank" rel="noopener noreferrer" />}
+        >
+          {t.guide.link}
+          <ExternalLink className="size-4" />
+        </Button>
+        <Button
+          variant="outline"
+          render={<Link href={PLUGGY_DASHBOARD_URL} target="_blank" rel="noopener noreferrer" />}
+        >
+          {t.guide.dashboardLink}
+          <ExternalLink className="size-4" />
+        </Button>
+      </div>
       <div className="flex justify-between">
         <Button type="button" variant="ghost" onClick={onBack}>
           {t.guide.back}
@@ -143,6 +152,16 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
           required
         />
         <p className="text-muted-foreground text-xs">{t.form.itemIdHelp}</p>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="institutionName">{t.form.institutionNameLabel}</Label>
+        <Input
+          id="institutionName"
+          name="institutionName"
+          autoComplete="off"
+          maxLength={INSTITUTION_NAME_MAX_LENGTH}
+        />
+        <p className="text-muted-foreground text-xs">{t.form.institutionNameHelp}</p>
       </div>
 
       <div className="flex justify-between">

@@ -48,6 +48,7 @@ import type {
   AddConnectionFormInput,
   ConnectProviderFormInput,
   RelabelAccountFormInput,
+  RenameConnectionFormInput,
 } from "./validation";
 
 export type SyncDeps = {
@@ -202,7 +203,12 @@ async function establishConnection(
   client: ProviderClient,
   repository: SyncUserRepository,
   db: Database,
-  input: { providerItemId: string; consentId: string; assignTo: HouseholdScope },
+  input: {
+    providerItemId: string;
+    consentId: string;
+    assignTo: HouseholdScope;
+    institutionName?: string;
+  },
 ): Promise<Outcome<EstablishedConnection, ConnectionFailure>> {
   const existing = await repository.findConnectionByItem(db, PROVIDER_KIND, input.providerItemId);
   if (existing) {
@@ -251,7 +257,7 @@ async function establishConnection(
       const connectionId = await repository.createConnection(tx, {
         provider: PROVIDER_KIND,
         providerItemId: input.providerItemId,
-        institutionName: institution.institutionName,
+        institutionName: input.institutionName ?? institution.institutionName,
         institutionProviderId: institution.institutionProviderId,
         consentId: input.consentId,
       });
@@ -364,6 +370,7 @@ export async function connectProvider(
     providerItemId: input.providerItemId,
     consentId: input.consentId,
     assignTo: householdScope(session),
+    institutionName: input.institutionName,
   });
 }
 
@@ -408,6 +415,7 @@ export async function addConnection(
     providerItemId: input.providerItemId,
     consentId: consent.consentId,
     assignTo: householdScope(session),
+    institutionName: input.institutionName,
   });
 }
 
@@ -440,6 +448,28 @@ export async function deleteConnection(
       connectionId,
     );
     return { status: deleted ? "ok" : "not_found" };
+  } catch {
+    return { status: "failed" };
+  }
+}
+
+export type RenameConnectionOutcome = SimpleOutcome<"ok" | "not_found" | "failed">;
+
+// Renames only what Feudo shows for the connection: Pluggy never exposes the
+// underlying bank for a MeuPluggy item (#69), so this is the one place a
+// member corrects it, at connect time or any time after.
+export async function renameConnection(
+  input: RenameConnectionFormInput,
+  session: CurrentSession,
+  db: Database,
+): Promise<RenameConnectionOutcome> {
+  try {
+    const renamed = await createSyncUserRepository(userScope(session)).renameConnection(
+      db,
+      input.connectionId,
+      input.institutionName,
+    );
+    return { status: renamed ? "ok" : "not_found" };
   } catch {
     return { status: "failed" };
   }

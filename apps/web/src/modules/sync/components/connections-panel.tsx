@@ -5,6 +5,7 @@ import type { ConnectionSummary } from "../repository";
 import { AddConnectionDialog } from "./add-connection-dialog";
 import { DeleteConnectionDialog } from "./delete-connection-dialog";
 import { RemoveCredentialsDialog } from "./remove-credentials-dialog";
+import { RenameConnectionDialog } from "./rename-connection-dialog";
 import { t } from "../strings";
 
 export function ConnectionsPanel({
@@ -71,10 +72,16 @@ export function ConnectionsPanel({
                   <span className="text-destructive text-xs">{t.accounts.syncFailed}</span>
                 ) : null}
               </div>
-              <DeleteConnectionDialog
-                connectionId={connection.id}
-                institutionName={connection.institutionName}
-              />
+              <div className="flex items-center gap-1">
+                <RenameConnectionDialog
+                  connectionId={connection.id}
+                  institutionName={connection.institutionName}
+                />
+                <DeleteConnectionDialog
+                  connectionId={connection.id}
+                  institutionName={connection.institutionName}
+                />
+              </div>
             </li>
           ))}
         </ul>

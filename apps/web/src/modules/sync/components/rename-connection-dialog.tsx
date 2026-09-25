@@ -1,11 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Plus } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
-import { Checkbox } from "@/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -18,29 +16,38 @@ import {
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { interpolate } from "@/lib/interpolate";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
-import { addConnectionAction } from "../actions";
+import { renameConnectionAction } from "../actions";
 import { t } from "../strings";
 import { INSTITUTION_NAME_MAX_LENGTH } from "../validation";
 
-export function AddConnectionDialog() {
+export function RenameConnectionDialog({
+  connectionId,
+  institutionName,
+}: {
+  connectionId: string;
+  institutionName: string;
+}) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(addConnectionAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(renameConnectionAction, initialActionState);
 
   useCloseOnSuccess(state, setOpen);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        <Plus className="size-4" />
-        {t.connections.addAction}
+      <DialogTrigger render={<Button type="button" variant="ghost" size="sm" />}>
+        {t.connections.renameAction}
       </DialogTrigger>
       <DialogContent>
         <form action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="connectionId" value={connectionId} />
           <DialogHeader>
-            <DialogTitle>{t.connections.addDialog.title}</DialogTitle>
-            <DialogDescription>{t.connections.addDialog.description}</DialogDescription>
+            <DialogTitle>
+              {interpolate(t.connections.renameDialog.title, "{institution}", institutionName)}
+            </DialogTitle>
+            <DialogDescription>{t.connections.renameDialog.description}</DialogDescription>
           </DialogHeader>
 
           {state.status === "error" ? (
@@ -50,32 +57,18 @@ export function AddConnectionDialog() {
           ) : null}
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="add-connection-item-id">{t.connections.addDialog.itemIdLabel}</Label>
+            <Label htmlFor={`rename-connection-${connectionId}`}>
+              {t.connections.renameDialog.label}
+            </Label>
             <Input
-              id="add-connection-item-id"
-              name="providerItemId"
+              id={`rename-connection-${connectionId}`}
+              name="institutionName"
               autoComplete="off"
-              spellCheck={false}
-              placeholder="00000000-0000-0000-0000-000000000000"
+              defaultValue={institutionName}
+              maxLength={INSTITUTION_NAME_MAX_LENGTH}
               required
             />
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="add-connection-institution-name">{t.form.institutionNameLabel}</Label>
-            <Input
-              id="add-connection-institution-name"
-              name="institutionName"
-              autoComplete="off"
-              maxLength={INSTITUTION_NAME_MAX_LENGTH}
-            />
-            <p className="text-muted-foreground text-xs">{t.form.institutionNameHelp}</p>
-          </div>
-
-          <Label className="flex items-start gap-2 text-sm font-normal">
-            <Checkbox name="accepted" required className="mt-0.5" />
-            <span>{t.consent.checkbox}</span>
-          </Label>
 
           <DialogFooter>
             <Button
@@ -85,10 +78,10 @@ export function AddConnectionDialog() {
                 setOpen(false);
               }}
             >
-              {t.connections.addDialog.cancel}
+              {t.connections.renameDialog.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
-              {t.connections.addDialog.submit}
+              {t.connections.renameDialog.submit}
             </Button>
           </DialogFooter>
         </form>

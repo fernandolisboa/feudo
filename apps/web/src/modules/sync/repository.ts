@@ -294,6 +294,19 @@ export function createSyncUserRepository(scope: UserScope) {
       return true;
     },
 
+    async renameConnection(
+      db: Database,
+      connectionId: string,
+      institutionName: string,
+    ): Promise<boolean> {
+      const rows = await db
+        .update(bankConnection)
+        .set({ institutionName })
+        .where(and(eq(bankConnection.id, connectionId), eq(bankConnection.userId, scope.userId)))
+        .returning({ id: bankConnection.id });
+      return rows.length > 0;
+    },
+
     async markSynced(
       db: Database,
       connectionId: string,
