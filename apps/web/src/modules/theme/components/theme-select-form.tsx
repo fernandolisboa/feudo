@@ -11,6 +11,11 @@ import { updateThemeAction } from "../actions";
 import { t } from "../strings";
 import { isThemeName, THEME_NAMES, type ThemeName } from "../tokens";
 
+const THEME_ITEMS = THEME_NAMES.map((theme) => ({
+  value: theme,
+  label: t.preferences.themeNames[theme],
+}));
+
 export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
   const [state, formAction] = useActionState(updateThemeAction, initialActionState);
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>(currentTheme);
@@ -44,14 +49,14 @@ export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="theme">{t.preferences.themeLabel}</Label>
-        <Select value={selectedTheme} onValueChange={handleValueChange}>
+        <Select items={THEME_ITEMS} value={selectedTheme} onValueChange={handleValueChange}>
           <SelectTrigger id="theme" className="w-56">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {THEME_NAMES.map((theme) => (
-              <SelectItem key={theme} value={theme}>
-                {t.preferences.themeNames[theme]}
+            {THEME_ITEMS.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
               </SelectItem>
             ))}
           </SelectContent>

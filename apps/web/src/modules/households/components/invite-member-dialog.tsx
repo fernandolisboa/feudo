@@ -23,6 +23,11 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 import { inviteMemberAction } from "../actions";
 import { t } from "../strings";
 
+const ROLE_ITEMS = [
+  { value: "admin", label: t.casa.roles.admin },
+  { value: "member", label: t.casa.roles.member },
+];
+
 export function InviteMemberDialog() {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(inviteMemberAction, initialActionState);
@@ -60,13 +65,16 @@ export function InviteMemberDialog() {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="invite-role">{t.casa.inviteDialog.roleLabel}</Label>
-            <Select name="role" defaultValue="member">
+            <Select name="role" items={ROLE_ITEMS} defaultValue="member">
               <SelectTrigger id="invite-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">{t.casa.roles.admin}</SelectItem>
-                <SelectItem value="member">{t.casa.roles.member}</SelectItem>
+                {ROLE_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

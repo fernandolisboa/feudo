@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { t } from "../strings";
@@ -22,6 +22,12 @@ afterEach(() => {
 });
 
 describe("HouseholdSwitcherSelect", () => {
+  it("shows the active household's name, not its id", () => {
+    render(<HouseholdSwitcherSelect households={households} activeHouseholdId="household-b" />);
+
+    expect(within(screen.getByRole("combobox")).queryByText("Casa B")).not.toBeNull();
+  });
+
   it("shows the failure alert when switchHouseholdAction resolves an error", async () => {
     switchHouseholdActionMock.mockResolvedValue({
       status: "error",

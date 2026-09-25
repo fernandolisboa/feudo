@@ -24,16 +24,23 @@ export function HouseholdSwitcherSelect({
     run(() => switchHouseholdAction(householdId));
   }
 
+  const items = households.map((household) => ({ value: household.id, label: household.name }));
+
   return (
     <div className="flex flex-col gap-1.5">
-      <Select value={activeHouseholdId} onValueChange={handleValueChange} disabled={isPending}>
+      <Select
+        items={items}
+        value={activeHouseholdId}
+        onValueChange={handleValueChange}
+        disabled={isPending}
+      >
         <SelectTrigger aria-label={t.switcher.label}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {households.map((household) => (
-            <SelectItem key={household.id} value={household.id}>
-              {household.name}
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
             </SelectItem>
           ))}
         </SelectContent>
