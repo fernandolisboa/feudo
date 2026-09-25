@@ -15,6 +15,7 @@ import { interpolate } from "@/lib/interpolate";
 import { acceptConsentAction, connectProviderAction, type AcceptConsentState } from "../actions";
 import { CONSENT_SCOPE_VERSION } from "../consent-text";
 import { MEU_PLUGGY_URL, PLUGGY_DASHBOARD_URL, t } from "../strings";
+import { INSTITUTION_NAME_MAX_LENGTH } from "../validation";
 
 type Step =
   { kind: "consent" } | { kind: "guide"; consentId: string } | { kind: "form"; consentId: string };
@@ -154,7 +155,12 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="institutionName">{t.form.institutionNameLabel}</Label>
-        <Input id="institutionName" name="institutionName" autoComplete="off" maxLength={80} />
+        <Input
+          id="institutionName"
+          name="institutionName"
+          autoComplete="off"
+          maxLength={INSTITUTION_NAME_MAX_LENGTH}
+        />
         <p className="text-muted-foreground text-xs">{t.form.institutionNameHelp}</p>
       </div>
 

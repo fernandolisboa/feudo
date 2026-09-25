@@ -22,6 +22,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { addConnectionAction } from "../actions";
 import { t } from "../strings";
+import { INSTITUTION_NAME_MAX_LENGTH } from "../validation";
 
 export function AddConnectionDialog() {
   const [open, setOpen] = useState(false);
@@ -66,7 +67,7 @@ export function AddConnectionDialog() {
               id="add-connection-institution-name"
               name="institutionName"
               autoComplete="off"
-              maxLength={80}
+              maxLength={INSTITUTION_NAME_MAX_LENGTH}
             />
             <p className="text-muted-foreground text-xs">{t.form.institutionNameHelp}</p>
           </div>

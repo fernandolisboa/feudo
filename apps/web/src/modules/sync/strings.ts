@@ -190,7 +190,7 @@ const ptBR = {
     itemIdHelp: "O Item ID de uma conexão MeuPluggy no Pluggy Dashboard, no formato 8-4-4-4-12.",
     institutionNameLabel: "Nome do banco",
     institutionNameHelp:
-      "Como a conexão aparece no Feudo, por exemplo Itaú. Se ficar em branco, o Feudo usa o nome que a Pluggy informa, que é MeuPluggy em toda conexão do Meu Pluggy.",
+      "Como a conexão aparece no Feudo, por exemplo Itaú. Se ficar em branco, o Feudo usa o nome que a Pluggy informa, que é MeuPluggy em todas as conexões do Meu Pluggy.",
     submit: "Conectar e sincronizar",
     submitting: "Conectando…",
     back: "Voltar",

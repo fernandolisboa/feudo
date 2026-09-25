@@ -21,6 +21,7 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { renameConnectionAction } from "../actions";
 import { t } from "../strings";
+import { INSTITUTION_NAME_MAX_LENGTH } from "../validation";
 
 export function RenameConnectionDialog({
   connectionId,
@@ -64,7 +65,7 @@ export function RenameConnectionDialog({
               name="institutionName"
               autoComplete="off"
               defaultValue={institutionName}
-              maxLength={80}
+              maxLength={INSTITUTION_NAME_MAX_LENGTH}
               required
             />
           </div>

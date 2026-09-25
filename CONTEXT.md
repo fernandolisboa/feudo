@@ -31,7 +31,7 @@ An offer, sent to an email address, to join a household with a given role.
 ### Banks and accounts
 
 **Bank connection**:
-A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it. Meu Pluggy has no endpoint that lists a user's connections, so the user identifies the one to bring into Feudo by pasting its **Item ID**, Pluggy's own identifier, which is kept verbatim in copy for that reason.
+A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it. Meu Pluggy has no endpoint that lists a user's connections, so the user identifies the one to bring into Feudo by pasting its **Item ID**, Pluggy's own identifier, which is kept verbatim in copy for that reason. The connection's institution name is its owner's own label, typed when connecting or later through "Renomear"; left blank, it falls back to the provider's connector name, which Pluggy reports as "MeuPluggy" for every Meu Pluggy connection, never the underlying bank (ADR-0005). It is free text for display, not a reference to an **Institution**.
 _Avoid_: item (Pluggy's term) to mean the connection itself, link, integration
 
 **Bank-connection consent**:
@@ -61,7 +61,7 @@ The daily read of every bank connection with its owner's own credentials, one co
 _Avoid_: refresh (that is Meu Pluggy's own step, outside Feudo), import
 
 **Institution**:
-A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation.
+A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation. Distinct from a bank connection's institution name, which is a label its owner types and may not match.
 _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
 
 ### Ledger
