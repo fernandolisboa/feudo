@@ -22,11 +22,9 @@ import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { inviteMemberAction } from "../actions";
 import { t } from "../strings";
+import { INVITABLE_ROLES } from "../validation";
 
-const ROLE_ITEMS = [
-  { value: "admin", label: t.casa.roles.admin },
-  { value: "member", label: t.casa.roles.member },
-];
+const ROLE_ITEMS = INVITABLE_ROLES.map((role) => ({ value: role, label: t.casa.roles[role] }));
 
 export function InviteMemberDialog() {
   const [open, setOpen] = useState(false);
