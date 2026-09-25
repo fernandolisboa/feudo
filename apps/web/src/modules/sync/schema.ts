@@ -133,8 +133,9 @@ export const bankConnection = pgTable(
 );
 
 // Household-scoped (ADR-0001): household_id is nullable only to mean
-// "unassigned" (the household it was assigned to was deleted); an unassigned
-// account is visible only to its connection's owner. "bank_account", not
+// "unassigned" (the household it was assigned to was deleted, or its
+// connection's owner left or was removed from it: member_departure_trigger);
+// an unassigned account is visible only to its connection's owner. "bank_account", not
 // "account": Better Auth already owns an "account" table for login providers.
 export const bankAccount = pgTable(
   "bank_account",

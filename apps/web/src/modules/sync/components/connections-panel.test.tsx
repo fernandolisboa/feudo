@@ -70,10 +70,7 @@ describe("ConnectionsPanel accounts", () => {
 
     expect(screen.getByText("Em Casa A")).toBeDefined();
     expect(screen.getByText(t.connections.accountUnassigned)).toBeDefined();
-    const [moveAssigned] = screen.getAllByRole("button", { name: t.connections.moveAction });
-    expect(moveAssigned).toBeDefined();
-
-    fireEvent.click(moveAssigned as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Mover Conta corrente" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Casa B")).toBeDefined();
@@ -83,6 +80,7 @@ describe("ConnectionsPanel accounts", () => {
   it("offers no move when the account already sits in the owner's only household", () => {
     renderPanel([{ id: "house-a", name: "Casa A" }]);
 
-    expect(screen.getAllByRole("button", { name: t.connections.moveAction })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Mover Conta corrente" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mover Poupança" })).toBeDefined();
   });
 });

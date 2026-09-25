@@ -28,9 +28,9 @@
 | Bank-connection consent                     | consentimento                                  | the recorded acceptance that precedes every connection                       |
 | Sync                                        | sincronização                                  | "sincronizar" as the verb; never "importar"                                  |
 | Account                                     | conta                                          | bank account only                                                            |
+| Unassigned account                          | sem casa                                       | shown to the owner only, e.g. "Sem casa"                                     |
 | Shared account                              | conta da casa                                  |                                                                              |
 | Individual account                          | conta individual                               |                                                                              |
-| Unassigned account                          | sem casa                                       | shown to the owner only, e.g. "Sem casa"                                     |
 | Institution                                 | instituição                                    | "banco" is acceptable in copy                                                |
 | Transaction                                 | transação                                      | never "lançamento"                                                           |
 | Internal transfer                           | transferência interna                          |                                                                              |

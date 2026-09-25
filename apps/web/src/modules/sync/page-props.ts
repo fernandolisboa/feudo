@@ -1,6 +1,13 @@
+import { headers } from "next/headers";
+
 import { getDb } from "@/platform/db/client";
-import type { HouseholdSession } from "@/modules/households";
-import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import type { HouseholdSession, HouseholdSummary } from "@/modules/households";
+import {
+  DEFAULT_TIME_ZONE,
+  getHouseholdSettings,
+  householdScope,
+  listHouseholds,
+} from "@/modules/households";
 
 import {
   createHouseholdAccountsRepository,
@@ -8,7 +15,6 @@ import {
   type ConnectionSummary,
   type HouseholdAccount,
   type OwnedAccount,
-  type OwnHousehold,
 } from "./repository";
 import { userScope } from "./scope";
 
@@ -21,7 +27,7 @@ export type AccountsSectionProps = {
   foreignAccounts: HouseholdAccount[];
   connections: ConnectionSummary[];
   ownedAccounts: OwnedAccount[];
-  ownHouseholds: OwnHousehold[];
+  ownHouseholds: HouseholdSummary[];
   hasCredentials: boolean;
   credentialsSavedAt: Date | null;
   viewerUserId: string;
@@ -40,7 +46,7 @@ export async function getAccountsSectionProps(
       createHouseholdAccountsRepository(householdScope(session), userScope(session)).list(db),
       userRepository.listConnections(db),
       userRepository.listOwnedAccounts(db),
-      userRepository.listOwnHouseholds(db),
+      listHouseholds(await headers()),
       userRepository.getCredential(db),
       getHouseholdSettings(householdScope(session), db),
     ]);

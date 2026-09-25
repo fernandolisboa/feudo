@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 import type { NormalizedAccount, NormalizedTransaction } from "../provider/provider";
-import { createSyncUserRepository, type MoveAccountResult } from "../repository";
+import { createSyncUserRepository } from "../repository";
+import { moveAccount, type MoveAccountOutcome } from "../service";
 import { bankAccount } from "../schema";
 import type { SeededUser } from "./with-two-users";
 
@@ -98,6 +99,6 @@ export async function moveSeededAccount(
   owner: SeededUser,
   accountId: string,
   householdId: string,
-): Promise<MoveAccountResult> {
-  return createSyncUserRepository(owner.scope).moveAccount(db, { accountId, householdId });
+): Promise<MoveAccountOutcome["status"]> {
+  return (await moveAccount({ accountId, householdId }, owner.session, db)).status;
 }

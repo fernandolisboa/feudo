@@ -1,6 +1,7 @@
 import { and, asc, count, eq, exists, gte, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
 
-import { member, organization, user } from "@/modules/auth/schema";
+import { organization, user } from "@/modules/auth/schema";
+import { lockMembershipScope } from "@/modules/households";
 
 import {
   bankAccount,
@@ -79,9 +80,7 @@ export type OwnedAccount = {
   householdName: string | null;
 };
 
-export type MoveAccountResult = "ok" | "not_found" | "not_member";
-
-export type OwnHousehold = { id: string; name: string };
+export type MoveAccountResult = "ok" | "not_found";
 
 // A write that Postgres accepted but returned nothing for, or a consent
 // handed in that the scope cannot see: both mean a caller broke an
@@ -282,12 +281,13 @@ export function createSyncUserRepository(scope: UserScope) {
         throw new SyncRepositoryInvariantError("consent is not the scoped user's, or already used");
       }
       const { defaultHousehold, ...connection } = input;
+      const membership = await lockMembershipScope(db, scope.userId, defaultHousehold.householdId);
       const [row] = await db
         .insert(bankConnection)
         .values({
           userId: scope.userId,
           ...connection,
-          defaultHouseholdId: defaultHousehold.householdId,
+          defaultHouseholdId: membership?.householdId ?? null,
         })
         .returning({ id: bankConnection.id });
       if (!row) {
@@ -341,11 +341,12 @@ export function createSyncUserRepository(scope: UserScope) {
     // New accounts land in the connection's default household with the
     // default label, or unassigned when its owner is no longer a member
     // there; an account seen before keeps its household and label and only
-    // refreshes what the provider publishes. Callers run this inside a
-    // transaction: the share lock on the owner's member row is what stops a
-    // concurrent leave or removal from committing between this read and the
-    // insert, which would otherwise land a new account in a household its
-    // owner just left (#74; member_departure_trigger clears the rest).
+    // refreshes what the provider publishes. The membership check and the
+    // insert share one transaction (a savepoint inside a caller's), so the
+    // share lock on the owner's member row stops a concurrent leave or
+    // removal from committing in between and landing a new account in a
+    // household its owner just left (#74; member_departure_trigger clears
+    // the rest).
     async upsertAccounts(
       db: Database,
       connectionId: string,
@@ -355,61 +356,61 @@ export function createSyncUserRepository(scope: UserScope) {
       await requireOwnedConnection(db, connectionId);
       // One statement cannot touch the same conflict target twice, and a
       // provider may list the same account under two listings.
+      // Sorted by code unit, as member_departure_trigger orders them with
+      // COLLATE "C", so a sync and a leave lock rows in the same order and
+      // wait on each other instead of deadlocking.
       const unique = [
         ...new Map(accounts.map((account) => [account.providerAccountId, account])).values(),
-      ];
+      ].sort((a, b) => (a.providerAccountId < b.providerAccountId ? -1 : 1));
       if (unique.length === 0) {
         return 0;
       }
-      const [assigned] = await db
-        .select({ householdId: member.organizationId })
-        .from(bankConnection)
-        .innerJoin(
-          member,
-          and(
-            eq(member.userId, bankConnection.userId),
-            eq(member.organizationId, bankConnection.defaultHouseholdId),
-          ),
-        )
-        .where(and(eq(bankConnection.id, connectionId), eq(bankConnection.userId, scope.userId)))
-        .limit(1)
-        .for("share", { of: member });
-      await db
-        .insert(bankAccount)
-        .values(
-          unique.map((account) => ({
-            connectionId,
-            householdId: assigned?.householdId ?? null,
-            providerAccountId: account.providerAccountId,
-            type: account.type,
-            productType: account.productType,
-            name: account.name,
-            balanceCentavos: account.balanceCentavos,
-            currency: account.currency,
-            holderDocumentHash: account.holderDocumentHash,
-            ratePpm: account.ratePpm,
-            rateType: account.rateType,
-            dueDate: account.dueDate,
-            acquisitionDate: account.acquisitionDate,
-            syncedAt: options.syncedAt,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: [bankAccount.connectionId, bankAccount.providerAccountId],
-          set: {
-            type: sql`excluded.type`,
-            productType: sql`excluded.product_type`,
-            name: sql`excluded.name`,
-            balanceCentavos: sql`excluded.balance_centavos`,
-            currency: sql`excluded.currency`,
-            holderDocumentHash: sql`excluded.holder_document_hash`,
-            ratePpm: sql`excluded.rate_ppm`,
-            rateType: sql`excluded.rate_type`,
-            dueDate: sql`excluded.due_date`,
-            acquisitionDate: sql`excluded.acquisition_date`,
-            syncedAt: sql`excluded.synced_at`,
-          },
-        });
+      await db.transaction(async (tx) => {
+        const [connection] = await tx
+          .select({ defaultHouseholdId: bankConnection.defaultHouseholdId })
+          .from(bankConnection)
+          .where(and(eq(bankConnection.id, connectionId), eq(bankConnection.userId, scope.userId)))
+          .limit(1);
+        const assigned = connection?.defaultHouseholdId
+          ? await lockMembershipScope(tx, scope.userId, connection.defaultHouseholdId)
+          : null;
+        await tx
+          .insert(bankAccount)
+          .values(
+            unique.map((account) => ({
+              connectionId,
+              householdId: assigned?.householdId ?? null,
+              providerAccountId: account.providerAccountId,
+              type: account.type,
+              productType: account.productType,
+              name: account.name,
+              balanceCentavos: account.balanceCentavos,
+              currency: account.currency,
+              holderDocumentHash: account.holderDocumentHash,
+              ratePpm: account.ratePpm,
+              rateType: account.rateType,
+              dueDate: account.dueDate,
+              acquisitionDate: account.acquisitionDate,
+              syncedAt: options.syncedAt,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: [bankAccount.connectionId, bankAccount.providerAccountId],
+            set: {
+              type: sql`excluded.type`,
+              productType: sql`excluded.product_type`,
+              name: sql`excluded.name`,
+              balanceCentavos: sql`excluded.balance_centavos`,
+              currency: sql`excluded.currency`,
+              holderDocumentHash: sql`excluded.holder_document_hash`,
+              ratePpm: sql`excluded.rate_ppm`,
+              rateType: sql`excluded.rate_type`,
+              dueDate: sql`excluded.due_date`,
+              acquisitionDate: sql`excluded.acquisition_date`,
+              syncedAt: sql`excluded.synced_at`,
+            },
+          });
+      });
       return unique.length;
     },
 
@@ -506,57 +507,35 @@ export function createSyncUserRepository(scope: UserScope) {
         .orderBy(bankAccount.type, bankAccount.name);
     },
 
-    async listOwnHouseholds(db: Database): Promise<OwnHousehold[]> {
-      return db
-        .select({ id: organization.id, name: organization.name })
-        .from(member)
-        .innerJoin(organization, eq(organization.id, member.organizationId))
-        .where(eq(member.userId, scope.userId))
-        .orderBy(organization.name);
-    },
-
-    // The destination id comes from a form, so it is honoured only once the
-    // scoped user's own member row for it is found, and share-locked so a
-    // leave or removal cannot commit in between (#13). The connection's
-    // default household follows the account, so accounts the provider lists
-    // later join where their owner last put one (#76).
+    // The destination arrives as a scope, and households.lockMembershipScope
+    // is the only thing that builds one from an id the owner picked: the
+    // caller holds that lock in the same transaction as this write (#13).
+    // The connection's default household follows the account, so accounts
+    // the provider lists later join where their owner last put one (#76).
     async moveAccount(
       db: Database,
-      input: { accountId: string; householdId: string },
+      accountId: string,
+      destination: HouseholdScope,
     ): Promise<MoveAccountResult> {
-      return db.transaction(async (tx) => {
-        const [membership] = await tx
-          .select({ id: member.id })
-          .from(member)
-          .where(and(eq(member.userId, scope.userId), eq(member.organizationId, input.householdId)))
-          .limit(1)
-          .for("share");
-        if (!membership) {
-          return "not_member";
-        }
-        const ownedConnections = tx
-          .select({ id: bankConnection.id })
-          .from(bankConnection)
-          .where(eq(bankConnection.userId, scope.userId));
-        const [moved] = await tx
-          .update(bankAccount)
-          .set({ householdId: input.householdId })
-          .where(
-            and(
-              eq(bankAccount.id, input.accountId),
-              inArray(bankAccount.connectionId, ownedConnections),
-            ),
-          )
-          .returning({ connectionId: bankAccount.connectionId });
-        if (!moved) {
-          return "not_found";
-        }
-        await tx
-          .update(bankConnection)
-          .set({ defaultHouseholdId: input.householdId })
-          .where(eq(bankConnection.id, moved.connectionId));
-        return "ok";
-      });
+      const ownedConnections = db
+        .select({ id: bankConnection.id })
+        .from(bankConnection)
+        .where(eq(bankConnection.userId, scope.userId));
+      const [moved] = await db
+        .update(bankAccount)
+        .set({ householdId: destination.householdId })
+        .where(
+          and(eq(bankAccount.id, accountId), inArray(bankAccount.connectionId, ownedConnections)),
+        )
+        .returning({ connectionId: bankAccount.connectionId });
+      if (!moved) {
+        return "not_found";
+      }
+      await db
+        .update(bankConnection)
+        .set({ defaultHouseholdId: destination.householdId })
+        .where(eq(bankConnection.id, moved.connectionId));
+      return "ok";
     },
 
     async recordSyncFailure(

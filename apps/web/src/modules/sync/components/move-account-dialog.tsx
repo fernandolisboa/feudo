@@ -18,9 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { initialActionState } from "@/lib/action-state";
 import { interpolate } from "@/lib/interpolate";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
+import type { HouseholdSummary } from "@/modules/households";
 
 import { moveAccountAction } from "../actions";
-import type { OwnHousehold } from "../repository";
 import { t } from "../strings";
 
 export function MoveAccountDialog({
@@ -30,7 +30,7 @@ export function MoveAccountDialog({
 }: {
   accountId: string;
   accountName: string;
-  destinations: OwnHousehold[];
+  destinations: HouseholdSummary[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(moveAccountAction, initialActionState);
@@ -40,7 +40,15 @@ export function MoveAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button type="button" variant="ghost" size="sm" />}>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={interpolate(t.connections.moveActionFor, "{account}", accountName)}
+          />
+        }
+      >
         {t.connections.moveAction}
       </DialogTrigger>
       <DialogContent>

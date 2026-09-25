@@ -1,7 +1,9 @@
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 
-import type { ConnectionSummary, OwnedAccount, OwnHousehold } from "../repository";
+import type { HouseholdSummary } from "@/modules/households";
+
+import type { ConnectionSummary, OwnedAccount } from "../repository";
 import { AddConnectionDialog } from "./add-connection-dialog";
 import { DeleteConnectionDialog } from "./delete-connection-dialog";
 import { MoveAccountDialog } from "./move-account-dialog";
@@ -19,7 +21,7 @@ export function ConnectionsPanel({
 }: {
   connections: ConnectionSummary[];
   ownedAccounts: OwnedAccount[];
-  ownHouseholds: OwnHousehold[];
+  ownHouseholds: HouseholdSummary[];
   hasCredentials: boolean;
   credentialsSavedAt: Date | null;
   timeZone: string;
@@ -106,7 +108,7 @@ function ConnectionAccounts({
   ownHouseholds,
 }: {
   accounts: OwnedAccount[];
-  ownHouseholds: OwnHousehold[];
+  ownHouseholds: HouseholdSummary[];
 }) {
   if (accounts.length === 0) {
     return null;

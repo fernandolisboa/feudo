@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { CurrentSession } from "@/modules/auth";
 import type { HouseholdScope, HouseholdSession } from "@/modules/households";
-import { householdScope } from "@/modules/households";
+import { householdScope, lockMembershipScope } from "@/modules/households";
 
 import { errorName } from "@/lib/error-name";
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
@@ -504,9 +504,15 @@ export async function moveAccount(
   session: CurrentSession,
   db: Database,
 ): Promise<MoveAccountOutcome> {
+  const repository = createSyncUserRepository(userScope(session));
   try {
-    const status = await createSyncUserRepository(userScope(session)).moveAccount(db, input);
-    return { status };
+    return await db.transaction(async (tx) => {
+      const destination = await lockMembershipScope(tx, session.userId, input.householdId);
+      if (!destination) {
+        return { status: "not_member" };
+      }
+      return { status: await repository.moveAccount(tx, input.accountId, destination) };
+    });
   } catch {
     return { status: "failed" };
   }

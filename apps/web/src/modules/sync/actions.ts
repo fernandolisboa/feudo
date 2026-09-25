@@ -272,6 +272,6 @@ export async function moveAccountAction(
     case "not_member":
       return { status: "error", message: t.errors.notAMember };
     case "failed":
-      return { status: "error", message: t.errors.connectFailed };
+      return { status: "error", message: t.errors.moveFailed };
   }
 }

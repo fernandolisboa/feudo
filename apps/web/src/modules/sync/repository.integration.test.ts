@@ -11,6 +11,7 @@ import {
 } from "./repository";
 import { member } from "@/modules/auth/schema";
 import { householdScope, type HouseholdScope } from "@/modules/households";
+import { moveSeededAccount } from "./test/seed-synced-connection";
 import { joinHousehold, withTwoUsers, type TwoUsers } from "./test/with-two-users";
 
 import type { NormalizedAccount } from "./provider/provider";
@@ -129,10 +130,7 @@ describe("sync user-scoped repository isolation (integration)", () => {
       expect(await repositoryB.listOwnedAccounts(db)).toEqual([]);
       const [accountOfA] = await repositoryA.listOwnedAccounts(db);
       expect(
-        await repositoryB.moveAccount(db, {
-          accountId: accountOfA?.id ?? "",
-          householdId: userB.session.householdId,
-        }),
+        await moveSeededAccount(db, userB, accountOfA?.id ?? "", userB.session.householdId),
       ).toBe("not_found");
       await expect(repositoryB.hasTransactions(db, connectionId)).rejects.toThrow(
         ConnectionNotOwnedError,
@@ -367,6 +365,24 @@ describe("the household new accounts land in (integration, #76)", () => {
   });
 });
 
+describe("the household a connection starts in (integration)", () => {
+  it("records no default household when the owner is not a member of the session's household", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await db.delete(member).where(eq(member.userId, userA.id));
+
+      const connectionId = await connectFor(db, userA);
+
+      const [connection] = await db
+        .select({ defaultHouseholdId: bankConnection.defaultHouseholdId })
+        .from(bankConnection)
+        .where(eq(bankConnection.id, connectionId));
+      expect(connection?.defaultHouseholdId).toBeNull();
+      const [row] = await createSyncUserRepository(userA.scope).listOwnedAccounts(db);
+      expect(row?.householdId).toBeNull();
+    });
+  });
+});
+
 describe("moveAccount (integration, #13)", () => {
   it("moves an owned account to another household of the owner, and later accounts follow it", async () => {
     await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
@@ -375,9 +391,7 @@ describe("moveAccount (integration, #13)", () => {
       const connectionId = await connectFor(db, userB, { household: { householdId: householdA } });
       const [owned] = await repositoryB.listOwnedAccounts(db);
 
-      expect(
-        await repositoryB.moveAccount(db, { accountId: owned?.id ?? "", householdId: householdB }),
-      ).toBe("ok");
+      expect(await moveSeededAccount(db, userB, owned?.id ?? "", householdB)).toBe("ok");
 
       expect(await householdAccounts(householdA, userA).list(db)).toEqual([]);
       expect((await householdAccounts(householdB, userB).list(db)).map((row) => row.id)).toEqual([
@@ -411,12 +425,7 @@ describe("moveAccount (integration, #13)", () => {
       const [unassigned] = await repositoryB.listOwnedAccounts(db);
       expect(unassigned?.householdId).toBeNull();
 
-      expect(
-        await repositoryB.moveAccount(db, {
-          accountId: unassigned?.id ?? "",
-          householdId: householdB,
-        }),
-      ).toBe("ok");
+      expect(await moveSeededAccount(db, userB, unassigned?.id ?? "", householdB)).toBe("ok");
 
       expect(await householdAccounts(householdB, userB).list(db)).toHaveLength(1);
     });
@@ -424,22 +433,15 @@ describe("moveAccount (integration, #13)", () => {
 
   it("refuses a household the owner does not belong to, and an account someone else owns", async () => {
     await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
-      const repositoryA = createSyncUserRepository(userA.scope);
       const repositoryB = createSyncUserRepository(userB.scope);
       await joinHousehold(db, userA.id, householdB);
       await connectFor(db, userB);
       const [ofB] = await repositoryB.listOwnedAccounts(db);
       const accountId = ofB?.id ?? "";
 
-      expect(await repositoryB.moveAccount(db, { accountId, householdId: householdA })).toBe(
-        "not_member",
-      );
-      expect(await repositoryA.moveAccount(db, { accountId, householdId: householdB })).toBe(
-        "not_found",
-      );
-      expect(await repositoryA.moveAccount(db, { accountId, householdId: householdA })).toBe(
-        "not_found",
-      );
+      expect(await moveSeededAccount(db, userB, accountId, householdA)).toBe("not_member");
+      expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("not_found");
+      expect(await moveSeededAccount(db, userA, accountId, householdA)).toBe("not_found");
       expect((await repositoryB.listOwnedAccounts(db))[0]?.householdId).toBe(householdB);
     });
   });
