@@ -40,6 +40,7 @@
 | Subcategory                                 | subcategoria                                   |                                                                              |
 | Kind (income / fixed / variable / transfer) | tipo (renda / fixo / variável / transferência) |                                                                              |
 | Categorization rule                         | regra de categorização                         |                                                                              |
+| Uncategorized                               | sem categoria                                  |                                                                              |
 | Fixed cost                                  | custo fixo                                     |                                                                              |
 | Savings rate                                | taxa de poupança                               |                                                                              |
 | Reserve target                              | meta da reserva                                |                                                                              |

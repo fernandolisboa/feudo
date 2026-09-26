@@ -92,6 +92,13 @@
       "when": 1790352884015,
       "tag": "0012_connection_default_household",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790438133336,
+      "tag": "0013_transaction_categorization",
+      "breakpoints": true
     }
   ]
 }
