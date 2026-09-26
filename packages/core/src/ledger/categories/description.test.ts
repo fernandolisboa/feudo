@@ -31,6 +31,30 @@ describe("rulePatternFromDescription", () => {
   it("falls back to the normalized description for empty input", () => {
     expect(rulePatternFromDescription("   ")).toBe("");
   });
+
+  it("keeps the longest contiguous non-numeric run when a number sits in the middle", () => {
+    expect(rulePatternFromDescription("Pix enviado condominio residencial 0912 abc")).toBe(
+      "PIX ENVIADO CONDOMINIO RESIDENCIAL",
+    );
+  });
+
+  it("prefers the merchant after the card number when both runs are equally long", () => {
+    expect(rulePatternFromDescription("Compra cartao 1234 Academia XYZ")).toBe("ACADEMIA XYZ");
+  });
+
+  it("drops a numeric token at the start of the description", () => {
+    expect(rulePatternFromDescription("1234 Academia XYZ")).toBe("ACADEMIA XYZ");
+  });
+
+  it("drops a numeric token at the end of the description", () => {
+    expect(rulePatternFromDescription("Academia XYZ 1234")).toBe("ACADEMIA XYZ");
+  });
+
+  it("returns a pattern that matches its own description even with a number in the middle", () => {
+    const description = "Compra cartao 1234 Academia XYZ";
+    const pattern = rulePatternFromDescription(description);
+    expect(matchesPattern(normalizeDescription(description), pattern)).toBe(true);
+  });
 });
 
 describe("matchesPattern", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
+import { member } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
 import { bankTransaction } from "@/modules/sync/schema";
 import {
@@ -240,6 +241,37 @@ describe("categorization repository (integration)", () => {
     });
   });
 
+  it("refuses to set or clear a manual choice on an unassigned account's transaction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "a-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "a-1");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      expect(
+        await repoA.setManual(
+          db,
+          transactionId,
+          { type: "product", id: "housing.condo" },
+          userA.id,
+        ),
+      ).toBe("ok");
+
+      await db.delete(member).where(eq(member.userId, userA.id));
+
+      expect(
+        await repoA.setManual(
+          db,
+          transactionId,
+          { type: "product", id: "food.groceries" },
+          userA.id,
+        ),
+      ).toBe("not_found");
+      expect(await repoA.clearManual(db, transactionId)).toBe("not_found");
+    });
+  });
+
   it("does not let an unknown transaction id be categorized", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       const repoA = createCategorizationRepository(householdScope(userA.session));
@@ -249,7 +281,7 @@ describe("categorization repository (integration)", () => {
     });
   });
 
-  it("does not carry a manual choice when its account moves to another household", async () => {
+  it("carries a product-subcategory manual choice along when its account moves to another household", async () => {
     await withTwoUsers(async ({ db, userA, householdB }) => {
       const seeded = await seedSyncedConnection(db, userA, {
         household: householdScope(userA.session),
@@ -282,7 +314,82 @@ describe("categorization repository (integration)", () => {
         days: SEPTEMBER,
         accountId: null,
       });
+      expect(rowsB.find((row) => row.id === transactionId)?.manual).toEqual({
+        type: "product",
+        id: "housing.condo",
+      });
+    });
+  });
+
+  it("stops resolving a manual choice pointing at the origin household's own subcategory once the account moves, and lets the destination take over", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdB }) => {
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "move-2" })],
+      });
+      const transactionId = await transactionIdFor(db, "move-2");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const ownSubcategory = await repoA.addHouseholdSubcategory(db, {
+        categoryId: "shopping",
+        name: "Presentes",
+        kind: "variable",
+      });
+      if (ownSubcategory.status !== "ok") {
+        throw new Error("setup failed");
+      }
+      expect(
+        await repoA.setManual(
+          db,
+          transactionId,
+          { type: "household", id: ownSubcategory.id },
+          userA.id,
+        ),
+      ).toBe("ok");
+
+      await joinHousehold(db, userA.id, householdB);
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("ok");
+
+      const ledgerB = createHouseholdLedgerRepository({ householdId: householdB });
+      const rowsB = await ledgerB.listTransactionsInRange(db, {
+        days: SEPTEMBER,
+        accountId: null,
+      });
       expect(rowsB.find((row) => row.id === transactionId)?.manual).toBeNull();
+
+      const repoB = createCategorizationRepository({ householdId: householdB });
+      expect(await repoB.listHouseholdSubcategories(db)).toEqual([]);
+      expect(
+        await repoB.setManual(
+          db,
+          transactionId,
+          { type: "household", id: ownSubcategory.id },
+          userB.id,
+        ),
+      ).toBe("not_found");
+
+      expect(
+        await repoB.setManual(db, transactionId, { type: "product", id: "housing.rent" }, userB.id),
+      ).toBe("ok");
+      const rowsAfterOverwrite = await ledgerB.listTransactionsInRange(db, {
+        days: SEPTEMBER,
+        accountId: null,
+      });
+      expect(rowsAfterOverwrite.find((row) => row.id === transactionId)?.manual).toEqual({
+        type: "product",
+        id: "housing.rent",
+      });
+      expect(await repoB.clearManual(db, transactionId)).toBe("ok");
+
+      expect(
+        await repoA.setManual(
+          db,
+          transactionId,
+          { type: "product", id: "housing.condo" },
+          userA.id,
+        ),
+      ).toBe("not_found");
+      expect(await repoA.clearManual(db, transactionId)).toBe("not_found");
     });
   });
 });

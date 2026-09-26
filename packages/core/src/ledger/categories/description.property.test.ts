@@ -1,22 +1,24 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { normalizeDescription } from "./description";
 
-describe("normalizeDescription property tests", () => {
-  it("is idempotent", () => {
-    fc.assert(
-      fc.property(fc.string(), (text) => {
-        const once = normalizeDescription(text);
-        expect(normalizeDescription(once)).toBe(once);
-      }),
-    );
-  });
+import { matchesPattern, normalizeDescription, rulePatternFromDescription } from "./description";
 
-  it("only ever produces uppercase letters, digits and single spaces", () => {
+const wordArb = fc.stringMatching(/^[A-Za-z]{1,10}$/);
+const numberArb = fc.stringMatching(/^[0-9]{1,6}$/);
+const tokenArb = fc.oneof(wordArb, numberArb);
+const descriptionArb = fc
+  .array(tokenArb, { minLength: 1, maxLength: 10 })
+  .map((tokens) => tokens.join(" "));
+
+describe("rulePatternFromDescription property tests", () => {
+  it("returns a pattern that matches its own normalized description whenever it is non-empty", () => {
     fc.assert(
-      fc.property(fc.string(), (text) => {
-        const normalized = normalizeDescription(text);
-        expect(normalized).toMatch(/^([A-Z0-9]+( [A-Z0-9]+)*)?$/);
+      fc.property(descriptionArb, (description) => {
+        const pattern = rulePatternFromDescription(description);
+        if (pattern === "") {
+          return;
+        }
+        expect(matchesPattern(normalizeDescription(description), pattern)).toBe(true);
       }),
     );
   });

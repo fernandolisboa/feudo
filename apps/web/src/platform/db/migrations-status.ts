@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import journal from "../../../drizzle/meta/_journal.json";
+import { findSqlState } from "./sql-state.ts";
 
 import type { Database } from "./client.ts";
 
@@ -62,28 +63,8 @@ interface MigrationRow {
 const RELATION_DOES_NOT_EXIST = "42P01";
 const MAX_CAUSE_CHAIN_DEPTH = 5;
 
-function hasStringCode(value: unknown): value is { code: string } {
-  return (
-    typeof value === "object" && value !== null && "code" in value && typeof value.code === "string"
-  );
-}
-
 function hasCause(value: unknown): value is { cause: unknown } {
   return typeof value === "object" && value !== null && "cause" in value;
-}
-
-function findSqlState(error: unknown): string | undefined {
-  let current = error;
-  for (let depth = 0; depth < MAX_CAUSE_CHAIN_DEPTH; depth += 1) {
-    if (hasStringCode(current)) {
-      return current.code;
-    }
-    if (!hasCause(current)) {
-      return undefined;
-    }
-    current = current.cause;
-  }
-  return undefined;
 }
 
 function innermostErrorName(error: unknown): string {

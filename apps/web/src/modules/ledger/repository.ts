@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 
 import { bankAccount, bankConnection, bankTransaction } from "@/modules/sync/schema";
 
-import { subcategoryRefFrom } from "./categorization-repository";
+import { manualSubcategoryRefFrom } from "./categorization-repository";
 import { transactionCategorization } from "./schema";
 
 import type { IsoDateRange, SubcategoryRef } from "@feudo/core";
@@ -36,7 +36,8 @@ export type TransactionsFilter = { days: IsoDateRange; accountId: string | null 
 // contract's precedence: manual > household rule > product default rule >
 // provider category mapping); this repository only supplies the two facts
 // that resolution needs and this slice persists, providerCategory and the
-// household's own manual choice.
+// transaction's manual choice, resolved for this scope (manualSubcategoryRefFrom
+// hides a household ref that belongs to a different household than scope).
 export function createHouseholdLedgerRepository(scope: HouseholdScope) {
   function matches(filter: TransactionsFilter) {
     return and(
@@ -82,16 +83,14 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
           institutionName: bankConnection.institutionName,
           manualProductSubcategoryId: transactionCategorization.productSubcategoryId,
           manualHouseholdSubcategoryId: transactionCategorization.householdSubcategoryId,
+          manualSubcategoryHouseholdId: transactionCategorization.subcategoryHouseholdId,
         })
         .from(bankTransaction)
         .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
         .innerJoin(bankConnection, eq(bankConnection.id, bankAccount.connectionId))
         .leftJoin(
           transactionCategorization,
-          and(
-            eq(transactionCategorization.transactionId, bankTransaction.id),
-            eq(transactionCategorization.householdId, scope.householdId),
-          ),
+          eq(transactionCategorization.transactionId, bankTransaction.id),
         )
         .where(matches(filter))
         .orderBy(
@@ -99,10 +98,22 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
           asc(bankTransaction.amountCentavos),
           asc(bankTransaction.id),
         );
-      return rows.map(({ manualProductSubcategoryId, manualHouseholdSubcategoryId, ...row }) => ({
-        ...row,
-        manual: subcategoryRefFrom(manualProductSubcategoryId, manualHouseholdSubcategoryId),
-      }));
+      return rows.map(
+        ({
+          manualProductSubcategoryId,
+          manualHouseholdSubcategoryId,
+          manualSubcategoryHouseholdId,
+          ...row
+        }) => ({
+          ...row,
+          manual: manualSubcategoryRefFrom(
+            manualProductSubcategoryId,
+            manualHouseholdSubcategoryId,
+            manualSubcategoryHouseholdId,
+            scope.householdId,
+          ),
+        }),
+      );
     },
   };
 }

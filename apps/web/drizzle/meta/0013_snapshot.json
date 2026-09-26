@@ -1,5 +1,5 @@
 {
-  "id": "6858fdd9-f860-4811-87b2-75f43c920e0b",
+  "id": "4b998cc0-9c54-4d6d-838b-eed11cfe7ef5",
   "prevId": "a2b2f6de-92e3-464f-9490-64398bf7ac88",
   "version": "7",
   "dialect": "postgresql",
@@ -1929,16 +1929,10 @@
       "name": "transaction_categorization",
       "schema": "",
       "columns": {
-        "household_id": {
-          "name": "household_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "transaction_id": {
           "name": "transaction_id",
           "type": "text",
-          "primaryKey": false,
+          "primaryKey": true,
           "notNull": true
         },
         "product_subcategory_id": {
@@ -1949,6 +1943,12 @@
         },
         "household_subcategory_id": {
           "name": "household_subcategory_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subcategory_household_id": {
+          "name": "subcategory_household_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1969,19 +1969,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "transaction_categorization_household_id_organization_id_fk": {
-          "name": "transaction_categorization_household_id_organization_id_fk",
-          "tableFrom": "transaction_categorization",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "household_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "transaction_categorization_transaction_id_bank_transaction_id_fk": {
           "name": "transaction_categorization_transaction_id_bank_transaction_id_fk",
           "tableFrom": "transaction_categorization",
@@ -2013,7 +2000,7 @@
           "tableFrom": "transaction_categorization",
           "tableTo": "household_subcategory",
           "columnsFrom": [
-            "household_id",
+            "subcategory_household_id",
             "household_subcategory_id"
           ],
           "columnsTo": [
@@ -2024,21 +2011,13 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "transaction_categorization_household_id_transaction_id_pk": {
-          "name": "transaction_categorization_household_id_transaction_id_pk",
-          "columns": [
-            "household_id",
-            "transaction_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
         "transaction_categorization_target_check": {
           "name": "transaction_categorization_target_check",
-          "value": "num_nonnulls(\"transaction_categorization\".\"product_subcategory_id\", \"transaction_categorization\".\"household_subcategory_id\") = 1"
+          "value": "(\"transaction_categorization\".\"product_subcategory_id\" is not null and \"transaction_categorization\".\"household_subcategory_id\" is null and \"transaction_categorization\".\"subcategory_household_id\" is null)\n        or (\"transaction_categorization\".\"product_subcategory_id\" is null and \"transaction_categorization\".\"household_subcategory_id\" is not null and \"transaction_categorization\".\"subcategory_household_id\" is not null)"
         }
       },
       "isRLSEnabled": false

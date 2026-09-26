@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, exists } from "drizzle-orm";
 
 import {
+  isProductCategoryId,
   isProductSubcategoryId,
   productSubcategory,
   type CategorizationRule,
@@ -13,6 +14,7 @@ import {
 } from "@feudo/core";
 
 import { bankAccount, bankTransaction } from "@/modules/sync/schema";
+import { hasSqlState } from "@/platform/db/sql-state";
 
 import {
   categorizationRule,
@@ -22,37 +24,14 @@ import {
 } from "./schema";
 
 import type { HouseholdScope } from "@/modules/households";
-import type { Database as Connection } from "@/platform/db/client";
+import type { DatabaseOrTransaction } from "@/platform/db/client";
 
-// Accepts a transaction handle as well as the pooled connection, the same
-// widening households/membership-scope.ts uses: categorization-service.ts
-// sets a manual choice and saves a rule in one transaction, so this
-// repository's writes must run against either.
-type Database = Connection | Parameters<Parameters<Connection["transaction"]>[0]>[0];
+// categorization-service.ts sets a manual choice and saves a rule in one
+// transaction, so every method here runs against either handle.
+type Database = DatabaseOrTransaction;
 
 const POSTGRES_UNIQUE_VIOLATION = "23505";
 const POSTGRES_FOREIGN_KEY_VIOLATION = "23503";
-
-const MAX_CAUSE_CHAIN_DEPTH = 5;
-
-// drizzle wraps the driver's error in DrizzleQueryError, whose message loses
-// the SQLSTATE; the original error survives on .cause (platform/db's
-// migrations-status.ts walks the same chain for the same reason).
-function hasPgErrorCode(error: unknown, code: string): boolean {
-  let current = error;
-  for (let depth = 0; depth < MAX_CAUSE_CHAIN_DEPTH; depth += 1) {
-    if (typeof current === "object" && current !== null && "code" in current) {
-      if (current.code === code) {
-        return true;
-      }
-    }
-    if (typeof current !== "object" || current === null || !("cause" in current)) {
-      return false;
-    }
-    current = current.cause;
-  }
-  return false;
-}
 
 function subcategoryTargetColumns(subcategory: SubcategoryRef): {
   productSubcategoryId: string | null;
@@ -61,6 +40,32 @@ function subcategoryTargetColumns(subcategory: SubcategoryRef): {
   return subcategory.type === "product"
     ? { productSubcategoryId: subcategory.id, householdSubcategoryId: null }
     : { productSubcategoryId: null, householdSubcategoryId: subcategory.id };
+}
+
+// transaction_categorization has no household_id of its own (it travels with
+// the account, ADR-0001): a household ref names its owning household in
+// subcategoryHouseholdId, purely so the composite foreign key can validate it
+// against household_subcategory. Only the writer's own household ever goes
+// in that column, since ownsTarget already refused any other household's id.
+function transactionCategorizationTargetColumns(
+  subcategory: SubcategoryRef,
+  householdId: string,
+): {
+  productSubcategoryId: string | null;
+  householdSubcategoryId: string | null;
+  subcategoryHouseholdId: string | null;
+} {
+  return subcategory.type === "product"
+    ? {
+        productSubcategoryId: subcategory.id,
+        householdSubcategoryId: null,
+        subcategoryHouseholdId: null,
+      }
+    : {
+        productSubcategoryId: null,
+        householdSubcategoryId: subcategory.id,
+        subcategoryHouseholdId: householdId,
+      };
 }
 
 export function subcategoryRefFrom(
@@ -72,6 +77,26 @@ export function subcategoryRefFrom(
   }
   if (productSubcategoryId && isProductSubcategoryId(productSubcategoryId)) {
     return { type: "product", id: productSubcategoryId };
+  }
+  return null;
+}
+
+// A manual choice travels with the transaction's account (ADR-0001), but a
+// household ref only resolves while the reading household is the one that
+// pointed it there; once the account moves elsewhere, the destination's own
+// rules and defaults take over instead (schema.ts's why-comment on the
+// table). A product ref has no owner and resolves for whoever reads it.
+export function manualSubcategoryRefFrom(
+  productSubcategoryId: string | null,
+  householdSubcategoryId: string | null,
+  subcategoryHouseholdId: string | null,
+  viewerHouseholdId: string,
+): SubcategoryRef | null {
+  if (productSubcategoryId && isProductSubcategoryId(productSubcategoryId)) {
+    return { type: "product", id: productSubcategoryId };
+  }
+  if (householdSubcategoryId && subcategoryHouseholdId === viewerHouseholdId) {
+    return { type: "household", id: householdSubcategoryId };
   }
   return null;
 }
@@ -128,7 +153,9 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         .from(householdSubcategory)
         .where(eq(householdSubcategory.householdId, scope.householdId))
         .orderBy(householdSubcategory.categoryId, householdSubcategory.name);
-      return rows.map((row) => ({ ...row, categoryId: row.categoryId as ProductCategoryId }));
+      return rows.filter((row): row is typeof row & { categoryId: ProductCategoryId } =>
+        isProductCategoryId(row.categoryId),
+      );
     },
 
     async addHouseholdSubcategory(
@@ -145,7 +172,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         }
         return { status: "ok", id: row.id };
       } catch (error) {
-        if (hasPgErrorCode(error, POSTGRES_UNIQUE_VIOLATION)) {
+        if (hasSqlState(error, POSTGRES_UNIQUE_VIOLATION)) {
           return { status: "duplicate" };
         }
         throw error;
@@ -270,7 +297,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
           });
         return "ok";
       } catch (error) {
-        if (hasPgErrorCode(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
+        if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
           return "not_found";
         }
         throw error;
@@ -311,39 +338,50 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         return "not_found";
       }
 
-      const target = subcategoryTargetColumns(subcategory);
+      const target = transactionCategorizationTargetColumns(subcategory, scope.householdId);
       try {
         await db
           .insert(transactionCategorization)
           .values({
-            householdId: scope.householdId,
             transactionId,
             categorizedByUserId: userId,
             ...target,
           })
           .onConflictDoUpdate({
-            target: [
-              transactionCategorization.householdId,
-              transactionCategorization.transactionId,
-            ],
+            target: [transactionCategorization.transactionId],
             set: { categorizedByUserId: userId, categorizedAt: new Date(), ...target },
           });
         return "ok";
       } catch (error) {
-        if (hasPgErrorCode(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
+        if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
           return "not_found";
         }
         throw error;
       }
     },
 
+    // Deletes only when the transaction's account is currently assigned to
+    // this household (same check as setManual): the row itself carries no
+    // household id to filter on, since the manual choice travels with the
+    // account rather than staying with the household that made it.
     async clearManual(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
       const deleted = await db
         .delete(transactionCategorization)
         .where(
           and(
-            eq(transactionCategorization.householdId, scope.householdId),
             eq(transactionCategorization.transactionId, transactionId),
+            exists(
+              db
+                .select({ id: bankTransaction.id })
+                .from(bankTransaction)
+                .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+                .where(
+                  and(
+                    eq(bankTransaction.id, transactionCategorization.transactionId),
+                    eq(bankAccount.householdId, scope.householdId),
+                  ),
+                ),
+            ),
           ),
         )
         .returning({ transactionId: transactionCategorization.transactionId });

@@ -1,5 +1,5 @@
 import type { YearMonth } from "../year-month";
-import { normalizeDescription } from "./description";
+import { rulePatternFromDescription } from "./description";
 import type { Kind, SubcategoryRef, TransactionDirection } from "./taxonomy";
 
 export type RecurringInput = {
@@ -77,7 +77,7 @@ export function suggestFixedSubcategories(
       continue;
     }
 
-    const description = normalizeDescription(item.description);
+    const description = rulePatternFromDescription(item.description);
     const key = groupKey(item.subcategory, description);
     const group = groups.get(key) ?? {
       subcategory: item.subcategory,

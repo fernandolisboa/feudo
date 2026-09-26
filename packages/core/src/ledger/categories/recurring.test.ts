@@ -158,6 +158,17 @@ describe("suggestFixedSubcategories", () => {
     ]);
   });
 
+  it("groups month-stamped bills together by dropping the numeric token from the description", () => {
+    const condo: SubcategoryRef = { type: "product", id: "housing.condo" };
+    const items: RecurringInput[] = [
+      debit(MONTHS[0], "CONDOMINIO 06 2026", 50000, condo),
+      debit(MONTHS[1], "CONDOMINIO 07 2026", 50000, condo),
+      debit(MONTHS[2], "CONDOMINIO 08 2026", 50000, condo),
+    ];
+    const result = suggestFixedSubcategories(items, MONTHS);
+    expect(result).toEqual([{ subcategory: condo, description: "CONDOMINIO", months: MONTHS }]);
+  });
+
   it("sums same-month, same-group transactions before comparing to the median", () => {
     const items: RecurringInput[] = [
       debit(MONTHS[0], "IFOOD", 5000, foodDelivery),
@@ -167,5 +178,18 @@ describe("suggestFixedSubcategories", () => {
     ];
     const result = suggestFixedSubcategories(items, MONTHS);
     expect(result).toEqual([{ subcategory: foodDelivery, description: "IFOOD", months: MONTHS }]);
+  });
+
+  it("keeps two card merchants in one subcategory apart, so a steady one is still suggested", () => {
+    const fitness: SubcategoryRef = { type: "product", id: "health.fitness" };
+    const items: RecurringInput[] = [
+      debit(MONTHS[0], "COMPRA CARTAO 1234 ACADEMIA XYZ", 10000, fitness),
+      debit(MONTHS[1], "COMPRA CARTAO 1234 ACADEMIA XYZ", 10000, fitness),
+      debit(MONTHS[2], "COMPRA CARTAO 1234 ACADEMIA XYZ", 10000, fitness),
+      debit(MONTHS[0], "COMPRA CARTAO 1234 LOJA ESPORTE", 2000, fitness),
+      debit(MONTHS[2], "COMPRA CARTAO 1234 LOJA ESPORTE", 45000, fitness),
+    ];
+    const result = suggestFixedSubcategories(items, MONTHS);
+    expect(result).toEqual([{ subcategory: fitness, description: "ACADEMIA XYZ", months: MONTHS }]);
   });
 });
