@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { member } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
+import { bankTransaction } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
   seedAccount,
@@ -11,6 +12,7 @@ import {
 } from "@/modules/sync/test/seed-synced-connection";
 import { joinHousehold, withTwoUsers, type TwoUsers } from "@/modules/sync/test/with-two-users";
 
+import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
 
 import type { Database } from "@/platform/db/client";
@@ -68,33 +70,30 @@ describe("household ledger repository (integration)", () => {
       const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
       const ledgerB = createHouseholdLedgerRepository(householdScope(userB.session));
 
-      const pageA = await ledgerA.listTransactions(
-        db,
-        { days: SEPTEMBER, accountId: null },
-        { number: 1, size: 50 },
-      );
-      expect(pageA.hasMore).toBe(false);
-      expect(pageA.transactions.map((transaction) => transaction.description)).toEqual([
+      const pageA = await ledgerA.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null });
+      expect(pageA.map((transaction) => transaction.description)).toEqual([
         "a condominio",
         "a tarifa",
         "a salario",
       ]);
-      expect(pageA.transactions[0]).toMatchObject({
+      expect(pageA[0]).toMatchObject({
         accountName: "Conta corrente",
         institutionName: "Banco Fixture",
         currency: "BRL",
         type: "debit",
+        providerCategory: null,
+        manual: null,
       });
-      expect(await ledgerA.countTransactions(db, { days: SEPTEMBER, accountId: null })).toBe(3);
-      expect(await ledgerB.countTransactions(db, { days: SEPTEMBER, accountId: null })).toBe(3);
       expect(
-        (
-          await ledgerB.listTransactions(
-            db,
-            { days: SEPTEMBER, accountId: null },
-            { number: 1, size: 50 },
-          )
-        ).transactions.every((transaction) => transaction.description.startsWith("b ")),
+        await ledgerA.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null }),
+      ).toHaveLength(3);
+      expect(
+        await ledgerB.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null }),
+      ).toHaveLength(3);
+      expect(
+        (await ledgerB.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null })).every(
+          (transaction) => transaction.description.startsWith("b "),
+        ),
       ).toBe(true);
       expect((await ledgerA.listAccounts(db)).map((account) => account.name)).toEqual([
         "Conta corrente",
@@ -110,17 +109,8 @@ describe("household ledger repository (integration)", () => {
       const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
       const accountOfB = seededB.accountIdsByProvider.get("b-checking") ?? "";
 
-      expect(await ledgerA.countTransactions(db, { days: SEPTEMBER, accountId: accountOfB })).toBe(
-        0,
-      );
       expect(
-        (
-          await ledgerA.listTransactions(
-            db,
-            { days: SEPTEMBER, accountId: accountOfB },
-            { number: 1, size: 50 },
-          )
-        ).transactions,
+        await ledgerA.listTransactionsInRange(db, { days: SEPTEMBER, accountId: accountOfB }),
       ).toEqual([]);
     });
   });
@@ -136,7 +126,9 @@ describe("household ledger repository (integration)", () => {
       for (const user of [userA, userB]) {
         const ledger = createHouseholdLedgerRepository(householdScope(user.session));
         expect(await ledger.listAccounts(db)).toEqual([]);
-        expect(await ledger.countTransactions(db, { days: SEPTEMBER, accountId: null })).toBe(0);
+        expect(
+          await ledger.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null }),
+        ).toEqual([]);
       }
     });
   });
@@ -151,60 +143,68 @@ describe("household ledger repository (integration)", () => {
       const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
       const ledgerB = createHouseholdLedgerRepository(householdScope(userB.session));
       const all = { days: SEPTEMBER, accountId: null };
-      expect(await ledgerA.countTransactions(db, all)).toBe(1);
+      expect(await ledgerA.listTransactionsInRange(db, all)).toHaveLength(1);
 
       await db.delete(member).where(eq(member.id, membershipInA));
-      expect(await ledgerA.countTransactions(db, all)).toBe(0);
-      expect(await ledgerB.countTransactions(db, all)).toBe(0);
+      expect(await ledgerA.listTransactionsInRange(db, all)).toHaveLength(0);
+      expect(await ledgerB.listTransactionsInRange(db, all)).toHaveLength(0);
 
       const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
       expect(await moveSeededAccount(db, userB, accountId, householdB)).toBe("ok");
-      expect(await ledgerA.countTransactions(db, all)).toBe(0);
-      expect(await ledgerB.countTransactions(db, all)).toBe(1);
+      expect(await ledgerA.listTransactionsInRange(db, all)).toHaveLength(0);
+      expect(await ledgerB.listTransactionsInRange(db, all)).toHaveLength(1);
     });
   });
 
-  it("filters by month and account, and pages with a look-ahead", async () => {
+  it("filters by month and account", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       const seeded = await seedHouseholdLedger(db, userA, "a");
       const ledger = createHouseholdLedgerRepository(householdScope(userA.session));
       const checking = seeded.accountIdsByProvider.get("a-checking") ?? "";
 
-      const august = await ledger.listTransactions(
-        db,
-        { days: AUGUST, accountId: null },
-        { number: 1, size: 50 },
-      );
-      expect(august.transactions.map((transaction) => transaction.description)).toEqual([
-        "a agosto",
-      ]);
+      const august = await ledger.listTransactionsInRange(db, { days: AUGUST, accountId: null });
+      expect(august.map((transaction) => transaction.description)).toEqual(["a agosto"]);
 
-      const checkingOnly = await ledger.listTransactions(
-        db,
-        { days: SEPTEMBER, accountId: checking },
-        { number: 1, size: 50 },
-      );
-      expect(checkingOnly.transactions.map((transaction) => transaction.description)).toEqual([
+      const checkingOnly = await ledger.listTransactionsInRange(db, {
+        days: SEPTEMBER,
+        accountId: checking,
+      });
+      expect(checkingOnly.map((transaction) => transaction.description)).toEqual([
         "a condominio",
         "a salario",
       ]);
+    });
+  });
 
-      const firstPage = await ledger.listTransactions(
-        db,
-        { days: SEPTEMBER, accountId: null },
-        { number: 1, size: 2 },
+  it("resolves the household's own manual categorization onto a transaction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedHouseholdLedger(db, userA, "a");
+      const transactionId = (
+        await db
+          .select({ id: bankTransaction.id })
+          .from(bankTransaction)
+          .where(eq(bankTransaction.providerTransactionId, "a-1"))
+      )[0]?.id;
+      if (!transactionId) {
+        throw new Error("seed did not create the expected transaction");
+      }
+      const categorization = createCategorizationRepository(householdScope(userA.session));
+      expect(
+        await categorization.setManual(
+          db,
+          transactionId,
+          { type: "product", id: "housing.condo" },
+          userA.id,
+        ),
+      ).toBe("ok");
+
+      const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
+      const rows = await ledgerA.listTransactionsInRange(db, { days: SEPTEMBER, accountId: null });
+      const categorized = rows.find((transaction) => transaction.id === transactionId);
+      expect(categorized?.manual).toEqual({ type: "product", id: "housing.condo" });
+      expect(rows.filter((transaction) => transaction.id !== transactionId)).toSatisfy(
+        (others: typeof rows) => others.every((transaction) => transaction.manual === null),
       );
-      const secondPage = await ledger.listTransactions(
-        db,
-        { days: SEPTEMBER, accountId: null },
-        { number: 2, size: 2 },
-      );
-      expect(firstPage).toMatchObject({ hasMore: true });
-      expect(firstPage.transactions).toHaveLength(2);
-      expect(secondPage).toMatchObject({ hasMore: false });
-      expect(secondPage.transactions.map((transaction) => transaction.description)).toEqual([
-        "a salario",
-      ]);
     });
   });
 });
