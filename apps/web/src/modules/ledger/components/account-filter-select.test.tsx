@@ -20,7 +20,14 @@ afterEach(() => {
 
 describe("AccountFilterSelect", () => {
   it("shows the all-accounts label when no account is selected", () => {
-    render(<AccountFilterSelect month="2026-09" accounts={accounts} selectedAccountId={null} />);
+    render(
+      <AccountFilterSelect
+        month="2026-09"
+        accounts={accounts}
+        selectedAccountId={null}
+        uncategorizedOnly={false}
+      />,
+    );
 
     expect(within(screen.getByRole("combobox")).queryByText(t.accountFilter.all)).not.toBeNull();
   });
@@ -31,6 +38,7 @@ describe("AccountFilterSelect", () => {
         month="2026-09"
         accounts={accounts}
         selectedAccountId="d55d31d4-7294-4ae7-9184-27f1dbb0a002"
+        uncategorizedOnly={false}
       />,
     );
 

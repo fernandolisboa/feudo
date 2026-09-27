@@ -12,11 +12,13 @@ export function MonthSwitcher({
   previousMonth,
   nextMonth,
   accountId,
+  uncategorizedOnly,
 }: {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
   accountId: string | null;
+  uncategorizedOnly: boolean;
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -24,7 +26,11 @@ export function MonthSwitcher({
         variant="ghost"
         size="icon-sm"
         aria-label={t.monthSwitcher.previous}
-        render={<Link href={transactionsHref({ month: previousMonth, accountId, page: 1 })} />}
+        render={
+          <Link
+            href={transactionsHref({ month: previousMonth, accountId, page: 1, uncategorizedOnly })}
+          />
+        }
       >
         <ChevronLeft aria-hidden="true" />
       </Button>
@@ -36,7 +42,11 @@ export function MonthSwitcher({
           variant="ghost"
           size="icon-sm"
           aria-label={t.monthSwitcher.next}
-          render={<Link href={transactionsHref({ month: nextMonth, accountId, page: 1 })} />}
+          render={
+            <Link
+              href={transactionsHref({ month: nextMonth, accountId, page: 1, uncategorizedOnly })}
+            />
+          }
         >
           <ChevronRight aria-hidden="true" />
         </Button>

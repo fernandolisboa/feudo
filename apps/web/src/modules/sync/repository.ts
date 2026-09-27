@@ -12,7 +12,7 @@ import {
   providerCredential,
 } from "./schema";
 
-import type { Database as Connection } from "@/platform/db/client";
+import type { DatabaseOrTransaction } from "@/platform/db/client";
 import type { HouseholdScope } from "@/modules/households";
 import type {
   AccountType,
@@ -25,7 +25,7 @@ import type { ConnectionSyncFailure } from "./sync-status";
 
 // Every method runs equally on the pooled connection or inside a transaction
 // it opened, so a service can group several writes into one commit.
-export type Database = Connection | Parameters<Parameters<Connection["transaction"]>[0]>[0];
+export type Database = DatabaseOrTransaction;
 
 export type DataProviderKind = "pluggy";
 

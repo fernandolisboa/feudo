@@ -2,10 +2,10 @@ import { and, eq } from "drizzle-orm";
 
 import { member } from "@/modules/auth/schema";
 
-import type { Database as Connection } from "@/platform/db/client";
+import type { DatabaseOrTransaction } from "@/platform/db/client";
 import type { HouseholdScope } from "./scope";
 
-type Database = Connection | Parameters<Parameters<Connection["transaction"]>[0]>[0];
+type Database = DatabaseOrTransaction;
 
 // The one way to turn a household id that did not come from the session
 // (a form field, a connection's default household) into a scope: only when

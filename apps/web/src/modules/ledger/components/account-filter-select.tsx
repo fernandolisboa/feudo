@@ -15,10 +15,12 @@ export function AccountFilterSelect({
   month,
   accounts,
   selectedAccountId,
+  uncategorizedOnly,
 }: {
   month: YearMonth;
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
+  uncategorizedOnly: boolean;
 }) {
   const router = useRouter();
 
@@ -27,7 +29,7 @@ export function AccountFilterSelect({
     if (accountId === selectedAccountId) {
       return;
     }
-    router.push(transactionsHref({ month, accountId, page: 1 }));
+    router.push(transactionsHref({ month, accountId, page: 1, uncategorizedOnly }));
   }
 
   const items = [
