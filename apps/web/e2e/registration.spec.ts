@@ -22,7 +22,7 @@ test("sign-up, verification, login, onboarding and sign-out", async ({
   await createHouseholdOnboarding(page, "Casa do Playwright");
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: "Olá, Playwright User." })).toBeVisible();
+  await expect(page.getByText(/^Visão geral · /)).toBeVisible();
 
   await page.getByRole("button", { name: "Playwright User" }).click();
   await page.getByRole("menuitem", { name: "Sair" }).click();

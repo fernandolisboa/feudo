@@ -50,7 +50,8 @@ export async function getCategoriesPageProps(
   const scope = householdScope(session);
 
   const settings = await getHouseholdSettings(scope, db);
-  const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
+  const currentMonth = yearMonthOf(now, timeZone);
   const months: YearMonth[] = Array.from({ length: RECURRING_MONTHS }, (_, index) =>
     shiftYearMonth(currentMonth, index - RECURRING_MONTHS),
   );
@@ -58,7 +59,7 @@ export async function getCategoriesPageProps(
     from: yearMonthDayRange(months[0] ?? currentMonth).from,
     to: yearMonthDayRange(months[months.length - 1] ?? currentMonth).to,
   };
-  const { kinds, rules, rows } = await readHouseholdLedger(db, scope, range, null);
+  const { kinds, rules, rows } = await readHouseholdLedger(db, scope, range, null, timeZone);
   const taxonomy = buildTaxonomyView(kinds);
 
   // row.kind, not taxonomy.kindOf(row.categorization.subcategory): an

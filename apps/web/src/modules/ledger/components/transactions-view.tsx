@@ -73,10 +73,22 @@ export function TransactionsView({
           <>
             <MonthSwitcher
               monthLabel={monthLabel}
-              previousMonth={previousMonth}
-              nextMonth={nextMonth}
-              accountId={selectedAccountId}
-              uncategorizedOnly={uncategorizedOnly}
+              previousHref={transactionsHref({
+                month: previousMonth,
+                accountId: selectedAccountId,
+                page: 1,
+                uncategorizedOnly,
+              })}
+              nextHref={
+                nextMonth
+                  ? transactionsHref({
+                      month: nextMonth,
+                      accountId: selectedAccountId,
+                      page: 1,
+                      uncategorizedOnly,
+                    })
+                  : null
+              }
             />
             {accounts.length > 0 ? (
               <AccountFilterSelect

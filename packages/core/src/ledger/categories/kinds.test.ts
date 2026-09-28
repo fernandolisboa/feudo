@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kindOf, type KindContext } from "./kinds";
+import { categoryOf, kindOf, type KindContext } from "./kinds";
 
 function context(
   overrides: KindContext["overrides"] = new Map(),
@@ -33,5 +33,28 @@ describe("kindOf", () => {
 
   it("returns null for an unknown household subcategory id", () => {
     expect(kindOf({ type: "household", id: "does-not-exist" }, context())).toBeNull();
+  });
+});
+
+describe("categoryOf", () => {
+  it("returns the product subcategory's own category", () => {
+    expect(categoryOf({ type: "product", id: "housing.rent" }, context())).toBe("housing");
+  });
+
+  it("returns the category of a known household subcategory", () => {
+    const ctx = context(
+      new Map(),
+      new Map([
+        [
+          "custom-1",
+          { id: "custom-1", categoryId: "shopping", name: "Presentes", kind: "variable" },
+        ],
+      ]),
+    );
+    expect(categoryOf({ type: "household", id: "custom-1" }, ctx)).toBe("shopping");
+  });
+
+  it("returns null for an unknown household subcategory id", () => {
+    expect(categoryOf({ type: "household", id: "does-not-exist" }, context())).toBeNull();
   });
 });

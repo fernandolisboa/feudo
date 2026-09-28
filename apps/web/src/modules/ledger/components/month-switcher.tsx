@@ -3,55 +3,39 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/ui/button";
 
-import type { YearMonth } from "@feudo/core";
-import { transactionsHref } from "../href";
 import { t } from "../strings";
 
 export function MonthSwitcher({
   monthLabel,
-  previousMonth,
-  nextMonth,
-  accountId,
-  uncategorizedOnly,
+  previousHref,
+  nextHref,
 }: {
   monthLabel: string;
-  previousMonth: YearMonth;
-  nextMonth: YearMonth | null;
-  accountId: string | null;
-  uncategorizedOnly: boolean;
+  previousHref: string;
+  nextHref: string | null;
 }) {
   return (
     <div className="flex items-center gap-1">
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
         aria-label={t.monthSwitcher.previous}
-        render={
-          <Link
-            href={transactionsHref({ month: previousMonth, accountId, page: 1, uncategorizedOnly })}
-          />
-        }
+        render={<Link href={previousHref} />}
       >
         <ChevronLeft aria-hidden="true" />
       </Button>
-      <span className="font-heading min-w-[9.5rem] text-center text-[15px] capitalize">
-        {monthLabel}
-      </span>
-      {nextMonth ? (
+      <span className="font-heading min-w-[9.5rem] text-center text-[15px]">{monthLabel}</span>
+      {nextHref ? (
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           aria-label={t.monthSwitcher.next}
-          render={
-            <Link
-              href={transactionsHref({ month: nextMonth, accountId, page: 1, uncategorizedOnly })}
-            />
-          }
+          render={<Link href={nextHref} />}
         >
           <ChevronRight aria-hidden="true" />
         </Button>
       ) : (
-        <Button variant="ghost" size="icon-sm" aria-label={t.monthSwitcher.next} disabled>
+        <Button variant="ghost" size="icon" aria-label={t.monthSwitcher.next} disabled>
           <ChevronRight aria-hidden="true" />
         </Button>
       )}

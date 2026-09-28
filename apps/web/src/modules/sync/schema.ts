@@ -187,6 +187,13 @@ export const bankTransaction = pgTable(
       .references(() => bankAccount.id, { onDelete: "cascade" }),
     providerTransactionId: text("provider_transaction_id").notNull(),
     date: date("date", { mode: "string" }).notNull(),
+    // The provider's instant for this transaction, when it gave one (a
+    // literal UTC-midnight timestamp carries no time zone information and is
+    // kept as a plain date instead, with this column left null): the ledger
+    // resolves the household-local calendar day from this at read time,
+    // since an account's household - and so its time zone - can change after
+    // sync (CONTEXT.md's Transaction).
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
     amountCentavos: bigint("amount_centavos", { mode: "number" }).notNull(),
     currency: text("currency").notNull(),
     description: text("description").notNull(),

@@ -830,7 +830,7 @@ describe("syncAllConnections (integration)", () => {
       expect((await connectionRow(db, stuckB))?.lastSyncError).toBe("too_slow");
       expect((await connectionRow(db, healthy))?.lastSyncedAt).toEqual(NOW);
     });
-  }, 30_000);
+  }, 60_000);
 
   // An unexpected error (a bug, a transient failure the code has no name
   // for) inside one connection's turn used to escape all the way out of

@@ -43,6 +43,19 @@ export function yearMonthOf(instant: Date, timeZone: string): YearMonth {
   return parseYearMonth(`${year}-${month}`);
 }
 
+export function localDateOf(instant: Date, timeZone: string): string {
+  const formatted = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const year = formatted.find((part) => part.type === "year")?.value ?? "";
+  const month = formatted.find((part) => part.type === "month")?.value ?? "";
+  const day = formatted.find((part) => part.type === "day")?.value ?? "";
+  return `${year}-${month}-${day}`;
+}
+
 export function shiftYearMonth(yearMonth: YearMonth, months: number): YearMonth {
   const { year, month } = parts(yearMonth);
   const index = year * 12 + (month - 1) + months;

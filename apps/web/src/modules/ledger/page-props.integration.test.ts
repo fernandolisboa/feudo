@@ -60,6 +60,17 @@ describe("getTransactionsPageProps (integration)", () => {
     });
   });
 
+  it("clamps a future month in the URL to the current month, like the overview does", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, { household: householdScope(userA.session) });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-12" }, NOW);
+
+      expect(props.month).toBe("2026-09");
+      expect(props.nextMonth).toBeNull();
+    });
+  });
+
   it("reads the month, account and page from the URL and drops what it cannot use", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const seeded = await seedSyncedConnection(db, userA, {
@@ -883,8 +894,12 @@ describe("getTransactionsPageProps (integration)", () => {
         ],
       });
 
-      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
-      const october = await getTransactionsPageProps(userA.session, { mes: "2026-10" }, NOW);
+      // October must not be a future month here, or the page-props' own
+      // clamp (never move past the household's current month) would read it
+      // back as September instead of letting this test reach it.
+      const laterNow = new Date("2026-10-20T12:00:00.000Z");
+      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, laterNow);
+      const october = await getTransactionsPageProps(userA.session, { mes: "2026-10" }, laterNow);
 
       const d1 = september.transactions.find(
         (transaction) => transaction.description === "SAIDA SEM PAR",
@@ -905,6 +920,52 @@ describe("getTransactionsPageProps (integration)", () => {
         }),
       );
       expect(october.totals.transferCount).toBe(2);
+    });
+  });
+
+  // A Pix sent at 23:30 in São Paulo on 31 August arrives from the provider
+  // dated 2026-09-01 (the UTC prefix of the instant it names): the household
+  // is in America/Sao_Paulo, so it must read as 31 August, not 1 September.
+  it("shows a late-night transaction on its local calendar day, not the stored date's day", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "late-night-pix",
+            date: "2026-09-01",
+            occurredAt: new Date("2026-08-31T23:30:00-03:00"),
+            description: "PIX ENVIADO TARDE DA NOITE",
+            amountCentavos: -5000,
+          }),
+          seedTransaction({
+            providerTransactionId: "plain-date",
+            date: "2026-09-01",
+            occurredAt: null,
+            description: "COMPRA SEM HORA",
+            amountCentavos: -1000,
+          }),
+        ],
+      });
+
+      const august = await getTransactionsPageProps(userA.session, { mes: "2026-08" }, NOW);
+      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+
+      expect(
+        august.transactions.find(
+          (transaction) => transaction.description === "PIX ENVIADO TARDE DA NOITE",
+        )?.date,
+      ).toBe("2026-08-31");
+      expect(
+        september.transactions.some(
+          (transaction) => transaction.description === "PIX ENVIADO TARDE DA NOITE",
+        ),
+      ).toBe(false);
+
+      expect(
+        september.transactions.find((transaction) => transaction.description === "COMPRA SEM HORA")
+          ?.date,
+      ).toBe("2026-09-01");
     });
   });
 });

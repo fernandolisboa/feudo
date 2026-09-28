@@ -364,6 +364,21 @@
       gap: 4px;
     }
   }
+
+  .chart-bar {
+    transform-box: fill-box;
+    transform-origin: bottom;
+    animation: chart-bar-grow 300ms ease-out;
+  }
+}
+
+@keyframes chart-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -136,16 +136,43 @@ function compareEdges(a: CandidateEdge, b: CandidateEdge): number {
   return 0;
 }
 
+function magnitudeBucketKey(currency: string, amountCentavos: number): string {
+  return `${currency}:${String(Math.abs(amountCentavos))}`;
+}
+
+// A pair only ever forms between a debit and a credit of the same currency
+// and absolute amount (candidateEdge's own first checks), so bucketing
+// credits by that key up front lets each debit visit only its own
+// same-magnitude candidates instead of every credit in the read window.
+function creditsByMagnitude(
+  credits: readonly PairableTransaction[],
+): Map<string, PairableTransaction[]> {
+  const buckets = new Map<string, PairableTransaction[]>();
+  for (const credit of credits) {
+    const key = magnitudeBucketKey(credit.currency, credit.amountCentavos);
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.push(credit);
+    } else {
+      buckets.set(key, [credit]);
+    }
+  }
+  return buckets;
+}
+
 export function pairInternalTransfers(
   transactions: readonly PairableTransaction[],
   holderDocumentHashes: ReadonlySet<string>,
 ): TransferPair[] {
   const debits = transactions.filter((transaction) => transaction.type === "debit");
   const credits = transactions.filter((transaction) => transaction.type === "credit");
+  const creditBuckets = creditsByMagnitude(credits);
 
   const edges: CandidateEdge[] = [];
   for (const debit of debits) {
-    for (const credit of credits) {
+    const key = magnitudeBucketKey(debit.currency, debit.amountCentavos);
+    const candidates = creditBuckets.get(key) ?? [];
+    for (const credit of candidates) {
       const edge = candidateEdge(debit, credit, holderDocumentHashes);
       if (edge !== null) edges.push(edge);
     }

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { HOUSEHOLD_CURRENCY } from "@feudo/core";
 
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession, HouseholdSummary } from "@/modules/households";
@@ -17,10 +18,6 @@ import {
   type OwnedAccount,
 } from "./repository";
 import { userScope } from "./scope";
-
-// Only BRL accounts ever enter a household total (#12); the split is made
-// here, once, so no component decides which currency counts.
-const HOUSEHOLD_CURRENCY = "BRL";
 
 export type AccountsSectionProps = {
   domesticAccounts: HouseholdAccount[];
@@ -51,6 +48,10 @@ export async function getAccountsSectionProps(
       getHouseholdSettings(householdScope(session), db),
     ]);
 
+  // Only BRL accounts ever enter a household total (#12); the split is made
+  // here, once, so no component decides which currency counts.
+  // HOUSEHOLD_CURRENCY lives in packages/core/src/money (ADR-0002) so core's
+  // own dashboard reads the same constant.
   return {
     domesticAccounts: accounts.filter((account) => account.currency === HOUSEHOLD_CURRENCY),
     foreignAccounts: accounts.filter((account) => account.currency !== HOUSEHOLD_CURRENCY),

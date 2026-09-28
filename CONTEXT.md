@@ -71,7 +71,7 @@ _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
 ### Ledger
 
 **Transaction**:
-A single movement on an account, synced from the bank: a purchase, a payment, a transfer, a yield credit. Amounts are integer centavos with a currency code.
+A single movement on an account, synced from the bank: a purchase, a payment, a transfer, a yield credit. Amounts are integer centavos with a currency code. A transaction's day is its calendar day in the household's time zone, resolved at read time from the provider's instant when it gave one; a provider timestamp at exact midnight UTC carries no time-zone information and is read as a plain date instead.
 _Avoid_: entry, movement, record
 
 **Internal transfer**:
@@ -134,7 +134,7 @@ How much more a CPF can hold in one financial conglomerate while staying inside 
 _Avoid_: FGC room, remaining coverage
 
 **Average fixed cost**:
-The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used.
+The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used. A month counts toward this history only if it has at least one categorized transaction; a month with nothing categorized yet is a gap, not a zero, and is left out rather than silently pulling the average down.
 
 ### Market data
 

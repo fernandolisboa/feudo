@@ -5,6 +5,7 @@ export {
   formatBRL,
   formatMoney,
   decimalToCentavos,
+  HOUSEHOLD_CURRENCY,
   NonFiniteAmountError,
   NonIntegerAmountError,
 } from "./money/money";
@@ -31,6 +32,7 @@ export {
   InvalidYearMonthError,
   formatYearMonth,
   isYearMonth,
+  localDateOf,
   parseYearMonth,
   shiftYearMonth,
   yearMonthDayRange,
@@ -76,7 +78,7 @@ export type {
 export { categorize, orderRules } from "./ledger/categories/categorize";
 
 export type { KindContext } from "./ledger/categories/kinds";
-export { kindOf } from "./ledger/categories/kinds";
+export { categoryOf, kindOf } from "./ledger/categories/kinds";
 
 export type { CurrencyAmount, UncategorizedSummary } from "./ledger/categories/uncategorized";
 export { summarizeUncategorized } from "./ledger/categories/uncategorized";
@@ -96,3 +98,15 @@ export type {
 export { resolveLedger } from "./ledger/transfers/resolve-ledger";
 
 export { summarizeLedger } from "./ledger/totals";
+
+export type {
+  AverageFixedCost,
+  CategorySpending,
+  DashboardLine,
+  LedgerDashboard,
+  MonthTotals,
+  MonthlyPoint,
+} from "./ledger/dashboard";
+export { buildLedgerDashboard, dashboardMonthRange } from "./ledger/dashboard";
+
+export { formatBasisPointsPercent, formatCompactReais } from "./money/format";

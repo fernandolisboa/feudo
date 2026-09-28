@@ -1,4 +1,10 @@
-import { KINDS, PRODUCT_CATEGORY_IDS, isYearMonth, normalizeDescription } from "@feudo/core";
+import {
+  KINDS,
+  PRODUCT_CATEGORY_IDS,
+  isYearMonth,
+  normalizeDescription,
+  type YearMonth,
+} from "@feudo/core";
 import { z } from "zod";
 
 import { UNCATEGORIZED_FILTER } from "./href";
@@ -6,7 +12,22 @@ import { decodeSubcategoryRef } from "./subcategory-ref";
 
 export const TRANSACTIONS_PAGE_SIZE = 50;
 
-const yearMonthSchema = z.string().refine(isYearMonth).optional().catch(undefined);
+// isYearMonth's own pattern accepts any four-digit year: "0050-03" parses
+// but Date.UTC folds years 0-99 into 1900-1999 downstream (formatYearMonth,
+// shortMonthLabel), and "0000-01" makes shiftYearMonth's own arithmetic
+// throw. Bounding the year here, in the one schema both / and /transacoes
+// parse their `mes` param with, keeps every caller's month math (year * 12
+// + ...) inside a range it was written for.
+const MIN_YEAR_MONTH_YEAR = 1970;
+const MAX_YEAR_MONTH_YEAR = 9999;
+
+function isBoundedYearMonth(value: string): value is YearMonth {
+  if (!isYearMonth(value)) return false;
+  const year = Number(value.slice(0, 4));
+  return year >= MIN_YEAR_MONTH_YEAR && year <= MAX_YEAR_MONTH_YEAR;
+}
+
+const yearMonthSchema = z.string().refine(isBoundedYearMonth).optional().catch(undefined);
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
@@ -19,6 +40,12 @@ export const transactionsSearchParamsSchema = z.object({
   categoria: z.literal(UNCATEGORIZED_FILTER).optional().catch(undefined),
 });
 export type TransactionsSearchParams = z.input<typeof transactionsSearchParamsSchema>;
+
+// Same fallback contract as transactionsSearchParamsSchema: an unreadable
+// month in the URL falls back to the default (the current month) rather
+// than an error page.
+export const overviewSearchParamsSchema = z.object({ mes: yearMonthSchema });
+export type OverviewSearchParams = z.input<typeof overviewSearchParamsSchema>;
 
 const idSchema = z.string().trim().min(1).max(64);
 

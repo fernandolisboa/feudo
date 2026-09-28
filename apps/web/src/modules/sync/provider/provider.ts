@@ -39,6 +39,7 @@ export const normalizedTransactionSchema = z.object({
   providerTransactionId: z.string().min(1),
   providerAccountId: z.string().min(1),
   date: isoDateSchema,
+  occurredAt: z.date().nullable(),
   amountCentavos: z.number().int(),
   currency: currencySchema,
   description: z.string(),

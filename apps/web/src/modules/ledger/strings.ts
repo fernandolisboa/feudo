@@ -300,6 +300,54 @@ const en = {
   rules: {
     removed: "Rule removed.",
   },
+  overview: {
+    overline: "Overview",
+    headline: {
+      kept: "The household kept {percent} of its income in {month}.",
+      overspent: "The household spent more than it received in {month}.",
+      noIncome: "The household spent {amount} in {month} with no income registered.",
+      negativeIncome:
+        "The household's income was negative in {month} ({amount}), with no spending registered.",
+      noActivity: "Nothing was registered in {month}.",
+    },
+    inProgressSuffix: "so far",
+    uncategorized: {
+      one: "1 transaction in {month} has no category yet ({amount}). It stays out of every number here until it gets one.",
+      many: "{count} transactions in {month} have no category yet ({amount}). They stay out of every number here until they get one.",
+      action: "Categorize them",
+    },
+    otherCurrencyNotice:
+      "Accounts in another currency stay out of these numbers; see them in Transactions.",
+    tiles: {
+      income: "Income",
+      spending: "Spending",
+      spendingMeta: "Fixed {fixed} · Variable {variable}",
+      savingsRate: "Savings rate",
+      savingsRateNoIncome: "No income registered this month.",
+      averageFixedCost: "Average fixed cost",
+      averageFixedCostAverage: "average of {count} months",
+      averageFixedCostEstimate: "estimate based on: {months}",
+      averageFixedCostNoHistory: "No fixed-cost history yet.",
+    },
+    categorySpending: {
+      title: "Spending by category",
+      empty: "No categorized spending this month.",
+    },
+    chart: {
+      title: "Last six months",
+      income: "Income",
+      spending: "Spending",
+      month: "Month",
+      accessibleName: "Income and spending from {from} to {to}",
+    },
+    empty: {
+      noAccounts: "Connect a bank to see the household's spending here.",
+    },
+    error: {
+      message: "Couldn't load the overview right now. Check your connection and try again.",
+      retry: "Try again",
+    },
+  },
   errors: {
     invalidInput: "Check the fields and try again.",
     invalidPattern: "Use at least 3 letters or numbers in the rule's text.",
@@ -444,6 +492,53 @@ const ptBR = {
   },
   rules: {
     removed: "Regra removida.",
+  },
+  overview: {
+    overline: "Visão geral",
+    headline: {
+      kept: "A casa guardou {percent} da renda em {month}.",
+      overspent: "A casa gastou mais do que recebeu em {month}.",
+      noIncome: "A casa gastou {amount} em {month} sem nenhuma renda registrada.",
+      negativeIncome:
+        "A renda da casa ficou negativa em {month} ({amount}), sem gastos registrados.",
+      noActivity: "Nada foi registrado em {month}.",
+    },
+    inProgressSuffix: "até agora",
+    uncategorized: {
+      one: "1 transação de {month} está sem categoria ({amount}) e fica fora destes números até ser categorizada.",
+      many: "{count} transações de {month} estão sem categoria ({amount}) e ficam fora destes números até serem categorizadas.",
+      action: "Categorizar agora",
+    },
+    otherCurrencyNotice: "Contas em outra moeda ficam fora desses números; veja-as em Transações.",
+    tiles: {
+      income: "Renda",
+      spending: "Gastos",
+      spendingMeta: "Fixos {fixed} · Variáveis {variable}",
+      savingsRate: "Taxa de poupança",
+      savingsRateNoIncome: "Sem renda registrada neste mês.",
+      averageFixedCost: "Custo fixo médio",
+      averageFixedCostAverage: "média de {count} meses",
+      averageFixedCostEstimate: "estimativa com base em: {months}",
+      averageFixedCostNoHistory: "Ainda sem histórico de custo fixo.",
+    },
+    categorySpending: {
+      title: "Gastos por categoria",
+      empty: "Nenhum gasto categorizado neste mês.",
+    },
+    chart: {
+      title: "Últimos seis meses",
+      income: "Renda",
+      spending: "Gastos",
+      month: "Mês",
+      accessibleName: "Renda e gastos de {from} a {to}",
+    },
+    empty: {
+      noAccounts: "Conecte um banco para ver os gastos da casa aqui.",
+    },
+    error: {
+      message: "Não deu para carregar a visão geral agora. Confira sua conexão e tente de novo.",
+      retry: "Tentar de novo",
+    },
   },
   errors: {
     invalidInput: "Confira os campos e tente de novo.",

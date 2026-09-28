@@ -3,6 +3,12 @@ export type Money = {
   currency: "BRL";
 };
 
+// The only currency the ledger aggregates (ADR-0002): accounts in any other
+// currency are shown separately and excluded from every total, rate and
+// target. The one place this literal is spelled out; every reader, core or
+// web, imports it from here.
+export const HOUSEHOLD_CURRENCY: Money["currency"] = "BRL";
+
 export class NonIntegerAmountError extends Error {
   readonly amountCentavos: number;
 
@@ -63,4 +69,12 @@ export function decimalToCentavos(amount: number): number {
     throw new NonFiniteAmountError(amount);
   }
   return Math.round(amount * 100);
+}
+
+// Math.round rounds halves toward positive infinity, so -0.5 becomes -0
+// instead of -1; every rate and average in the ledger rounds halves away
+// from zero instead, so a savings rate or an average fixed cost never
+// flips sign at the midpoint.
+export function roundHalfAwayFromZero(value: number): number {
+  return value < 0 ? -Math.round(-value) : Math.round(value);
 }
