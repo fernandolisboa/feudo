@@ -457,6 +457,7 @@ export function createSyncUserRepository(scope: UserScope) {
           accountId,
           providerTransactionId: transaction.providerTransactionId,
           date: transaction.date,
+          occurredAt: transaction.occurredAt,
           amountCentavos: transaction.amountCentavos,
           currency: transaction.currency,
           description: transaction.description,
@@ -476,6 +477,7 @@ export function createSyncUserRepository(scope: UserScope) {
             target: [bankTransaction.accountId, bankTransaction.providerTransactionId],
             set: {
               date: sql`excluded.date`,
+              occurredAt: sql`excluded.occurred_at`,
               amountCentavos: sql`excluded.amount_centavos`,
               currency: sql`excluded.currency`,
               description: sql`excluded.description`,

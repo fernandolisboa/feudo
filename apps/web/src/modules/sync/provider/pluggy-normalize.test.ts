@@ -222,6 +222,7 @@ describe("normalizeTransaction", () => {
       providerTransactionId: "c1000000-0000-4000-8000-000000000001",
       providerAccountId: "a1000000-0000-4000-8000-000000000001",
       date: "2026-09-15",
+      occurredAt: new Date("2026-09-15T03:00:00.000Z"),
       amountCentavos: 850000,
       currency: "BRL",
       description: "PIX RECEBIDO EMPRESA FIXTURE",
@@ -296,6 +297,7 @@ describe("normalizeTransaction", () => {
 
     expect(normalizeTransaction(installment, hasher)).toMatchObject({
       date: "2020-10-14",
+      occurredAt: null,
       amountCentavos: 15920,
       type: "debit",
     });
@@ -321,4 +323,56 @@ describe("normalizeTransaction", () => {
       });
     },
   );
+
+  // A provider timestamp with no time-zone meaning (Pluggy's midnight-UTC
+  // stand-in for "just a date") must not masquerade as a real instant: the
+  // ledger would localize it to the previous day west of UTC.
+  it("treats an exact midnight-UTC timestamp as a plain date, not an instant", () => {
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-midnight-utc",
+      accountId: "acc-1",
+      date: "2026-09-02T00:00:00.000Z",
+      description: "Compra",
+      type: "DEBIT",
+      amount: 10,
+      currencyCode: "BRL",
+      paymentData: null,
+    });
+    expect(normalizeTransaction(transaction, hasher).occurredAt).toBeNull();
+  });
+
+  it("treats a bare YYYY-MM-DD date as a plain date, not an instant", () => {
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-bare-date",
+      accountId: "acc-1",
+      date: "2026-09-02",
+      description: "Compra",
+      type: "DEBIT",
+      amount: 10,
+      currencyCode: "BRL",
+      paymentData: null,
+    });
+    expect(normalizeTransaction(transaction, hasher)).toMatchObject({
+      date: "2026-09-02",
+      occurredAt: null,
+    });
+  });
+
+  it("keeps a non-midnight timestamp as the instant it names", () => {
+    const pixAt2330SaoPauloOn31August = "2026-09-01T02:30:00.000Z";
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-late-night-pix",
+      accountId: "acc-1",
+      date: pixAt2330SaoPauloOn31August,
+      description: "Pix enviado",
+      type: "DEBIT",
+      amount: 10,
+      currencyCode: "BRL",
+      paymentData: null,
+    });
+    expect(normalizeTransaction(transaction, hasher)).toMatchObject({
+      date: "2026-09-01",
+      occurredAt: new Date(pixAt2330SaoPauloOn31August),
+    });
+  });
 });

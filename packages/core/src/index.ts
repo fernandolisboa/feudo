@@ -31,6 +31,7 @@ export {
   InvalidYearMonthError,
   formatYearMonth,
   isYearMonth,
+  localDateOf,
   parseYearMonth,
   shiftYearMonth,
   yearMonthDayRange,
@@ -96,3 +97,16 @@ export type {
 export { resolveLedger } from "./ledger/transfers/resolve-ledger";
 
 export { summarizeLedger } from "./ledger/totals";
+
+export type {
+  AverageFixedCost,
+  CategorySpending,
+  DashboardLine,
+  LedgerDashboard,
+  MonthTotals,
+  MonthlyPoint,
+} from "./ledger/dashboard";
+export { buildLedgerDashboard, dashboardMonthRange } from "./ledger/dashboard";
+
+export { roundHalfAwayFromZero } from "./money/money";
+export { formatBasisPointsPercent, formatCompactReais } from "./money/format";

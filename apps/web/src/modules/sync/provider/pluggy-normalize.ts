@@ -30,6 +30,22 @@ function isoDateOnly(value: string | null | undefined): string | null {
   return match?.[1] ?? null;
 }
 
+const BARE_ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MIDNIGHT_UTC_SUFFIX_PATTERN = /T00:00:00(\.000)?Z$/;
+
+// Pluggy names a plain calendar day the same way it names a real instant: a
+// timestamp at exact UTC midnight. That timestamp carries no time-zone
+// information (converting it to the household's zone would land it on the
+// previous day everywhere west of UTC), so it is read as a date, never as an
+// instant to localize later (CONTEXT.md's Transaction).
+function occurredAtOf(value: string): Date | null {
+  if (BARE_ISO_DATE_PATTERN.test(value) || MIDNIGHT_UTC_SUFFIX_PATTERN.test(value)) {
+    return null;
+  }
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? null : instant;
+}
+
 function currencyOf(code: string): string {
   return code.toUpperCase();
 }
@@ -195,6 +211,7 @@ export function normalizeTransaction(
       providerTransactionId: transaction.id,
       providerAccountId: transaction.accountId,
       date: isoDateOnly(transaction.date),
+      occurredAt: occurredAtOf(transaction.date),
       amountCentavos: decimalToCentavos(transaction.amount),
       currency: currencyOf(transaction.currencyCode),
       description: transaction.description,

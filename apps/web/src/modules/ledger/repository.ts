@@ -16,6 +16,7 @@ export type LedgerAccount = { id: string; name: string; institutionName: string 
 export type LedgerTransactionRow = {
   id: string;
   date: string;
+  occurredAt: Date | null;
   description: string;
   amountCentavos: number;
   currency: string;
@@ -98,6 +99,7 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
         .select({
           id: bankTransaction.id,
           date: bankTransaction.date,
+          occurredAt: bankTransaction.occurredAt,
           description: bankTransaction.description,
           amountCentavos: bankTransaction.amountCentavos,
           currency: bankTransaction.currency,

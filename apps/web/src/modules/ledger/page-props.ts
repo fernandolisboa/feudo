@@ -166,7 +166,8 @@ export async function getTransactionsPageProps(
     getHouseholdSettings(scope, db),
     repository.listAccounts(db),
   ]);
-  const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
+  const currentMonth = yearMonthOf(now, timeZone);
   const month = params.mes ?? currentMonth;
   const selectedAccountId = accounts.some((account) => account.id === params.conta)
     ? (params.conta ?? null)
@@ -178,7 +179,7 @@ export async function getTransactionsPageProps(
     kinds,
     rows: monthRows,
     padded,
-  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId);
+  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(padded.map((row) => [row.id, row]));
 

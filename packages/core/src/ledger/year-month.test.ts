@@ -7,6 +7,7 @@ import {
   formatYearMonth,
   isoDateToUtcMidnight,
   isYearMonth,
+  localDateOf,
   padDayRange,
   parseYearMonth,
   shiftIsoDate,
@@ -40,6 +41,35 @@ describe("yearMonthOf", () => {
 
     expect(yearMonthOf(instant, "UTC")).toBe("2026-10");
     expect(yearMonthOf(instant, "America/Sao_Paulo")).toBe("2026-09");
+  });
+});
+
+describe("localDateOf", () => {
+  it("reads the calendar day in the given time zone, not in UTC", () => {
+    const instant = new Date("2026-10-01T01:30:00.000Z");
+
+    expect(localDateOf(instant, "UTC")).toBe("2026-10-01");
+    expect(localDateOf(instant, "America/Sao_Paulo")).toBe("2026-09-30");
+  });
+
+  it("rolls a 23:30 local transaction on the last day of the month into that day, not the next", () => {
+    const pixAt2330SaoPauloOn31August = new Date("2026-09-01T02:30:00.000Z");
+
+    expect(localDateOf(pixAt2330SaoPauloOn31August, "America/Sao_Paulo")).toBe("2026-08-31");
+  });
+
+  it("agrees with the UTC prefix for a zone east of UTC", () => {
+    const instant = new Date("2026-03-14T22:15:00.000Z");
+
+    expect(localDateOf(instant, "Asia/Tokyo")).toBe("2026-03-15");
+  });
+
+  it("does not observe daylight saving in São Paulo", () => {
+    const nearMidnightInJanuary = new Date("2026-01-01T02:59:00.000Z");
+    const nearMidnightInJuly = new Date("2026-07-01T02:59:00.000Z");
+
+    expect(localDateOf(nearMidnightInJanuary, "America/Sao_Paulo")).toBe("2025-12-31");
+    expect(localDateOf(nearMidnightInJuly, "America/Sao_Paulo")).toBe("2026-06-30");
   });
 });
 

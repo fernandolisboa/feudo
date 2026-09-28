@@ -64,3 +64,11 @@ export function decimalToCentavos(amount: number): number {
   }
   return Math.round(amount * 100);
 }
+
+// Math.round rounds halves toward positive infinity, so -0.5 becomes -0
+// instead of -1; every rate and average in the ledger rounds halves away
+// from zero instead, so a savings rate or an average fixed cost never
+// flips sign at the midpoint.
+export function roundHalfAwayFromZero(value: number): number {
+  return value < 0 ? -Math.round(-value) : Math.round(value);
+}

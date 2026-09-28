@@ -71,7 +71,7 @@ _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
 ### Ledger
 
 **Transaction**:
-A single movement on an account, synced from the bank: a purchase, a payment, a transfer, a yield credit. Amounts are integer centavos with a currency code.
+A single movement on an account, synced from the bank: a purchase, a payment, a transfer, a yield credit. Amounts are integer centavos with a currency code. A transaction's day is its calendar day in the household's time zone, resolved at read time from the provider's instant when it gave one; a provider timestamp at exact midnight UTC carries no time-zone information and is read as a plain date instead.
 _Avoid_: entry, movement, record
 
 **Internal transfer**:

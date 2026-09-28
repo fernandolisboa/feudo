@@ -5,6 +5,7 @@ import {
   formatBRL,
   formatMoney,
   decimalToCentavos,
+  roundHalfAwayFromZero,
   NonFiniteAmountError,
   NonIntegerAmountError,
   type Money,
@@ -92,6 +93,33 @@ describe("formatMoney", () => {
     expect(() => formatMoney({ amountCentavos: 10.5, currency: "BRL" })).toThrow(
       NonIntegerAmountError,
     );
+  });
+});
+
+describe("roundHalfAwayFromZero", () => {
+  it("rounds a positive half up", () => {
+    expect(roundHalfAwayFromZero(2.5)).toBe(3);
+  });
+
+  it("rounds a negative half down, away from zero", () => {
+    expect(roundHalfAwayFromZero(-2.5)).toBe(-3);
+  });
+
+  it("rounds a positive value below the half down", () => {
+    expect(roundHalfAwayFromZero(2.4)).toBe(2);
+  });
+
+  it("rounds a negative value below the half up, toward zero", () => {
+    expect(roundHalfAwayFromZero(-2.4)).toBe(-2);
+  });
+
+  it("leaves an integer unchanged", () => {
+    expect(roundHalfAwayFromZero(7)).toBe(7);
+    expect(roundHalfAwayFromZero(-7)).toBe(-7);
+  });
+
+  it("rounds zero to zero", () => {
+    expect(roundHalfAwayFromZero(0)).toBe(0);
   });
 });
 

@@ -35,6 +35,7 @@ export function seedTransaction(
     providerTransactionId: "tx-1",
     providerAccountId: "acc-1",
     date: "2026-09-15",
+    occurredAt: null,
     amountCentavos: -1000,
     currency: "BRL",
     description: "COMPRA",
