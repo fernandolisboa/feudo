@@ -75,8 +75,12 @@ A single movement on an account, synced from the bank: a purchase, a payment, a 
 _Avoid_: entry, movement, record
 
 **Internal transfer**:
-A pair of transactions moving money between two accounts of the same household, including a credit-card bill payment. Never spending, never income.
+A pair of transactions moving money between two accounts of the same household, including a credit-card bill payment. Never spending, never income. Detected by pairing (same amount and currency, opposite direction, at most two business days apart, confirmed by the counterpart's document when the bank sends one), or marked by a member.
 _Avoid_: own transfer, self transfer
+
+**Internal-transfer mark**:
+A member's manual statement about one transaction: it is an internal transfer, or it is not. Beats detection and every categorization; the member can clear it to go back to detection. Travels with the transaction when its account moves.
+_Avoid_: flag, tag
 
 **Income**:
 An inbound transaction whose category is of kind income: salary, fees, rent received, yields. Internal transfers and refunds are never income.
