@@ -26,7 +26,7 @@ function buildProps(overrides: Partial<OverviewPageProps> = {}): OverviewPagePro
       spending: {
         label: t.overview.tiles.spending,
         value: "R$ 1.192,80",
-        meta: "Fixo R$ 980,50 · Variável R$ 212,30",
+        meta: "Fixos R$ 980,50 · Variáveis R$ 212,30",
       },
       savingsRate: { label: t.overview.tiles.savingsRate, value: "86%", meta: null },
       averageFixedCost: {

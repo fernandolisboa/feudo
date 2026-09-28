@@ -18,26 +18,24 @@ export function MonthSwitcher({
     <div className="flex items-center gap-1">
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
         aria-label={t.monthSwitcher.previous}
         render={<Link href={previousHref} />}
       >
         <ChevronLeft aria-hidden="true" />
       </Button>
-      <span className="font-heading min-w-[9.5rem] text-center text-[15px] capitalize">
-        {monthLabel}
-      </span>
+      <span className="font-heading min-w-[9.5rem] text-center text-[15px]">{monthLabel}</span>
       {nextHref ? (
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           aria-label={t.monthSwitcher.next}
           render={<Link href={nextHref} />}
         >
           <ChevronRight aria-hidden="true" />
         </Button>
       ) : (
-        <Button variant="ghost" size="icon-sm" aria-label={t.monthSwitcher.next} disabled>
+        <Button variant="ghost" size="icon" aria-label={t.monthSwitcher.next} disabled>
           <ChevronRight aria-hidden="true" />
         </Button>
       )}

@@ -500,14 +500,14 @@ const ptBR = {
     },
     inProgressSuffix: "até agora",
     uncategorized: {
-      one: "1 transação de {month} ainda está sem categoria ({amount}). Ela fica fora de todos os números daqui até ganhar uma.",
-      many: "{count} transações de {month} ainda estão sem categoria ({amount}). Elas ficam fora de todos os números daqui até ganharem uma.",
+      one: "1 transação de {month} está sem categoria ({amount}) e fica fora destes números até ser categorizada.",
+      many: "{count} transações de {month} estão sem categoria ({amount}) e ficam fora destes números até serem categorizadas.",
       action: "Categorizar agora",
     },
     tiles: {
       income: "Renda",
       spending: "Gastos",
-      spendingMeta: "Fixo {fixed} · Variável {variable}",
+      spendingMeta: "Fixos {fixed} · Variáveis {variable}",
       savingsRate: "Taxa de poupança",
       savingsRateNoIncome: "Sem renda registrada neste mês.",
       averageFixedCost: "Custo fixo médio",
