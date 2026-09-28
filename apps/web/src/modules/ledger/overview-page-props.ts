@@ -1,12 +1,13 @@
 import {
   buildLedgerDashboard,
+  categoryOf,
   dashboardMonthRange,
   formatBasisPointsPercent,
   formatCompactReais,
   formatMoney,
   formatYearMonth,
+  HOUSEHOLD_CURRENCY,
   parseYearMonth,
-  productSubcategory,
   shiftYearMonth,
   summarizeUncategorized,
   yearMonthDayRange,
@@ -17,8 +18,6 @@ import {
   type KindContext,
   type MonthlyPoint,
   type MonthTotals,
-  type ProductCategoryId,
-  type SubcategoryRef,
   type YearMonth,
 } from "@feudo/core";
 
@@ -26,7 +25,6 @@ import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
-import { HOUSEHOLD_CURRENCY } from "@/modules/sync";
 
 import { readHouseholdLedger } from "./ledger-read";
 import { createHouseholdLedgerRepository } from "./repository";
@@ -61,6 +59,7 @@ export type OverviewPageProps = {
   spendingCentavos: number;
   savingsRateBasisPoints: number | null;
   uncategorized: { count: number; amountLabel: string };
+  hasOtherCurrencyRows: boolean;
   tiles: {
     income: StatTileView;
     spending: StatTileView;
@@ -75,20 +74,14 @@ function monthOfDate(date: string): YearMonth {
   return parseYearMonth(date.slice(0, 7));
 }
 
-function categoryIdOf(ref: SubcategoryRef, kinds: KindContext): ProductCategoryId | null {
-  if (ref.type === "product") {
-    return productSubcategory(ref.id).categoryId;
-  }
-  return kinds.householdSubcategories.get(ref.id)?.categoryId ?? null;
-}
-
 function toDashboardLine(row: ResolvedLedgerRow, kinds: KindContext): DashboardLine {
   return {
     month: monthOfDate(row.date),
     kind: row.kind,
     type: row.type,
     amountCentavos: row.amountCentavos,
-    categoryId: row.categorization ? categoryIdOf(row.categorization.subcategory, kinds) : null,
+    categoryId: row.categorization ? categoryOf(row.categorization.subcategory, kinds) : null,
+    currency: row.currency,
   };
 }
 
@@ -241,15 +234,18 @@ export async function getOverviewPageProps(
   };
 
   const { kinds, rows } = await readHouseholdLedger(db, scope, dayRange, null, timeZone);
-  const lines = rows
-    .filter((row) => row.currency === HOUSEHOLD_CURRENCY)
-    .map((row) => toDashboardLine(row, kinds));
+  const lines = rows.map((row) => toDashboardLine(row, kinds));
   const dashboard = buildLedgerDashboard({ month, lines });
 
   const monthDays = yearMonthDayRange(month);
   const monthRows = rows.filter((row) => row.date >= monthDays.from && row.date <= monthDays.to);
+  // The uncategorized notice counts the same rows the tiles above it do: a
+  // foreign-currency row is neither in nor out of these numbers, it simply
+  // does not belong to them (ADR-0002), so it stays out of the count too.
+  const householdCurrencyMonthRows = monthRows.filter((row) => row.currency === HOUSEHOLD_CURRENCY);
+  const hasOtherCurrencyRows = monthRows.some((row) => row.currency !== HOUSEHOLD_CURRENCY);
   const uncategorizedSummary = summarizeUncategorized(
-    monthRows.map((row) => ({
+    householdCurrencyMonthRows.map((row) => ({
       categorization: row.categorization,
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
@@ -269,6 +265,7 @@ export async function getOverviewPageProps(
       count: uncategorizedSummary.count,
       amountLabel: uncategorizedSummary.totals.map(formatMoney).join(" + "),
     },
+    hasOtherCurrencyRows,
     tiles: {
       income: incomeTile(dashboard.totals),
       spending: spendingTile(dashboard.totals),

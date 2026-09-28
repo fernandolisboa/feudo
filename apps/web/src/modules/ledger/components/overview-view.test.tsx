@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoney } from "@feudo/core";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -21,6 +20,7 @@ function buildProps(overrides: Partial<OverviewPageProps> = {}): OverviewPagePro
     spendingCentavos: 119280,
     savingsRateBasisPoints: 8597,
     uncategorized: { count: 0, amountLabel: "R$ 0,00" },
+    hasOtherCurrencyRows: false,
     tiles: {
       income: { label: t.overview.tiles.income, value: "R$ 8.500,00", meta: null },
       spending: {
@@ -101,10 +101,9 @@ describe("OverviewView", () => {
       />,
     );
 
-    const spendingLabel = formatMoney({ amountCentavos: 119280, currency: "BRL" });
     expect(
       screen.getByRole("heading", {
-        name: `A casa gastou ${spendingLabel} em setembro de 2026 sem nenhuma renda registrada.`,
+        name: "A casa gastou R$ 1.192,80 em setembro de 2026 sem nenhuma renda registrada.",
       }),
     ).not.toBeNull();
   });
@@ -118,6 +117,38 @@ describe("OverviewView", () => {
 
     expect(
       screen.getByRole("heading", { name: "Nada foi registrado em setembro de 2026." }),
+    ).not.toBeNull();
+  });
+
+  it("names the negative income when income is negative and there is no spending", () => {
+    render(
+      <OverviewView
+        {...buildProps({
+          savingsRateBasisPoints: null,
+          incomeCentavos: -50000,
+          spendingCentavos: 0,
+          tiles: {
+            income: { label: t.overview.tiles.income, value: "-R$ 500,00", meta: null },
+            spending: { label: t.overview.tiles.spending, value: "R$ 0,00", meta: null },
+            savingsRate: {
+              label: t.overview.tiles.savingsRate,
+              value: "—",
+              meta: t.overview.tiles.savingsRateNoIncome,
+            },
+            averageFixedCost: {
+              label: t.overview.tiles.averageFixedCost,
+              value: "—",
+              meta: t.overview.tiles.averageFixedCostNoHistory,
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "A renda da casa ficou negativa em setembro de 2026 (-R$ 500,00), sem gastos registrados.",
+      }),
     ).not.toBeNull();
   });
 
@@ -154,5 +185,17 @@ describe("OverviewView", () => {
     render(<OverviewView {...buildProps({ categorySpending: [] })} />);
 
     expect(screen.getByText(t.overview.categorySpending.empty)).not.toBeNull();
+  });
+
+  it("shows the other-currency notice when the month has rows in another currency", () => {
+    render(<OverviewView {...buildProps({ hasOtherCurrencyRows: true })} />);
+
+    expect(screen.getByText(t.overview.otherCurrencyNotice)).not.toBeNull();
+  });
+
+  it("does not show the other-currency notice when every row is in the household's currency", () => {
+    render(<OverviewView {...buildProps({ hasOtherCurrencyRows: false })} />);
+
+    expect(screen.queryByText(t.overview.otherCurrencyNotice)).toBeNull();
   });
 });

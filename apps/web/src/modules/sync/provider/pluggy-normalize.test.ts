@@ -341,6 +341,34 @@ describe("normalizeTransaction", () => {
     expect(normalizeTransaction(transaction, hasher).occurredAt).toBeNull();
   });
 
+  it("treats a midnight-UTC timestamp spelled with an explicit +00:00 offset as a plain date", () => {
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-midnight-offset",
+      accountId: "acc-1",
+      date: "2026-09-02T00:00:00+00:00",
+      description: "Compra",
+      type: "DEBIT",
+      amount: 10,
+      currencyCode: "BRL",
+      paymentData: null,
+    });
+    expect(normalizeTransaction(transaction, hasher).occurredAt).toBeNull();
+  });
+
+  it("treats a midnight-UTC timestamp with microsecond precision as a plain date", () => {
+    const transaction = pluggyTransactionSchema.parse({
+      id: "tx-midnight-microseconds",
+      accountId: "acc-1",
+      date: "2026-09-02T00:00:00.000000Z",
+      description: "Compra",
+      type: "DEBIT",
+      amount: 10,
+      currencyCode: "BRL",
+      paymentData: null,
+    });
+    expect(normalizeTransaction(transaction, hasher).occurredAt).toBeNull();
+  });
+
   it("treats a bare YYYY-MM-DD date as a plain date, not an instant", () => {
     const transaction = pluggyTransactionSchema.parse({
       id: "tx-bare-date",

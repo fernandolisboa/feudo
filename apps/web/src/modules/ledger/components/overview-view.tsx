@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { Landmark } from "lucide-react";
-import { formatBasisPointsPercent, formatMoney } from "@feudo/core";
+import { formatBasisPointsPercent } from "@feudo/core";
 
 import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
-import { HOUSEHOLD_CURRENCY } from "@/modules/sync";
 
 import { transactionsHref } from "../href";
 import { overviewHref } from "../overview-href";
@@ -26,21 +25,32 @@ function withProgress(sentence: string, inProgress: boolean): string {
 }
 
 function headline({
+  incomeCentavos,
   savingsRateBasisPoints,
   spendingCentavos,
   monthLabel,
   inProgress,
+  tiles,
 }: OverviewPageProps): string {
   if (savingsRateBasisPoints === null) {
-    if (spendingCentavos <= 0) {
+    if (incomeCentavos === 0 && spendingCentavos <= 0) {
       return withProgress(
         interpolate(t.overview.headline.noActivity, "{month}", monthLabel),
         inProgress,
       );
     }
+    if (spendingCentavos <= 0) {
+      return withProgress(
+        interpolateAll(t.overview.headline.negativeIncome, {
+          amount: tiles.income.value,
+          month: monthLabel,
+        }),
+        inProgress,
+      );
+    }
     return withProgress(
       interpolateAll(t.overview.headline.noIncome, {
-        amount: formatMoney({ amountCentavos: spendingCentavos, currency: HOUSEHOLD_CURRENCY }),
+        amount: tiles.spending.value,
         month: monthLabel,
       }),
       inProgress,
@@ -74,6 +84,7 @@ export function OverviewView(props: OverviewPageProps) {
     nextMonth,
     hasAccounts,
     uncategorized,
+    hasOtherCurrencyRows,
     tiles,
     categorySpending,
     series,
@@ -126,6 +137,12 @@ export function OverviewView(props: OverviewPageProps) {
             >
               {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
             </Notice>
+          ) : null}
+
+          {hasOtherCurrencyRows ? (
+            <p className="text-muted-foreground mb-4 text-[13px]">
+              {t.overview.otherCurrencyNotice}
+            </p>
           ) : null}
 
           <div className="bg-border mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">

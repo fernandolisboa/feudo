@@ -31,19 +31,29 @@ function isoDateOnly(value: string | null | undefined): string | null {
 }
 
 const BARE_ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const MIDNIGHT_UTC_SUFFIX_PATTERN = /T00:00:00(\.000)?Z$/;
 
 // Pluggy names a plain calendar day the same way it names a real instant: a
 // timestamp at exact UTC midnight. That timestamp carries no time-zone
 // information (converting it to the household's zone would land it on the
 // previous day everywhere west of UTC), so it is read as a date, never as an
-// instant to localize later (CONTEXT.md's Transaction).
+// instant to localize later (CONTEXT.md's Transaction). Decided on the
+// parsed instant's own UTC clock fields rather than the string's suffix, so
+// "+00:00", extra fractional digits or any other spelling of exact midnight
+// UTC all resolve the same way.
 function occurredAtOf(value: string): Date | null {
-  if (BARE_ISO_DATE_PATTERN.test(value) || MIDNIGHT_UTC_SUFFIX_PATTERN.test(value)) {
+  if (BARE_ISO_DATE_PATTERN.test(value)) {
     return null;
   }
   const instant = new Date(value);
-  return Number.isNaN(instant.getTime()) ? null : instant;
+  if (Number.isNaN(instant.getTime())) {
+    return null;
+  }
+  const isExactUtcMidnight =
+    instant.getUTCHours() === 0 &&
+    instant.getUTCMinutes() === 0 &&
+    instant.getUTCSeconds() === 0 &&
+    instant.getUTCMilliseconds() === 0;
+  return isExactUtcMidnight ? null : instant;
 }
 
 function currencyOf(code: string): string {

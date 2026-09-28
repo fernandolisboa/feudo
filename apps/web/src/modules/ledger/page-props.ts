@@ -1,6 +1,7 @@
 import {
   formatMoney,
   formatYearMonth,
+  HOUSEHOLD_CURRENCY,
   rulePatternFromDescription,
   shiftYearMonth,
   summarizeLedger,
@@ -36,8 +37,6 @@ import {
   type TransactionsSearchParams,
 } from "./validation";
 
-const FALLBACK_CURRENCY = "BRL";
-
 export type UncategorizedSummaryView = { count: number; amountLabel: string };
 
 export type TotalsView = { incomeLabel: string; spendingLabel: string; transferCount: number };
@@ -70,7 +69,7 @@ function fallbackCurrency(rows: readonly { currency: string }[]): string {
   const currencies = [...new Set(rows.map((row) => row.currency))].sort((a, b) =>
     a.localeCompare(b),
   );
-  return currencies[0] ?? FALLBACK_CURRENCY;
+  return currencies[0] ?? HOUSEHOLD_CURRENCY;
 }
 
 function amountsLabel(amounts: readonly CurrencyAmount[], currency: string): string {
@@ -148,10 +147,11 @@ function toRowView(
 
 // Everything /transacoes renders, so the page stays a composition of this
 // slice's components (ADR-0011). The month defaults to today's in the
-// household's time zone; an account id not in the household is ignored and
-// a page past the last one lands on the last. Pairing and categorization
-// are both resolved by readHouseholdLedger, the one read path shared with
-// /categorias (design contract's #16 review, item 3).
+// household's time zone and never moves past it, even from a crafted URL,
+// the same clamp the overview applies; an account id not in the household
+// is ignored and a page past the last one lands on the last. Pairing and
+// categorization are both resolved by readHouseholdLedger, the one read
+// path shared with /categorias (design contract's #16 review, item 3).
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
@@ -168,7 +168,8 @@ export async function getTransactionsPageProps(
   ]);
   const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
   const currentMonth = yearMonthOf(now, timeZone);
-  const month = params.mes ?? currentMonth;
+  const requestedMonth = params.mes ?? currentMonth;
+  const month = requestedMonth > currentMonth ? currentMonth : requestedMonth;
   const selectedAccountId = accounts.some((account) => account.id === params.conta)
     ? (params.conta ?? null)
     : null;

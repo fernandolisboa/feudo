@@ -306,6 +306,8 @@ const en = {
       kept: "The household kept {percent} of its income in {month}.",
       overspent: "The household spent more than it received in {month}.",
       noIncome: "The household spent {amount} in {month} with no income registered.",
+      negativeIncome:
+        "The household's income was negative in {month} ({amount}), with no spending registered.",
       noActivity: "Nothing was registered in {month}.",
     },
     inProgressSuffix: "so far",
@@ -314,6 +316,8 @@ const en = {
       many: "{count} transactions in {month} have no category yet ({amount}). They stay out of every number here until they get one.",
       action: "Categorize them",
     },
+    otherCurrencyNotice:
+      "Accounts in another currency stay out of these numbers; see them in Transactions.",
     tiles: {
       income: "Income",
       spending: "Spending",
@@ -496,6 +500,8 @@ const ptBR = {
       kept: "A casa guardou {percent} da renda em {month}.",
       overspent: "A casa gastou mais do que recebeu em {month}.",
       noIncome: "A casa gastou {amount} em {month} sem nenhuma renda registrada.",
+      negativeIncome:
+        "A renda da casa ficou negativa em {month} ({amount}), sem gastos registrados.",
       noActivity: "Nada foi registrado em {month}.",
     },
     inProgressSuffix: "até agora",
@@ -504,6 +510,7 @@ const ptBR = {
       many: "{count} transações de {month} estão sem categoria ({amount}) e ficam fora destes números até serem categorizadas.",
       action: "Categorizar agora",
     },
+    otherCurrencyNotice: "Contas em outra moeda ficam fora desses números; veja-as em Transações.",
     tiles: {
       income: "Renda",
       spending: "Gastos",

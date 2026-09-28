@@ -21,6 +21,7 @@ const lineArb: fc.Arbitrary<DashboardLine> = fc.record({
   type: fc.constantFrom<"credit" | "debit">("credit", "debit"),
   amountCentavos: fc.integer({ min: 1, max: 1_000_000_00 }),
   categoryId: fc.constantFrom<ProductCategoryId | null>(...PRODUCT_CATEGORY_IDS, null),
+  currency: fc.constant("BRL"),
 });
 
 function shuffle<T>(items: readonly T[], seed: number): T[] {
@@ -75,7 +76,7 @@ describe("buildLedgerDashboard property tests", () => {
     );
   });
 
-  it("gives a savings rate whose sign matches income minus spending whenever income is positive", () => {
+  it("gives a savings rate that is zero only when the rounded difference is zero, and agrees in sign otherwise", () => {
     fc.assert(
       fc.property(fc.array(lineArb), (lines) => {
         const result = buildLedgerDashboard({ month: MONTH, lines });
@@ -85,10 +86,13 @@ describe("buildLedgerDashboard property tests", () => {
           return;
         }
         const net = incomeCentavos - spendingCentavos;
-        if (net === 0) {
-          expect(result.savingsRateBasisPoints).toBe(0);
+        const rate = result.savingsRateBasisPoints as number;
+        if (rate === 0) {
+          // roundHalfAwayFromZero((net * 10000) / income) rounds to zero
+          // only when the unrounded value's magnitude is under half a unit.
+          expect(Math.abs(net) * 20000).toBeLessThan(incomeCentavos);
         } else {
-          expect(Math.sign(result.savingsRateBasisPoints as number)).toBe(Math.sign(net));
+          expect(Math.sign(rate)).toBe(Math.sign(net));
         }
       }),
     );

@@ -3,6 +3,12 @@ export type Money = {
   currency: "BRL";
 };
 
+// The only currency the ledger aggregates (ADR-0002): accounts in any other
+// currency are shown separately and excluded from every total, rate and
+// target. The one place this literal is spelled out; every reader, core or
+// web, imports it from here.
+export const HOUSEHOLD_CURRENCY: Money["currency"] = "BRL";
+
 export class NonIntegerAmountError extends Error {
   readonly amountCentavos: number;
 

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { encodeSubcategoryRef } from "./subcategory-ref";
-import { categorizeTransactionFormSchema } from "./validation";
+import {
+  categorizeTransactionFormSchema,
+  overviewSearchParamsSchema,
+  transactionsSearchParamsSchema,
+} from "./validation";
 
 const BASE = {
   transactionId: "tx-1",
@@ -54,5 +58,28 @@ describe("categorizeTransactionFormSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("month search params bounds", () => {
+  it("falls back to undefined for a year below 1970 on the overview", () => {
+    expect(overviewSearchParamsSchema.parse({ mes: "0000-01" })).toEqual({ mes: undefined });
+    expect(overviewSearchParamsSchema.parse({ mes: "0050-03" })).toEqual({ mes: undefined });
+  });
+
+  it("falls back to undefined for a year below 1970 on transactions", () => {
+    expect(transactionsSearchParamsSchema.parse({ mes: "0000-01" })).toMatchObject({
+      mes: undefined,
+    });
+    expect(transactionsSearchParamsSchema.parse({ mes: "0050-03" })).toMatchObject({
+      mes: undefined,
+    });
+  });
+
+  it("keeps a year within the bounded range on both schemas", () => {
+    expect(overviewSearchParamsSchema.parse({ mes: "1970-01" })).toEqual({ mes: "1970-01" });
+    expect(transactionsSearchParamsSchema.parse({ mes: "2026-09" })).toMatchObject({
+      mes: "2026-09",
+    });
   });
 });

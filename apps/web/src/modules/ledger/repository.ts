@@ -89,8 +89,10 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
     },
 
     // Every transaction of the filter, unpaginated: a household's month is a
-    // few hundred rows at most, so pagination and recurring-spend detection
-    // (both callers) slice this in memory instead of round-tripping per page.
+    // few hundred rows at most, and the overview's seven-month read (the
+    // month plus dashboardMonthRange's six behind it) stays in the low
+    // thousands, so pagination and recurring-spend detection (both callers)
+    // slice this in memory instead of round-tripping per page.
     async listTransactionsInRange(
       db: Database,
       filter: TransactionsFilter,

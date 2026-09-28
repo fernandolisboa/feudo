@@ -5,6 +5,7 @@ export {
   formatBRL,
   formatMoney,
   decimalToCentavos,
+  HOUSEHOLD_CURRENCY,
   NonFiniteAmountError,
   NonIntegerAmountError,
 } from "./money/money";
@@ -77,7 +78,7 @@ export type {
 export { categorize, orderRules } from "./ledger/categories/categorize";
 
 export type { KindContext } from "./ledger/categories/kinds";
-export { kindOf } from "./ledger/categories/kinds";
+export { categoryOf, kindOf } from "./ledger/categories/kinds";
 
 export type { CurrencyAmount, UncategorizedSummary } from "./ledger/categories/uncategorized";
 export { summarizeUncategorized } from "./ledger/categories/uncategorized";
@@ -108,5 +109,4 @@ export type {
 } from "./ledger/dashboard";
 export { buildLedgerDashboard, dashboardMonthRange } from "./ledger/dashboard";
 
-export { roundHalfAwayFromZero } from "./money/money";
 export { formatBasisPointsPercent, formatCompactReais } from "./money/format";

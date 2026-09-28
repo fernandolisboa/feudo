@@ -11,6 +11,7 @@ function line(overrides: Partial<DashboardLine> = {}): DashboardLine {
     type: "credit",
     amountCentavos: 10000,
     categoryId: null,
+    currency: "BRL",
     ...overrides,
   };
 }
@@ -292,7 +293,7 @@ describe("averageFixedCost", () => {
     });
   });
 
-  it("counts a month with only uncategorized lines toward monthsUsed, contributing zero fixed cost", () => {
+  it("excludes a month with only uncategorized lines from monthsUsed, not a fully uncategorized month's silent zero", () => {
     const gapMonth = shiftYearMonth(MONTH, -2);
     const dataMonth = shiftYearMonth(MONTH, -1);
     const result = buildLedgerDashboard({
@@ -303,8 +304,8 @@ describe("averageFixedCost", () => {
       ],
     });
     expect(result.averageFixedCost).toEqual({
-      averageCentavos: 30000,
-      monthsUsed: [gapMonth, dataMonth],
+      averageCentavos: 60000,
+      monthsUsed: [dataMonth],
       isEstimate: true,
     });
   });
@@ -320,6 +321,25 @@ describe("averageFixedCost", () => {
       averageCentavos: 50000,
       monthsUsed: [withinWindow],
       isEstimate: true,
+    });
+  });
+});
+
+describe("currency", () => {
+  it("ignores lines in any currency other than the household's own", () => {
+    const result = buildLedgerDashboard({
+      month: MONTH,
+      lines: [
+        line({ kind: "income", type: "credit", amountCentavos: 500000, currency: "USD" }),
+        line({ kind: "fixed", type: "debit", amountCentavos: 90000, currency: "USD" }),
+        line({ kind: "income", type: "credit", amountCentavos: 100000, currency: "BRL" }),
+      ],
+    });
+    expect(result.totals).toEqual({
+      incomeCentavos: 100000,
+      fixedCentavos: 0,
+      variableCentavos: 0,
+      spendingCentavos: 0,
     });
   });
 });

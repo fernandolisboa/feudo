@@ -1,10 +1,11 @@
-import { roundHalfAwayFromZero } from "../money/money";
+import { HOUSEHOLD_CURRENCY, roundHalfAwayFromZero } from "../money/money";
 import {
   PRODUCT_CATEGORY_IDS,
   type Kind,
   type ProductCategoryId,
   type TransactionDirection,
 } from "./categories/taxonomy";
+import { netForKind } from "./totals";
 import { shiftYearMonth, type YearMonth } from "./year-month";
 
 export type DashboardLine = {
@@ -13,6 +14,7 @@ export type DashboardLine = {
   type: TransactionDirection;
   amountCentavos: number;
   categoryId: ProductCategoryId | null;
+  currency: string;
 };
 
 export type MonthTotals = {
@@ -46,20 +48,6 @@ const MINIMUM_MONTHS_FOR_AVERAGE = 3;
 
 function categoryPosition(categoryId: ProductCategoryId): number {
   return (PRODUCT_CATEGORY_IDS as readonly ProductCategoryId[]).indexOf(categoryId);
-}
-
-function netForKind(
-  lines: readonly DashboardLine[],
-  kind: Kind,
-  positiveDirection: TransactionDirection,
-): number {
-  let total = 0;
-  for (const line of lines) {
-    if (line.kind !== kind) continue;
-    const magnitude = Math.abs(line.amountCentavos);
-    total += line.type === positiveDirection ? magnitude : -magnitude;
-  }
-  return total;
 }
 
 function linesInMonth(lines: readonly DashboardLine[], month: YearMonth): DashboardLine[] {
@@ -128,7 +116,7 @@ function computeAverageFixedCost(
     shiftYearMonth(month, index - AVERAGE_WINDOW_MONTHS),
   );
   const monthsUsed = windowMonths.filter((windowMonth) =>
-    lines.some((line) => line.month === windowMonth),
+    lines.some((line) => line.month === windowMonth && line.kind !== null),
   );
   if (monthsUsed.length === 0) return null;
 
@@ -148,11 +136,15 @@ export function dashboardMonthRange(month: YearMonth): { from: YearMonth; to: Ye
   return { from: shiftYearMonth(month, -AVERAGE_WINDOW_MONTHS), to: month };
 }
 
+// A household aggregates only its own currency (ADR-0002); a line synced
+// from a foreign-currency account never reaches monthTotals, the category
+// bars or the series, whatever the caller passed in.
 export function buildLedgerDashboard(input: {
   month: YearMonth;
   lines: readonly DashboardLine[];
 }): LedgerDashboard {
-  const { month, lines } = input;
+  const { month } = input;
+  const lines = input.lines.filter((line) => line.currency === HOUSEHOLD_CURRENCY);
   const range = dashboardMonthRange(month);
   const linesInRange = lines.filter((line) => line.month >= range.from && line.month <= range.to);
   const currentMonthLines = linesInMonth(linesInRange, month);

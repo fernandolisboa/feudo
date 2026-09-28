@@ -134,7 +134,7 @@ How much more a CPF can hold in one financial conglomerate while staying inside 
 _Avoid_: FGC room, remaining coverage
 
 **Average fixed cost**:
-The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used.
+The mean monthly fixed cost over the last six complete months, computed with at least three; with fewer, the target is an estimate labelled with the months used. A month counts toward this history only if it has at least one categorized transaction; a month with nothing categorized yet is a gap, not a zero, and is left out rather than silently pulling the average down.
 
 ### Market data
 

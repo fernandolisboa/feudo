@@ -270,6 +270,71 @@ describe("getOverviewPageProps (integration)", () => {
 
       expect(props.incomeCentavos).toBe(0);
       expect(props.spendingCentavos).toBe(20000);
+      expect(props.hasOtherCurrencyRows).toBe(true);
+    });
+  });
+
+  it("counts only household-currency rows in the uncategorized notice, ignoring a foreign-currency row", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [
+          seedAccount(),
+          seedAccount({ providerAccountId: "acc-usd", name: "Conta global", currency: "USD" }),
+        ],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "usd-uncategorized",
+            providerAccountId: "acc-usd",
+            date: "2026-09-05",
+            description: "UNKNOWN USD CHARGE",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -30000,
+            currency: "USD",
+          }),
+          seedTransaction({
+            providerTransactionId: "brl-uncategorized",
+            providerAccountId: "acc-1",
+            date: "2026-09-06",
+            description: "TRANSACAO DESCONHECIDA",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -12345,
+            currency: "BRL",
+          }),
+        ],
+      });
+
+      const props = await getOverviewPageProps(userA.session, { mes: "2026-09" }, NOW);
+
+      expect(props.uncategorized).toEqual({
+        count: 1,
+        amountLabel: formatMoney({ amountCentavos: 12345, currency: "BRL" }),
+      });
+      expect(props.hasOtherCurrencyRows).toBe(true);
+    });
+  });
+
+  it("does not flag other-currency rows when the month only has household-currency accounts", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "brl-only-salary",
+            date: "2026-09-05",
+            description: "SALARIO SETEMBRO",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+        ],
+      });
+
+      const props = await getOverviewPageProps(userA.session, { mes: "2026-09" }, NOW);
+
+      expect(props.hasOtherCurrencyRows).toBe(false);
     });
   });
 
@@ -324,6 +389,21 @@ describe("getOverviewPageProps (integration)", () => {
             type: "credit",
             amountCentavos: 500000,
           }),
+          seedTransaction({
+            providerTransactionId: "a-fixed",
+            date: "2026-09-06",
+            description: "PIX ENVIADO CONDOMINIO",
+            type: "debit",
+            amountCentavos: -80000,
+          }),
+          seedTransaction({
+            providerTransactionId: "a-uncategorized",
+            date: "2026-09-12",
+            description: "TRANSACAO DESCONHECIDA A",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -11111,
+          }),
         ],
       });
       await seedSyncedConnection(db, userB, {
@@ -338,6 +418,21 @@ describe("getOverviewPageProps (integration)", () => {
             type: "credit",
             amountCentavos: 900000,
           }),
+          seedTransaction({
+            providerTransactionId: "b-fixed",
+            date: "2026-09-06",
+            description: "PIX ENVIADO CONDOMINIO",
+            type: "debit",
+            amountCentavos: -70000,
+          }),
+          seedTransaction({
+            providerTransactionId: "b-uncategorized",
+            date: "2026-09-12",
+            description: "TRANSACAO DESCONHECIDA B",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -22222,
+          }),
         ],
       });
 
@@ -346,6 +441,41 @@ describe("getOverviewPageProps (integration)", () => {
 
       expect(propsA.incomeCentavos).toBe(500000);
       expect(propsB.incomeCentavos).toBe(900000);
+
+      expect(findSeries(propsA.series, "2026-09")).toMatchObject({
+        incomeCentavos: 500000,
+        spendingCentavos: 80000,
+      });
+      expect(findSeries(propsB.series, "2026-09")).toMatchObject({
+        incomeCentavos: 900000,
+        spendingCentavos: 70000,
+      });
+
+      expect(propsA.categorySpending).toEqual([
+        {
+          key: "housing",
+          label: "Moradia",
+          amountLabel: formatMoney({ amountCentavos: 80000, currency: "BRL" }),
+          fraction: 1,
+        },
+      ]);
+      expect(propsB.categorySpending).toEqual([
+        {
+          key: "housing",
+          label: "Moradia",
+          amountLabel: formatMoney({ amountCentavos: 70000, currency: "BRL" }),
+          fraction: 1,
+        },
+      ]);
+
+      expect(propsA.uncategorized).toEqual({
+        count: 1,
+        amountLabel: formatMoney({ amountCentavos: 11111, currency: "BRL" }),
+      });
+      expect(propsB.uncategorized).toEqual({
+        count: 1,
+        amountLabel: formatMoney({ amountCentavos: 22222, currency: "BRL" }),
+      });
     });
   });
 });

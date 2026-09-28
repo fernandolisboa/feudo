@@ -60,6 +60,17 @@ describe("getTransactionsPageProps (integration)", () => {
     });
   });
 
+  it("clamps a future month in the URL to the current month, like the overview does", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, { household: householdScope(userA.session) });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-12" }, NOW);
+
+      expect(props.month).toBe("2026-09");
+      expect(props.nextMonth).toBeNull();
+    });
+  });
+
   it("reads the month, account and page from the URL and drops what it cannot use", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const seeded = await seedSyncedConnection(db, userA, {
@@ -883,8 +894,12 @@ describe("getTransactionsPageProps (integration)", () => {
         ],
       });
 
-      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
-      const october = await getTransactionsPageProps(userA.session, { mes: "2026-10" }, NOW);
+      // October must not be a future month here, or the page-props' own
+      // clamp (never move past the household's current month) would read it
+      // back as September instead of letting this test reach it.
+      const laterNow = new Date("2026-10-20T12:00:00.000Z");
+      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, laterNow);
+      const october = await getTransactionsPageProps(userA.session, { mes: "2026-10" }, laterNow);
 
       const d1 = september.transactions.find(
         (transaction) => transaction.description === "SAIDA SEM PAR",
