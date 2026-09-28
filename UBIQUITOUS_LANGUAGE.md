@@ -34,6 +34,7 @@
 | Institution                                 | instituição                                    | "banco" is acceptable in copy                                                |
 | Transaction                                 | transação                                      | never "lançamento"                                                           |
 | Internal transfer                           | transferência interna                          |                                                                              |
+| Internal-transfer mark                      | marcação de transferência interna              | actions: "É transferência interna" / "Não é transferência interna"           |
 | Income                                      | renda                                          |                                                                              |
 | Spending                                    | gastos                                         |                                                                              |
 | Category                                    | categoria                                      |                                                                              |

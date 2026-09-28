@@ -392,4 +392,109 @@ describe("categorization repository (integration)", () => {
       expect(await repoA.clearManual(db, transactionId)).toBe("not_found");
     });
   });
+
+  it("sets and clears a transfer mark only through the transaction's own household", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "mark-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "mark-1");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+
+      expect(await repoB.setTransferMark(db, transactionId, true, userB.id)).toBe("not_found");
+      expect(await repoB.clearTransferMark(db, transactionId)).toBe("not_found");
+
+      expect(await repoA.setTransferMark(db, transactionId, true, userA.id)).toBe("ok");
+      const rowsA = await createHouseholdLedgerRepository(
+        householdScope(userA.session),
+      ).listTransactionsInRange(db, { days: SEPTEMBER, accountId: null });
+      expect(rowsA.find((row) => row.id === transactionId)?.transferMark).toBe(true);
+      const rowsB = await createHouseholdLedgerRepository(
+        householdScope(userB.session),
+      ).listTransactionsInRange(db, { days: SEPTEMBER, accountId: null });
+      expect(rowsB).toEqual([]);
+
+      expect(await repoB.setTransferMark(db, transactionId, false, userB.id)).toBe("not_found");
+      expect(await repoB.clearTransferMark(db, transactionId)).toBe("not_found");
+      expect(
+        (
+          await createHouseholdLedgerRepository(
+            householdScope(userA.session),
+          ).listTransactionsInRange(db, { days: SEPTEMBER, accountId: null })
+        ).find((row) => row.id === transactionId)?.transferMark,
+      ).toBe(true);
+
+      expect(await repoA.setTransferMark(db, transactionId, false, userA.id)).toBe("ok");
+      expect(
+        (
+          await createHouseholdLedgerRepository(
+            householdScope(userA.session),
+          ).listTransactionsInRange(db, { days: SEPTEMBER, accountId: null })
+        ).find((row) => row.id === transactionId)?.transferMark,
+      ).toBe(false);
+
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+    });
+  });
+
+  it("clears a transfer mark idempotently: ok whether or not a mark exists, not_found only when the transaction is out of scope", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "clear-idempotent" })],
+      });
+      const transactionId = await transactionIdFor(db, "clear-idempotent");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+      expect(await repoB.clearTransferMark(db, transactionId)).toBe("not_found");
+
+      await db.delete(member).where(eq(member.userId, userA.id));
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("not_found");
+    });
+  });
+
+  it("refuses to set or clear a transfer mark on an unassigned account's transaction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "mark-unassigned" })],
+      });
+      const transactionId = await transactionIdFor(db, "mark-unassigned");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      expect(await repoA.setTransferMark(db, transactionId, true, userA.id)).toBe("ok");
+
+      await db.delete(member).where(eq(member.userId, userA.id));
+
+      expect(await repoA.setTransferMark(db, transactionId, false, userA.id)).toBe("not_found");
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("not_found");
+    });
+  });
+
+  it("carries a transfer mark along when its account moves to another household", async () => {
+    await withTwoUsers(async ({ db, userA, householdB }) => {
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "mark-move-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "mark-move-1");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      expect(await repoA.setTransferMark(db, transactionId, true, userA.id)).toBe("ok");
+
+      await joinHousehold(db, userA.id, householdB);
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("ok");
+
+      const ledgerB = createHouseholdLedgerRepository({ householdId: householdB });
+      const rowsB = await ledgerB.listTransactionsInRange(db, {
+        days: SEPTEMBER,
+        accountId: null,
+      });
+      expect(rowsB.find((row) => row.id === transactionId)?.transferMark).toBe(true);
+    });
+  });
 });

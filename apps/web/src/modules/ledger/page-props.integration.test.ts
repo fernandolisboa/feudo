@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { formatMoney } from "@feudo/core";
 
+import { interpolateAll } from "@/lib/interpolate";
 import { householdScope } from "@/modules/households";
 import { bankTransaction } from "@/modules/sync/schema";
 import {
+  moveSeededAccount,
   seedAccount,
   seedSyncedConnection,
   seedTransaction,
 } from "@/modules/sync/test/seed-synced-connection";
-import { withTwoUsers } from "@/modules/sync/test/with-two-users";
+import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import { createCategorizationRepository } from "./categorization-repository";
 import { getTransactionsPageProps } from "./page-props";
@@ -357,6 +359,552 @@ describe("getTransactionsPageProps (integration)", () => {
         sourceLabel: t.category.sources.default,
       });
       expect(props.uncategorized.count).toBe(0);
+    });
+  });
+
+  it("falls back a total's currency to the listed rows' own currency, not always BRL (design contract's #16 review, item 8)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "usd-income",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+            currency: "USD",
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+
+      expect(props.totals.incomeLabel).toBe(
+        formatMoney({ amountCentavos: 500000, currency: "USD" }),
+      );
+      expect(props.totals.spendingLabel).toBe(formatMoney({ amountCentavos: 0, currency: "USD" }));
+    });
+  });
+
+  it("falls back a total's currency to the month's rows, not the uncategorized-filtered page list (design contract's #16 review round 2, item 8)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "brl-income",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+            currency: "BRL",
+          }),
+          seedTransaction({
+            providerTransactionId: "usd-unknown",
+            date: "2026-09-06",
+            description: "MISTERIOSO NO EXTERIOR",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -1000,
+            currency: "USD",
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", categoria: "sem" },
+        NOW,
+      );
+
+      expect(props.transactions.map((transaction) => transaction.currency)).toEqual(["USD"]);
+      expect(props.totals.spendingLabel).toBe(formatMoney({ amountCentavos: 0, currency: "BRL" }));
+    });
+  });
+
+  it("falls back to BRL when the month has no listed rows at all", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, { household: householdScope(userA.session) });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+
+      expect(props.totals.incomeLabel).toBe(formatMoney({ amountCentavos: 0, currency: "BRL" }));
+      expect(props.totals.spendingLabel).toBe(formatMoney({ amountCentavos: 0, currency: "BRL" }));
+    });
+  });
+
+  it("prefills the category dialog from a member's stored manual choice, never the derived transfer subcategory a mark forces (design contract's #16 review, item 9)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "manual-plus-mark",
+            date: "2026-09-05",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -9900,
+          }),
+        ],
+      });
+      const categorization = createCategorizationRepository(householdScope(userA.session));
+      const transactionId = await transactionIdFor(db, "manual-plus-mark");
+      await categorization.setManual(
+        db,
+        transactionId,
+        { type: "product", id: "food.groceries" },
+        userA.id,
+      );
+      await categorization.setTransferMark(db, transactionId, true, userA.id);
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const row = props.transactions.find((transaction) => transaction.id === transactionId);
+
+      expect(row?.categorize.subcategoryValue).toBe("product:food.groceries");
+    });
+  });
+
+  it("detects a pair between two of the household's own accounts and excludes it from income and spending, counting its two transactions as transfers", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "pair-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "debit",
+            amountCentavos: -50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "pair-credit",
+            providerAccountId: "acc-2",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "income-1",
+            providerAccountId: "acc-1",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+          seedTransaction({
+            providerTransactionId: "spending-1",
+            providerAccountId: "acc-1",
+            date: "2026-09-06",
+            description: "COMPRA NO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -20000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const pairRows = props.transactions.filter((row) => row.description === "TRANSFERENCIA CASA");
+      expect(pairRows).toHaveLength(2);
+      expect(pairRows.every((row) => row.categorize.isInternalTransfer)).toBe(true);
+      expect(pairRows.every((row) => !row.categorize.hasTransferMark)).toBe(true);
+
+      expect(props.totals).toEqual({
+        incomeLabel: formatMoney({ amountCentavos: 500000, currency: "BRL" }),
+        spendingLabel: formatMoney({ amountCentavos: 20000, currency: "BRL" }),
+        transferCount: 2,
+      });
+    });
+  });
+
+  // transferCount counts kind-transfer transactions, not detected pairs
+  // (design contract's #16 review round 3, item 2): a card-bill debit the
+  // default rule catches is kind transfer even with no household account to
+  // pair it with, so it counts too, while never showing as an internal
+  // transfer itself.
+  it("counts an unpaired card-bill debit from the default rule among the transfers left out of the totals", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "unpaired-card-bill",
+            providerAccountId: "acc-1",
+            date: "2026-09-10",
+            description: "PAGAMENTO FATURA CARTAO",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -40000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const billRow = props.transactions.find(
+        (transaction) => transaction.description === "PAGAMENTO FATURA CARTAO",
+      );
+
+      expect(billRow?.categorize.isInternalTransfer).toBe(false);
+      expect(props.totals.transferCount).toBe(1);
+    });
+  });
+
+  it("pairs a transaction once its counterpart's account moves into the household, and unpairs both once it moves back out", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "move-pair-a",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "debit",
+            amountCentavos: -50000,
+          }),
+        ],
+      });
+      const seededB = await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "household-b-item",
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "move-pair-b",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 50000,
+          }),
+        ],
+      });
+      const accountBId = seededB.accountIdsByProvider.get("acc-1") ?? "";
+
+      const beforeMove = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      expect(
+        beforeMove.transactions.find((row) => row.description === "TRANSFERENCIA CASA")?.categorize
+          .isInternalTransfer,
+      ).toBe(false);
+
+      await joinHousehold(db, userB.id, householdA);
+      expect(await moveSeededAccount(db, userB, accountBId, householdA)).toBe("ok");
+
+      const afterMoveIn = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const pairedRows = afterMoveIn.transactions.filter(
+        (row) => row.description === "TRANSFERENCIA CASA",
+      );
+      expect(pairedRows).toHaveLength(2);
+      expect(pairedRows.every((row) => row.categorize.isInternalTransfer)).toBe(true);
+
+      expect(await moveSeededAccount(db, userB, accountBId, householdB)).toBe("ok");
+
+      const afterMoveOutA = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      expect(
+        afterMoveOutA.transactions.find((row) => row.description === "TRANSFERENCIA CASA")
+          ?.categorize.isInternalTransfer,
+      ).toBe(false);
+      const afterMoveOutB = await getTransactionsPageProps(userB.session, { mes: "2026-09" }, NOW);
+      expect(
+        afterMoveOutB.transactions.find((row) => row.description === "TRANSFERENCIA CASA")
+          ?.categorize.isInternalTransfer,
+      ).toBe(false);
+    });
+  });
+
+  it("lets a member's mark override a detected pair, and force a lone transaction into being one, at the read boundary", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "boundary-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "debit",
+            amountCentavos: -50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "boundary-credit",
+            providerAccountId: "acc-2",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "boundary-lone",
+            providerAccountId: "acc-1",
+            date: "2026-09-12",
+            description: "SAQUE PARA GUARDAR EM CASA",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -3000,
+          }),
+        ],
+      });
+
+      const categorization = createCategorizationRepository(householdScope(userA.session));
+      const debitId = await transactionIdFor(db, "boundary-debit");
+      const loneId = await transactionIdFor(db, "boundary-lone");
+      expect(await categorization.setTransferMark(db, debitId, false, userA.id)).toBe("ok");
+      expect(await categorization.setTransferMark(db, loneId, true, userA.id)).toBe("ok");
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const byId = new Map(props.transactions.map((row) => [row.id, row]));
+
+      expect(byId.get(debitId)?.categorize.isInternalTransfer).toBe(false);
+      const creditId = await transactionIdFor(db, "boundary-credit");
+      expect(byId.get(creditId)?.categorize.isInternalTransfer).toBe(false);
+      expect(byId.get(loneId)?.categorize.isInternalTransfer).toBe(true);
+      expect(props.totals.transferCount).toBe(1);
+    });
+  });
+
+  it("never confirms or rejects a pair using another household's account-holder hash (design contract's #16 review, item 11)", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "household-b-item",
+        accounts: [seedAccount({ holderDocumentHash: "hash-b-holder" })],
+      });
+
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [
+          seedAccount({ providerAccountId: "acc-1", name: "Conta 1", holderDocumentHash: null }),
+          seedAccount({ providerAccountId: "acc-2", name: "Conta 2", holderDocumentHash: null }),
+          seedAccount({ providerAccountId: "acc-3", name: "Conta 3", holderDocumentHash: null }),
+          seedAccount({
+            providerAccountId: "acc-4",
+            name: "Conta 4",
+            holderDocumentHash: "hash-a-4",
+          }),
+          seedAccount({ providerAccountId: "acc-5", name: "Conta 5", holderDocumentHash: null }),
+          seedAccount({
+            providerAccountId: "acc-6",
+            name: "Conta 6",
+            holderDocumentHash: "hash-a-6",
+          }),
+        ],
+        transactions: [
+          // A's holder set never includes household B's hash, so a
+          // counterpart matching it (and no known holder on the receiving
+          // side) is unconfirmed evidence, not a confirmation.
+          seedTransaction({
+            providerTransactionId: "sec-unconfirmed-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA 1",
+            type: "debit",
+            amountCentavos: -10000,
+            counterpartType: "cpf",
+            counterpartDocumentHash: "hash-b-holder",
+          }),
+          seedTransaction({
+            providerTransactionId: "sec-unconfirmed-credit",
+            providerAccountId: "acc-2",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA 1",
+            type: "credit",
+            amountCentavos: 10000,
+          }),
+          // The receiving account's own holder is known and different, so a
+          // CPF counterpart equal to household B's holder rejects the pair.
+          seedTransaction({
+            providerTransactionId: "sec-rejected-debit",
+            providerAccountId: "acc-3",
+            date: "2026-09-11",
+            description: "TRANSFERENCIA 2",
+            type: "debit",
+            amountCentavos: -20000,
+            counterpartType: "cpf",
+            counterpartDocumentHash: "hash-b-holder",
+          }),
+          seedTransaction({
+            providerTransactionId: "sec-rejected-credit",
+            providerAccountId: "acc-4",
+            date: "2026-09-11",
+            description: "TRANSFERENCIA 2",
+            type: "credit",
+            amountCentavos: 20000,
+          }),
+          // The same shape, but the counterpart hash matches the receiving
+          // account's own holder: confirms.
+          seedTransaction({
+            providerTransactionId: "sec-confirmed-debit",
+            providerAccountId: "acc-5",
+            date: "2026-09-12",
+            description: "TRANSFERENCIA 3",
+            type: "debit",
+            amountCentavos: -30000,
+            counterpartType: "cpf",
+            counterpartDocumentHash: "hash-a-6",
+          }),
+          seedTransaction({
+            providerTransactionId: "sec-confirmed-credit",
+            providerAccountId: "acc-6",
+            date: "2026-09-12",
+            description: "TRANSFERENCIA 3",
+            type: "credit",
+            amountCentavos: 30000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const rowsFor = (description: string) =>
+        props.transactions.filter((row) => row.description === description);
+
+      const unconfirmed = rowsFor("TRANSFERENCIA 1");
+      expect(unconfirmed).toHaveLength(2);
+      expect(unconfirmed.every((row) => row.categorize.isInternalTransfer)).toBe(true);
+
+      const rejected = rowsFor("TRANSFERENCIA 2");
+      expect(rejected).toHaveLength(2);
+      expect(rejected.every((row) => !row.categorize.isInternalTransfer)).toBe(true);
+
+      const confirmed = rowsFor("TRANSFERENCIA 3");
+      expect(confirmed).toHaveLength(2);
+      expect(confirmed.every((row) => row.categorize.isInternalTransfer)).toBe(true);
+    });
+  });
+
+  // Pins ledger-read.ts's pairingReadRange padding: fails if that pad is
+  // dropped, since the credit leg on 2026-10-01 would then never be read
+  // while rendering September (design contract's #16 review round 2, item 4).
+  it("pairs a debit on the last day of the month with a credit on another household account the next day", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "pad-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-30",
+            description: "TRANSFERENCIA FIM DE MES",
+            type: "debit",
+            amountCentavos: -70000,
+          }),
+          seedTransaction({
+            providerTransactionId: "pad-credit",
+            providerAccountId: "acc-2",
+            date: "2026-10-01",
+            description: "TRANSFERENCIA FIM DE MES",
+            type: "credit",
+            amountCentavos: 70000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const debitRow = props.transactions.find(
+        (transaction) => transaction.description === "TRANSFERENCIA FIM DE MES",
+      );
+
+      expect(debitRow?.categorize.isInternalTransfer).toBe(true);
+      expect(debitRow?.category?.sourceLabel).toBe(
+        interpolateAll(t.category.transferTooltip.pair, {
+          institution: "Banco Fixture",
+          account: "Poupança",
+          date: "01/10/2026",
+        }),
+      );
+      expect(props.totals.transferCount).toBe(1);
+    });
+  });
+
+  // Pad covers one competing hop (design contract's #16 review round 3, item
+  // 1): d1 (2026-09-30) and c1 (2026-10-02) are themselves a valid,
+  // unconfirmed candidate, but c1 also confirms with d2 (2026-10-05), one
+  // business day away, and that edge must outrank d1's. September's own read
+  // window only reaches d1 and c1 with a four-day pad, so d1 wrongly pairs
+  // there while October (whose read window reaches all three) correctly
+  // pairs c1 with d2 instead — the two months would disagree. With the
+  // eight-day pad both months read all three transactions and agree.
+  it("resolves a competing candidate the same way from both months it touches", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [
+          seedAccount({
+            providerAccountId: "acc-x",
+            name: "Conta X",
+            holderDocumentHash: "hash-x",
+          }),
+          seedAccount({
+            providerAccountId: "acc-y",
+            name: "Conta Y",
+            holderDocumentHash: "hash-y",
+          }),
+          seedAccount({
+            providerAccountId: "acc-z",
+            name: "Conta Z",
+            holderDocumentHash: "hash-z",
+          }),
+        ],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "hop-d1",
+            providerAccountId: "acc-x",
+            date: "2026-09-30",
+            description: "SAIDA SEM PAR",
+            type: "debit",
+            amountCentavos: -10000,
+          }),
+          seedTransaction({
+            providerTransactionId: "hop-c1",
+            providerAccountId: "acc-y",
+            date: "2026-10-02",
+            description: "TRANSFERENCIA COMPETIDA",
+            type: "credit",
+            amountCentavos: 10000,
+            counterpartType: "cpf",
+            counterpartDocumentHash: "hash-z",
+          }),
+          seedTransaction({
+            providerTransactionId: "hop-d2",
+            providerAccountId: "acc-z",
+            date: "2026-10-05",
+            description: "TRANSFERENCIA COMPETIDA",
+            type: "debit",
+            amountCentavos: -10000,
+            counterpartType: "cpf",
+            counterpartDocumentHash: "hash-y",
+          }),
+        ],
+      });
+
+      const september = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const october = await getTransactionsPageProps(userA.session, { mes: "2026-10" }, NOW);
+
+      const d1 = september.transactions.find(
+        (transaction) => transaction.description === "SAIDA SEM PAR",
+      );
+      expect(d1?.categorize.isInternalTransfer).toBe(false);
+
+      const d2 = october.transactions.find(
+        (transaction) =>
+          transaction.description === "TRANSFERENCIA COMPETIDA" &&
+          transaction.date === "2026-10-05",
+      );
+      expect(d2?.categorize.isInternalTransfer).toBe(true);
+      expect(d2?.category?.sourceLabel).toBe(
+        interpolateAll(t.category.transferTooltip.pair, {
+          institution: "Banco Fixture",
+          account: "Conta Y",
+          date: "02/10/2026",
+        }),
+      );
+      expect(october.totals.transferCount).toBe(2);
     });
   });
 });

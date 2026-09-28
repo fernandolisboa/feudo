@@ -3,21 +3,30 @@ import {
   formatYearMonth,
   rulePatternFromDescription,
   shiftYearMonth,
+  summarizeLedger,
   summarizeUncategorized,
   yearMonthDayRange,
   yearMonthOf,
+  type CurrencyAmount,
+  type InternalTransfer,
   type YearMonth,
 } from "@feudo/core";
 
+import { formatIsoDate } from "@/lib/format-date";
+import { interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
-import { categorizeRows, type CategorizedRow } from "./categorize-rows";
-import { createCategorizationRepository } from "./categorization-repository";
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
-import { createHouseholdLedgerRepository, type LedgerAccount } from "./repository";
+import { readHouseholdLedger } from "./ledger-read";
+import {
+  createHouseholdLedgerRepository,
+  type LedgerAccount,
+  type LedgerTransactionRow,
+} from "./repository";
+import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
@@ -27,7 +36,11 @@ import {
   type TransactionsSearchParams,
 } from "./validation";
 
+const FALLBACK_CURRENCY = "BRL";
+
 export type UncategorizedSummaryView = { count: number; amountLabel: string };
+
+export type TotalsView = { incomeLabel: string; spendingLabel: string; transferCount: number };
 
 export type TransactionsPageProps = {
   month: YearMonth;
@@ -38,6 +51,7 @@ export type TransactionsPageProps = {
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
   uncategorized: UncategorizedSummaryView;
+  totals: TotalsView;
   categoryGroups: SubcategoryOptionGroup[];
   transactions: TransactionRowView[];
   total: number;
@@ -45,9 +59,59 @@ export type TransactionsPageProps = {
   hasMore: boolean;
 };
 
-function toRowView(row: CategorizedRow, taxonomy: TaxonomyView): TransactionRowView {
+// A total with nothing in it still reads as a full sentence rather than an
+// empty string: it shows zero in whatever currency the rows the totals are
+// computed over actually use (the month's rows for the selected account, not
+// the page's uncategorized-filtered list, design contract's #16 review round
+// 2 item 8), so a household that only ever sees USD accounts doesn't get a
+// stray "R$ 0,00", and only falls back to BRL when there is nothing to take
+// a currency from.
+function fallbackCurrency(rows: readonly { currency: string }[]): string {
+  const currencies = [...new Set(rows.map((row) => row.currency))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  return currencies[0] ?? FALLBACK_CURRENCY;
+}
+
+function amountsLabel(amounts: readonly CurrencyAmount[], currency: string): string {
+  if (amounts.length === 0) {
+    return formatMoney({ amountCentavos: 0, currency });
+  }
+  return amounts.map(formatMoney).join(" + ");
+}
+
+function pairTooltip(counterpart: LedgerTransactionRow): string {
+  return interpolateAll(t.category.transferTooltip.pair, {
+    institution: counterpart.institutionName,
+    account: counterpart.accountName,
+    date: formatIsoDate(counterpart.date),
+  });
+}
+
+function transferTooltip(
+  internalTransfer: InternalTransfer,
+  rowById: ReadonlyMap<string, LedgerTransactionRow>,
+): string {
+  if (internalTransfer.source === "mark") {
+    return t.category.transferTooltip.mark;
+  }
+  const counterpart = rowById.get(internalTransfer.counterpartId);
+  return counterpart ? pairTooltip(counterpart) : t.category.sources.internal_transfer;
+}
+
+function toRowView(
+  row: ResolvedLedgerRow,
+  taxonomy: TaxonomyView,
+  rowById: ReadonlyMap<string, LedgerTransactionRow>,
+): TransactionRowView {
   const label = row.categorization ? taxonomy.labelOf(row.categorization.subcategory) : null;
   const amountLabel = formatMoney({ amountCentavos: row.amountCentavos, currency: row.currency });
+  const sourceLabel = row.internalTransfer
+    ? transferTooltip(row.internalTransfer, rowById)
+    : row.categorization
+      ? t.category.sources[row.categorization.source]
+      : null;
+  const manualLabel = row.manual ? taxonomy.labelOf(row.manual) : null;
   return {
     id: row.id,
     date: row.date,
@@ -57,21 +121,26 @@ function toRowView(row: CategorizedRow, taxonomy: TaxonomyView): TransactionRowV
     accountName: row.accountName,
     institutionName: row.institutionName,
     category:
-      row.categorization && label
-        ? {
-            label: label.label,
-            categoryLabel: label.categoryLabel,
-            sourceLabel: t.category.sources[row.categorization.source],
-          }
+      row.categorization && label && sourceLabel
+        ? { label: label.label, categoryLabel: label.categoryLabel, sourceLabel }
         : null,
     categorize: {
       id: row.id,
       description: row.description,
       amountLabel,
       type: row.type,
+      // The manual choice a member stored always wins the prefill, so saving
+      // the dialog again never overwrites it with a derived transfer
+      // subcategory (design contract's #16 review, item 9).
       subcategoryValue:
-        row.categorization && label ? encodeSubcategoryRef(row.categorization.subcategory) : null,
+        row.manual && manualLabel
+          ? encodeSubcategoryRef(row.manual)
+          : row.categorization && label
+            ? encodeSubcategoryRef(row.categorization.subcategory)
+            : null,
       isManual: row.manual !== null,
+      isInternalTransfer: row.internalTransfer !== null,
+      hasTransferMark: row.transferMark !== null,
       suggestedPattern: rulePatternFromDescription(row.description),
     },
   };
@@ -80,9 +149,9 @@ function toRowView(row: CategorizedRow, taxonomy: TaxonomyView): TransactionRowV
 // Everything /transacoes renders, so the page stays a composition of this
 // slice's components (ADR-0011). The month defaults to today's in the
 // household's time zone; an account id not in the household is ignored and
-// a page past the last one lands on the last. Categories are resolved here,
-// over the whole month, because the uncategorized count and the filter need
-// every row, not just the page on screen (ADR-0003, amended 2026-09-26).
+// a page past the last one lands on the last. Pairing and categorization
+// are both resolved by readHouseholdLedger, the one read path shared with
+// /categorias (design contract's #16 review, item 3).
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
@@ -91,15 +160,11 @@ export async function getTransactionsPageProps(
   const db = getDb();
   const scope = householdScope(session);
   const repository = createHouseholdLedgerRepository(scope);
-  const categorization = createCategorizationRepository(scope);
   const params = transactionsSearchParamsSchema.parse(searchParams);
 
-  const [settings, accounts, householdSubcategories, overrides, rules] = await Promise.all([
+  const [settings, accounts] = await Promise.all([
     getHouseholdSettings(scope, db),
     repository.listAccounts(db),
-    categorization.listHouseholdSubcategories(db),
-    categorization.listKindOverrides(db),
-    categorization.listRules(db),
   ]);
   const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
   const month = params.mes ?? currentMonth;
@@ -107,31 +172,37 @@ export async function getTransactionsPageProps(
     ? (params.conta ?? null)
     : null;
   const uncategorizedOnly = params.categoria !== undefined;
-  const taxonomy = buildTaxonomyView({
-    overrides,
-    householdSubcategories: new Map(
-      householdSubcategories.map((subcategory) => [subcategory.id, subcategory]),
-    ),
-  });
 
-  const rows = categorizeRows(
-    await repository.listTransactionsInRange(db, {
-      days: yearMonthDayRange(month),
-      accountId: selectedAccountId,
-    }),
-    rules,
-  );
+  const monthRange = yearMonthDayRange(month);
+  const {
+    kinds,
+    rows: monthRows,
+    padded,
+  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId);
+  const taxonomy = buildTaxonomyView(kinds);
+  const rowById = new Map(padded.map((row) => [row.id, row]));
+
   const summary = summarizeUncategorized(
-    rows.map((row) => ({
+    monthRows.map((row) => ({
       categorization: row.categorization,
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
-  const listed = uncategorizedOnly ? rows.filter((row) => row.categorization === null) : rows;
+  const totals = summarizeLedger(
+    monthRows.map((row) => ({
+      kind: row.kind,
+      type: row.type,
+      amount: { amountCentavos: row.amountCentavos, currency: row.currency },
+    })),
+  );
+  const listed = uncategorizedOnly
+    ? monthRows.filter((row) => row.categorization === null)
+    : monthRows;
   const total = listed.length;
   const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
   const page = Math.min(params.pagina ?? 1, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
+  const totalsCurrency = fallbackCurrency(monthRows);
 
   return {
     month,
@@ -145,13 +216,18 @@ export async function getTransactionsPageProps(
       count: summary.count,
       amountLabel: summary.totals.map(formatMoney).join(" + "),
     },
+    totals: {
+      incomeLabel: amountsLabel(totals.income, totalsCurrency),
+      spendingLabel: amountsLabel(totals.spending, totalsCurrency),
+      transferCount: totals.transferCount,
+    },
     categoryGroups: taxonomy.categories.map((category) => ({
       label: category.label,
       options: category.subcategories.map(({ value, label }) => ({ value, label })),
     })),
     transactions: listed
       .slice(start, start + TRANSACTIONS_PAGE_SIZE)
-      .map((row) => toRowView(row, taxonomy)),
+      .map((row) => toRowView(row, taxonomy, rowById)),
     total,
     page,
     hasMore: start + TRANSACTIONS_PAGE_SIZE < total,

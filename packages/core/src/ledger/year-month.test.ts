@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  InvalidIsoDateError,
   InvalidYearMonthError,
+  calendarDaysBetween,
   formatYearMonth,
+  isoDateToUtcMidnight,
   isYearMonth,
+  padDayRange,
   parseYearMonth,
+  shiftIsoDate,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,
 } from "./year-month";
+
+const INVALID_ISO_DATES = ["2026-9-28", "2026/09/28", "not-a-date", "", "2026-02-31", "2026-13-01"];
 
 describe("parseYearMonth", () => {
   it("accepts a zero-padded YYYY-MM", () => {
@@ -57,5 +64,62 @@ describe("formatYearMonth", () => {
   it("formats in Brazilian Portuguese", () => {
     expect(formatYearMonth("2026-09")).toBe("setembro de 2026");
     expect(formatYearMonth("2027-01")).toBe("janeiro de 2027");
+  });
+});
+
+describe("shiftIsoDate", () => {
+  it("moves forward and backward across month and year boundaries", () => {
+    expect(shiftIsoDate("2026-09-28", 3)).toBe("2026-10-01");
+    expect(shiftIsoDate("2026-01-01", -1)).toBe("2025-12-31");
+    expect(shiftIsoDate("2026-09-28", 0)).toBe("2026-09-28");
+  });
+
+  it.each(INVALID_ISO_DATES)("throws InvalidIsoDateError for %j", (value) => {
+    expect(() => shiftIsoDate(value, 1)).toThrow(InvalidIsoDateError);
+  });
+});
+
+describe("isoDateToUtcMidnight", () => {
+  it("round-trips through toISOString for a real calendar day", () => {
+    const time = isoDateToUtcMidnight("2026-09-28");
+    expect(new Date(time).toISOString().slice(0, 10)).toBe("2026-09-28");
+  });
+
+  it.each(INVALID_ISO_DATES)(
+    "throws InvalidIsoDateError for %j instead of rolling over to a nearby real date",
+    (value) => {
+      expect(() => isoDateToUtcMidnight(value)).toThrow(InvalidIsoDateError);
+    },
+  );
+});
+
+describe("calendarDaysBetween", () => {
+  it("is symmetric and counts whole days", () => {
+    expect(calendarDaysBetween("2026-09-25", "2026-09-29")).toBe(4);
+    expect(calendarDaysBetween("2026-09-29", "2026-09-25")).toBe(4);
+    expect(calendarDaysBetween("2026-09-25", "2026-09-25")).toBe(0);
+  });
+});
+
+describe("padDayRange", () => {
+  it("extends both ends of the range by the given number of calendar days", () => {
+    expect(padDayRange({ from: "2026-09-01", to: "2026-09-30" }, 7)).toEqual({
+      from: "2026-08-25",
+      to: "2026-10-07",
+    });
+  });
+
+  it("crosses a year boundary", () => {
+    expect(padDayRange({ from: "2026-12-28", to: "2026-12-31" }, 7)).toEqual({
+      from: "2026-12-21",
+      to: "2027-01-07",
+    });
+  });
+
+  it("does nothing when padded by zero days", () => {
+    expect(padDayRange({ from: "2026-09-01", to: "2026-09-30" }, 0)).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-30",
+    });
   });
 });

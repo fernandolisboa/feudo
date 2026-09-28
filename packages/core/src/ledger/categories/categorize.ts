@@ -18,7 +18,7 @@ export type CategorizableTransaction = {
   manual: SubcategoryRef | null;
 };
 
-export type CategorizationSource = "manual" | "rule" | "default" | "provider";
+export type CategorizationSource = "manual" | "rule" | "default" | "provider" | "internal_transfer";
 
 export type Categorization = {
   subcategory: SubcategoryRef;

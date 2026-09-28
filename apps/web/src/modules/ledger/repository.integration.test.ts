@@ -176,6 +176,37 @@ describe("household ledger repository (integration)", () => {
     });
   });
 
+  it("lists only the scoped household's account-holder hashes (design contract's #16 review round 3, item 5)", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        itemId: "holder-a-item",
+        accounts: [
+          seedAccount({ providerAccountId: "a-checking", holderDocumentHash: "hash-a-1" }),
+          seedAccount({
+            providerAccountId: "a-savings",
+            name: "Poupança",
+            type: "savings",
+            holderDocumentHash: "hash-a-2",
+          }),
+        ],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "holder-b-item",
+        accounts: [
+          seedAccount({ providerAccountId: "b-checking", holderDocumentHash: "hash-b-1" }),
+        ],
+      });
+
+      const ledgerA = createHouseholdLedgerRepository(householdScope(userA.session));
+      const hashesA = await ledgerA.listHolderDocumentHashes(db);
+
+      expect(hashesA).toEqual(new Set(["hash-a-1", "hash-a-2"]));
+      expect(hashesA.has("hash-b-1")).toBe(false);
+    });
+  });
+
   it("resolves the household's own manual categorization onto a transaction", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedHouseholdLedger(db, userA, "a");

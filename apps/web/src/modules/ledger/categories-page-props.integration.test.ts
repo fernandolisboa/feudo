@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { householdScope } from "@/modules/households";
-import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
+import {
+  seedAccount,
+  seedSyncedConnection,
+  seedTransaction,
+} from "@/modules/sync/test/seed-synced-connection";
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import { createCategorizationRepository } from "./categorization-repository";
@@ -123,6 +127,85 @@ describe("getCategoriesPageProps (integration)", () => {
             providerCategory: "Groceries",
             type: "debit",
             amountCentavos: -9900,
+          }),
+        ],
+      });
+
+      const props = await getCategoriesPageProps(userA.session, NOW);
+
+      expect(props.suggestions).toEqual([]);
+    });
+  });
+
+  // Padding's own load-bearing pin lives in page-props.integration.test.ts
+  // ("pairs a debit on the last day of the month..."): with pairing intact,
+  // June's and August's debits below stay unpaired without the pad and land
+  // on a different subcategory than July's (still paired, both legs inside
+  // the window either way), so this test alone cannot tell a missing pad
+  // apart from a correct one. What it does pin: if pairing were broken
+  // outright, all three months would collapse onto the same provider-mapped
+  // "food.groceries" subcategory and this recurring streak would wrongly
+  // surface as a suggestion.
+  it("keeps a recurring own-account transfer pair out of fixed-cost suggestions across three months", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          // June's other leg lands before the 3-month window (which starts
+          // June 1st): one business day earlier, on the preceding Friday.
+          seedTransaction({
+            providerTransactionId: "transfer-jun-debit",
+            providerAccountId: "acc-1",
+            date: "2026-06-01",
+            description: "TRANSFERENCIA CASA",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -9900,
+          }),
+          seedTransaction({
+            providerTransactionId: "transfer-jun-credit",
+            providerAccountId: "acc-2",
+            date: "2026-05-29",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 9900,
+          }),
+          seedTransaction({
+            providerTransactionId: "transfer-jul-debit",
+            providerAccountId: "acc-1",
+            date: "2026-07-01",
+            description: "TRANSFERENCIA CASA",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -9950,
+          }),
+          seedTransaction({
+            providerTransactionId: "transfer-jul-credit",
+            providerAccountId: "acc-2",
+            date: "2026-07-02",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 9950,
+          }),
+          // August's other leg lands after the window (which ends August
+          // 31st): two business days later, in the following September.
+          seedTransaction({
+            providerTransactionId: "transfer-aug-debit",
+            providerAccountId: "acc-1",
+            date: "2026-08-31",
+            description: "TRANSFERENCIA CASA",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -10000,
+          }),
+          seedTransaction({
+            providerTransactionId: "transfer-aug-credit",
+            providerAccountId: "acc-2",
+            date: "2026-09-02",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 10000,
           }),
         ],
       });

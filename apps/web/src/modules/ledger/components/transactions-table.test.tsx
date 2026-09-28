@@ -7,6 +7,8 @@ import { t } from "../strings";
 vi.mock("../actions", () => ({
   categorizeTransactionAction: vi.fn(),
   resetTransactionCategoryAction: vi.fn(),
+  setTransferMarkAction: vi.fn(),
+  clearTransferMarkAction: vi.fn(),
 }));
 
 import { TransactionsTable, type TransactionRowView } from "./transactions-table";
@@ -32,6 +34,8 @@ function buildRow(overrides: Partial<TransactionRowView> = {}): TransactionRowVi
       type: "debit",
       subcategoryValue: null,
       isManual: false,
+      isInternalTransfer: false,
+      hasTransferMark: false,
       suggestedPattern: "COMPRA NO MERCADO",
     },
     ...overrides,

@@ -270,6 +270,37 @@ describe("normalizeTransaction", () => {
     ],
   ];
 
+  // ADR-0003 (amended #16): each installment is its own Pluggy transaction
+  // dated and sized as itself; creditCardMetadata's purchaseDate and
+  // totalAmount describe the original purchase, which Feudo ignores on
+  // purpose so the installment counts on the month it actually bills.
+  it("keeps an installment's own date and amount, ignoring creditCardMetadata's purchase date and total", () => {
+    const installment = pluggyTransactionSchema.parse({
+      id: "tx-installment-2-of-2",
+      accountId: "acc-card",
+      date: "2020-10-14T00:00:00.000Z",
+      description: "COMPRA PARCELADA 2/2",
+      type: "DEBIT",
+      amount: 159.2,
+      currencyCode: "BRL",
+      paymentData: null,
+      creditCardMetadata: {
+        totalAmount: 320,
+        totalInstallments: 2,
+        installmentNumber: 2,
+        purchaseDate: "2020-09-14T00:00:00.000Z",
+        billId: "bill-fixture-1",
+        billForecastDate: "2020-10",
+      },
+    });
+
+    expect(normalizeTransaction(installment, hasher)).toMatchObject({
+      date: "2020-10-14",
+      amountCentavos: 15920,
+      type: "debit",
+    });
+  });
+
   it.each(discardedCounterparts)(
     "reads %s without refusing the transaction",
     (_label, transactionType, paymentData) => {

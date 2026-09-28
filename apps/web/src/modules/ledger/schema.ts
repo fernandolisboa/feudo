@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   foreignKey,
   pgEnum,
@@ -152,3 +153,19 @@ export const transactionCategorization = pgTable(
     ),
   ],
 );
+
+// Scoped through the transaction's account, like transaction_categorization
+// above (ADR-0001 line 61): a member's mark is a fact about the transaction,
+// not about the household that made it, so it travels with the account when
+// it moves. Read time (packages/core/src/ledger/transfers/resolve-ledger.ts)
+// gives a mark the highest precedence, ahead of a detected pair: true always
+// makes the transaction an internal transfer, false never does, whatever
+// pairing or categorization would otherwise say.
+export const internalTransferMark = pgTable("internal_transfer_mark", {
+  transactionId: text("transaction_id")
+    .primaryKey()
+    .references(() => bankTransaction.id, { onDelete: "cascade" }),
+  isInternalTransfer: boolean("is_internal_transfer").notNull(),
+  markedByUserId: text("marked_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  markedAt: timestamp("marked_at", { withTimezone: true }).defaultNow().notNull(),
+});

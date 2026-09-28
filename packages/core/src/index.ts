@@ -27,6 +27,7 @@ export { parsePercentToRatePpm, InvalidPercentStringError } from "./market-data/
 
 export type { IsoDateRange, YearMonth } from "./ledger/year-month";
 export {
+  InvalidIsoDateError,
   InvalidYearMonthError,
   formatYearMonth,
   isYearMonth,
@@ -82,3 +83,16 @@ export { summarizeUncategorized } from "./ledger/categories/uncategorized";
 
 export type { RecurringInput, FixedSuggestion } from "./ledger/categories/recurring";
 export { suggestFixedSubcategories } from "./ledger/categories/recurring";
+
+export type { CounterpartType } from "./ledger/transfers/pairing";
+export { pairingReadRange } from "./ledger/transfers/pairing";
+
+export type {
+  InternalTransfer,
+  LedgerAccountType,
+  LedgerContext,
+  LedgerTransaction,
+} from "./ledger/transfers/resolve-ledger";
+export { resolveLedger } from "./ledger/transfers/resolve-ledger";
+
+export { summarizeLedger } from "./ledger/totals";

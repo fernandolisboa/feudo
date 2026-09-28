@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 
 import { bankAccount, bankConnection, bankTransaction } from "@/modules/sync/schema";
 
 import { manualSubcategoryRefFrom } from "./categorization-repository";
-import { transactionCategorization } from "./schema";
+import { internalTransferMark, transactionCategorization } from "./schema";
 
-import type { IsoDateRange, SubcategoryRef } from "@feudo/core";
+import type { CounterpartType, IsoDateRange, LedgerAccountType, SubcategoryRef } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
@@ -24,7 +24,12 @@ export type LedgerTransactionRow = {
   accountId: string;
   accountName: string;
   institutionName: string;
+  accountType: LedgerAccountType;
+  counterpartDocumentHash: string | null;
+  counterpartType: CounterpartType | null;
+  accountHolderDocumentHash: string | null;
   manual: SubcategoryRef | null;
+  transferMark: boolean | null;
 };
 
 export type TransactionsFilter = { days: IsoDateRange; accountId: string | null };
@@ -62,6 +67,26 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
         .orderBy(asc(bankConnection.institutionName), asc(bankAccount.name));
     },
 
+    // Every account holder document Feudo has hashed for this household,
+    // never a household-wide secret since the hash never round-trips to the
+    // original document (sync/document-hash.ts): resolveLedger only uses it
+    // to check that a transaction's counterpart, when known, is one of the
+    // household's own account holders.
+    async listHolderDocumentHashes(db: Database): Promise<Set<string>> {
+      const rows = await db
+        .select({ holderDocumentHash: bankAccount.holderDocumentHash })
+        .from(bankAccount)
+        .where(
+          and(
+            eq(bankAccount.householdId, scope.householdId),
+            isNotNull(bankAccount.holderDocumentHash),
+          ),
+        );
+      return new Set(
+        rows.flatMap((row) => (row.holderDocumentHash ? [row.holderDocumentHash] : [])),
+      );
+    },
+
     // Every transaction of the filter, unpaginated: a household's month is a
     // few hundred rows at most, so pagination and recurring-spend detection
     // (both callers) slice this in memory instead of round-tripping per page.
@@ -78,12 +103,17 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
           currency: bankTransaction.currency,
           type: bankTransaction.type,
           providerCategory: bankTransaction.providerCategory,
+          counterpartDocumentHash: bankTransaction.counterpartDocumentHash,
+          counterpartType: bankTransaction.counterpartType,
           accountId: bankAccount.id,
           accountName: bankAccount.name,
+          accountType: bankAccount.type,
+          accountHolderDocumentHash: bankAccount.holderDocumentHash,
           institutionName: bankConnection.institutionName,
           manualProductSubcategoryId: transactionCategorization.productSubcategoryId,
           manualHouseholdSubcategoryId: transactionCategorization.householdSubcategoryId,
           manualSubcategoryHouseholdId: transactionCategorization.subcategoryHouseholdId,
+          transferMark: internalTransferMark.isInternalTransfer,
         })
         .from(bankTransaction)
         .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
@@ -92,6 +122,7 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
           transactionCategorization,
           eq(transactionCategorization.transactionId, bankTransaction.id),
         )
+        .leftJoin(internalTransferMark, eq(internalTransferMark.transactionId, bankTransaction.id))
         .where(matches(filter))
         .orderBy(
           desc(bankTransaction.date),

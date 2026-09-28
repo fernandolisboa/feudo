@@ -1,4 +1,4 @@
-import { and, eq, exists } from "drizzle-orm";
+import { and, eq, exists, sql } from "drizzle-orm";
 
 import {
   isProductCategoryId,
@@ -19,6 +19,7 @@ import { hasSqlState } from "@/platform/db/sql-state";
 import {
   categorizationRule,
   householdSubcategory,
+  internalTransferMark,
   subcategoryKindOverride,
   transactionCategorization,
 } from "./schema";
@@ -121,6 +122,34 @@ export type SaveRuleInput = {
 // own household_subcategory; this repository turns that database refusal
 // into "not_found" instead of letting the constraint violation escape.
 export function createCategorizationRepository(scope: HouseholdScope) {
+  // Shared by every check keyed on a transaction id (ownsTransaction,
+  // clearManual, clearTransferMark, setTransferMark's INSERT…SELECT): a
+  // manual choice or a mark carries no household id of its own, so the only
+  // way to tell whether a transaction is currently this household's is to
+  // join back to its account and filter on this household. One predicate,
+  // reused everywhere a query needs to prove a transaction is in scope.
+  function scopedToHousehold(transactionId: string) {
+    return and(
+      eq(bankTransaction.id, transactionId),
+      eq(bankAccount.householdId, scope.householdId),
+    );
+  }
+
+  // A plain existence check, reused as-is or wrapped in exists() for a
+  // delete's WHERE clause.
+  function scopedTransactionQuery(db: Database, transactionId: string) {
+    return db
+      .select({ id: bankTransaction.id })
+      .from(bankTransaction)
+      .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+      .where(scopedToHousehold(transactionId));
+  }
+
+  async function ownsTransaction(db: Database, transactionId: string): Promise<boolean> {
+    const rows = await scopedTransactionQuery(db, transactionId).limit(1);
+    return rows.length > 0;
+  }
+
   // Checked before writing rather than left to the composite foreign key
   // alone: inside categorization-service's transaction a constraint error
   // would abort the whole transaction, so the refusal must come first.
@@ -323,18 +352,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       subcategory: SubcategoryRef,
       userId: string,
     ): Promise<"ok" | "not_found"> {
-      const owned = await db
-        .select({ id: bankTransaction.id })
-        .from(bankTransaction)
-        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-        .where(
-          and(
-            eq(bankTransaction.id, transactionId),
-            eq(bankAccount.householdId, scope.householdId),
-          ),
-        )
-        .limit(1);
-      if (owned.length === 0 || !(await ownsTarget(db, subcategory))) {
+      if (!(await ownsTransaction(db, transactionId)) || !(await ownsTarget(db, subcategory))) {
         return "not_found";
       }
 
@@ -370,22 +388,68 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         .where(
           and(
             eq(transactionCategorization.transactionId, transactionId),
-            exists(
-              db
-                .select({ id: bankTransaction.id })
-                .from(bankTransaction)
-                .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-                .where(
-                  and(
-                    eq(bankTransaction.id, transactionCategorization.transactionId),
-                    eq(bankAccount.householdId, scope.householdId),
-                  ),
-                ),
-            ),
+            exists(scopedTransactionQuery(db, transactionId)),
           ),
         )
         .returning({ transactionId: transactionCategorization.transactionId });
       return deleted.length > 0 ? "ok" : "not_found";
+    },
+
+    // The selection lists internal_transfer_mark's columns in schema order
+    // (schema.ts): drizzle's insert().select() sends an INSERT ... SELECT to
+    // Postgres, which assigns select-list positions to the target table's
+    // columns positionally, not by alias.
+    async setTransferMark(
+      db: Database,
+      transactionId: string,
+      value: boolean,
+      userId: string,
+    ): Promise<"ok" | "not_found"> {
+      const values = db
+        .select({
+          transactionId: sql<string>`${transactionId}::text`.as("transaction_id"),
+          isInternalTransfer: sql<boolean>`${value}::boolean`.as("is_internal_transfer"),
+          markedByUserId: sql<string>`${userId}::text`.as("marked_by_user_id"),
+          markedAt: sql<Date>`now()`.as("marked_at"),
+        })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(scopedToHousehold(transactionId))
+        .limit(1);
+
+      const written = await db
+        .insert(internalTransferMark)
+        .select(values)
+        .onConflictDoUpdate({
+          target: [internalTransferMark.transactionId],
+          set: { isInternalTransfer: value, markedByUserId: userId, markedAt: sql`now()` },
+        })
+        .returning({ transactionId: internalTransferMark.transactionId });
+      return written.length > 0 ? "ok" : "not_found";
+    },
+
+    // Idempotent within scope (design contract's #16 review, item 6): "ok"
+    // whether or not a mark existed, since the outcome a caller cares about
+    // ("this transaction now has no mark") already holds either way; only a
+    // transaction outside this household refuses with "not_found". The
+    // preliminary scope read only picks the return value; the delete itself
+    // repeats the tenancy predicate via exists(), so an account moved out of
+    // this household between the two queries still refuses the delete
+    // instead of racing it.
+    async clearTransferMark(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
+      const inScope = await scopedTransactionQuery(db, transactionId).limit(1);
+      if (inScope.length === 0) {
+        return "not_found";
+      }
+      await db
+        .delete(internalTransferMark)
+        .where(
+          and(
+            eq(internalTransferMark.transactionId, transactionId),
+            exists(scopedTransactionQuery(db, transactionId)),
+          ),
+        );
+      return "ok";
     },
   };
 }

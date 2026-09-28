@@ -5,6 +5,7 @@ import {
   suggestFixedSubcategories,
   yearMonthDayRange,
   yearMonthOf,
+  type IsoDateRange,
   type RecurringInput,
   type YearMonth,
 } from "@feudo/core";
@@ -13,9 +14,7 @@ import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
-import { categorizeRows } from "./categorize-rows";
-import { createCategorizationRepository } from "./categorization-repository";
-import { createHouseholdLedgerRepository } from "./repository";
+import { readHouseholdLedger } from "./ledger-read";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type CategoryView } from "./taxonomy-view";
@@ -49,39 +48,27 @@ export async function getCategoriesPageProps(
 ): Promise<CategoriesPageProps> {
   const db = getDb();
   const scope = householdScope(session);
-  const categorization = createCategorizationRepository(scope);
-  const ledger = createHouseholdLedgerRepository(scope);
 
-  const [settings, householdSubcategories, overrides, rules] = await Promise.all([
-    getHouseholdSettings(scope, db),
-    categorization.listHouseholdSubcategories(db),
-    categorization.listKindOverrides(db),
-    categorization.listRules(db),
-  ]);
-  const taxonomy = buildTaxonomyView({
-    overrides,
-    householdSubcategories: new Map(
-      householdSubcategories.map((subcategory) => [subcategory.id, subcategory]),
-    ),
-  });
-
+  const settings = await getHouseholdSettings(scope, db);
   const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
   const months: YearMonth[] = Array.from({ length: RECURRING_MONTHS }, (_, index) =>
     shiftYearMonth(currentMonth, index - RECURRING_MONTHS),
   );
-  const rows = await ledger.listTransactionsInRange(db, {
-    days: {
-      from: yearMonthDayRange(months[0] ?? currentMonth).from,
-      to: yearMonthDayRange(months[months.length - 1] ?? currentMonth).to,
-    },
-    accountId: null,
-  });
-  const recurringInputs = categorizeRows(rows, rules).flatMap((row): RecurringInput[] => {
-    if (!row.categorization) {
-      return [];
-    }
-    const kind = taxonomy.kindOf(row.categorization.subcategory);
-    if (!kind) {
+  const range: IsoDateRange = {
+    from: yearMonthDayRange(months[0] ?? currentMonth).from,
+    to: yearMonthDayRange(months[months.length - 1] ?? currentMonth).to,
+  };
+  const { kinds, rules, rows } = await readHouseholdLedger(db, scope, range, null);
+  const taxonomy = buildTaxonomyView(kinds);
+
+  // row.kind, not taxonomy.kindOf(row.categorization.subcategory): an
+  // internal transfer's kind is always "transfer" (design contract's #16),
+  // whatever kind override the household set on the subcategory it landed
+  // on, so only resolveLedger's own answer (already applied by
+  // readHouseholdLedger) can be trusted to keep it out of a fixed-cost
+  // suggestion.
+  const recurringInputs = rows.flatMap((row): RecurringInput[] => {
+    if (!row.categorization || row.kind === null) {
       return [];
     }
     return [
@@ -91,7 +78,7 @@ export async function getCategoriesPageProps(
         type: row.type,
         amountCentavos: row.amountCentavos,
         subcategory: row.categorization.subcategory,
-        kind,
+        kind: row.kind,
       },
     ];
   });
