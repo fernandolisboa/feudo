@@ -9,27 +9,24 @@ import {
   yearMonthOf,
   type CurrencyAmount,
   type InternalTransfer,
-  type KindContext,
-  type LedgerContext,
   type YearMonth,
 } from "@feudo/core";
 
 import { formatIsoDate } from "@/lib/format-date";
-import { interpolate } from "@/lib/interpolate";
+import { interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
-import { resolveLedgerRows, type ResolvedLedgerRow } from "./categorize-rows";
-import { createCategorizationRepository } from "./categorization-repository";
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
-import { PAIRING_WINDOW_PAD_DAYS, padDayRange } from "./pairing-window";
+import { readHouseholdLedger } from "./ledger-read";
 import {
   createHouseholdLedgerRepository,
   type LedgerAccount,
   type LedgerTransactionRow,
 } from "./repository";
+import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
@@ -62,26 +59,31 @@ export type TransactionsPageProps = {
   hasMore: boolean;
 };
 
-// Falls back to a zero amount in the household's usual currency rather than
-// an empty string, so the totals line always reads as a full sentence even
-// in a month with no income, or no spending, at all.
-function amountsLabel(amounts: readonly CurrencyAmount[]): string {
+// A total with nothing in it still reads as a full sentence rather than an
+// empty string: it shows zero in whatever currency the month's listed rows
+// actually use, so a household that only ever sees USD accounts doesn't get
+// a stray "R$ 0,00", and only falls back to BRL when there is nothing listed
+// to take a currency from.
+function fallbackCurrency(rows: readonly { currency: string }[]): string {
+  const currencies = [...new Set(rows.map((row) => row.currency))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  return currencies[0] ?? FALLBACK_CURRENCY;
+}
+
+function amountsLabel(amounts: readonly CurrencyAmount[], currency: string): string {
   if (amounts.length === 0) {
-    return formatMoney({ amountCentavos: 0, currency: FALLBACK_CURRENCY });
+    return formatMoney({ amountCentavos: 0, currency });
   }
   return amounts.map(formatMoney).join(" + ");
 }
 
 function pairTooltip(counterpart: LedgerTransactionRow): string {
-  return interpolate(
-    interpolate(
-      interpolate(t.category.transferTooltip.pair, "{institution}", counterpart.institutionName),
-      "{account}",
-      counterpart.accountName,
-    ),
-    "{date}",
-    formatIsoDate(counterpart.date),
-  );
+  return interpolateAll(t.category.transferTooltip.pair, {
+    institution: counterpart.institutionName,
+    account: counterpart.accountName,
+    date: formatIsoDate(counterpart.date),
+  });
 }
 
 function transferTooltip(
@@ -107,6 +109,7 @@ function toRowView(
     : row.categorization
       ? t.category.sources[row.categorization.source]
       : null;
+  const manualLabel = row.manual ? taxonomy.labelOf(row.manual) : null;
   return {
     id: row.id,
     date: row.date,
@@ -124,8 +127,15 @@ function toRowView(
       description: row.description,
       amountLabel,
       type: row.type,
+      // The manual choice a member stored always wins the prefill, so saving
+      // the dialog again never overwrites it with a derived transfer
+      // subcategory (design contract's #16 review, item 9).
       subcategoryValue:
-        row.categorization && label ? encodeSubcategoryRef(row.categorization.subcategory) : null,
+        row.manual && manualLabel
+          ? encodeSubcategoryRef(row.manual)
+          : row.categorization && label
+            ? encodeSubcategoryRef(row.categorization.subcategory)
+            : null,
       isManual: row.manual !== null,
       isInternalTransfer: row.internalTransfer !== null,
       hasTransferMark: row.transferMark !== null,
@@ -137,11 +147,9 @@ function toRowView(
 // Everything /transacoes renders, so the page stays a composition of this
 // slice's components (ADR-0011). The month defaults to today's in the
 // household's time zone; an account id not in the household is ignored and
-// a page past the last one lands on the last. Pairing and categorization are
-// both resolved here, over the whole household padded a week past the
-// month's edges (design contract #16), because a pair's other leg can fall
-// just outside the month being viewed; the month/account filter is applied
-// only after resolving, never to the query that feeds it.
+// a page past the last one lands on the last. Pairing and categorization
+// are both resolved by readHouseholdLedger, the one read path shared with
+// /categorias (design contract's #16 review, item 3).
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
@@ -150,45 +158,27 @@ export async function getTransactionsPageProps(
   const db = getDb();
   const scope = householdScope(session);
   const repository = createHouseholdLedgerRepository(scope);
-  const categorization = createCategorizationRepository(scope);
   const params = transactionsSearchParamsSchema.parse(searchParams);
 
-  const [settings, accounts, householdSubcategories, overrides, rules, holderDocumentHashes] =
-    await Promise.all([
-      getHouseholdSettings(scope, db),
-      repository.listAccounts(db),
-      categorization.listHouseholdSubcategories(db),
-      categorization.listKindOverrides(db),
-      categorization.listRules(db),
-      repository.listHolderDocumentHashes(db),
-    ]);
+  const [settings, accounts] = await Promise.all([
+    getHouseholdSettings(scope, db),
+    repository.listAccounts(db),
+  ]);
   const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
   const month = params.mes ?? currentMonth;
   const selectedAccountId = accounts.some((account) => account.id === params.conta)
     ? (params.conta ?? null)
     : null;
   const uncategorizedOnly = params.categoria !== undefined;
-  const kinds: KindContext = {
-    overrides,
-    householdSubcategories: new Map(
-      householdSubcategories.map((subcategory) => [subcategory.id, subcategory]),
-    ),
-  };
-  const taxonomy = buildTaxonomyView(kinds);
 
   const monthRange = yearMonthDayRange(month);
-  const paddedRows = await repository.listTransactionsInRange(db, {
-    days: padDayRange(monthRange, PAIRING_WINDOW_PAD_DAYS),
-    accountId: null,
-  });
-  const rowById = new Map(paddedRows.map((row) => [row.id, row]));
-  const context: LedgerContext = { rules, kinds, holderDocumentHashes };
-  const monthRows = resolveLedgerRows(paddedRows, context).filter(
-    (row) =>
-      row.date >= monthRange.from &&
-      row.date <= monthRange.to &&
-      (selectedAccountId === null || row.accountId === selectedAccountId),
-  );
+  const {
+    kinds,
+    rows: monthRows,
+    padded,
+  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId);
+  const taxonomy = buildTaxonomyView(kinds);
+  const rowById = new Map(padded.map((row) => [row.id, row]));
 
   const summary = summarizeUncategorized(
     monthRows.map((row) => ({
@@ -210,6 +200,7 @@ export async function getTransactionsPageProps(
   const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
   const page = Math.min(params.pagina ?? 1, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
+  const currency = fallbackCurrency(listed);
 
   return {
     month,
@@ -224,8 +215,8 @@ export async function getTransactionsPageProps(
       amountLabel: summary.totals.map(formatMoney).join(" + "),
     },
     totals: {
-      incomeLabel: amountsLabel(totals.income),
-      spendingLabel: amountsLabel(totals.spending),
+      incomeLabel: amountsLabel(totals.income, currency),
+      spendingLabel: amountsLabel(totals.spending, currency),
       transferCount: totals.transferCount,
     },
     categoryGroups: taxonomy.categories.map((category) => ({

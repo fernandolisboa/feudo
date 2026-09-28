@@ -5,7 +5,7 @@ import { bankAccount, bankConnection, bankTransaction } from "@/modules/sync/sch
 import { manualSubcategoryRefFrom } from "./categorization-repository";
 import { internalTransferMark, transactionCategorization } from "./schema";
 
-import type { IsoDateRange, LedgerAccountType, SubcategoryRef } from "@feudo/core";
+import type { CounterpartType, IsoDateRange, LedgerAccountType, SubcategoryRef } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
@@ -26,6 +26,8 @@ export type LedgerTransactionRow = {
   institutionName: string;
   accountType: LedgerAccountType;
   counterpartDocumentHash: string | null;
+  counterpartType: CounterpartType | null;
+  accountHolderDocumentHash: string | null;
   manual: SubcategoryRef | null;
   transferMark: boolean | null;
 };
@@ -102,9 +104,11 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
           type: bankTransaction.type,
           providerCategory: bankTransaction.providerCategory,
           counterpartDocumentHash: bankTransaction.counterpartDocumentHash,
+          counterpartType: bankTransaction.counterpartType,
           accountId: bankAccount.id,
           accountName: bankAccount.name,
           accountType: bankAccount.type,
+          accountHolderDocumentHash: bankAccount.holderDocumentHash,
           institutionName: bankConnection.institutionName,
           manualProductSubcategoryId: transactionCategorization.productSubcategoryId,
           manualHouseholdSubcategoryId: transactionCategorization.householdSubcategoryId,

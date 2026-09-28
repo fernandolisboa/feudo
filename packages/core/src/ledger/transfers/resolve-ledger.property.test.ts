@@ -23,6 +23,8 @@ const baseTransactionArb = fc.record({
   currency: fc.constant("BRL"),
   type: fc.constantFrom<TransactionDirection>("credit", "debit"),
   counterpartDocumentHash: fc.constant<string | null>(null),
+  counterpartType: fc.constant<"cpf" | "cnpj" | null>(null),
+  accountHolderDocumentHash: fc.constant<string | null>(null),
   description: fc.constantFrom(...DESCRIPTIONS),
   providerCategory: fc.constant<string | null>(null),
   manual: fc.constant<LedgerTransaction["manual"]>(null),

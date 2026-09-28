@@ -24,6 +24,8 @@ function toLedgerTransaction(row: LedgerTransactionRow): LedgerTransaction {
     currency: row.currency,
     type: row.type,
     counterpartDocumentHash: row.counterpartDocumentHash,
+    counterpartType: row.counterpartType,
+    accountHolderDocumentHash: row.accountHolderDocumentHash,
     accountType: row.accountType,
     description: row.description,
     providerCategory: row.providerCategory,
@@ -33,26 +35,20 @@ function toLedgerTransaction(row: LedgerTransactionRow): LedgerTransaction {
 }
 
 // A thin adapter over packages/core's resolveLedger (design contract's
-// read-time model, #16): every caller in this slice needs the row it read
-// back alongside what resolveLedger decided for it, keyed by id so this
-// stays a plain lookup rather than trusting order across the two arrays.
+// read-time model, #16): resolveLedger returns one entry per input, in the
+// same order (property-tested in core), so the two arrays zip by index.
 export function resolveLedgerRows(
   rows: readonly LedgerTransactionRow[],
   context: LedgerContext,
 ): ResolvedLedgerRow[] {
-  const resolvedById = new Map(
-    resolveLedger(rows.map(toLedgerTransaction), context).map((resolved) => [
-      resolved.id,
-      resolved,
-    ]),
-  );
-  return rows.map((row) => {
-    const resolved = resolvedById.get(row.id);
+  const resolved = resolveLedger(rows.map(toLedgerTransaction), context);
+  return rows.map((row, index) => {
+    const item = resolved[index] ?? { categorization: null, kind: null, internalTransfer: null };
     return {
       ...row,
-      categorization: resolved?.categorization ?? null,
-      kind: resolved?.kind ?? null,
-      internalTransfer: resolved?.internalTransfer ?? null,
+      categorization: item.categorization,
+      kind: item.kind,
+      internalTransfer: item.internalTransfer,
     };
   });
 }

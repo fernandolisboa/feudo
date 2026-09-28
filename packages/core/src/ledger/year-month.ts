@@ -53,6 +53,43 @@ export function shiftYearMonth(yearMonth: YearMonth, months: number): YearMonth 
 
 export type IsoDateRange = { from: string; to: string };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export class InvalidIsoDateError extends Error {
+  readonly value: string;
+
+  constructor(value: string) {
+    super(`Expected an ISO YYYY-MM-DD date, received ${value}`);
+    this.name = "InvalidIsoDateError";
+    this.value = value;
+  }
+}
+
+// The one place that turns an ISO date string into a UTC instant: a
+// malformed value must throw here rather than let Date.parse's NaN collapse
+// silently into "same day" arithmetic downstream (businessDaysBetween,
+// shiftIsoDate and every caller built on them).
+export function isoDateToUtcMidnight(value: string): number {
+  if (!ISO_DATE_PATTERN.test(value)) {
+    throw new InvalidIsoDateError(value);
+  }
+  const time = Date.parse(`${value}T00:00:00Z`);
+  if (Number.isNaN(time)) {
+    throw new InvalidIsoDateError(value);
+  }
+  return time;
+}
+
+export function shiftIsoDate(isoDate: string, days: number): string {
+  const shifted = isoDateToUtcMidnight(isoDate) + days * DAY_MS;
+  return new Date(shifted).toISOString().slice(0, 10);
+}
+
+export function padDayRange(range: IsoDateRange, days: number): IsoDateRange {
+  return { from: shiftIsoDate(range.from, -days), to: shiftIsoDate(range.to, days) };
+}
+
 export function yearMonthDayRange(yearMonth: YearMonth): IsoDateRange {
   const { year, month } = parts(yearMonth);
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();

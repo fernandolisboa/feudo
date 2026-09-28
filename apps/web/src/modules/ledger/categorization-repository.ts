@@ -1,4 +1,4 @@
-import { and, eq, exists } from "drizzle-orm";
+import { and, eq, exists, sql } from "drizzle-orm";
 
 import {
   isProductCategoryId,
@@ -122,19 +122,24 @@ export type SaveRuleInput = {
 // own household_subcategory; this repository turns that database refusal
 // into "not_found" instead of letting the constraint violation escape.
 export function createCategorizationRepository(scope: HouseholdScope) {
-  // Shared by every write keyed on a transaction id (setManual,
-  // setTransferMark): a manual choice or a mark carries no household id of
-  // its own, so the only way to refuse another household's transaction is to
-  // join back to its account before writing.
-  async function ownsTransaction(db: Database, transactionId: string): Promise<boolean> {
-    const rows = await db
+  // Shared by every check keyed on a transaction id (ownsTransaction,
+  // clearManual, clearTransferMark): a manual choice or a mark carries no
+  // household id of its own, so the only way to tell whether a transaction
+  // is currently this household's is to join back to its account. One query
+  // shape, reused as either a plain existence check or, wrapped in exists(),
+  // a delete's WHERE clause.
+  function scopedTransactionQuery(db: Database, transactionId: string) {
+    return db
       .select({ id: bankTransaction.id })
       .from(bankTransaction)
       .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
       .where(
         and(eq(bankTransaction.id, transactionId), eq(bankAccount.householdId, scope.householdId)),
-      )
-      .limit(1);
+      );
+  }
+
+  async function ownsTransaction(db: Database, transactionId: string): Promise<boolean> {
+    const rows = await scopedTransactionQuery(db, transactionId).limit(1);
     return rows.length > 0;
   }
 
@@ -376,18 +381,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         .where(
           and(
             eq(transactionCategorization.transactionId, transactionId),
-            exists(
-              db
-                .select({ id: bankTransaction.id })
-                .from(bankTransaction)
-                .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-                .where(
-                  and(
-                    eq(bankTransaction.id, transactionCategorization.transactionId),
-                    eq(bankAccount.householdId, scope.householdId),
-                  ),
-                ),
-            ),
+            exists(scopedTransactionQuery(db, transactionId)),
           ),
         )
         .returning({ transactionId: transactionCategorization.transactionId });
@@ -395,53 +389,58 @@ export function createCategorizationRepository(scope: HouseholdScope) {
     },
 
     // A member's mark, true or false (design contract's precedence: mark
-    // beats a detected pair and manual categorization alike). Scoped the
-    // same way as setManual: only through the transaction's current
-    // household, so it travels with the account when it moves.
+    // beats a detected pair and manual categorization alike). The ownership
+    // check and the write are one statement: the inserted row's values come
+    // from a SELECT gated by the same account join as scopedTransactionQuery,
+    // so a transaction outside this household inserts zero rows instead of
+    // racing a separate existence check against a concurrent account move.
     async setTransferMark(
       db: Database,
       transactionId: string,
       value: boolean,
       userId: string,
     ): Promise<"ok" | "not_found"> {
-      if (!(await ownsTransaction(db, transactionId))) {
-        return "not_found";
-      }
-      await db
+      const values = db
+        .select({
+          transactionId: sql<string>`${transactionId}::text`.as("transaction_id"),
+          isInternalTransfer: sql<boolean>`${value}::boolean`.as("is_internal_transfer"),
+          markedByUserId: sql<string>`${userId}::text`.as("marked_by_user_id"),
+          markedAt: sql<Date>`now()`.as("marked_at"),
+        })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(
+          and(
+            eq(bankTransaction.id, transactionId),
+            eq(bankAccount.householdId, scope.householdId),
+          ),
+        )
+        .limit(1);
+
+      const written = await db
         .insert(internalTransferMark)
-        .values({ transactionId, isInternalTransfer: value, markedByUserId: userId })
+        .select(values)
         .onConflictDoUpdate({
           target: [internalTransferMark.transactionId],
           set: { isInternalTransfer: value, markedByUserId: userId, markedAt: new Date() },
-        });
-      return "ok";
+        })
+        .returning({ transactionId: internalTransferMark.transactionId });
+      return written.length > 0 ? "ok" : "not_found";
     },
 
-    // Same scoping as clearManual: the mark carries no household id of its
-    // own, so only a transaction whose account is currently this household's
-    // can have its mark cleared.
+    // Idempotent within scope (design contract's #16 review, item 6): "ok"
+    // whether or not a mark existed, since the outcome a caller cares about
+    // ("this transaction now has no mark") already holds either way; only a
+    // transaction outside this household refuses with "not_found".
     async clearTransferMark(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
-      const deleted = await db
+      const inScope = await scopedTransactionQuery(db, transactionId).limit(1);
+      if (inScope.length === 0) {
+        return "not_found";
+      }
+      await db
         .delete(internalTransferMark)
-        .where(
-          and(
-            eq(internalTransferMark.transactionId, transactionId),
-            exists(
-              db
-                .select({ id: bankTransaction.id })
-                .from(bankTransaction)
-                .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-                .where(
-                  and(
-                    eq(bankTransaction.id, internalTransferMark.transactionId),
-                    eq(bankAccount.householdId, scope.householdId),
-                  ),
-                ),
-            ),
-          ),
-        )
-        .returning({ transactionId: internalTransferMark.transactionId });
-      return deleted.length > 0 ? "ok" : "not_found";
+        .where(eq(internalTransferMark.transactionId, transactionId));
+      return "ok";
     },
   };
 }

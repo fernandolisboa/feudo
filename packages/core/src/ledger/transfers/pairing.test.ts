@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pairInternalTransfers, type PairableTransaction } from "./pairing";
+import { pairInternalTransfers, pairingReadRange, type PairableTransaction } from "./pairing";
 
 function transaction(overrides: Partial<PairableTransaction> = {}): PairableTransaction {
   return {
@@ -10,23 +10,31 @@ function transaction(overrides: Partial<PairableTransaction> = {}): PairableTran
     currency: "BRL",
     type: "debit",
     counterpartDocumentHash: null,
+    counterpartType: null,
+    accountHolderDocumentHash: null,
     ...overrides,
   };
 }
 
 describe("pairInternalTransfers", () => {
-  it("rejects a candidate whose counterpart document hash is present but not a household holder", () => {
+  it("pairs unconfirmed when the counterpart's account carries no holder hash and the household set is empty", () => {
     const debit = transaction({
       id: "d1",
       type: "debit",
-      counterpartDocumentHash: "hash-stranger",
+      counterpartDocumentHash: "hash-partner",
+      counterpartType: "cpf",
     });
-    const credit = transaction({ id: "c1", accountId: "card-1", type: "credit" });
-    const pairs = pairInternalTransfers([debit, credit], new Set(["hash-a"]));
-    expect(pairs).toEqual([]);
+    const credit = transaction({
+      id: "c1",
+      accountId: "card-1",
+      type: "credit",
+      accountHolderDocumentHash: null,
+    });
+    const pairs = pairInternalTransfers([debit, credit], new Set());
+    expect(pairs).toEqual([{ debitId: "d1", creditId: "c1", confirmed: false }]);
   });
 
-  it("confirms a pair when only one side carries a matching hash", () => {
+  it("confirms when only one side carries a matching hash", () => {
     const debit = transaction({ id: "d1", type: "debit" });
     const credit = transaction({
       id: "c1",
@@ -146,5 +154,143 @@ describe("pairInternalTransfers", () => {
     const creditB = transaction({ id: "c-b", accountId: "card-2", type: "credit" });
     const pairs = pairInternalTransfers([debitB, creditB, debitA, creditA], new Set());
     expect(pairs.map((pair) => pair.debitId)).toEqual(["d-a", "d-b"]);
+  });
+
+  describe("per-leg counterpart-hash evidence (design contract's #16 review, item 2)", () => {
+    it("pairs a partner account without a holder hash of its own as unconfirmed when its counterpart isn't a household holder either", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-partner",
+        counterpartType: "cpf",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        accountHolderDocumentHash: null,
+      });
+      expect(pairInternalTransfers([debit, credit], new Set())).toEqual([
+        { debitId: "d1", creditId: "c1", confirmed: false },
+      ]);
+    });
+
+    it("confirms via the household holder set when the counterpart's account carries no holder hash of its own", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-partner",
+        counterpartType: "cpf",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        accountHolderDocumentHash: null,
+      });
+      expect(pairInternalTransfers([debit, credit], new Set(["hash-partner"]))).toEqual([
+        { debitId: "d1", creditId: "c1", confirmed: true },
+      ]);
+    });
+
+    it("pairs a card bill paid to the issuer's CNPJ, which never matches the card account's own holder", () => {
+      const debit = transaction({
+        id: "d1",
+        accountId: "checking-1",
+        type: "debit",
+        counterpartDocumentHash: "hash-issuer-cnpj",
+        counterpartType: "cnpj",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "card-1",
+        type: "credit",
+        accountHolderDocumentHash: "hash-holder",
+      });
+      const pairs = pairInternalTransfers([debit, credit], new Set(["hash-holder"]));
+      expect(pairs).toEqual([{ debitId: "d1", creditId: "c1", confirmed: false }]);
+    });
+
+    it("rejects when the debit's counterpart CPF is a known third person, not the credit account's own holder", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-stranger",
+        counterpartType: "cpf",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        accountHolderDocumentHash: "hash-holder",
+      });
+      expect(pairInternalTransfers([debit, credit], new Set(["hash-holder"]))).toEqual([]);
+    });
+
+    it("confirms when the debit's counterpart CPF matches the credit account's own holder", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-holder",
+        counterpartType: "cpf",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        accountHolderDocumentHash: "hash-holder",
+      });
+      expect(pairInternalTransfers([debit, credit], new Set(["hash-holder"]))).toEqual([
+        { debitId: "d1", creditId: "c1", confirmed: true },
+      ]);
+    });
+
+    it("rejects a CPF that is a household holder but not this specific counterpart's known holder", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-other-household-account",
+        counterpartType: "cpf",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        accountHolderDocumentHash: "hash-holder",
+      });
+      expect(
+        pairInternalTransfers(
+          [debit, credit],
+          new Set(["hash-holder", "hash-other-household-account"]),
+        ),
+      ).toEqual([]);
+    });
+
+    it("rejects the candidate when either leg's evidence rejects, even if the other leg confirms", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-credit-holder",
+        counterpartType: "cpf",
+        accountHolderDocumentHash: "hash-debit-holder",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        counterpartDocumentHash: "hash-stranger",
+        counterpartType: "cpf",
+        accountHolderDocumentHash: "hash-credit-holder",
+      });
+      expect(pairInternalTransfers([debit, credit], new Set())).toEqual([]);
+    });
+  });
+});
+
+describe("pairingReadRange", () => {
+  it("pads a range by more than MAX_TRANSFER_BUSINESS_DAYS of calendar days", () => {
+    const padded = pairingReadRange({ from: "2026-09-01", to: "2026-09-30" });
+    expect(padded.from < "2026-09-01").toBe(true);
+    expect(padded.to > "2026-09-30").toBe(true);
   });
 });

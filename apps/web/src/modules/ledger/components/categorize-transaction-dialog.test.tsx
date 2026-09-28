@@ -106,6 +106,30 @@ describe("CategorizeTransactionDialog", () => {
     ).not.toBeNull();
   });
 
+  it("shows the category reset and the transfer's own back-to-detection action distinctly when both a manual choice and a mark exist", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{
+          ...transaction,
+          isManual: true,
+          isInternalTransfer: true,
+          hasTransferMark: true,
+        }}
+        groups={groups}
+      />,
+    );
+    openDialog();
+
+    const resetButton = await screen.findByRole("button", { name: t.categorize.resetAction });
+    const transferBackButton = screen.getByRole("button", {
+      name: t.categorize.transfer.backToAutomatic,
+    });
+    expect(resetButton).not.toBe(transferBackButton);
+    expect(resetButton.textContent).not.toBe(transferBackButton.textContent);
+    expect(screen.getByRole("button", { name: t.categorize.transfer.unmark })).not.toBeNull();
+    expect(screen.getByText(t.categorize.transfer.sectionLabel)).not.toBeNull();
+  });
+
   it("offers to unmark a detected pair even without a mark of its own, but not the automatic-detection link", async () => {
     render(
       <CategorizeTransactionDialog

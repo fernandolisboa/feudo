@@ -4,6 +4,7 @@ import { businessDaysBetween } from "./business-days";
 import {
   MAX_TRANSFER_BUSINESS_DAYS,
   pairInternalTransfers,
+  type CounterpartType,
   type PairableTransaction,
 } from "./pairing";
 import type { TransactionDirection } from "../categories/taxonomy";
@@ -13,6 +14,7 @@ const DATES = ["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-
 const AMOUNTS = [0, 1000, 5000, 10000];
 const CURRENCIES = ["BRL", "USD"];
 const HASHES = ["hash-a", "hash-b", "hash-c"];
+const COUNTERPART_TYPES: CounterpartType[] = ["cpf", "cnpj"];
 
 const baseTransactionArb = fc.record({
   accountId: fc.constantFrom(...ACCOUNT_IDS),
@@ -21,6 +23,8 @@ const baseTransactionArb = fc.record({
   currency: fc.constantFrom(...CURRENCIES),
   type: fc.constantFrom<TransactionDirection>("credit", "debit"),
   counterpartDocumentHash: fc.option(fc.constantFrom(...HASHES), { nil: null }),
+  counterpartType: fc.option(fc.constantFrom(...COUNTERPART_TYPES), { nil: null }),
+  accountHolderDocumentHash: fc.option(fc.constantFrom(...HASHES), { nil: null }),
 });
 
 const transactionsArb: fc.Arbitrary<PairableTransaction[]> = fc
@@ -28,6 +32,22 @@ const transactionsArb: fc.Arbitrary<PairableTransaction[]> = fc
   .map((items) => items.map((item, index) => ({ ...item, id: `t${String(index)}` })));
 
 const holdersArb = fc.subarray([...HASHES]).map((hashes) => new Set(hashes) as ReadonlySet<string>);
+
+type LegEvidence = "confirms" | "rejects" | "none";
+
+function legEvidence(
+  leg: PairableTransaction,
+  otherAccountHolderHash: string | null,
+  holderDocumentHashes: ReadonlySet<string>,
+): LegEvidence {
+  const h = leg.counterpartDocumentHash;
+  if (h === null) return "none";
+  if (otherAccountHolderHash !== null) {
+    if (h === otherAccountHolderHash) return "confirms";
+    return leg.counterpartType === "cpf" ? "rejects" : "none";
+  }
+  return holderDocumentHashes.has(h) ? "confirms" : "none";
+}
 
 describe("pairInternalTransfers property tests", () => {
   it("never puts a transaction in two pairs", () => {
@@ -75,14 +95,13 @@ describe("pairInternalTransfers property tests", () => {
             MAX_TRANSFER_BUSINESS_DAYS,
           );
 
-          const presentHashes = [
-            debit.counterpartDocumentHash,
-            credit.counterpartDocumentHash,
-          ].filter((hash): hash is string => hash !== null);
-          for (const hash of presentHashes) {
-            expect(holders.has(hash)).toBe(true);
-          }
-          expect(pair.confirmed).toBe(presentHashes.length > 0);
+          const debitEvidence = legEvidence(debit, credit.accountHolderDocumentHash, holders);
+          const creditEvidence = legEvidence(credit, debit.accountHolderDocumentHash, holders);
+          expect(debitEvidence).not.toBe("rejects");
+          expect(creditEvidence).not.toBe("rejects");
+          expect(pair.confirmed).toBe(
+            debitEvidence === "confirms" || creditEvidence === "confirms",
+          );
         }
       }),
     );

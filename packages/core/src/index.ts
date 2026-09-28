@@ -27,10 +27,13 @@ export { parsePercentToRatePpm, InvalidPercentStringError } from "./market-data/
 
 export type { IsoDateRange, YearMonth } from "./ledger/year-month";
 export {
+  InvalidIsoDateError,
   InvalidYearMonthError,
   formatYearMonth,
   isYearMonth,
+  padDayRange,
   parseYearMonth,
+  shiftIsoDate,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,
@@ -85,8 +88,16 @@ export { suggestFixedSubcategories } from "./ledger/categories/recurring";
 
 export { businessDaysBetween } from "./ledger/transfers/business-days";
 
-export type { PairableTransaction, TransferPair } from "./ledger/transfers/pairing";
-export { MAX_TRANSFER_BUSINESS_DAYS, pairInternalTransfers } from "./ledger/transfers/pairing";
+export type {
+  CounterpartType,
+  PairableTransaction,
+  TransferPair,
+} from "./ledger/transfers/pairing";
+export {
+  MAX_TRANSFER_BUSINESS_DAYS,
+  pairInternalTransfers,
+  pairingReadRange,
+} from "./ledger/transfers/pairing";
 
 export type {
   InternalTransfer,

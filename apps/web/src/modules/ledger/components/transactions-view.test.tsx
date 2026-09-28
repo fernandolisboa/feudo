@@ -81,7 +81,7 @@ describe("TransactionsView", () => {
     expect(screen.getByText("Renda R$ 8.500,00 · Gastos R$ 1.192,80")).not.toBeNull();
   });
 
-  it("adds a singular transfers clause when exactly one internal transfer stayed out of the totals", () => {
+  it("adds a singular transfers clause when exactly one internal-transfer transaction stayed out of the totals", () => {
     render(
       <TransactionsView
         {...buildProps({
@@ -96,7 +96,7 @@ describe("TransactionsView", () => {
     ).not.toBeNull();
   });
 
-  it("pluralizes the transfers clause for more than one internal transfer", () => {
+  it("pluralizes the transfers clause for more than one internal-transfer transaction", () => {
     render(
       <TransactionsView
         {...buildProps({
@@ -108,7 +108,7 @@ describe("TransactionsView", () => {
 
     expect(
       screen.getByText(
-        "Renda R$ 8.500,00 · Gastos R$ 1.192,80 · 2 transferências internas fora dos totais",
+        "Renda R$ 8.500,00 · Gastos R$ 1.192,80 · 2 transações de transferência interna ficaram fora dos totais",
       ),
     ).not.toBeNull();
   });

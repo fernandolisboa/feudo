@@ -212,8 +212,8 @@ const en = {
   totals: {
     income: "Income {amount}",
     spending: "Spending {amount}",
-    transfersOne: "1 internal transfer stayed out of the totals",
-    transfersMany: "{count} internal transfers stayed out of the totals",
+    transfersOne: "1 internal-transfer transaction left out of the totals",
+    transfersMany: "{count} internal-transfer transactions left out of the totals",
   },
   categoriesLink: "Categories and rules",
   category: {
@@ -249,9 +249,10 @@ const en = {
     saved: "Category saved.",
     resetDone: "The transaction follows the rules again.",
     transfer: {
+      sectionLabel: "Internal transfer",
       mark: "Internal transfer",
       unmark: "Not an internal transfer",
-      backToAutomatic: "Back to automatic detection",
+      backToAutomatic: "Let Feudo detect it",
       marked: "Marked as an internal transfer.",
       unmarked: "Marked as not an internal transfer.",
       cleared: "Back to automatic detection.",
@@ -356,8 +357,8 @@ const ptBR = {
   totals: {
     income: "Renda {amount}",
     spending: "Gastos {amount}",
-    transfersOne: "1 transferência interna fora dos totais",
-    transfersMany: "{count} transferências internas fora dos totais",
+    transfersOne: "1 transação de transferência interna ficou fora dos totais",
+    transfersMany: "{count} transações de transferência interna ficaram fora dos totais",
   },
   categoriesLink: "Categorias e regras",
   category: {
@@ -370,7 +371,7 @@ const ptBR = {
       internal_transfer: "Transferência interna",
     },
     transferTooltip: {
-      pair: "Par com {institution} · {account}, {date}",
+      pair: "Pareada com {institution} · {account}, {date}",
       mark: "Marcada à mão como transferência interna",
     },
   },
@@ -393,9 +394,10 @@ const ptBR = {
     saved: "Categoria salva.",
     resetDone: "A transação voltou a seguir as regras.",
     transfer: {
+      sectionLabel: "Transferência interna",
       mark: "É transferência interna",
       unmark: "Não é transferência interna",
-      backToAutomatic: "Voltar à detecção automática",
+      backToAutomatic: "Deixar o Feudo detectar",
       marked: "Marcada como transferência interna.",
       unmarked: "Marcada como não sendo transferência interna.",
       cleared: "Voltou à detecção automática.",

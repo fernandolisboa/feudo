@@ -1,7 +1,22 @@
 import { businessDaysBetween } from "./business-days";
+import { isoDateToUtcMidnight, padDayRange, type IsoDateRange } from "../year-month";
 import type { TransactionDirection } from "../categories/taxonomy";
 
 export const MAX_TRANSFER_BUSINESS_DAYS = 2;
+
+// businessDaysBetween counts weekdays only (no holiday calendar), so the read
+// window a caller pads by must cover more than the worst-case weekday span
+// for MAX_TRANSFER_BUSINESS_DAYS, plus a margin for a bank holiday sitting
+// next to a weekend: derived from the same constant so the pad and the pair
+// rule's own span can never drift apart.
+const PAIRING_READ_PAD_MARGIN_DAYS = 5;
+export const PAIRING_READ_PAD_DAYS = MAX_TRANSFER_BUSINESS_DAYS + PAIRING_READ_PAD_MARGIN_DAYS;
+
+export function pairingReadRange(range: IsoDateRange): IsoDateRange {
+  return padDayRange(range, PAIRING_READ_PAD_DAYS);
+}
+
+export type CounterpartType = "cpf" | "cnpj";
 
 export type PairableTransaction = {
   id: string;
@@ -11,6 +26,8 @@ export type PairableTransaction = {
   currency: string;
   type: TransactionDirection;
   counterpartDocumentHash: string | null;
+  counterpartType: CounterpartType | null;
+  accountHolderDocumentHash: string | null;
 };
 
 export type TransferPair = {
@@ -27,22 +44,49 @@ type CandidateEdge = {
   calendarDays: number;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function calendarDaysBetween(a: string, b: string): number {
-  const dayMs = 24 * 60 * 60 * 1000;
-  const aTime = Date.parse(`${a}T00:00:00Z`);
-  const bTime = Date.parse(`${b}T00:00:00Z`);
-  return Math.abs(aTime - bTime) / dayMs;
+  return Math.abs(isoDateToUtcMidnight(a) - isoDateToUtcMidnight(b)) / DAY_MS;
 }
 
-function hashesAreHouseholdHolders(
+type LegEvidence = "confirms" | "rejects" | "none";
+
+// One leg's answer to "does this transaction's counterpart document point at
+// the other leg's account?" (design contract's #16 review, item 2). h is
+// this leg's counterpart hash, t its type, H the other leg's own account
+// holder hash: a bank that omits taxNumber leaves H null for a real
+// household partner, and a card bill's counterpart is the issuer's CNPJ, so
+// neither can reject on its own — only a CPF that provably belongs to
+// someone else (h present, H known, h !== H, t === "cpf") does.
+function legEvidence(
+  leg: PairableTransaction,
+  otherAccountHolderHash: string | null,
+  holderDocumentHashes: ReadonlySet<string>,
+): LegEvidence {
+  const h = leg.counterpartDocumentHash;
+  if (h === null) {
+    return "none";
+  }
+  if (otherAccountHolderHash !== null) {
+    if (h === otherAccountHolderHash) {
+      return "confirms";
+    }
+    return leg.counterpartType === "cpf" ? "rejects" : "none";
+  }
+  return holderDocumentHashes.has(h) ? "confirms" : "none";
+}
+
+function evaluateEvidence(
   debit: PairableTransaction,
   credit: PairableTransaction,
   holderDocumentHashes: ReadonlySet<string>,
-): boolean {
-  const presentHashes = [debit.counterpartDocumentHash, credit.counterpartDocumentHash].filter(
-    (hash): hash is string => hash !== null,
-  );
-  return presentHashes.every((hash) => holderDocumentHashes.has(hash));
+): { rejected: boolean; confirmed: boolean } {
+  const debitEvidence = legEvidence(debit, credit.accountHolderDocumentHash, holderDocumentHashes);
+  const creditEvidence = legEvidence(credit, debit.accountHolderDocumentHash, holderDocumentHashes);
+  const rejected = debitEvidence === "rejects" || creditEvidence === "rejects";
+  const confirmed = !rejected && (debitEvidence === "confirms" || creditEvidence === "confirms");
+  return { rejected, confirmed };
 }
 
 function candidateEdge(
@@ -60,14 +104,13 @@ function candidateEdge(
   const businessDays = businessDaysBetween(debit.date, credit.date);
   if (businessDays > MAX_TRANSFER_BUSINESS_DAYS) return null;
 
-  if (!hashesAreHouseholdHolders(debit, credit, holderDocumentHashes)) return null;
+  const evidence = evaluateEvidence(debit, credit, holderDocumentHashes);
+  if (evidence.rejected) return null;
 
-  const confirmed =
-    debit.counterpartDocumentHash !== null || credit.counterpartDocumentHash !== null;
   return {
     debit,
     credit,
-    confirmed,
+    confirmed: evidence.confirmed,
     businessDays,
     calendarDays: calendarDaysBetween(debit.date, credit.date),
   };

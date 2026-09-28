@@ -13,6 +13,8 @@ function transaction(overrides: Partial<LedgerTransaction> = {}): LedgerTransact
     currency: "BRL",
     type: "debit",
     counterpartDocumentHash: null,
+    counterpartType: null,
+    accountHolderDocumentHash: null,
     description: "COMPRA CARTAO MERCADO",
     providerCategory: null,
     manual: null,

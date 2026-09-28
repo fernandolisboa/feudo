@@ -436,6 +436,24 @@ describe("categorization repository (integration)", () => {
       ).toBe(false);
 
       expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+    });
+  });
+
+  it("clears a transfer mark idempotently: ok whether or not a mark exists, not_found only when the transaction is out of scope", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "clear-idempotent" })],
+      });
+      const transactionId = await transactionIdFor(db, "clear-idempotent");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+
+      expect(await repoA.clearTransferMark(db, transactionId)).toBe("ok");
+      expect(await repoB.clearTransferMark(db, transactionId)).toBe("not_found");
+
+      await db.delete(member).where(eq(member.userId, userA.id));
       expect(await repoA.clearTransferMark(db, transactionId)).toBe("not_found");
     });
   });

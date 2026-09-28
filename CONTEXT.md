@@ -103,7 +103,7 @@ What a subcategory means for the calculations: `income`, `fixed`, `variable` or 
 A household's instruction that assigns a subcategory to transactions whose description contains a pattern, optionally only credits or only debits. Applies to past and future transactions alike; manual recategorization always wins.
 
 **Uncategorized**:
-A transaction that no manual choice, household rule, product default or provider category places in a subcategory. It has no kind, counts in no total, and is shown with its count and amount until a member categorizes it.
+A transaction that no internal-transfer mark or pair, manual choice, household rule, product default or provider category places in a subcategory. It has no kind, counts in no total, and is shown with its count and amount until a member categorizes it.
 
 **Fixed cost**:
 Spending in subcategories of kind fixed. The product marks the usual ones as fixed by default and a household can override the kind per subcategory. Detected recurring spending is suggested as fixed, never applied silently.
