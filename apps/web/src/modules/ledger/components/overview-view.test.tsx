@@ -65,7 +65,7 @@ describe("OverviewView", () => {
     render(<OverviewView {...buildProps({ hasAccounts: false })} />);
 
     expect(screen.getByText(t.overview.empty.noAccounts)).not.toBeNull();
-    expect(screen.getByRole("link", { name: t.overview.empty.connectAction })).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /conectar banco/i })).toBeNull();
     expect(screen.queryByText(t.overview.tiles.income)).toBeNull();
   });
 

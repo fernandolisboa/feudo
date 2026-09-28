@@ -342,7 +342,6 @@ const en = {
     },
     empty: {
       noAccounts: "Connect a bank to see the household's spending here.",
-      connectAction: "Connect bank",
     },
     error: {
       message: "Couldn't load the overview right now. Check your connection and try again.",
@@ -535,7 +534,6 @@ const ptBR = {
     },
     empty: {
       noAccounts: "Conecte um banco para ver os gastos da casa aqui.",
-      connectAction: "Conectar banco",
     },
     error: {
       message: "Não deu para carregar a visão geral agora. Confira sua conexão e tente de novo.",

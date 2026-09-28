@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Landmark } from "lucide-react";
 import { formatBasisPointsPercent } from "@feudo/core";
 
 import { Button } from "@/ui/button";
@@ -105,13 +104,7 @@ export function OverviewView(props: OverviewPageProps) {
       />
 
       {!hasAccounts ? (
-        <div className="flex flex-col items-start gap-3">
-          <p className="font-heading text-[18px]">{t.overview.empty.noAccounts}</p>
-          <Button render={<Link href="/conectar-banco" />}>
-            <Landmark className="size-4" />
-            {t.overview.empty.connectAction}
-          </Button>
-        </div>
+        <p className="font-heading text-[18px]">{t.overview.empty.noAccounts}</p>
       ) : (
         <>
           {uncategorized.count > 0 ? (

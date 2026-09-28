@@ -64,7 +64,7 @@ test("invite, accept by a second user, switch household and transfer ownership",
   await inviteePage.getByRole("button", { name: "Aceitar e entrar" }).click();
 
   await expect(inviteePage).toHaveURL(/\/$/);
-  await expect(inviteePage.getByRole("heading", { name: `Olá, ${invitee.name}.` })).toBeVisible();
+  await expect(inviteePage.getByText(/^Visão geral · /)).toBeVisible();
 
   const inviteeSidebar = inviteePage.locator('nav.app-shell-nav[data-shell="sidebar"]');
   const householdSwitcher = inviteeSidebar.getByLabel("Casa");
