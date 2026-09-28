@@ -9,6 +9,8 @@ import { t } from "../strings";
 vi.mock("../actions", () => ({
   categorizeTransactionAction: vi.fn(),
   resetTransactionCategoryAction: vi.fn(),
+  setTransferMarkAction: vi.fn(),
+  clearTransferMarkAction: vi.fn(),
 }));
 
 import {
@@ -28,6 +30,8 @@ const transaction: CategorizableRow = {
   type: "debit",
   subcategoryValue: null,
   isManual: false,
+  isInternalTransfer: false,
+  hasTransferMark: false,
   suggestedPattern: "PIX ENVIADO CONDOMINIO",
 };
 
@@ -71,5 +75,51 @@ describe("CategorizeTransactionDialog", () => {
 
     const patternInput = await screen.findByLabelText<HTMLInputElement>(t.categorize.patternLabel);
     expect(patternInput.value).toBe(transaction.suggestedPattern);
+  });
+
+  it("offers to mark a transaction that is not an internal transfer as one, with no automatic-detection link", async () => {
+    render(<CategorizeTransactionDialog transaction={transaction} groups={groups} />);
+    openDialog();
+
+    expect(await screen.findByRole("button", { name: t.categorize.transfer.mark })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: t.categorize.transfer.unmark })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: t.categorize.transfer.backToAutomatic }),
+    ).toBeNull();
+  });
+
+  it("offers to unmark an internal transfer and to go back to automatic detection once it carries a mark", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{ ...transaction, isInternalTransfer: true, hasTransferMark: true }}
+        groups={groups}
+      />,
+    );
+    openDialog();
+
+    expect(
+      await screen.findByRole("button", { name: t.categorize.transfer.unmark }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: t.categorize.transfer.mark })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t.categorize.transfer.backToAutomatic }),
+    ).not.toBeNull();
+  });
+
+  it("offers to unmark a detected pair even without a mark of its own, but not the automatic-detection link", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{ ...transaction, isInternalTransfer: true, hasTransferMark: false }}
+        groups={groups}
+      />,
+    );
+    openDialog();
+
+    expect(
+      await screen.findByRole("button", { name: t.categorize.transfer.unmark }),
+    ).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: t.categorize.transfer.backToAutomatic }),
+    ).toBeNull();
   });
 });

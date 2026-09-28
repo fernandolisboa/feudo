@@ -209,6 +209,12 @@ const en = {
     show: "Categorize them",
     showAll: "Show all transactions",
   },
+  totals: {
+    income: "Income {amount}",
+    spending: "Spending {amount}",
+    transfersOne: "1 internal transfer stayed out of the totals",
+    transfersMany: "{count} internal transfers stayed out of the totals",
+  },
   categoriesLink: "Categories and rules",
   category: {
     uncategorized: "No category",
@@ -218,6 +224,10 @@ const en = {
       default: "Recognized by Feudo",
       provider: "Category from the bank",
       internal_transfer: "Internal transfer",
+    },
+    transferTooltip: {
+      pair: "Paired with {institution} · {account}, {date}",
+      mark: "Marked by hand as an internal transfer",
     },
   },
   categorize: {
@@ -238,6 +248,14 @@ const en = {
     resetAction: "Back to automatic",
     saved: "Category saved.",
     resetDone: "The transaction follows the rules again.",
+    transfer: {
+      mark: "Internal transfer",
+      unmark: "Not an internal transfer",
+      backToAutomatic: "Back to automatic detection",
+      marked: "Marked as an internal transfer.",
+      unmarked: "Marked as not an internal transfer.",
+      cleared: "Back to automatic detection.",
+    },
   },
   categoriesPage: {
     overline: "Categories",
@@ -335,6 +353,12 @@ const ptBR = {
     show: "Categorizar agora",
     showAll: "Ver todas as transações",
   },
+  totals: {
+    income: "Renda {amount}",
+    spending: "Gastos {amount}",
+    transfersOne: "1 transferência interna fora dos totais",
+    transfersMany: "{count} transferências internas fora dos totais",
+  },
   categoriesLink: "Categorias e regras",
   category: {
     uncategorized: "Sem categoria",
@@ -344,6 +368,10 @@ const ptBR = {
       default: "Reconhecida pelo Feudo",
       provider: "Categoria do banco",
       internal_transfer: "Transferência interna",
+    },
+    transferTooltip: {
+      pair: "Par com {institution} · {account}, {date}",
+      mark: "Marcada à mão como transferência interna",
     },
   },
   categorize: {
@@ -364,6 +392,14 @@ const ptBR = {
     resetAction: "Voltar ao automático",
     saved: "Categoria salva.",
     resetDone: "A transação voltou a seguir as regras.",
+    transfer: {
+      mark: "É transferência interna",
+      unmark: "Não é transferência interna",
+      backToAutomatic: "Voltar à detecção automática",
+      marked: "Marcada como transferência interna.",
+      unmarked: "Marcada como não sendo transferência interna.",
+      cleared: "Voltou à detecção automática.",
+    },
   },
   categoriesPage: {
     overline: "Categorias",

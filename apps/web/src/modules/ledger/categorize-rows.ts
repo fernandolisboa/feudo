@@ -1,24 +1,58 @@
-import { categorize, orderRules, type Categorization, type CategorizationRule } from "@feudo/core";
+import {
+  resolveLedger,
+  type Categorization,
+  type InternalTransfer,
+  type Kind,
+  type LedgerContext,
+  type LedgerTransaction,
+} from "@feudo/core";
 
 import type { LedgerTransactionRow } from "./repository";
 
-export type CategorizedRow = LedgerTransactionRow & { categorization: Categorization | null };
+export type ResolvedLedgerRow = LedgerTransactionRow & {
+  categorization: Categorization | null;
+  kind: Kind | null;
+  internalTransfer: InternalTransfer | null;
+};
 
-export function categorizeRows(
+function toLedgerTransaction(row: LedgerTransactionRow): LedgerTransaction {
+  return {
+    id: row.id,
+    accountId: row.accountId,
+    date: row.date,
+    amountCentavos: row.amountCentavos,
+    currency: row.currency,
+    type: row.type,
+    counterpartDocumentHash: row.counterpartDocumentHash,
+    accountType: row.accountType,
+    description: row.description,
+    providerCategory: row.providerCategory,
+    manual: row.manual,
+    transferMark: row.transferMark,
+  };
+}
+
+// A thin adapter over packages/core's resolveLedger (design contract's
+// read-time model, #16): every caller in this slice needs the row it read
+// back alongside what resolveLedger decided for it, keyed by id so this
+// stays a plain lookup rather than trusting order across the two arrays.
+export function resolveLedgerRows(
   rows: readonly LedgerTransactionRow[],
-  rules: readonly CategorizationRule[],
-): CategorizedRow[] {
-  const ordered = orderRules(rules);
-  return rows.map((row) => ({
-    ...row,
-    categorization: categorize(
-      {
-        description: row.description,
-        type: row.type,
-        providerCategory: row.providerCategory,
-        manual: row.manual,
-      },
-      ordered,
-    ),
-  }));
+  context: LedgerContext,
+): ResolvedLedgerRow[] {
+  const resolvedById = new Map(
+    resolveLedger(rows.map(toLedgerTransaction), context).map((resolved) => [
+      resolved.id,
+      resolved,
+    ]),
+  );
+  return rows.map((row) => {
+    const resolved = resolvedById.get(row.id);
+    return {
+      ...row,
+      categorization: resolved?.categorization ?? null,
+      kind: resolved?.kind ?? null,
+      internalTransfer: resolved?.internalTransfer ?? null,
+    };
+  });
 }

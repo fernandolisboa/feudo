@@ -5,6 +5,8 @@ import {
   suggestFixedSubcategories,
   yearMonthDayRange,
   yearMonthOf,
+  type KindContext,
+  type LedgerContext,
   type RecurringInput,
   type YearMonth,
 } from "@feudo/core";
@@ -13,7 +15,7 @@ import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
-import { categorizeRows } from "./categorize-rows";
+import { resolveLedgerRows } from "./categorize-rows";
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
 import { encodeSubcategoryRef } from "./subcategory-ref";
@@ -52,18 +54,21 @@ export async function getCategoriesPageProps(
   const categorization = createCategorizationRepository(scope);
   const ledger = createHouseholdLedgerRepository(scope);
 
-  const [settings, householdSubcategories, overrides, rules] = await Promise.all([
-    getHouseholdSettings(scope, db),
-    categorization.listHouseholdSubcategories(db),
-    categorization.listKindOverrides(db),
-    categorization.listRules(db),
-  ]);
-  const taxonomy = buildTaxonomyView({
+  const [settings, householdSubcategories, overrides, rules, holderDocumentHashes] =
+    await Promise.all([
+      getHouseholdSettings(scope, db),
+      categorization.listHouseholdSubcategories(db),
+      categorization.listKindOverrides(db),
+      categorization.listRules(db),
+      ledger.listHolderDocumentHashes(db),
+    ]);
+  const kinds: KindContext = {
     overrides,
     householdSubcategories: new Map(
       householdSubcategories.map((subcategory) => [subcategory.id, subcategory]),
     ),
-  });
+  };
+  const taxonomy = buildTaxonomyView(kinds);
 
   const currentMonth = yearMonthOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
   const months: YearMonth[] = Array.from({ length: RECURRING_MONTHS }, (_, index) =>
@@ -76,12 +81,14 @@ export async function getCategoriesPageProps(
     },
     accountId: null,
   });
-  const recurringInputs = categorizeRows(rows, rules).flatMap((row): RecurringInput[] => {
-    if (!row.categorization) {
-      return [];
-    }
-    const kind = taxonomy.kindOf(row.categorization.subcategory);
-    if (!kind) {
+  const context: LedgerContext = { rules, kinds, holderDocumentHashes };
+  // row.kind, not taxonomy.kindOf(row.categorization.subcategory): an
+  // internal transfer's kind is always "transfer" (design contract's #16),
+  // whatever kind override the household set on the subcategory it landed
+  // on, so only resolveLedger's own answer can be trusted to keep it out of
+  // a fixed-cost suggestion.
+  const recurringInputs = resolveLedgerRows(rows, context).flatMap((row): RecurringInput[] => {
+    if (!row.categorization || row.kind === null) {
       return [];
     }
     return [
@@ -91,7 +98,7 @@ export async function getCategoriesPageProps(
         type: row.type,
         amountCentavos: row.amountCentavos,
         subcategory: row.categorization.subcategory,
-        kind,
+        kind: row.kind,
       },
     ];
   });

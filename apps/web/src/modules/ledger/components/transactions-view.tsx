@@ -33,6 +33,21 @@ function uncategorizedMessage(count: number, amountLabel: string, monthLabel: st
   );
 }
 
+function totalsLine(totals: TransactionsPageProps["totals"]): string {
+  const parts = [
+    interpolate(t.totals.income, "{amount}", totals.incomeLabel),
+    interpolate(t.totals.spending, "{amount}", totals.spendingLabel),
+  ];
+  if (totals.transferCount > 0) {
+    parts.push(
+      totals.transferCount === 1
+        ? t.totals.transfersOne
+        : interpolate(t.totals.transfersMany, "{count}", String(totals.transferCount)),
+    );
+  }
+  return parts.join(" · ");
+}
+
 export function TransactionsView({
   month,
   monthLabel,
@@ -42,6 +57,7 @@ export function TransactionsView({
   selectedAccountId,
   uncategorizedOnly,
   uncategorized,
+  totals,
   categoryGroups,
   transactions,
   total,
@@ -77,6 +93,9 @@ export function TransactionsView({
           </>
         }
       />
+      {accounts.length > 0 ? (
+        <p className="text-muted-foreground mb-3 text-[13px] tabular-nums">{totalsLine(totals)}</p>
+      ) : null}
       {uncategorized.count > 0 && !uncategorizedOnly ? (
         <Notice
           action={

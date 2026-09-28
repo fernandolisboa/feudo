@@ -34,6 +34,10 @@ export async function categorizeTransaction(
       if (manual === "not_found") {
         return { status: "not_found" as const };
       }
+      // A member who picks a category after marking the transaction must see
+      // that category, not the mark's forced "transfer" kind (design
+      // contract's precedence: mark would otherwise outrank this choice).
+      await repository.clearTransferMark(tx, input.transactionId);
       if (input.createRule === "on") {
         const rule = await repository.saveRule(
           tx,
@@ -110,6 +114,41 @@ export async function removeRule(
     const status = await createCategorizationRepository(householdScope(session)).deleteRule(
       db,
       ruleId,
+    );
+    return { status };
+  } catch {
+    return { status: "failed" };
+  }
+}
+
+export async function markInternalTransfer(
+  transactionId: string,
+  value: boolean,
+  session: HouseholdSession,
+  db: Database,
+): Promise<CategorizeOutcome> {
+  try {
+    const status = await createCategorizationRepository(householdScope(session)).setTransferMark(
+      db,
+      transactionId,
+      value,
+      session.userId,
+    );
+    return { status };
+  } catch {
+    return { status: "failed" };
+  }
+}
+
+export async function clearInternalTransferMark(
+  transactionId: string,
+  session: HouseholdSession,
+  db: Database,
+): Promise<CategorizeOutcome> {
+  try {
+    const status = await createCategorizationRepository(householdScope(session)).clearTransferMark(
+      db,
+      transactionId,
     );
     return { status };
   } catch {

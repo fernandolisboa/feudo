@@ -30,7 +30,12 @@ import { interpolate } from "@/lib/interpolate";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import type { TransactionDirection } from "@feudo/core";
-import { categorizeTransactionAction, resetTransactionCategoryAction } from "../actions";
+import {
+  categorizeTransactionAction,
+  clearTransferMarkAction,
+  resetTransactionCategoryAction,
+  setTransferMarkAction,
+} from "../actions";
 import { t } from "../strings";
 import { RULE_PATTERN_MAX_LENGTH } from "../validation";
 
@@ -46,6 +51,8 @@ export type CategorizableRow = {
   type: TransactionDirection;
   subcategoryValue: string | null;
   isManual: boolean;
+  isInternalTransfer: boolean;
+  hasTransferMark: boolean;
   suggestedPattern: string;
 };
 
@@ -66,18 +73,32 @@ export function CategorizeTransactionDialog({
     resetTransactionCategoryAction,
     initialActionState,
   );
+  const [transferMarkState, transferMarkAction, isMarkingTransfer] = useActionState(
+    setTransferMarkAction,
+    initialActionState,
+  );
+  const [clearMarkState, clearMarkAction, isClearingMark] = useActionState(
+    clearTransferMarkAction,
+    initialActionState,
+  );
   const items = groups.flatMap((group) => group.options);
   const error =
     state.status === "error"
       ? state.message
       : resetState.status === "error"
         ? resetState.message
-        : null;
+        : transferMarkState.status === "error"
+          ? transferMarkState.message
+          : clearMarkState.status === "error"
+            ? clearMarkState.message
+            : null;
   const selectId = `categorize-${transaction.id}`;
   const patternId = `categorize-pattern-${transaction.id}`;
 
   useCloseOnSuccess(state, setOpen);
   useCloseOnSuccess(resetState, setOpen);
+  useCloseOnSuccess(transferMarkState, setOpen);
+  useCloseOnSuccess(clearMarkState, setOpen);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -185,14 +206,57 @@ export function CategorizeTransactionDialog({
           </DialogFooter>
         </form>
 
-        {transaction.isManual ? (
-          <form action={resetAction} className="border-border border-t pt-3">
-            <input type="hidden" name="transactionId" value={transaction.id} />
-            <Button type="submit" variant="link" size="sm" disabled={isResetting} className="px-0">
-              {t.categorize.resetAction}
-            </Button>
-          </form>
-        ) : null}
+        <div className="border-border flex flex-col gap-2 border-t pt-3">
+          {transaction.isManual ? (
+            <form action={resetAction}>
+              <input type="hidden" name="transactionId" value={transaction.id} />
+              <Button
+                type="submit"
+                variant="link"
+                size="sm"
+                disabled={isResetting}
+                className="px-0"
+              >
+                {t.categorize.resetAction}
+              </Button>
+            </form>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-4">
+            <form action={transferMarkAction}>
+              <input type="hidden" name="transactionId" value={transaction.id} />
+              <input
+                type="hidden"
+                name="value"
+                value={transaction.isInternalTransfer ? "false" : "true"}
+              />
+              <Button
+                type="submit"
+                variant="link"
+                size="sm"
+                disabled={isMarkingTransfer}
+                className="px-0"
+              >
+                {transaction.isInternalTransfer
+                  ? t.categorize.transfer.unmark
+                  : t.categorize.transfer.mark}
+              </Button>
+            </form>
+            {transaction.hasTransferMark ? (
+              <form action={clearMarkAction}>
+                <input type="hidden" name="transactionId" value={transaction.id} />
+                <Button
+                  type="submit"
+                  variant="link"
+                  size="sm"
+                  disabled={isClearingMark}
+                  className="px-0"
+                >
+                  {t.categorize.transfer.backToAutomatic}
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

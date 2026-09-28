@@ -10,6 +10,8 @@ import {
   addSubcategory,
   categorizeTransaction,
   changeSubcategoryKind,
+  clearInternalTransferMark,
+  markInternalTransfer,
   removeRule,
   resetTransactionCategory,
   type CategorizeOutcome,
@@ -21,6 +23,7 @@ import {
   changeKindFormSchema,
   ruleIdFormSchema,
   transactionIdFormSchema,
+  transferMarkFormSchema,
 } from "./validation";
 
 function revalidateLedger(): void {
@@ -134,4 +137,39 @@ export async function removeRuleAction(
   }
   const session = await requireHouseholdSession();
   return stateFor(await removeRule(parsed.data.ruleId, session, getDb()), t.rules.removed);
+}
+
+export async function setTransferMarkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = transferMarkFormSchema.safeParse({
+    transactionId: formData.get("transactionId"),
+    value: formData.get("value"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateFor(
+    await markInternalTransfer(parsed.data.transactionId, parsed.data.value, session, getDb()),
+    parsed.data.value ? t.categorize.transfer.marked : t.categorize.transfer.unmarked,
+  );
+}
+
+export async function clearTransferMarkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = transactionIdFormSchema.safeParse({
+    transactionId: formData.get("transactionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateFor(
+    await clearInternalTransferMark(parsed.data.transactionId, session, getDb()),
+    t.categorize.transfer.cleared,
+  );
 }

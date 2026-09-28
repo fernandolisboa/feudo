@@ -82,3 +82,9 @@ export const changeKindFormSchema = z.object({
   kind: z.enum(KINDS),
 });
 export type ChangeKindFormInput = z.infer<typeof changeKindFormSchema>;
+
+export const transferMarkFormSchema = z.object({
+  transactionId: idSchema,
+  value: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
+export type TransferMarkFormInput = z.infer<typeof transferMarkFormSchema>;

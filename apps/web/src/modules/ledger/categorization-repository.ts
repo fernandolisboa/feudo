@@ -19,6 +19,7 @@ import { hasSqlState } from "@/platform/db/sql-state";
 import {
   categorizationRule,
   householdSubcategory,
+  internalTransferMark,
   subcategoryKindOverride,
   transactionCategorization,
 } from "./schema";
@@ -121,6 +122,22 @@ export type SaveRuleInput = {
 // own household_subcategory; this repository turns that database refusal
 // into "not_found" instead of letting the constraint violation escape.
 export function createCategorizationRepository(scope: HouseholdScope) {
+  // Shared by every write keyed on a transaction id (setManual,
+  // setTransferMark): a manual choice or a mark carries no household id of
+  // its own, so the only way to refuse another household's transaction is to
+  // join back to its account before writing.
+  async function ownsTransaction(db: Database, transactionId: string): Promise<boolean> {
+    const rows = await db
+      .select({ id: bankTransaction.id })
+      .from(bankTransaction)
+      .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+      .where(
+        and(eq(bankTransaction.id, transactionId), eq(bankAccount.householdId, scope.householdId)),
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
   // Checked before writing rather than left to the composite foreign key
   // alone: inside categorization-service's transaction a constraint error
   // would abort the whole transaction, so the refusal must come first.
@@ -323,18 +340,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       subcategory: SubcategoryRef,
       userId: string,
     ): Promise<"ok" | "not_found"> {
-      const owned = await db
-        .select({ id: bankTransaction.id })
-        .from(bankTransaction)
-        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-        .where(
-          and(
-            eq(bankTransaction.id, transactionId),
-            eq(bankAccount.householdId, scope.householdId),
-          ),
-        )
-        .limit(1);
-      if (owned.length === 0 || !(await ownsTarget(db, subcategory))) {
+      if (!(await ownsTransaction(db, transactionId)) || !(await ownsTarget(db, subcategory))) {
         return "not_found";
       }
 
@@ -385,6 +391,56 @@ export function createCategorizationRepository(scope: HouseholdScope) {
           ),
         )
         .returning({ transactionId: transactionCategorization.transactionId });
+      return deleted.length > 0 ? "ok" : "not_found";
+    },
+
+    // A member's mark, true or false (design contract's precedence: mark
+    // beats a detected pair and manual categorization alike). Scoped the
+    // same way as setManual: only through the transaction's current
+    // household, so it travels with the account when it moves.
+    async setTransferMark(
+      db: Database,
+      transactionId: string,
+      value: boolean,
+      userId: string,
+    ): Promise<"ok" | "not_found"> {
+      if (!(await ownsTransaction(db, transactionId))) {
+        return "not_found";
+      }
+      await db
+        .insert(internalTransferMark)
+        .values({ transactionId, isInternalTransfer: value, markedByUserId: userId })
+        .onConflictDoUpdate({
+          target: [internalTransferMark.transactionId],
+          set: { isInternalTransfer: value, markedByUserId: userId, markedAt: new Date() },
+        });
+      return "ok";
+    },
+
+    // Same scoping as clearManual: the mark carries no household id of its
+    // own, so only a transaction whose account is currently this household's
+    // can have its mark cleared.
+    async clearTransferMark(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
+      const deleted = await db
+        .delete(internalTransferMark)
+        .where(
+          and(
+            eq(internalTransferMark.transactionId, transactionId),
+            exists(
+              db
+                .select({ id: bankTransaction.id })
+                .from(bankTransaction)
+                .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+                .where(
+                  and(
+                    eq(bankTransaction.id, internalTransferMark.transactionId),
+                    eq(bankAccount.householdId, scope.householdId),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .returning({ transactionId: internalTransferMark.transactionId });
       return deleted.length > 0 ? "ok" : "not_found";
     },
   };
