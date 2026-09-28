@@ -11,7 +11,7 @@ export type UncategorizedSummary = {
 // Synced transactions carry whatever currency the bank reported (a card bill
 // in dollars, say), so totals are kept per currency rather than through
 // Money, which is BRL-only; adding across currencies would be a wrong number.
-function addSameCurrency(a: CurrencyAmount, b: CurrencyAmount): CurrencyAmount {
+export function addSameCurrency(a: CurrencyAmount, b: CurrencyAmount): CurrencyAmount {
   const amountCentavos = a.amountCentavos + b.amountCentavos;
   if (!Number.isSafeInteger(amountCentavos)) {
     throw new NonIntegerAmountError(amountCentavos);

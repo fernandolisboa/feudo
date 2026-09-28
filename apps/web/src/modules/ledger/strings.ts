@@ -217,6 +217,7 @@ const en = {
       rule: "From a household rule",
       default: "Recognized by Feudo",
       provider: "Category from the bank",
+      internal_transfer: "Internal transfer",
     },
   },
   categorize: {
@@ -342,6 +343,7 @@ const ptBR = {
       rule: "Por uma regra da casa",
       default: "Reconhecida pelo Feudo",
       provider: "Categoria do banco",
+      internal_transfer: "Transferência interna",
     },
   },
   categorize: {
