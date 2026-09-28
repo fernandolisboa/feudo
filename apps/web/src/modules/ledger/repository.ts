@@ -69,9 +69,9 @@ export function createHouseholdLedgerRepository(scope: HouseholdScope) {
 
     // Every account holder document Feudo has hashed for this household,
     // never a household-wide secret since the hash never round-trips to the
-    // original document (sync/document-hash.ts): pairInternalTransfers only
-    // uses it to check that a transaction's counterpart, when known, is one
-    // of the household's own account holders.
+    // original document (sync/document-hash.ts): resolveLedger only uses it
+    // to check that a transaction's counterpart, when known, is one of the
+    // household's own account holders.
     async listHolderDocumentHashes(db: Database): Promise<Set<string>> {
       const rows = await db
         .select({ holderDocumentHash: bankAccount.holderDocumentHash })

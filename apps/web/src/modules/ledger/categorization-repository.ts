@@ -395,12 +395,6 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       return deleted.length > 0 ? "ok" : "not_found";
     },
 
-    // A member's mark, true or false (design contract's precedence: mark
-    // beats a detected pair and manual categorization alike). The ownership
-    // check and the write are one statement: the inserted row's values come
-    // from a SELECT gated by the same tenancy predicate as scopedTransactionQuery,
-    // so a transaction outside this household inserts zero rows instead of
-    // racing a separate existence check against a concurrent account move.
     // The selection lists internal_transfer_mark's columns in schema order
     // (schema.ts): drizzle's insert().select() sends an INSERT ... SELECT to
     // Postgres, which assigns select-list positions to the target table's

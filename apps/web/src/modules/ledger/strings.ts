@@ -212,8 +212,8 @@ const en = {
   totals: {
     income: "Income {amount}",
     spending: "Spending {amount}",
-    transfersOne: "1 internal-transfer transaction left out of the totals",
-    transfersMany: "{count} internal-transfer transactions left out of the totals",
+    transfersOne: "1 transfer transaction left out of the totals",
+    transfersMany: "{count} transfer transactions left out of the totals",
   },
   categoriesLink: "Categories and rules",
   category: {
@@ -357,8 +357,8 @@ const ptBR = {
   totals: {
     income: "Renda {amount}",
     spending: "Gastos {amount}",
-    transfersOne: "1 transação de transferência interna ficou fora dos totais",
-    transfersMany: "{count} transações de transferência interna ficaram fora dos totais",
+    transfersOne: "1 transação de transferência ficou fora dos totais",
+    transfersMany: "{count} transações de transferência ficaram fora dos totais",
   },
   categoriesLink: "Categorias e regras",
   category: {

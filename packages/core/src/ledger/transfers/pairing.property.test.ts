@@ -24,12 +24,24 @@ const baseTransactionArb = fc.record({
   type: fc.constantFrom<TransactionDirection>("credit", "debit"),
   counterpartDocumentHash: fc.option(fc.constantFrom(...HASHES), { nil: null }),
   counterpartType: fc.option(fc.constantFrom(...COUNTERPART_TYPES), { nil: null }),
-  accountHolderDocumentHash: fc.option(fc.constantFrom(...HASHES), { nil: null }),
 });
 
+// One holder hash per account for the whole run (design contract's #16
+// review round 3, item 6): an account's own holder never disagrees between
+// two of its transactions, so the generator must not let it.
+const accountHolderMapArb: fc.Arbitrary<ReadonlyMap<string, string | null>> = fc
+  .tuple(...ACCOUNT_IDS.map(() => fc.option(fc.constantFrom(...HASHES), { nil: null })))
+  .map((hashes) => new Map(ACCOUNT_IDS.map((id, index) => [id, hashes[index] ?? null])));
+
 const transactionsArb: fc.Arbitrary<PairableTransaction[]> = fc
-  .array(baseTransactionArb, { maxLength: 8 })
-  .map((items) => items.map((item, index) => ({ ...item, id: `t${String(index)}` })));
+  .tuple(fc.array(baseTransactionArb, { maxLength: 8 }), accountHolderMapArb)
+  .map(([items, holderByAccount]) =>
+    items.map((item, index) => ({
+      ...item,
+      id: `t${String(index)}`,
+      accountHolderDocumentHash: holderByAccount.get(item.accountId) ?? null,
+    })),
+  );
 
 const holdersArb = fc.subarray([...HASHES]).map((hashes) => new Set(hashes) as ReadonlySet<string>);
 

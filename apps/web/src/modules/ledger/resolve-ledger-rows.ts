@@ -43,7 +43,10 @@ export function resolveLedgerRows(
 ): ResolvedLedgerRow[] {
   const resolved = resolveLedger(rows.map(toLedgerTransaction), context);
   return rows.map((row, index) => {
-    const item = resolved[index] ?? { categorization: null, kind: null, internalTransfer: null };
+    const item = resolved[index];
+    if (!item) {
+      throw new Error(`resolveLedger dropped row ${String(index)} of ${String(rows.length)}`);
+    }
     return {
       ...row,
       categorization: item.categorization,

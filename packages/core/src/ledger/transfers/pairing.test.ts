@@ -344,8 +344,16 @@ describe("pairingReadRange", () => {
     expect(padded.to > "2026-09-30").toBe(true);
   });
 
-  it.each(["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25"])(
-    "covers a pair reaching MAX_TRANSFER_BUSINESS_DAYS business days from %s on either side (design contract's #16 review round 2, item 5)",
+  it.each([
+    "2026-09-21",
+    "2026-09-22",
+    "2026-09-23",
+    "2026-09-24",
+    "2026-09-25",
+    "2026-09-26",
+    "2026-09-27",
+  ])(
+    "covers a pair reaching MAX_TRANSFER_BUSINESS_DAYS business days from %s on either side, including a weekend start or end date (design contract's #16 review round 2, item 5; round 3, item 1)",
     (start) => {
       const forwardEdge = farthestWithinBusinessDays(start, 1);
       expect(pairingReadRange({ from: start, to: start }).to >= forwardEdge).toBe(true);
