@@ -57,10 +57,6 @@ const en = {
     resent: "We sent the email again.",
     backToSignIn: "Back to sign in",
   },
-  overview: {
-    title: "Overview",
-    greeting: "Hello, {name}.",
-  },
   userMenu: {
     signOut: "Sign out",
   },
@@ -167,10 +163,6 @@ const ptBR = {
     resend: "Reenviar e-mail",
     resent: "Enviamos o e-mail novamente.",
     backToSignIn: "Voltar para entrar",
-  },
-  overview: {
-    title: "Visão geral",
-    greeting: "Olá, {name}.",
   },
   userMenu: {
     signOut: "Sair",

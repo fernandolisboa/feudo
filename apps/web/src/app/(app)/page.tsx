@@ -1,20 +1,51 @@
-import { PageHeader } from "@/ui/page-header";
-import { interpolate } from "@/lib/interpolate";
-import { t } from "@/modules/auth";
-import { requireHouseholdSession } from "@/modules/households";
+import { Suspense } from "react";
+
+import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
+import {
+  getOverviewPageProps,
+  OverviewErrorBoundary,
+  OverviewSkeleton,
+  OverviewView,
+  type OverviewSearchParams,
+} from "@/modules/ledger";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
-export default async function Home() {
+async function OverviewContent({
+  session,
+  searchParams,
+}: {
+  session: HouseholdSession;
+  searchParams: OverviewSearchParams;
+}) {
+  const props = await getOverviewPageProps(session, searchParams);
+  return <OverviewView {...props} />;
+}
+
+async function AccountsSectionContent({ session }: { session: HouseholdSession }) {
+  const props = await getAccountsSectionProps(session);
+  return <AccountsSection {...props} />;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<OverviewSearchParams>;
+}) {
   const session = await requireHouseholdSession();
-  const accountsSection = await getAccountsSectionProps(session);
+  const params = await searchParams;
 
   return (
     <>
-      <PageHeader
-        overline={t.overview.title}
-        title={interpolate(t.overview.greeting, "{name}", session.name)}
-      />
-      <AccountsSection {...accountsSection} />
+      <OverviewErrorBoundary>
+        <Suspense fallback={<OverviewSkeleton />}>
+          <OverviewContent session={session} searchParams={params} />
+        </Suspense>
+      </OverviewErrorBoundary>
+      <div className="mt-10">
+        <Suspense fallback={null}>
+          <AccountsSectionContent session={session} />
+        </Suspense>
+      </div>
     </>
   );
 }

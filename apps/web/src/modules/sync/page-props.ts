@@ -19,8 +19,9 @@ import {
 import { userScope } from "./scope";
 
 // Only BRL accounts ever enter a household total (#12); the split is made
-// here, once, so no component decides which currency counts.
-const HOUSEHOLD_CURRENCY = "BRL";
+// here, once, so no component decides which currency counts. Exported for
+// the ledger dashboard, the other reader of the household's own currency.
+export const HOUSEHOLD_CURRENCY = "BRL";
 
 export type AccountsSectionProps = {
   domesticAccounts: HouseholdAccount[];

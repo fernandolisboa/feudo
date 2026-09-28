@@ -20,6 +20,12 @@ export const transactionsSearchParamsSchema = z.object({
 });
 export type TransactionsSearchParams = z.input<typeof transactionsSearchParamsSchema>;
 
+// Same fallback contract as transactionsSearchParamsSchema: an unreadable
+// month in the URL falls back to the default (the current month) rather
+// than an error page.
+export const overviewSearchParamsSchema = z.object({ mes: yearMonthSchema });
+export type OverviewSearchParams = z.input<typeof overviewSearchParamsSchema>;
+
 const idSchema = z.string().trim().min(1).max(64);
 
 const subcategoryRefSchema = z.string().transform((value, context) => {
