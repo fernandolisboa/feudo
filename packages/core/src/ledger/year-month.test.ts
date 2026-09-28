@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   InvalidIsoDateError,
   InvalidYearMonthError,
+  calendarDaysBetween,
   formatYearMonth,
+  isoDateToUtcMidnight,
   isYearMonth,
   padDayRange,
   parseYearMonth,
@@ -12,6 +14,8 @@ import {
   yearMonthDayRange,
   yearMonthOf,
 } from "./year-month";
+
+const INVALID_ISO_DATES = ["2026-9-28", "2026/09/28", "not-a-date", "", "2026-02-31", "2026-13-01"];
 
 describe("parseYearMonth", () => {
   it("accepts a zero-padded YYYY-MM", () => {
@@ -70,12 +74,31 @@ describe("shiftIsoDate", () => {
     expect(shiftIsoDate("2026-09-28", 0)).toBe("2026-09-28");
   });
 
-  it.each(["2026-9-28", "2026/09/28", "not-a-date", ""])(
-    "throws InvalidIsoDateError for %j",
+  it.each(INVALID_ISO_DATES)("throws InvalidIsoDateError for %j", (value) => {
+    expect(() => shiftIsoDate(value, 1)).toThrow(InvalidIsoDateError);
+  });
+});
+
+describe("isoDateToUtcMidnight", () => {
+  it("round-trips through toISOString for a real calendar day", () => {
+    const time = isoDateToUtcMidnight("2026-09-28");
+    expect(new Date(time).toISOString().slice(0, 10)).toBe("2026-09-28");
+  });
+
+  it.each(INVALID_ISO_DATES)(
+    "throws InvalidIsoDateError for %j instead of rolling over to a nearby real date",
     (value) => {
-      expect(() => shiftIsoDate(value, 1)).toThrow(InvalidIsoDateError);
+      expect(() => isoDateToUtcMidnight(value)).toThrow(InvalidIsoDateError);
     },
   );
+});
+
+describe("calendarDaysBetween", () => {
+  it("is symmetric and counts whole days", () => {
+    expect(calendarDaysBetween("2026-09-25", "2026-09-29")).toBe(4);
+    expect(calendarDaysBetween("2026-09-29", "2026-09-25")).toBe(4);
+    expect(calendarDaysBetween("2026-09-25", "2026-09-25")).toBe(0);
+  });
 });
 
 describe("padDayRange", () => {

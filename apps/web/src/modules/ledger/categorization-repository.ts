@@ -123,19 +123,26 @@ export type SaveRuleInput = {
 // into "not_found" instead of letting the constraint violation escape.
 export function createCategorizationRepository(scope: HouseholdScope) {
   // Shared by every check keyed on a transaction id (ownsTransaction,
-  // clearManual, clearTransferMark): a manual choice or a mark carries no
-  // household id of its own, so the only way to tell whether a transaction
-  // is currently this household's is to join back to its account. One query
-  // shape, reused as either a plain existence check or, wrapped in exists(),
-  // a delete's WHERE clause.
+  // clearManual, clearTransferMark, setTransferMark's INSERT…SELECT): a
+  // manual choice or a mark carries no household id of its own, so the only
+  // way to tell whether a transaction is currently this household's is to
+  // join back to its account and filter on this household. One predicate,
+  // reused everywhere a query needs to prove a transaction is in scope.
+  function scopedToHousehold(transactionId: string) {
+    return and(
+      eq(bankTransaction.id, transactionId),
+      eq(bankAccount.householdId, scope.householdId),
+    );
+  }
+
+  // A plain existence check, reused as-is or wrapped in exists() for a
+  // delete's WHERE clause.
   function scopedTransactionQuery(db: Database, transactionId: string) {
     return db
       .select({ id: bankTransaction.id })
       .from(bankTransaction)
       .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-      .where(
-        and(eq(bankTransaction.id, transactionId), eq(bankAccount.householdId, scope.householdId)),
-      );
+      .where(scopedToHousehold(transactionId));
   }
 
   async function ownsTransaction(db: Database, transactionId: string): Promise<boolean> {
@@ -391,9 +398,13 @@ export function createCategorizationRepository(scope: HouseholdScope) {
     // A member's mark, true or false (design contract's precedence: mark
     // beats a detected pair and manual categorization alike). The ownership
     // check and the write are one statement: the inserted row's values come
-    // from a SELECT gated by the same account join as scopedTransactionQuery,
+    // from a SELECT gated by the same tenancy predicate as scopedTransactionQuery,
     // so a transaction outside this household inserts zero rows instead of
     // racing a separate existence check against a concurrent account move.
+    // The selection lists internal_transfer_mark's columns in schema order
+    // (schema.ts): drizzle's insert().select() sends an INSERT ... SELECT to
+    // Postgres, which assigns select-list positions to the target table's
+    // columns positionally, not by alias.
     async setTransferMark(
       db: Database,
       transactionId: string,
@@ -409,12 +420,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         })
         .from(bankTransaction)
         .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
-        .where(
-          and(
-            eq(bankTransaction.id, transactionId),
-            eq(bankAccount.householdId, scope.householdId),
-          ),
-        )
+        .where(scopedToHousehold(transactionId))
         .limit(1);
 
       const written = await db
@@ -422,7 +428,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         .select(values)
         .onConflictDoUpdate({
           target: [internalTransferMark.transactionId],
-          set: { isInternalTransfer: value, markedByUserId: userId, markedAt: new Date() },
+          set: { isInternalTransfer: value, markedByUserId: userId, markedAt: sql`now()` },
         })
         .returning({ transactionId: internalTransferMark.transactionId });
       return written.length > 0 ? "ok" : "not_found";
@@ -431,7 +437,11 @@ export function createCategorizationRepository(scope: HouseholdScope) {
     // Idempotent within scope (design contract's #16 review, item 6): "ok"
     // whether or not a mark existed, since the outcome a caller cares about
     // ("this transaction now has no mark") already holds either way; only a
-    // transaction outside this household refuses with "not_found".
+    // transaction outside this household refuses with "not_found". The
+    // preliminary scope read only picks the return value; the delete itself
+    // repeats the tenancy predicate via exists(), so an account moved out of
+    // this household between the two queries still refuses the delete
+    // instead of racing it.
     async clearTransferMark(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
       const inScope = await scopedTransactionQuery(db, transactionId).limit(1);
       if (inScope.length === 0) {
@@ -439,7 +449,12 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       }
       await db
         .delete(internalTransferMark)
-        .where(eq(internalTransferMark.transactionId, transactionId));
+        .where(
+          and(
+            eq(internalTransferMark.transactionId, transactionId),
+            exists(scopedTransactionQuery(db, transactionId)),
+          ),
+        );
       return "ok";
     },
   };

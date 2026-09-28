@@ -60,10 +60,12 @@ export type TransactionsPageProps = {
 };
 
 // A total with nothing in it still reads as a full sentence rather than an
-// empty string: it shows zero in whatever currency the month's listed rows
-// actually use, so a household that only ever sees USD accounts doesn't get
-// a stray "R$ 0,00", and only falls back to BRL when there is nothing listed
-// to take a currency from.
+// empty string: it shows zero in whatever currency the rows the totals are
+// computed over actually use (the month's rows for the selected account, not
+// the page's uncategorized-filtered list, design contract's #16 review round
+// 2 item 8), so a household that only ever sees USD accounts doesn't get a
+// stray "R$ 0,00", and only falls back to BRL when there is nothing to take
+// a currency from.
 function fallbackCurrency(rows: readonly { currency: string }[]): string {
   const currencies = [...new Set(rows.map((row) => row.currency))].sort((a, b) =>
     a.localeCompare(b),
@@ -200,7 +202,7 @@ export async function getTransactionsPageProps(
   const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
   const page = Math.min(params.pagina ?? 1, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
-  const currency = fallbackCurrency(listed);
+  const totalsCurrency = fallbackCurrency(monthRows);
 
   return {
     month,
@@ -215,8 +217,8 @@ export async function getTransactionsPageProps(
       amountLabel: summary.totals.map(formatMoney).join(" + "),
     },
     totals: {
-      incomeLabel: amountsLabel(totals.income, currency),
-      spendingLabel: amountsLabel(totals.spending, currency),
+      incomeLabel: amountsLabel(totals.income, totalsCurrency),
+      spendingLabel: amountsLabel(totals.spending, totalsCurrency),
       transferCount: totals.transferCount,
     },
     categoryGroups: taxonomy.categories.map((category) => ({

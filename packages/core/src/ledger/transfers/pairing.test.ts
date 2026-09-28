@@ -1,5 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { pairInternalTransfers, pairingReadRange, type PairableTransaction } from "./pairing";
+import { businessDaysBetween } from "./business-days";
+import {
+  MAX_TRANSFER_BUSINESS_DAYS,
+  pairInternalTransfers,
+  pairingReadRange,
+  type PairableTransaction,
+} from "./pairing";
+
+function addUtcDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+// The farthest date in the given direction still within
+// MAX_TRANSFER_BUSINESS_DAYS business days of start (pairing.ts's own pair
+// rule): a weekend right past the Nth business day keeps counting as that
+// same business-day distance, so this can land several calendar days beyond
+// the Nth weekday itself.
+function farthestWithinBusinessDays(start: string, direction: 1 | -1): string {
+  let offset = 0;
+  while (
+    businessDaysBetween(start, addUtcDays(start, (offset + 1) * direction)) <=
+    MAX_TRANSFER_BUSINESS_DAYS
+  ) {
+    offset += 1;
+  }
+  return addUtcDays(start, offset * direction);
+}
 
 function transaction(overrides: Partial<PairableTransaction> = {}): PairableTransaction {
   return {
@@ -245,7 +272,7 @@ describe("pairInternalTransfers", () => {
       ]);
     });
 
-    it("rejects a CPF that is a household holder but not this specific counterpart's known holder", () => {
+    it("treats a CPF that is a household holder but not this counterpart's known holder as no evidence, not a rejection (design contract's #16 review round 2, item 3)", () => {
       const debit = transaction({
         id: "d1",
         type: "debit",
@@ -263,7 +290,30 @@ describe("pairInternalTransfers", () => {
           [debit, credit],
           new Set(["hash-holder", "hash-other-household-account"]),
         ),
-      ).toEqual([]);
+      ).toEqual([{ debitId: "d1", creditId: "c1", confirmed: false }]);
+    });
+
+    it("confirms a joint account's transfer whose debit leg reports the credit account's other joint holder, not its registered one", () => {
+      const debit = transaction({
+        id: "d1",
+        type: "debit",
+        counterpartDocumentHash: "hash-partner-a",
+        counterpartType: "cpf",
+        accountHolderDocumentHash: "hash-checking-owner",
+      });
+      const credit = transaction({
+        id: "c1",
+        accountId: "checking-2",
+        type: "credit",
+        counterpartDocumentHash: "hash-checking-owner",
+        counterpartType: "cpf",
+        accountHolderDocumentHash: "hash-partner-b",
+      });
+      const pairs = pairInternalTransfers(
+        [debit, credit],
+        new Set(["hash-partner-a", "hash-partner-b"]),
+      );
+      expect(pairs).toEqual([{ debitId: "d1", creditId: "c1", confirmed: true }]);
     });
 
     it("rejects the candidate when either leg's evidence rejects, even if the other leg confirms", () => {
@@ -293,4 +343,15 @@ describe("pairingReadRange", () => {
     expect(padded.from < "2026-09-01").toBe(true);
     expect(padded.to > "2026-09-30").toBe(true);
   });
+
+  it.each(["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25"])(
+    "covers a pair reaching MAX_TRANSFER_BUSINESS_DAYS business days from %s on either side (design contract's #16 review round 2, item 5)",
+    (start) => {
+      const forwardEdge = farthestWithinBusinessDays(start, 1);
+      expect(pairingReadRange({ from: start, to: start }).to >= forwardEdge).toBe(true);
+
+      const backwardEdge = farthestWithinBusinessDays(start, -1);
+      expect(pairingReadRange({ from: start, to: start }).from <= backwardEdge).toBe(true);
+    },
+  );
 });

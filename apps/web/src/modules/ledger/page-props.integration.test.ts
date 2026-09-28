@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { formatMoney } from "@feudo/core";
 
+import { interpolateAll } from "@/lib/interpolate";
 import { householdScope } from "@/modules/households";
 import { bankTransaction } from "@/modules/sync/schema";
 import {
@@ -387,6 +388,43 @@ describe("getTransactionsPageProps (integration)", () => {
     });
   });
 
+  it("falls back a total's currency to the month's rows, not the uncategorized-filtered page list (design contract's #16 review round 2, item 8)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "brl-income",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+            currency: "BRL",
+          }),
+          seedTransaction({
+            providerTransactionId: "usd-unknown",
+            date: "2026-09-06",
+            description: "MISTERIOSO NO EXTERIOR",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -1000,
+            currency: "USD",
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", categoria: "sem" },
+        NOW,
+      );
+
+      expect(props.transactions.map((transaction) => transaction.currency)).toEqual(["USD"]);
+      expect(props.totals.spendingLabel).toBe(formatMoney({ amountCentavos: 0, currency: "BRL" }));
+    });
+  });
+
   it("falls back to BRL when the month has no listed rows at all", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, { household: householdScope(userA.session) });
@@ -704,6 +742,51 @@ describe("getTransactionsPageProps (integration)", () => {
       const confirmed = rowsFor("TRANSFERENCIA 3");
       expect(confirmed).toHaveLength(2);
       expect(confirmed.every((row) => row.categorize.isInternalTransfer)).toBe(true);
+    });
+  });
+
+  // Pins ledger-read.ts's pairingReadRange padding: fails if that pad is
+  // dropped, since the credit leg on 2026-10-01 would then never be read
+  // while rendering September (design contract's #16 review round 2, item 4).
+  it("pairs a debit on the last day of the month with a credit on another household account the next day", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "pad-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-30",
+            description: "TRANSFERENCIA FIM DE MES",
+            type: "debit",
+            amountCentavos: -70000,
+          }),
+          seedTransaction({
+            providerTransactionId: "pad-credit",
+            providerAccountId: "acc-2",
+            date: "2026-10-01",
+            description: "TRANSFERENCIA FIM DE MES",
+            type: "credit",
+            amountCentavos: 70000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      const debitRow = props.transactions.find(
+        (transaction) => transaction.description === "TRANSFERENCIA FIM DE MES",
+      );
+
+      expect(debitRow?.categorize.isInternalTransfer).toBe(true);
+      expect(debitRow?.category?.sourceLabel).toBe(
+        interpolateAll(t.category.transferTooltip.pair, {
+          institution: "Banco Fixture",
+          account: "Poupança",
+          date: "01/10/2026",
+        }),
+      );
+      expect(props.totals.transferCount).toBe(1);
     });
   });
 });

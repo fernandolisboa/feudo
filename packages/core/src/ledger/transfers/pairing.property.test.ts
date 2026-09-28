@@ -35,18 +35,54 @@ const holdersArb = fc.subarray([...HASHES]).map((hashes) => new Set(hashes) as R
 
 type LegEvidence = "confirms" | "rejects" | "none";
 
+// An oracle kept independent of pairing.ts's own legEvidence (design
+// contract's #16 review round 2, item 3): a lookup table built straight from
+// the five boolean facts the prose rule turns on, rather than the same
+// nested-if shape the implementation uses, so a bug shared by both would
+// still show up as a property failure.
+type EvidenceCase = {
+  hashPresent: boolean;
+  otherHolderKnown: boolean;
+  matchesOtherHolder: boolean;
+  isCpf: boolean;
+  inHouseholdSet: boolean;
+};
+
+const EVIDENCE_TABLE: { when: Partial<EvidenceCase>; result: LegEvidence }[] = [
+  { when: { hashPresent: false }, result: "none" },
+  { when: { otherHolderKnown: true, matchesOtherHolder: true }, result: "confirms" },
+  { when: { otherHolderKnown: true, isCpf: false }, result: "none" },
+  { when: { otherHolderKnown: true, isCpf: true, inHouseholdSet: true }, result: "none" },
+  { when: { otherHolderKnown: true, isCpf: true, inHouseholdSet: false }, result: "rejects" },
+  { when: { otherHolderKnown: false, inHouseholdSet: true }, result: "confirms" },
+  { when: { otherHolderKnown: false, inHouseholdSet: false }, result: "none" },
+];
+
+function matches(when: Partial<EvidenceCase>, candidate: EvidenceCase): boolean {
+  return (Object.keys(when) as (keyof EvidenceCase)[]).every((key) => when[key] === candidate[key]);
+}
+
+function decisionTableEvidence(candidate: EvidenceCase): LegEvidence {
+  const row = EVIDENCE_TABLE.find((entry) => matches(entry.when, candidate));
+  if (!row) {
+    throw new Error("no decision-table row matches this evidence case");
+  }
+  return row.result;
+}
+
 function legEvidence(
   leg: PairableTransaction,
   otherAccountHolderHash: string | null,
   holderDocumentHashes: ReadonlySet<string>,
 ): LegEvidence {
   const h = leg.counterpartDocumentHash;
-  if (h === null) return "none";
-  if (otherAccountHolderHash !== null) {
-    if (h === otherAccountHolderHash) return "confirms";
-    return leg.counterpartType === "cpf" ? "rejects" : "none";
-  }
-  return holderDocumentHashes.has(h) ? "confirms" : "none";
+  return decisionTableEvidence({
+    hashPresent: h !== null,
+    otherHolderKnown: otherAccountHolderHash !== null,
+    matchesOtherHolder: h !== null && h === otherAccountHolderHash,
+    isCpf: leg.counterpartType === "cpf",
+    inHouseholdSet: h !== null && holderDocumentHashes.has(h),
+  });
 }
 
 describe("pairInternalTransfers property tests", () => {

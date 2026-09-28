@@ -1,16 +1,29 @@
 import { businessDaysBetween } from "./business-days";
-import { isoDateToUtcMidnight, padDayRange, type IsoDateRange } from "../year-month";
+import { calendarDaysBetween, padDayRange, type IsoDateRange } from "../year-month";
 import type { TransactionDirection } from "../categories/taxonomy";
 
 export const MAX_TRANSFER_BUSINESS_DAYS = 2;
 
-// businessDaysBetween counts weekdays only (no holiday calendar), so the read
-// window a caller pads by must cover more than the worst-case weekday span
-// for MAX_TRANSFER_BUSINESS_DAYS, plus a margin for a bank holiday sitting
-// next to a weekend: derived from the same constant so the pad and the pair
-// rule's own span can never drift apart.
-const PAIRING_READ_PAD_MARGIN_DAYS = 5;
-export const PAIRING_READ_PAD_DAYS = MAX_TRANSFER_BUSINESS_DAYS + PAIRING_READ_PAD_MARGIN_DAYS;
+const BUSINESS_DAYS_PER_WEEK = 5;
+const WEEKEND_DAYS = 2;
+
+// businessDaysBetween counts weekdays only (design contract decision 2: no
+// holiday calendar), so the worst calendar span for MAX_TRANSFER_BUSINESS_DAYS
+// business days is whatever count starts right before a weekend: each full
+// week of business days still spans 7 calendar days, and a partial week adds
+// its own weekend on top. The read window a caller pads by must cover exactly
+// that worst case on each side, derived from the same constant, so the pad
+// and the pair rule's own span can never drift apart.
+function worstCaseCalendarSpan(businessDays: number): number {
+  const fullWeeks = Math.floor(businessDays / BUSINESS_DAYS_PER_WEEK);
+  const remainder = businessDays % BUSINESS_DAYS_PER_WEEK;
+  return (
+    fullWeeks * (BUSINESS_DAYS_PER_WEEK + WEEKEND_DAYS) +
+    (remainder === 0 ? 0 : remainder + WEEKEND_DAYS)
+  );
+}
+
+export const PAIRING_READ_PAD_DAYS = worstCaseCalendarSpan(MAX_TRANSFER_BUSINESS_DAYS);
 
 export function pairingReadRange(range: IsoDateRange): IsoDateRange {
   return padDayRange(range, PAIRING_READ_PAD_DAYS);
@@ -44,21 +57,19 @@ type CandidateEdge = {
   calendarDays: number;
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function calendarDaysBetween(a: string, b: string): number {
-  return Math.abs(isoDateToUtcMidnight(a) - isoDateToUtcMidnight(b)) / DAY_MS;
-}
-
 type LegEvidence = "confirms" | "rejects" | "none";
 
 // One leg's answer to "does this transaction's counterpart document point at
-// the other leg's account?" (design contract's #16 review, item 2). h is
-// this leg's counterpart hash, t its type, H the other leg's own account
-// holder hash: a bank that omits taxNumber leaves H null for a real
-// household partner, and a card bill's counterpart is the issuer's CNPJ, so
-// neither can reject on its own — only a CPF that provably belongs to
-// someone else (h present, H known, h !== H, t === "cpf") does.
+// the other leg's account?" (design contract's #16 review, item 2, refined by
+// round 2 item 3). h is this leg's counterpart hash, t its type, H the other
+// leg's own account holder hash: a bank that omits taxNumber leaves H null
+// for a real household partner, and a card bill's counterpart is the
+// issuer's CNPJ, so neither can reject on its own. Nor can a CPF that is
+// itself a household holder: a joint account is often reported with only one
+// of its two owners as the account's own holder, so the other owner's CPF
+// turning up as h (h !== H) still isn't evidence of a stranger — only a CPF
+// that belongs to no household holder at all (h present, H known, h !== H,
+// t === "cpf", h not in holderDocumentHashes) does.
 function legEvidence(
   leg: PairableTransaction,
   otherAccountHolderHash: string | null,
@@ -72,7 +83,10 @@ function legEvidence(
     if (h === otherAccountHolderHash) {
       return "confirms";
     }
-    return leg.counterpartType === "cpf" ? "rejects" : "none";
+    if (leg.counterpartType === "cpf") {
+      return holderDocumentHashes.has(h) ? "none" : "rejects";
+    }
+    return "none";
   }
   return holderDocumentHashes.has(h) ? "confirms" : "none";
 }

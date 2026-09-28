@@ -137,7 +137,16 @@ describe("getCategoriesPageProps (integration)", () => {
     });
   });
 
-  it("keeps a recurring own-account transfer pair out of fixed-cost suggestions, even when one pair's other leg falls just outside the 3-month window", async () => {
+  // Padding's own load-bearing pin lives in page-props.integration.test.ts
+  // ("pairs a debit on the last day of the month..."): with pairing intact,
+  // June's and August's debits below stay unpaired without the pad and land
+  // on a different subcategory than July's (still paired, both legs inside
+  // the window either way), so this test alone cannot tell a missing pad
+  // apart from a correct one. What it does pin: if pairing were broken
+  // outright, all three months would collapse onto the same provider-mapped
+  // "food.groceries" subcategory and this recurring streak would wrongly
+  // surface as a suggestion.
+  it("keeps a recurring own-account transfer pair out of fixed-cost suggestions across three months", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, {
         household: householdScope(userA.session),
