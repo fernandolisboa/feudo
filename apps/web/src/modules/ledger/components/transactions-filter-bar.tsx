@@ -74,15 +74,17 @@ export function TransactionsFilterBar({
         </div>
       </form>
       <div className="grid grid-cols-2 gap-2 md:contents">
-        <AccountFilterSelect
-          month={month}
-          accounts={accounts}
-          selectedAccountId={selectedAccountId}
-          uncategorizedOnly={uncategorizedOnly}
-          category={selectedCategory}
-          kind={selectedKind}
-          search={searchQuery}
-        />
+        <div className="col-span-2 md:contents">
+          <AccountFilterSelect
+            month={month}
+            accounts={accounts}
+            selectedAccountId={selectedAccountId}
+            uncategorizedOnly={uncategorizedOnly}
+            category={selectedCategory}
+            kind={selectedKind}
+            search={searchQuery}
+          />
+        </div>
         <KindFilterSelect
           month={month}
           accountId={selectedAccountId}

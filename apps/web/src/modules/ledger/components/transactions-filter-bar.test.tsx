@@ -45,6 +45,12 @@ describe("TransactionsFilterBar", () => {
       search: null,
     }).filter(([name]) => name !== "busca" && name !== "pagina");
     expect(hiddenInputs).toEqual(expected);
+    expect(hiddenInputs).toEqual([
+      ["mes", "2026-09"],
+      ["conta", "acc-1"],
+      ["categoria", "housing"],
+      ["tipo", "fixed"],
+    ]);
     expect(screen.getByLabelText(t.search.label).getAttribute("value")).toBe("condominio");
   });
 

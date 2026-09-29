@@ -163,6 +163,35 @@ describe("TransactionsView", () => {
     ).not.toBeNull();
   });
 
+  it("uses the 'found' headline, not the uncategorized one, when uncategorizedOnly is combined with a kind or search filter", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          selectedKind: "income",
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Nenhuma transação encontrada em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("keeps the uncategorized headline when uncategorizedOnly is the only active filter, even with a zero total", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, uncategorizedOnly: true, total: 0 })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Tudo categorizado em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
   it("shows the 'no matches' empty state, with the filter bar's own clear-filters link, when a category/kind/search filter empties an otherwise non-empty month", () => {
     render(
       <TransactionsView
@@ -180,6 +209,25 @@ describe("TransactionsView", () => {
       screen.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
     ).not.toBeNull();
     expect(screen.getByRole("link", { name: t.filters.clear })).not.toBeNull();
+  });
+
+  it("shows the 'no matches' empty state, not the uncategorized silence, when uncategorizedOnly is combined with a kind filter", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          selectedKind: "income",
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).not.toBeNull();
   });
 
   it("shows nothing under the headline when the uncategorized-only filter alone empties an otherwise non-empty month", () => {

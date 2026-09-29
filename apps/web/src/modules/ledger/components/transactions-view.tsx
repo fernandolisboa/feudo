@@ -19,10 +19,10 @@ function headline(
   uncategorizedOnly: boolean,
   hasOtherFilters: boolean,
 ): string {
-  const copy = uncategorizedOnly
-    ? t.uncategorizedHeadline
-    : hasOtherFilters
-      ? t.headline.found
+  const copy = hasOtherFilters
+    ? t.headline.found
+    : uncategorizedOnly
+      ? t.uncategorizedHeadline
       : t.headline;
   if (total === 0) {
     return interpolate(copy.none, "{month}", monthLabel);
