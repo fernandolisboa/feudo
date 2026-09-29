@@ -7,7 +7,7 @@ import { signUpVerifyAndSignIn, uniqueEmail } from "./support/auth";
 // 2026 (src/modules/sync/provider/fake-fixtures.ts).
 const FAKE_ITEM_BANCO_FIXTURE = "0f1e2d3c-4b5a-4a6b-8c7d-8e9f0a1b2c3d";
 
-test("transactions synced on connect, by month and by account", async ({
+test("transactions synced on connect, by month, account, search, category and kind", async ({
   page,
   request,
   baseURL,
@@ -54,6 +54,44 @@ test("transactions synced on connect, by month and by account", async ({
   await expect(page.getByRole("row", { name: /COMPRA CARTAO MERCADO/ })).toContainText(
     "-R$ 212,30",
   );
+
+  const search = page.getByRole("searchbox", { name: "Buscar transações" });
+  await search.fill("condomínio");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/busca=condom/);
+  await expect(
+    page.getByRole("heading", { name: "1 transação encontrada em setembro de 2026" }),
+  ).toBeVisible();
+  await expect(page.getByRole("row", { name: /PIX ENVIADO CONDOMINIO/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /PIX RECEBIDO EMPRESA FIXTURE/ })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Limpar filtros" }).click();
+  await expect(page).toHaveURL(/mes=2026-09$/);
+  await expect(
+    page.getByRole("heading", { name: "3 transações em setembro de 2026" }),
+  ).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Tipo" }).click();
+  await page.getByRole("option", { name: "Renda" }).click();
+  await expect(page).toHaveURL(/tipo=income/);
+  await expect(
+    page.getByRole("heading", { name: "1 transação encontrada em setembro de 2026" }),
+  ).toBeVisible();
+  await expect(page.getByRole("row", { name: /PIX RECEBIDO EMPRESA FIXTURE/ })).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Categoria" }).click();
+  await page.getByRole("option", { name: "Moradia" }).click();
+  await expect(page).toHaveURL(/categoria=housing&tipo=income/);
+  await expect(
+    page.getByRole("heading", { name: "Nenhuma transação encontrada em setembro de 2026" }),
+  ).toBeVisible();
+  await expect(page.getByText("Nada em setembro de 2026 bate com esses filtros.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Limpar filtros" }).click();
+  await expect(page).toHaveURL(/mes=2026-09$/);
+  await expect(
+    page.getByRole("heading", { name: "3 transações em setembro de 2026" }),
+  ).toBeVisible();
 
   await page.getByRole("combobox", { name: "Conta" }).click();
   await page.getByRole("option", { name: "Banco Fixture · Poupança" }).click();

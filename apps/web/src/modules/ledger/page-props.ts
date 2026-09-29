@@ -1,7 +1,9 @@
 import {
+  categoryOf,
   formatMoney,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
+  normalizeDescription,
   rulePatternFromDescription,
   shiftYearMonth,
   summarizeLedger,
@@ -10,6 +12,9 @@ import {
   yearMonthOf,
   type CurrencyAmount,
   type InternalTransfer,
+  type Kind,
+  type KindContext,
+  type ProductCategoryId,
   type YearMonth,
 } from "@feudo/core";
 
@@ -21,6 +26,7 @@ import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modul
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
+import { UNCATEGORIZED_FILTER } from "./href";
 import { readHouseholdLedger } from "./ledger-read";
 import {
   createHouseholdLedgerRepository,
@@ -41,6 +47,8 @@ export type UncategorizedSummaryView = { count: number; amountLabel: string };
 
 export type TotalsView = { incomeLabel: string; spendingLabel: string; transferCount: number };
 
+export type CategoryFilterOption = { id: ProductCategoryId; label: string };
+
 export type TransactionsPageProps = {
   month: YearMonth;
   monthLabel: string;
@@ -49,6 +57,11 @@ export type TransactionsPageProps = {
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
+  selectedCategory: ProductCategoryId | null;
+  categoryFilterOptions: CategoryFilterOption[];
+  selectedKind: Kind | null;
+  searchQuery: string | null;
+  monthHasTransactions: boolean;
   uncategorized: UncategorizedSummaryView;
   totals: TotalsView;
   categoryGroups: SubcategoryOptionGroup[];
@@ -70,6 +83,28 @@ function fallbackCurrency(rows: readonly { currency: string }[]): string {
     a.localeCompare(b),
   );
   return currencies[0] ?? HOUSEHOLD_CURRENCY;
+}
+
+// Household subcategories count under their product parent (categoryOf
+// resolves both), so a household's own "Cinema" subcategory still shows up
+// when filtering by "Leisure".
+function matchesCategory(
+  row: ResolvedLedgerRow,
+  category: ProductCategoryId | null,
+  kinds: KindContext,
+): boolean {
+  if (category === null) return true;
+  return (
+    row.categorization !== null && categoryOf(row.categorization.subcategory, kinds) === category
+  );
+}
+
+function matchesKind(row: ResolvedLedgerRow, kind: Kind | null): boolean {
+  return kind === null || row.kind === kind;
+}
+
+function matchesSearch(row: ResolvedLedgerRow, normalizedQuery: string): boolean {
+  return normalizedQuery === "" || normalizeDescription(row.description).includes(normalizedQuery);
 }
 
 function amountsLabel(amounts: readonly CurrencyAmount[], currency: string): string {
@@ -173,7 +208,18 @@ export async function getTransactionsPageProps(
   const selectedAccountId = accounts.some((account) => account.id === params.conta)
     ? (params.conta ?? null)
     : null;
-  const uncategorizedOnly = params.categoria !== undefined;
+  const uncategorizedOnly = params.categoria === UNCATEGORIZED_FILTER;
+  const selectedCategory =
+    params.categoria !== undefined && params.categoria !== UNCATEGORIZED_FILTER
+      ? params.categoria
+      : null;
+  const selectedKind = params.tipo ?? null;
+  const rawSearch = params.busca && params.busca.length > 0 ? params.busca : null;
+  const normalizedSearch = rawSearch !== null ? normalizeDescription(rawSearch) : "";
+  // A query that normalizes to nothing (all punctuation, say) is the same as
+  // no search at all, so it neither filters the rows below nor flips the
+  // view into its "found" headline or the "clear filters" affordance.
+  const searchQuery = normalizedSearch !== "" ? rawSearch : null;
 
   const monthRange = yearMonthDayRange(month);
   const {
@@ -190,16 +236,27 @@ export async function getTransactionsPageProps(
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
+  // Account, category, kind and search combine with AND; the uncategorized
+  // filter (`categoria=sem`) is applied only to `listed`, not here, so the
+  // totals line keeps excluding uncategorized rows from no total regardless
+  // of whether that filter is active (design contract's #16 review, item 8,
+  // extended by this ticket's totals rule).
+  const filteredRows = monthRows.filter(
+    (row) =>
+      matchesCategory(row, selectedCategory, kinds) &&
+      matchesKind(row, selectedKind) &&
+      matchesSearch(row, normalizedSearch),
+  );
   const totals = summarizeLedger(
-    monthRows.map((row) => ({
+    filteredRows.map((row) => ({
       kind: row.kind,
       type: row.type,
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
   const listed = uncategorizedOnly
-    ? monthRows.filter((row) => row.categorization === null)
-    : monthRows;
+    ? filteredRows.filter((row) => row.categorization === null)
+    : filteredRows;
   const total = listed.length;
   const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
   const page = Math.min(params.pagina ?? 1, lastPage);
@@ -214,6 +271,14 @@ export async function getTransactionsPageProps(
     accounts,
     selectedAccountId,
     uncategorizedOnly,
+    selectedCategory,
+    categoryFilterOptions: taxonomy.categories.map((category) => ({
+      id: category.categoryId,
+      label: category.label,
+    })),
+    selectedKind,
+    searchQuery,
+    monthHasTransactions: monthRows.length > 0,
     uncategorized: {
       count: summary.count,
       amountLabel: summary.totals.map(formatMoney).join(" + "),

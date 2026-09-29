@@ -171,6 +171,11 @@ const en = {
     none: "No transactions in {month}",
     one: "1 transaction in {month}",
     many: "{count} transactions in {month}",
+    found: {
+      none: "No transactions found in {month}",
+      one: "1 transaction found in {month}",
+      many: "{count} transactions found in {month}",
+    },
   },
   monthSwitcher: {
     previous: "Previous month",
@@ -179,6 +184,22 @@ const en = {
   accountFilter: {
     label: "Account",
     all: "All accounts",
+  },
+  categoryFilter: {
+    label: "Category",
+    all: "All categories",
+    uncategorized: "No category",
+  },
+  kindFilter: {
+    label: "Kind",
+    all: "All kinds",
+  },
+  search: {
+    label: "Search transactions",
+    placeholder: "Search by description",
+  },
+  filters: {
+    clear: "Clear filters",
   },
   table: {
     date: "Date",
@@ -191,6 +212,7 @@ const en = {
     noAccounts: "Connect a bank to see the household's transactions here.",
     connectAction: "Connect bank",
     noTransactions: "Nothing recorded in {month}.",
+    noMatches: "Nothing in {month} matches these filters.",
   },
   pagination: {
     label: "Pages",
@@ -364,6 +386,11 @@ const ptBR = {
     none: "Nenhuma transação em {month}",
     one: "1 transação em {month}",
     many: "{count} transações em {month}",
+    found: {
+      none: "Nenhuma transação encontrada em {month}",
+      one: "1 transação encontrada em {month}",
+      many: "{count} transações encontradas em {month}",
+    },
   },
   monthSwitcher: {
     previous: "Mês anterior",
@@ -372,6 +399,22 @@ const ptBR = {
   accountFilter: {
     label: "Conta",
     all: "Todas as contas",
+  },
+  categoryFilter: {
+    label: "Categoria",
+    all: "Todas as categorias",
+    uncategorized: "Sem categoria",
+  },
+  kindFilter: {
+    label: "Tipo",
+    all: "Todos os tipos",
+  },
+  search: {
+    label: "Buscar transações",
+    placeholder: "Buscar pela descrição",
+  },
+  filters: {
+    clear: "Limpar filtros",
   },
   table: {
     date: "Data",
@@ -384,6 +427,7 @@ const ptBR = {
     noAccounts: "Conecte um banco para ver as transações da casa aqui.",
     connectAction: "Conectar banco",
     noTransactions: "Nada registrado em {month}.",
+    noMatches: "Nada em {month} bate com esses filtros.",
   },
   pagination: {
     label: "Páginas",

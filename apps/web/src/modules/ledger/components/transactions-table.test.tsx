@@ -69,4 +69,31 @@ describe("TransactionsTable", () => {
       `${t.subcategories["food.groceries"]} · ${t.categories.food}`,
     );
   });
+
+  it("folds the date, category and account into one line under the description, for the mobile layout", () => {
+    const row = buildRow({
+      date: "2026-09-02",
+      category: {
+        label: t.subcategories["food.groceries"],
+        categoryLabel: t.categories.food,
+        sourceLabel: t.category.sources.provider,
+      },
+    });
+
+    render(<TransactionsTable transactions={[row]} groups={[]} />);
+
+    expect(
+      screen.getByText(
+        `02/09 · ${t.subcategories["food.groceries"]} · Banco Fixture · Conta corrente`,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("shows 'Sem categoria' in the mobile meta line for an uncategorized row", () => {
+    render(<TransactionsTable transactions={[buildRow({ category: null })]} groups={[]} />);
+
+    expect(
+      screen.getByText(`15/09 · ${t.category.uncategorized} · Banco Fixture · Conta corrente`),
+    ).not.toBeNull();
+  });
 });

@@ -4,6 +4,7 @@ import { encodeSubcategoryRef } from "./subcategory-ref";
 import {
   categorizeTransactionFormSchema,
   overviewSearchParamsSchema,
+  SEARCH_QUERY_MAX_LENGTH,
   transactionsSearchParamsSchema,
 } from "./validation";
 
@@ -80,6 +81,46 @@ describe("month search params bounds", () => {
     expect(overviewSearchParamsSchema.parse({ mes: "1970-01" })).toEqual({ mes: "1970-01" });
     expect(transactionsSearchParamsSchema.parse({ mes: "2026-09" })).toMatchObject({
       mes: "2026-09",
+    });
+  });
+});
+
+describe("transactionsSearchParamsSchema filters", () => {
+  it("trims a search query and truncates it instead of rejecting it", () => {
+    expect(transactionsSearchParamsSchema.parse({ busca: "  mercado  " })).toMatchObject({
+      busca: "mercado",
+    });
+    const long = "a".repeat(SEARCH_QUERY_MAX_LENGTH + 20);
+    expect(transactionsSearchParamsSchema.parse({ busca: long }).busca).toBe(
+      long.slice(0, SEARCH_QUERY_MAX_LENGTH),
+    );
+  });
+
+  it("falls back to undefined for a non-string search query", () => {
+    expect(transactionsSearchParamsSchema.parse({ busca: 42 })).toMatchObject({ busca: undefined });
+  });
+
+  it("accepts the uncategorized marker or a top-level product category for categoria", () => {
+    expect(transactionsSearchParamsSchema.parse({ categoria: "sem" })).toMatchObject({
+      categoria: "sem",
+    });
+    expect(transactionsSearchParamsSchema.parse({ categoria: "housing" })).toMatchObject({
+      categoria: "housing",
+    });
+  });
+
+  it("falls back to undefined for an unknown categoria value", () => {
+    expect(transactionsSearchParamsSchema.parse({ categoria: "castle" })).toMatchObject({
+      categoria: undefined,
+    });
+  });
+
+  it("accepts a known kind for tipo and falls back to undefined otherwise", () => {
+    expect(transactionsSearchParamsSchema.parse({ tipo: "variable" })).toMatchObject({
+      tipo: "variable",
+    });
+    expect(transactionsSearchParamsSchema.parse({ tipo: "unknown" })).toMatchObject({
+      tipo: undefined,
     });
   });
 });

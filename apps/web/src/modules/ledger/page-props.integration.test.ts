@@ -968,4 +968,304 @@ describe("getTransactionsPageProps (integration)", () => {
       ).toBe("2026-09-01");
     });
   });
+
+  it("filters by a search query, matching accent- and case-insensitively against the description", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "search-1",
+            date: "2026-09-05",
+            description: "PIX ENVIADO CONDOMINIO",
+            type: "debit",
+            amountCentavos: -80000,
+          }),
+          seedTransaction({
+            providerTransactionId: "search-2",
+            date: "2026-09-06",
+            description: "COMPRA NO MERCADO",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", busca: "condomínio" },
+        NOW,
+      );
+
+      expect(props.total).toBe(1);
+      expect(props.transactions[0]?.description).toBe("PIX ENVIADO CONDOMINIO");
+      expect(props.searchQuery).toBe("condomínio");
+    });
+  });
+
+  it("treats a search query that normalizes to nothing as no search at all", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ date: "2026-09-05" })],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", busca: "!!!" },
+        NOW,
+      );
+
+      expect(props.total).toBe(1);
+      expect(props.searchQuery).toBeNull();
+    });
+  });
+
+  it("filters by a top-level category, counting a household subcategory under its product parent", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "cat-house",
+            date: "2026-09-05",
+            description: "PIX CINEMA",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -3000,
+          }),
+          seedTransaction({
+            providerTransactionId: "cat-other",
+            date: "2026-09-06",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+        ],
+      });
+
+      const categorization = createCategorizationRepository(householdScope(userA.session));
+      const added = await categorization.addHouseholdSubcategory(db, {
+        categoryId: "leisure",
+        name: "Cinema",
+        kind: "variable",
+      });
+      if (added.status !== "ok") {
+        throw new Error("expected the household subcategory to be created");
+      }
+      const cinemaTransactionId = await transactionIdFor(db, "cat-house");
+      await categorization.setManual(
+        db,
+        cinemaTransactionId,
+        { type: "household", id: added.id },
+        userA.id,
+      );
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", categoria: "leisure" },
+        NOW,
+      );
+
+      expect(props.total).toBe(1);
+      expect(props.transactions[0]?.description).toBe("PIX CINEMA");
+    });
+  });
+
+  it("filters by kind", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "kind-income",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+          seedTransaction({
+            providerTransactionId: "kind-variable",
+            date: "2026-09-06",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", tipo: "income" },
+        NOW,
+      );
+
+      expect(props.total).toBe(1);
+      expect(props.transactions[0]?.description).toBe("SALARIO EMPRESA X");
+    });
+  });
+
+  it("keeps the totals line following category, kind and search filters, but never the uncategorized-only filter", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "totals-income",
+            date: "2026-09-05",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+          seedTransaction({
+            providerTransactionId: "totals-variable",
+            date: "2026-09-06",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -20000,
+          }),
+          seedTransaction({
+            providerTransactionId: "totals-fixed",
+            date: "2026-09-07",
+            description: "ALUGUEL APARTAMENTO",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -150000,
+          }),
+          seedTransaction({
+            providerTransactionId: "totals-uncategorized",
+            date: "2026-09-08",
+            description: "TRANSACAO MISTERIOSA",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -900,
+          }),
+        ],
+      });
+
+      const categorization = createCategorizationRepository(householdScope(userA.session));
+      await categorization.saveRule(
+        db,
+        {
+          pattern: "ALUGUEL",
+          direction: "debit",
+          subcategory: { type: "product", id: "housing.rent" },
+        },
+        userA.id,
+      );
+
+      const variableOnly = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", tipo: "variable" },
+        NOW,
+      );
+      expect(variableOnly.totals.spendingLabel).toBe(
+        formatMoney({ amountCentavos: 20000, currency: "BRL" }),
+      );
+      expect(variableOnly.totals.incomeLabel).toBe(
+        formatMoney({ amountCentavos: 0, currency: "BRL" }),
+      );
+
+      const uncategorizedAndVariable = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", categoria: "sem", tipo: "variable" },
+        NOW,
+      );
+      expect(uncategorizedAndVariable.total).toBe(0);
+      expect(uncategorizedAndVariable.totals.spendingLabel).toBe(
+        formatMoney({ amountCentavos: 20000, currency: "BRL" }),
+      );
+    });
+  });
+
+  it("paginates the filtered result, not the whole month", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const matching = Array.from({ length: TRANSACTIONS_PAGE_SIZE + 1 }, (_, index) =>
+        seedTransaction({
+          providerTransactionId: `match-${String(index)}`,
+          date: "2026-09-10",
+          description: `COMPRA CARTAO MERCADO ${String(index)}`,
+          providerCategory: "Groceries",
+          type: "debit",
+          amountCentavos: -(1000 + index),
+        }),
+      );
+      const nonMatching = seedTransaction({
+        providerTransactionId: "non-match",
+        date: "2026-09-11",
+        description: "SALARIO EMPRESA X",
+        providerCategory: "Salary",
+        type: "credit",
+        amountCentavos: 500000,
+      });
+
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [...matching, nonMatching],
+      });
+
+      const page1 = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", busca: "mercado" },
+        NOW,
+      );
+      expect(page1.total).toBe(TRANSACTIONS_PAGE_SIZE + 1);
+      expect(page1.transactions).toHaveLength(TRANSACTIONS_PAGE_SIZE);
+      expect(page1.hasMore).toBe(true);
+
+      const page2 = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", busca: "mercado", pagina: "2" },
+        NOW,
+      );
+      expect(page2.transactions).toHaveLength(1);
+      expect(page2.hasMore).toBe(false);
+    });
+  });
+
+  it("never lets another household's transactions leak through a search, category or kind filter", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "iso-a",
+            date: "2026-09-10",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+        ],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "household-b-item",
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "iso-b",
+            date: "2026-09-11",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 999999,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-09", busca: "salario", tipo: "income", categoria: "income" },
+        NOW,
+      );
+
+      expect(props.total).toBe(1);
+      expect(props.transactions[0]?.amountCentavos).toBe(500000);
+    });
+  });
 });

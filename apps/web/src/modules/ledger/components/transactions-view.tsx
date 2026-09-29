@@ -8,13 +8,22 @@ import { interpolate } from "@/lib/interpolate";
 
 import { transactionsHref } from "../href";
 import type { TransactionsPageProps } from "../page-props";
-import { AccountFilterSelect } from "./account-filter-select";
 import { MonthSwitcher } from "./month-switcher";
+import { TransactionsFilterBar } from "./transactions-filter-bar";
 import { TransactionsTable } from "./transactions-table";
 import { t } from "../strings";
 
-function headline(total: number, monthLabel: string, uncategorizedOnly: boolean): string {
-  const copy = uncategorizedOnly ? t.uncategorizedHeadline : t.headline;
+function headline(
+  total: number,
+  monthLabel: string,
+  uncategorizedOnly: boolean,
+  hasOtherFilters: boolean,
+): string {
+  const copy = uncategorizedOnly
+    ? t.uncategorizedHeadline
+    : hasOtherFilters
+      ? t.headline.found
+      : t.headline;
   if (total === 0) {
     return interpolate(copy.none, "{month}", monthLabel);
   }
@@ -56,6 +65,11 @@ export function TransactionsView({
   accounts,
   selectedAccountId,
   uncategorizedOnly,
+  selectedCategory,
+  categoryFilterOptions,
+  selectedKind,
+  searchQuery,
+  monthHasTransactions,
   uncategorized,
   totals,
   categoryGroups,
@@ -64,11 +78,20 @@ export function TransactionsView({
   page,
   hasMore,
 }: TransactionsPageProps) {
+  const hasOtherFilters =
+    selectedCategory !== null || selectedKind !== null || searchQuery !== null;
+  const activeFilters = {
+    uncategorizedOnly,
+    category: selectedCategory,
+    kind: selectedKind,
+    search: searchQuery,
+  };
+
   return (
     <>
       <PageHeader
         overline={`${t.overline} · ${monthLabel}`}
-        title={headline(total, monthLabel, uncategorizedOnly)}
+        title={headline(total, monthLabel, uncategorizedOnly, hasOtherFilters)}
         actions={
           <>
             <MonthSwitcher
@@ -77,7 +100,7 @@ export function TransactionsView({
                 month: previousMonth,
                 accountId: selectedAccountId,
                 page: 1,
-                uncategorizedOnly,
+                ...activeFilters,
               })}
               nextHref={
                 nextMonth
@@ -85,19 +108,11 @@ export function TransactionsView({
                       month: nextMonth,
                       accountId: selectedAccountId,
                       page: 1,
-                      uncategorizedOnly,
+                      ...activeFilters,
                     })
                   : null
               }
             />
-            {accounts.length > 0 ? (
-              <AccountFilterSelect
-                month={month}
-                accounts={accounts}
-                selectedAccountId={selectedAccountId}
-                uncategorizedOnly={uncategorizedOnly}
-              />
-            ) : null}
             <Button variant="ghost" size="sm" render={<Link href="/categorias" />}>
               <Tags className="size-4" />
               {t.categoriesLink}
@@ -105,6 +120,18 @@ export function TransactionsView({
           </>
         }
       />
+      {accounts.length > 0 ? (
+        <TransactionsFilterBar
+          month={month}
+          accounts={accounts}
+          selectedAccountId={selectedAccountId}
+          uncategorizedOnly={uncategorizedOnly}
+          selectedCategory={selectedCategory}
+          categoryFilterOptions={categoryFilterOptions}
+          selectedKind={selectedKind}
+          searchQuery={searchQuery}
+        />
+      ) : null}
       {accounts.length > 0 ? (
         <p className="text-muted-foreground mb-3 text-[13px] tabular-nums">{totalsLine(totals)}</p>
       ) : null}
@@ -120,6 +147,7 @@ export function TransactionsView({
                     month,
                     accountId: selectedAccountId,
                     page: 1,
+                    ...activeFilters,
                     uncategorizedOnly: true,
                   })}
                 />
@@ -132,27 +160,37 @@ export function TransactionsView({
           {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
         </Notice>
       ) : null}
-      {uncategorizedOnly ? (
-        <p className="mb-4 text-[13px]">
-          <Link
-            className="text-brand underline-offset-4 hover:underline"
-            href={transactionsHref({
-              month,
-              accountId: selectedAccountId,
-              page: 1,
-              uncategorizedOnly: false,
-            })}
-          >
-            {t.uncategorized.showAll}
-          </Link>
-        </p>
-      ) : null}
       {accounts.length === 0 ? (
         <div className="flex flex-col items-start gap-3">
           <p className="font-heading text-[18px]">{t.empty.noAccounts}</p>
           <Button render={<Link href="/conectar-banco" />}>
             <Landmark className="size-4" />
             {t.empty.connectAction}
+          </Button>
+        </div>
+      ) : transactions.length === 0 && hasOtherFilters && monthHasTransactions ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="font-heading text-[18px]">
+            {interpolate(t.empty.noMatches, "{month}", monthLabel)}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <Link
+                href={transactionsHref({
+                  month,
+                  accountId: null,
+                  page: 1,
+                  uncategorizedOnly: false,
+                  category: null,
+                  kind: null,
+                  search: null,
+                })}
+              />
+            }
+          >
+            {t.filters.clear}
           </Button>
         </div>
       ) : transactions.length === 0 ? (
@@ -181,7 +219,7 @@ export function TransactionsView({
                           month,
                           accountId: selectedAccountId,
                           page: page - 1,
-                          uncategorizedOnly,
+                          ...activeFilters,
                         })}
                       />
                     }
@@ -199,7 +237,7 @@ export function TransactionsView({
                           month,
                           accountId: selectedAccountId,
                           page: page + 1,
-                          uncategorizedOnly,
+                          ...activeFilters,
                         })}
                       />
                     }

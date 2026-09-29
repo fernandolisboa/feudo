@@ -23,6 +23,11 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     accounts: [],
     selectedAccountId: null,
     uncategorizedOnly: false,
+    selectedCategory: null,
+    categoryFilterOptions: [],
+    selectedKind: null,
+    searchQuery: null,
+    monthHasTransactions: true,
     uncategorized: { count: 0, amountLabel: "R$ 0,00" },
     totals: { incomeLabel: "R$ 0,00", spendingLabel: "R$ 0,00", transferCount: 0 },
     categoryGroups: [],
@@ -117,5 +122,60 @@ describe("TransactionsView", () => {
     render(<TransactionsView {...buildProps({ accounts: [] })} />);
 
     expect(screen.queryByText(/^Renda/)).toBeNull();
+  });
+
+  it("uses the 'found' headline once a category, kind or search filter is active", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, selectedKind: "income", total: 1 })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "1 transação encontrada em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("keeps the plain headline when only the account filter is active", () => {
+    render(
+      <TransactionsView {...buildProps({ accounts: oneAccount, selectedAccountId: "acc-1" })} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Nenhuma transação em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("shows the 'no matches' empty state and a clear-filters action when a filter empties an otherwise non-empty month", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          selectedKind: "income",
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Nada em setembro de 2026 bate com esses filtros.")).not.toBeNull();
+    expect(screen.getAllByRole("link", { name: t.filters.clear }).length).toBeGreaterThan(0);
+  });
+
+  it("shows the plain 'nothing recorded' empty state when the month itself has no transactions, even with a filter set", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          selectedKind: "income",
+          monthHasTransactions: false,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Nada registrado em setembro de 2026.")).not.toBeNull();
   });
 });

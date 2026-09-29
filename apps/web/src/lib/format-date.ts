@@ -16,3 +16,8 @@ export function formatIsoDate(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
   return `${day ?? ""}/${month ?? ""}/${year ?? ""}`;
 }
+
+export function formatIsoDateShort(isoDate: string): string {
+  const [, month, day] = isoDate.split("-");
+  return `${day ?? ""}/${month ?? ""}`;
+}
