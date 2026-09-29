@@ -5,7 +5,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
 import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import { transactionsHref, UNCATEGORIZED_FILTER } from "../href";
+import { transactionsHref, transactionsRouteParams } from "../href";
 import type { LedgerAccount } from "../repository";
 import { t } from "../strings";
 import { AccountFilterSelect } from "./account-filter-select";
@@ -39,17 +39,22 @@ export function TransactionsFilterBar({
     selectedKind !== null ||
     Boolean(searchQuery);
 
+  const hiddenParams = transactionsRouteParams({
+    month,
+    accountId: selectedAccountId,
+    page: 1,
+    uncategorizedOnly,
+    category: selectedCategory,
+    kind: selectedKind,
+    search: null,
+  }).filter(([name]) => name !== "busca" && name !== "pagina");
+
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
       <form action="/transacoes" method="get" className="w-full md:w-72 md:flex-none">
-        <input type="hidden" name="mes" value={month} />
-        {selectedAccountId ? <input type="hidden" name="conta" value={selectedAccountId} /> : null}
-        {uncategorizedOnly ? (
-          <input type="hidden" name="categoria" value={UNCATEGORIZED_FILTER} />
-        ) : selectedCategory ? (
-          <input type="hidden" name="categoria" value={selectedCategory} />
-        ) : null}
-        {selectedKind ? <input type="hidden" name="tipo" value={selectedKind} /> : null}
+        {hiddenParams.map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <div className="relative">
           <Search
             aria-hidden
@@ -68,7 +73,7 @@ export function TransactionsFilterBar({
           />
         </div>
       </form>
-      {accounts.length > 0 ? (
+      <div className="grid grid-cols-2 gap-2 md:contents">
         <AccountFilterSelect
           month={month}
           accounts={accounts}
@@ -78,24 +83,24 @@ export function TransactionsFilterBar({
           kind={selectedKind}
           search={searchQuery}
         />
-      ) : null}
-      <KindFilterSelect
-        month={month}
-        accountId={selectedAccountId}
-        uncategorizedOnly={uncategorizedOnly}
-        category={selectedCategory}
-        kind={selectedKind}
-        search={searchQuery}
-      />
-      <CategoryFilterSelect
-        month={month}
-        accountId={selectedAccountId}
-        options={categoryFilterOptions}
-        uncategorizedOnly={uncategorizedOnly}
-        selectedCategory={selectedCategory}
-        kind={selectedKind}
-        search={searchQuery}
-      />
+        <KindFilterSelect
+          month={month}
+          accountId={selectedAccountId}
+          uncategorizedOnly={uncategorizedOnly}
+          category={selectedCategory}
+          kind={selectedKind}
+          search={searchQuery}
+        />
+        <CategoryFilterSelect
+          month={month}
+          accountId={selectedAccountId}
+          options={categoryFilterOptions}
+          uncategorizedOnly={uncategorizedOnly}
+          selectedCategory={selectedCategory}
+          kind={selectedKind}
+          search={searchQuery}
+        />
+      </div>
       {hasActiveFilters ? (
         <Button
           variant="link"

@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { transactionsRouteParams } from "../href";
 import { t } from "../strings";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -15,7 +16,7 @@ afterEach(() => {
 });
 
 describe("TransactionsFilterBar", () => {
-  it("carries the month and the active filters as hidden inputs on the search form", () => {
+  it("renders exactly the hidden inputs transactionsRouteParams would produce for the same filters, minus busca and pagina", () => {
     const { container } = render(
       <TransactionsFilterBar
         month="2026-09"
@@ -31,10 +32,19 @@ describe("TransactionsFilterBar", () => {
 
     const form = container.querySelector("form");
     expect(form?.getAttribute("action")).toBe("/transacoes");
-    expect(form?.querySelector('input[name="mes"]')?.getAttribute("value")).toBe("2026-09");
-    expect(form?.querySelector('input[name="conta"]')?.getAttribute("value")).toBe("acc-1");
-    expect(form?.querySelector('input[name="categoria"]')?.getAttribute("value")).toBe("housing");
-    expect(form?.querySelector('input[name="tipo"]')?.getAttribute("value")).toBe("fixed");
+    const hiddenInputs = [...(form?.querySelectorAll('input[type="hidden"]') ?? [])].map(
+      (input) => [input.getAttribute("name"), input.getAttribute("value")],
+    );
+    const expected = transactionsRouteParams({
+      month: "2026-09",
+      accountId: "acc-1",
+      page: 1,
+      uncategorizedOnly: false,
+      category: "housing",
+      kind: "fixed",
+      search: null,
+    }).filter(([name]) => name !== "busca" && name !== "pagina");
+    expect(hiddenInputs).toEqual(expected);
     expect(screen.getByLabelText(t.search.label).getAttribute("value")).toBe("condominio");
   });
 

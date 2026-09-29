@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatIsoDate, formatIsoDateShort, formatShortDate } from "./format-date";
+import { formatIsoDate, formatShortDate } from "./format-date";
 
 describe("formatShortDate", () => {
   it("formats an instant in the household's own time zone, not UTC", () => {
@@ -14,11 +14,5 @@ describe("formatShortDate", () => {
 describe("formatIsoDate", () => {
   it("re-orders a calendar day into the Brazilian short form", () => {
     expect(formatIsoDate("2026-09-02")).toBe("02/09/2026");
-  });
-});
-
-describe("formatIsoDateShort", () => {
-  it("drops the year from the Brazilian short form", () => {
-    expect(formatIsoDateShort("2026-09-02")).toBe("02/09");
   });
 });

@@ -24,9 +24,9 @@ export function AccountFilterSelect({
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
-  category?: ProductCategoryId | null;
-  kind?: Kind | null;
-  search?: string | null;
+  category: ProductCategoryId | null;
+  kind: Kind | null;
+  search: string | null;
 }) {
   const router = useRouter();
 

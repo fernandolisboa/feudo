@@ -84,7 +84,7 @@ describe("TransactionsTable", () => {
 
     expect(
       screen.getByText(
-        `02/09 · ${t.subcategories["food.groceries"]} · Banco Fixture · Conta corrente`,
+        `02/09/2026 · ${t.subcategories["food.groceries"]} · Banco Fixture · Conta corrente`,
       ),
     ).not.toBeNull();
   });
@@ -93,7 +93,7 @@ describe("TransactionsTable", () => {
     render(<TransactionsTable transactions={[buildRow({ category: null })]} groups={[]} />);
 
     expect(
-      screen.getByText(`15/09 · ${t.category.uncategorized} · Banco Fixture · Conta corrente`),
+      screen.getByText(`15/09/2026 · ${t.category.uncategorized} · Banco Fixture · Conta corrente`),
     ).not.toBeNull();
   });
 });

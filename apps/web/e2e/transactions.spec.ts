@@ -85,7 +85,9 @@ test("transactions synced on connect, by month, account, search, category and ki
   await expect(
     page.getByRole("heading", { name: "Nenhuma transação encontrada em setembro de 2026" }),
   ).toBeVisible();
-  await expect(page.getByText("Nada em setembro de 2026 bate com esses filtros.")).toBeVisible();
+  await expect(
+    page.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Limpar filtros" }).click();
   await expect(page).toHaveURL(/mes=2026-09$/);

@@ -33,9 +33,6 @@ const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(u
 
 export const SEARCH_QUERY_MAX_LENGTH = 80;
 
-// A query longer than the bound is truncated rather than rejected, so a
-// pasted sentence still searches on its first 80 characters instead of
-// losing the filter entirely.
 const searchQuerySchema = z
   .string()
   .trim()

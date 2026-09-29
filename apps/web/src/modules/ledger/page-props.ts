@@ -85,9 +85,6 @@ function fallbackCurrency(rows: readonly { currency: string }[]): string {
   return currencies[0] ?? HOUSEHOLD_CURRENCY;
 }
 
-// Household subcategories count under their product parent (categoryOf
-// resolves both), so a household's own "Cinema" subcategory still shows up
-// when filtering by "Leisure".
 function matchesCategory(
   row: ResolvedLedgerRow,
   category: ProductCategoryId | null,
@@ -216,9 +213,6 @@ export async function getTransactionsPageProps(
   const selectedKind = params.tipo ?? null;
   const rawSearch = params.busca && params.busca.length > 0 ? params.busca : null;
   const normalizedSearch = rawSearch !== null ? normalizeDescription(rawSearch) : "";
-  // A query that normalizes to nothing (all punctuation, say) is the same as
-  // no search at all, so it neither filters the rows below nor flips the
-  // view into its "found" headline or the "clear filters" affordance.
   const searchQuery = normalizedSearch !== "" ? rawSearch : null;
 
   const monthRange = yearMonthDayRange(month);
@@ -236,11 +230,7 @@ export async function getTransactionsPageProps(
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
-  // Account, category, kind and search combine with AND; the uncategorized
-  // filter (`categoria=sem`) is applied only to `listed`, not here, so the
-  // totals line keeps excluding uncategorized rows from no total regardless
-  // of whether that filter is active (design contract's #16 review, item 8,
-  // extended by this ticket's totals rule).
+  // Uncategorized rows count in no total, so the sem filter never narrows the totals.
   const filteredRows = monthRows.filter(
     (row) =>
       matchesCategory(row, selectedCategory, kinds) &&

@@ -33,6 +33,21 @@ function headline(
   return interpolate(interpolate(copy.many, "{count}", String(total)), "{month}", monthLabel);
 }
 
+function emptyStateMessage(
+  hasOtherFilters: boolean,
+  uncategorizedOnly: boolean,
+  monthHasTransactions: boolean,
+  monthLabel: string,
+): string | null {
+  if (hasOtherFilters && monthHasTransactions) {
+    return interpolate(t.empty.noMatches, "{month}", monthLabel);
+  }
+  if (uncategorizedOnly && monthHasTransactions) {
+    return null;
+  }
+  return interpolate(t.empty.noTransactions, "{month}", monthLabel);
+}
+
 function uncategorizedMessage(count: number, amountLabel: string, monthLabel: string): string {
   const copy = count === 1 ? t.uncategorized.one : t.uncategorized.many;
   return interpolate(
@@ -86,6 +101,10 @@ export function TransactionsView({
     kind: selectedKind,
     search: searchQuery,
   };
+  const emptyMessage =
+    transactions.length === 0
+      ? emptyStateMessage(hasOtherFilters, uncategorizedOnly, monthHasTransactions, monthLabel)
+      : null;
 
   return (
     <>
@@ -147,8 +166,10 @@ export function TransactionsView({
                     month,
                     accountId: selectedAccountId,
                     page: 1,
-                    ...activeFilters,
                     uncategorizedOnly: true,
+                    category: null,
+                    kind: null,
+                    search: null,
                   })}
                 />
               }
@@ -168,35 +189,10 @@ export function TransactionsView({
             {t.empty.connectAction}
           </Button>
         </div>
-      ) : transactions.length === 0 && hasOtherFilters && monthHasTransactions ? (
-        <div className="flex flex-col items-start gap-3">
-          <p className="font-heading text-[18px]">
-            {interpolate(t.empty.noMatches, "{month}", monthLabel)}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              <Link
-                href={transactionsHref({
-                  month,
-                  accountId: null,
-                  page: 1,
-                  uncategorizedOnly: false,
-                  category: null,
-                  kind: null,
-                  search: null,
-                })}
-              />
-            }
-          >
-            {t.filters.clear}
-          </Button>
-        </div>
       ) : transactions.length === 0 ? (
-        <p className="font-heading text-[18px]">
-          {interpolate(t.empty.noTransactions, "{month}", monthLabel)}
-        </p>
+        emptyMessage !== null ? (
+          <p className="font-heading text-[18px]">{emptyMessage}</p>
+        ) : null
       ) : (
         <>
           <TransactionsTable transactions={transactions} groups={categoryGroups} />

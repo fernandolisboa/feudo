@@ -52,6 +52,23 @@ describe("TransactionsView", () => {
     expect(link.getAttribute("href")).toContain("categoria=sem");
   });
 
+  it("drops any active category, kind or search filter from the uncategorized notice's link, since its count is month-wide", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          uncategorized: { count: 2, amountLabel: "R$ 150,00" },
+          selectedAccountId: "acc-1",
+          selectedKind: "income",
+          searchQuery: "mercado",
+        })}
+      />,
+    );
+
+    const notice = screen.getByRole("status");
+    const link = within(notice).getByRole("link");
+    expect(link.getAttribute("href")).toBe("/transacoes?mes=2026-09&conta=acc-1&categoria=sem");
+  });
+
   it("does not show the notice when there are no uncategorized rows", () => {
     render(
       <TransactionsView {...buildProps({ uncategorized: { count: 0, amountLabel: "R$ 0,00" } })} />,
@@ -146,7 +163,7 @@ describe("TransactionsView", () => {
     ).not.toBeNull();
   });
 
-  it("shows the 'no matches' empty state and a clear-filters action when a filter empties an otherwise non-empty month", () => {
+  it("shows the 'no matches' empty state, with the filter bar's own clear-filters link, when a category/kind/search filter empties an otherwise non-empty month", () => {
     render(
       <TransactionsView
         {...buildProps({
@@ -159,8 +176,29 @@ describe("TransactionsView", () => {
       />,
     );
 
-    expect(screen.getByText("Nada em setembro de 2026 bate com esses filtros.")).not.toBeNull();
-    expect(screen.getAllByRole("link", { name: t.filters.clear }).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: t.filters.clear })).not.toBeNull();
+  });
+
+  it("shows nothing under the headline when the uncategorized-only filter alone empties an otherwise non-empty month", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.queryByText("Nada registrado em setembro de 2026.")).toBeNull();
+    expect(
+      screen.queryByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).toBeNull();
   });
 
   it("shows the plain 'nothing recorded' empty state when the month itself has no transactions, even with a filter set", () => {

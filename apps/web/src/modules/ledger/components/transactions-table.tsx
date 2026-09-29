@@ -2,7 +2,7 @@ import { formatMoney } from "@feudo/core";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
-import { formatIsoDate, formatIsoDateShort } from "@/lib/format-date";
+import { formatIsoDate } from "@/lib/format-date";
 
 import type { LedgerTransactionRow } from "../repository";
 import { t } from "../strings";
@@ -15,15 +15,12 @@ import {
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 const DESKTOP_ONLY_CLASS = "hidden md:table-cell";
 
-// The three columns a narrow screen drops (date, category, account) are
-// still shown, folded into one line under the description, so a mobile row
-// loses no information, only the table's rigid columns for it.
 function mobileMetaLine(transaction: TransactionRowView): string {
   const categoryLabel = transaction.category
     ? transaction.category.label
     : t.category.uncategorized;
   return [
-    formatIsoDateShort(transaction.date),
+    formatIsoDate(transaction.date),
     categoryLabel,
     transaction.institutionName,
     transaction.accountName,

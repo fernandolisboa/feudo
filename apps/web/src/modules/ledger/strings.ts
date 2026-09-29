@@ -212,7 +212,7 @@ const en = {
     noAccounts: "Connect a bank to see the household's transactions here.",
     connectAction: "Connect bank",
     noTransactions: "Nothing recorded in {month}.",
-    noMatches: "Nothing in {month} matches these filters.",
+    noMatches: "No transactions in {month} match these filters.",
   },
   pagination: {
     label: "Pages",
@@ -229,7 +229,6 @@ const en = {
     one: "1 transaction in {month} has no category yet ({amount}). It counts in no total until it gets one.",
     many: "{count} transactions in {month} have no category yet ({amount}). They count in no total until they get one.",
     show: "Categorize them",
-    showAll: "Show all transactions",
   },
   totals: {
     income: "Income {amount}",
@@ -427,7 +426,7 @@ const ptBR = {
     noAccounts: "Conecte um banco para ver as transações da casa aqui.",
     connectAction: "Conectar banco",
     noTransactions: "Nada registrado em {month}.",
-    noMatches: "Nada em {month} bate com esses filtros.",
+    noMatches: "Nenhuma transação de {month} com esses filtros.",
   },
   pagination: {
     label: "Páginas",
@@ -444,7 +443,6 @@ const ptBR = {
     one: "1 transação de {month} ainda está sem categoria ({amount}). Ela fica fora de todos os totais até ganhar uma.",
     many: "{count} transações de {month} ainda estão sem categoria ({amount}). Elas ficam fora de todos os totais até ganharem uma.",
     show: "Categorizar agora",
-    showAll: "Ver todas as transações",
   },
   totals: {
     income: "Renda {amount}",
