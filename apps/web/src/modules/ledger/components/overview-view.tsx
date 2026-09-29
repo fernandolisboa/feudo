@@ -120,6 +120,9 @@ export function OverviewView(props: OverviewPageProps) {
                         accountId: null,
                         page: 1,
                         uncategorizedOnly: true,
+                        category: null,
+                        kind: null,
+                        search: null,
                       })}
                     />
                   }

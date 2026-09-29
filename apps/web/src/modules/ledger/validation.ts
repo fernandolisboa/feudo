@@ -31,13 +31,31 @@ const yearMonthSchema = z.string().refine(isBoundedYearMonth).optional().catch(u
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
+export const SEARCH_QUERY_MAX_LENGTH = 80;
+
+const searchQuerySchema = z
+  .string()
+  .trim()
+  .transform((value) => value.slice(0, SEARCH_QUERY_MAX_LENGTH))
+  .optional()
+  .catch(undefined);
+
+const categoryFilterSchema = z
+  .union([z.literal(UNCATEGORIZED_FILTER), z.enum(PRODUCT_CATEGORY_IDS)])
+  .optional()
+  .catch(undefined);
+
+const kindFilterSchema = z.enum(KINDS).optional().catch(undefined);
+
 // Anything unreadable in the URL falls back to the default view rather than
 // an error page: a stale bookmark still lands on this month's transactions.
 export const transactionsSearchParamsSchema = z.object({
   mes: yearMonthSchema,
   conta: accountIdSchema,
   pagina: pageSchema,
-  categoria: z.literal(UNCATEGORIZED_FILTER).optional().catch(undefined),
+  categoria: categoryFilterSchema,
+  tipo: kindFilterSchema,
+  busca: searchQuerySchema,
 });
 export type TransactionsSearchParams = z.input<typeof transactionsSearchParamsSchema>;
 

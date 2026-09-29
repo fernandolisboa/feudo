@@ -26,6 +26,9 @@ describe("AccountFilterSelect", () => {
         accounts={accounts}
         selectedAccountId={null}
         uncategorizedOnly={false}
+        category={null}
+        kind={null}
+        search={null}
       />,
     );
 
@@ -39,6 +42,9 @@ describe("AccountFilterSelect", () => {
         accounts={accounts}
         selectedAccountId="d55d31d4-7294-4ae7-9184-27f1dbb0a002"
         uncategorizedOnly={false}
+        category={null}
+        kind={null}
+        search={null}
       />,
     );
 

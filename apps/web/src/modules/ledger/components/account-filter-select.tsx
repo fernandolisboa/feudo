@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
-import type { YearMonth } from "@feudo/core";
+import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
 import { transactionsHref } from "../href";
 import type { LedgerAccount } from "../repository";
 import { t } from "../strings";
@@ -16,11 +16,17 @@ export function AccountFilterSelect({
   accounts,
   selectedAccountId,
   uncategorizedOnly,
+  category,
+  kind,
+  search,
 }: {
   month: YearMonth;
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
+  category: ProductCategoryId | null;
+  kind: Kind | null;
+  search: string | null;
 }) {
   const router = useRouter();
 
@@ -29,7 +35,9 @@ export function AccountFilterSelect({
     if (accountId === selectedAccountId) {
       return;
     }
-    router.push(transactionsHref({ month, accountId, page: 1, uncategorizedOnly }));
+    router.push(
+      transactionsHref({ month, accountId, page: 1, uncategorizedOnly, category, kind, search }),
+    );
   }
 
   const items = [
@@ -46,7 +54,10 @@ export function AccountFilterSelect({
       value={selectedAccountId ?? ALL_ACCOUNTS}
       onValueChange={handleValueChange}
     >
-      <SelectTrigger aria-label={t.accountFilter.label} className="max-w-64">
+      <SelectTrigger
+        aria-label={t.accountFilter.label}
+        className="h-11 w-full max-w-none md:h-9 md:w-auto md:max-w-64"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

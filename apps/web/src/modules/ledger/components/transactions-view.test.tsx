@@ -23,6 +23,11 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     accounts: [],
     selectedAccountId: null,
     uncategorizedOnly: false,
+    selectedCategory: null,
+    categoryFilterOptions: [],
+    selectedKind: null,
+    searchQuery: null,
+    monthHasTransactions: true,
     uncategorized: { count: 0, amountLabel: "R$ 0,00" },
     totals: { incomeLabel: "R$ 0,00", spendingLabel: "R$ 0,00", transferCount: 0 },
     categoryGroups: [],
@@ -45,6 +50,23 @@ describe("TransactionsView", () => {
     const notice = screen.getByRole("status");
     const link = within(notice).getByRole("link");
     expect(link.getAttribute("href")).toContain("categoria=sem");
+  });
+
+  it("drops any active category, kind or search filter from the uncategorized notice's link, since its count is month-wide", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          uncategorized: { count: 2, amountLabel: "R$ 150,00" },
+          selectedAccountId: "acc-1",
+          selectedKind: "income",
+          searchQuery: "mercado",
+        })}
+      />,
+    );
+
+    const notice = screen.getByRole("status");
+    const link = within(notice).getByRole("link");
+    expect(link.getAttribute("href")).toBe("/transacoes?mes=2026-09&conta=acc-1&categoria=sem");
   });
 
   it("does not show the notice when there are no uncategorized rows", () => {
@@ -117,5 +139,129 @@ describe("TransactionsView", () => {
     render(<TransactionsView {...buildProps({ accounts: [] })} />);
 
     expect(screen.queryByText(/^Renda/)).toBeNull();
+  });
+
+  it("uses the 'found' headline once a category, kind or search filter is active", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, selectedKind: "income", total: 1 })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "1 transação encontrada em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("keeps the plain headline when only the account filter is active", () => {
+    render(
+      <TransactionsView {...buildProps({ accounts: oneAccount, selectedAccountId: "acc-1" })} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Nenhuma transação em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("uses the 'found' headline, not the uncategorized one, when uncategorizedOnly is combined with a kind or search filter", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          selectedKind: "income",
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Nenhuma transação encontrada em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("keeps the uncategorized headline when uncategorizedOnly is the only active filter, even with a zero total", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, uncategorizedOnly: true, total: 0 })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Tudo categorizado em setembro de 2026" }),
+    ).not.toBeNull();
+  });
+
+  it("shows the 'no matches' empty state, with the filter bar's own clear-filters link, when a category/kind/search filter empties an otherwise non-empty month", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          selectedKind: "income",
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).not.toBeNull();
+    expect(screen.getByRole("link", { name: t.filters.clear })).not.toBeNull();
+  });
+
+  it("shows the 'no matches' empty state, not the uncategorized silence, when uncategorizedOnly is combined with a kind filter", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          selectedKind: "income",
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).not.toBeNull();
+  });
+
+  it("shows nothing under the headline when the uncategorized-only filter alone empties an otherwise non-empty month", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          uncategorizedOnly: true,
+          monthHasTransactions: true,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.queryByText("Nada registrado em setembro de 2026.")).toBeNull();
+    expect(
+      screen.queryByText("Nenhuma transação de setembro de 2026 com esses filtros."),
+    ).toBeNull();
+  });
+
+  it("shows the plain 'nothing recorded' empty state when the month itself has no transactions, even with a filter set", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          selectedKind: "income",
+          monthHasTransactions: false,
+          transactions: [],
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Nada registrado em setembro de 2026.")).not.toBeNull();
   });
 });
