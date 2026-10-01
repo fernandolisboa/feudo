@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 
+import { organization } from "@/modules/auth/schema";
+
 import { householdSettings } from "./schema";
 
 import type { Database } from "@/platform/db/client";
@@ -61,4 +63,23 @@ export async function getHouseholdSettings(
   db: Database,
 ): Promise<HouseholdSettings | undefined> {
   return createHouseholdSettingsRepository(scope).get(db);
+}
+
+export async function updateReserveMultiple(
+  scope: HouseholdScope,
+  reserveMultiple: number,
+  db: Database,
+): Promise<void> {
+  await createHouseholdSettingsRepository(scope).update(db, { reserveMultiple });
+}
+
+// Job-only (ADR-0001's one exception to "no query path accepts an unscoped
+// id"): a daily cron step runs once per household, not once per session, so
+// it needs a scope for every household rather than the session-derived one
+// every other caller gets. Never exported for request-handling code; the
+// request path's only legitimate scope constructors are householdScope
+// (scope.ts, from a session) and scopeForNewHousehold (household creation).
+export async function listHouseholdScopesForJob(db: Database): Promise<HouseholdScope[]> {
+  const rows = await db.select({ householdId: organization.id }).from(organization);
+  return rows.map((row) => ({ householdId: row.householdId }));
 }
