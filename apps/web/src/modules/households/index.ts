@@ -10,7 +10,7 @@ export { runDailyPruneStep } from "./invitation-prune";
 export { lockMembershipScope } from "./membership-scope";
 export { getCasaPageProps, getInvitationPreview, getOnboardingInvites } from "./page-props";
 export type { HouseholdRole } from "./membership";
-export { getViewerRole } from "./membership";
+export { canManageHouseholdSettings, getViewerRole } from "./membership";
 export type { HouseholdSettings } from "./repository";
 export { getHouseholdSettings, updateReserveMultiple } from "./repository";
 export type { HouseholdSession } from "./require-household-session";

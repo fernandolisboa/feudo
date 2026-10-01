@@ -19,6 +19,16 @@ function apiErrorCode(error: unknown): string | undefined {
 
 export type HouseholdRole = "owner" | InvitableRole;
 
+// Only owner and admin administer settings (CONTEXT.md, "Role"); a member
+// does not. The one allow-list every caller checking "can this role manage
+// settings" uses — reserve's updateReserveMultipleAction and
+// getReservePageProps, households' own getCasaPageProps and
+// MemberRowActions — so a role model change needs updating here once, not
+// at every call site.
+export function canManageHouseholdSettings(role: HouseholdRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export type HouseholdMember = {
   id: string;
   userId: string;

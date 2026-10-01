@@ -274,7 +274,7 @@ describe("runReserveMonthCloseStep (integration)", () => {
       const result = await runReserveMonthCloseStep(db, NOW, alreadyPastDeadline);
 
       expect(result).toEqual({
-        ok: true,
+        ok: false,
         recorded: 0,
         notified: 0,
         skipped: 0,

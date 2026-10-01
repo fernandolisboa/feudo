@@ -12,11 +12,11 @@ import {
 } from "@feudo/core";
 
 import {
+  canManageHouseholdSettings,
   DEFAULT_TIME_ZONE,
   getHouseholdSettings,
   getViewerRole,
   householdScope,
-  type HouseholdRole,
   type HouseholdScope,
   type HouseholdSession,
 } from "@/modules/households";
@@ -33,12 +33,6 @@ export type { StatTileView };
 export type MonthlyFixedCostRow = { monthLabel: string; amountLabel: string | null };
 
 export type ReserveNoticeView = { id: string; message: string };
-
-// Only owner and admin administer settings (CONTEXT.md, "Role"); changing
-// the reserve multiple is a settings change, so a member sees it read-only.
-function canManageReserveMultiple(role: HouseholdRole): boolean {
-  return role === "owner" || role === "admin";
-}
 
 export type ReservePageProps = {
   monthLabel: string;
@@ -178,7 +172,7 @@ export async function getReservePageProps(
   const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
   const multiple = settings?.reserveMultiple ?? DEFAULT_RESERVE_MULTIPLE;
   const month = yearMonthOf(now, timeZone);
-  const canManage = canManageReserveMultiple(viewerRole);
+  const canManage = canManageHouseholdSettings(viewerRole);
 
   if (!hasAccounts) {
     return {

@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getViewerRole, householdScope, requireHouseholdSession } from "@/modules/households";
+import {
+  canManageHouseholdSettings,
+  getViewerRole,
+  householdScope,
+  requireHouseholdSession,
+} from "@/modules/households";
 
 import type { ActionState } from "@/lib/action-state";
 import { getDb } from "@/platform/db/client";
@@ -24,7 +29,7 @@ export async function updateReserveMultipleAction(
   const session = await requireHouseholdSession();
   const db = getDb();
   const viewerRole = await getViewerRole(session, db);
-  if (viewerRole === "member") {
+  if (!canManageHouseholdSettings(viewerRole)) {
     return { status: "error", message: t.errors.notAllowed };
   }
 

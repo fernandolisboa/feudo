@@ -115,7 +115,7 @@ Income minus spending, as a share of income, for a month.
 ### Reserve
 
 **Reserve target**:
-The amount the household should hold as an emergency reserve: the reserve multiple times the average monthly fixed cost. The Reserva page always shows the live target, computed the same way and from the same six-month window as the Visão geral tile, so the two numbers can never disagree. Once a day, the daily job also records the target for the household-local month that just closed (the month before the household's own current month, resolved in its time zone); this recorded history is what a notice compares against, not what the page displays.
+The amount the household should hold as an emergency reserve: the reserve multiple times the average monthly fixed cost, floored at zero (a negative average, from fixed-cost refunds exceeding fixed-cost debits, is a fact worth showing but never a negative target). The Reserva page always shows the live target, computed the same way and from the same six-month window as the Visão geral tile, so the two numbers can never disagree. Once a day, the daily job also records the target for the household-local month that just closed (the month before the household's own current month, resolved in its time zone); this recorded history is what a notice compares against, not what the page displays.
 _Avoid_: emergency fund goal, safety net
 
 **Reserve multiple**:

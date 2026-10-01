@@ -150,6 +150,9 @@ export type ReserveMonthCloseStep = ReserveMonthCloseResult | { error: string };
 // left for tomorrow's run than attempted and lost.
 const MIN_HOUSEHOLD_SLICE_MS = 250;
 
+// A fallback for a caller (today, only tests) that does not pass its own
+// deadline: the real wiring is /api/cron/daily, which always derives one
+// from its own maxDuration and never reaches this default.
 const DEFAULT_RUN_BUDGET_MS = 20_000;
 
 // The daily job (cron/daily route): every household, one after the other,
@@ -159,7 +162,11 @@ const DEFAULT_RUN_BUDGET_MS = 20_000;
 // never failing the rest of the run. A household not even started before
 // the deadline is counted `unreached`, not `failed`: listHouseholdIdsForMonthClose
 // orders households by id, so a run cut short here still makes deterministic
-// progress tomorrow instead of restarting from an arbitrary point.
+// progress tomorrow instead of restarting from an arbitrary point. A run
+// that leaves anyone unreached is not `ok` either, the same way a failed
+// household isn't: both mean the household-local month close did not
+// happen, and `unreached` is logged with its count so a shrinking cron
+// budget shows up in the logs before it becomes a pattern.
 export async function runReserveMonthCloseStep(
   db: Database,
   now: Date = new Date(),
@@ -208,7 +215,11 @@ export async function runReserveMonthCloseStep(
       }
     }
 
-    return { ok: failed === 0, recorded, notified, skipped, failed, unreached };
+    if (unreached > 0) {
+      console.warn(`reserve: month close left ${String(unreached)} household(s) unreached`);
+    }
+
+    return { ok: failed === 0 && unreached === 0, recorded, notified, skipped, failed, unreached };
   } catch (error) {
     return { error: errorName(error) };
   }

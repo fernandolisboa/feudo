@@ -183,6 +183,22 @@ describe("GET /api/cron/daily", () => {
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 
+  it("derives the reserve month-close deadline from the route's own maxDuration, stamped at request start", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T03:00:00.000Z"));
+    try {
+      await callCronRoute();
+
+      expect(runReserveMonthCloseStep).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(Date),
+        new Date("2026-10-01T03:00:45.000Z"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("returns 500 when the reserve month-close step reports internal failures even without a top-level error", async () => {
     vi.mocked(runReserveMonthCloseStep).mockResolvedValue({
       ok: false,

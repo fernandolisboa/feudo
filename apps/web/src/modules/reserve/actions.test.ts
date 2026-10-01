@@ -13,6 +13,7 @@ vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
 vi.mock("@/modules/households", () => ({
   requireHouseholdSession: requireHouseholdSessionMock,
   getViewerRole: getViewerRoleMock,
+  canManageHouseholdSettings: (role: string) => role === "owner" || role === "admin",
   householdScope: (session: { householdId: string }) => ({ householdId: session.householdId }),
 }));
 vi.mock("./service", () => ({
@@ -88,6 +89,18 @@ describe("updateReserveMultipleAction", () => {
 
   it("rejects a member before reaching the service (CONTEXT.md: only owner/admin administer settings)", async () => {
     getViewerRoleMock.mockResolvedValue("member");
+
+    const result = await updateReserveMultipleAction(
+      initialActionState,
+      formDataWith({ reserveMultiple: "9" }),
+    );
+
+    expect(result).toEqual({ status: "error", message: t.errors.notAllowed });
+    expect(setHouseholdReserveMultipleMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a role value that is neither owner, admin nor member (the allow-list denies by default)", async () => {
+    getViewerRoleMock.mockResolvedValue("member,viewer");
 
     const result = await updateReserveMultipleAction(
       initialActionState,
