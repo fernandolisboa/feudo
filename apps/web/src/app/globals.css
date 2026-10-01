@@ -391,3 +391,34 @@
     scroll-behavior: auto !important;
   }
 }
+
+.tour-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  animation: tour-fade-in 200ms ease-out;
+}
+
+.tour-scrim[data-dimmed="true"] {
+  background: color-mix(in oklab, var(--ink) 45%, transparent);
+}
+
+.tour-cutout {
+  position: fixed;
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 1px var(--surface),
+    0 0 0 200vmax color-mix(in oklab, var(--ink) 45%, transparent);
+  pointer-events: none;
+  transition:
+    top 200ms ease-in-out,
+    left 200ms ease-in-out,
+    width 200ms ease-in-out,
+    height 200ms ease-in-out;
+}
+
+@keyframes tour-fade-in {
+  from {
+    opacity: 0;
+  }
+}

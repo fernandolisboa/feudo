@@ -8,6 +8,7 @@ export type NavItem = {
   href: string;
   icon: NavIconName;
   disabled: boolean;
+  tourTarget?: string;
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -21,5 +22,12 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { id: "reserve", label: t.nav.reserve, href: "/reserva", icon: "reserve", disabled: false },
   { id: "banks", label: t.nav.banks, href: "/bancos", icon: "banks", disabled: true },
-  { id: "household", label: t.nav.household, href: "/casa", icon: "household", disabled: false },
+  {
+    id: "household",
+    label: t.nav.household,
+    href: "/casa",
+    icon: "household",
+    disabled: false,
+    tourTarget: "overview.household",
+  },
 ];

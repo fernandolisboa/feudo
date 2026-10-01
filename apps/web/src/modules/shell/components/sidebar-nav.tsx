@@ -39,7 +39,7 @@ export function SidebarNav({
         <span className="app-shell-wordmark">Feudo</span>
       </div>
 
-      <ul className="app-shell-nav-list">
+      <ul className="app-shell-nav-list" data-tour="overview.nav">
         {items.map((item) => (
           <li key={item.id}>
             <NavLink item={item} showLabel={!collapsed} />

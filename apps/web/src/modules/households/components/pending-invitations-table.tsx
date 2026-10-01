@@ -52,11 +52,15 @@ export function PendingInvitationsTable({
   timeZone: string;
 }) {
   if (invitations.length === 0) {
-    return <p className="font-heading text-sm">{t.casa.pendingInvitesEmpty}</p>;
+    return (
+      <p className="font-heading text-sm" data-tour="household.invitations">
+        {t.casa.pendingInvitesEmpty}
+      </p>
+    );
   }
 
   return (
-    <Table>
+    <Table data-tour="household.invitations">
       <TableHeader>
         <TableRow>
           <TableHead className="text-muted-foreground text-[11px] tracking-wide uppercase">

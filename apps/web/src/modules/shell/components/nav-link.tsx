@@ -41,6 +41,7 @@ export function NavLink({ item, showLabel }: { item: NavItem; showLabel: boolean
       href={item.href}
       aria-current={isActive ? "page" : undefined}
       aria-label={showLabel ? undefined : item.label}
+      data-tour={item.tourTarget}
       className={cn("app-shell-nav-link", isActive && "app-shell-nav-link-active")}
     >
       <Icon className="size-4" aria-hidden="true" />

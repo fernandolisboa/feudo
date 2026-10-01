@@ -12,7 +12,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="app-shell-tabbar">
+    <nav className="app-shell-tabbar" data-tour="overview.nav">
       {items.map((item) => {
         const isActive = pathname === item.href;
         const Icon = NAV_ICONS[item.icon];
@@ -35,6 +35,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
             key={item.id}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
+            data-tour={item.tourTarget}
             className={cn("app-shell-tab", isActive && "app-shell-tab-active")}
           >
             <Icon className="size-5" aria-hidden="true" />

@@ -60,7 +60,7 @@ export default async function Home({
           <OverviewContent session={session} searchParams={params} />
         </Suspense>
       </OverviewErrorBoundary>
-      <div className="mt-10">
+      <div className="mt-10" data-tour="overview.accounts">
         <Suspense fallback={null}>
           <AccountsSectionContent session={session} />
         </Suspense>

@@ -16,6 +16,9 @@ vi.mock("./mobile-header", () => ({
 }));
 vi.mock("./mobile-tab-bar", () => ({ MobileTabBar: () => null }));
 vi.mock("./user-menu", () => ({ UserMenu: () => null }));
+vi.mock("./tour-provider", () => ({
+  TourProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
 
 import { AppShell } from "./app-shell";
 
@@ -34,6 +37,7 @@ describe("AppShell", () => {
         userName="Ada"
         userEmail="ada@example.com"
         householdSwitcher={householdSwitcher}
+        tourState={{ autoStart: true, seenVersions: {} }}
       >
         {null}
       </AppShell>,
@@ -50,6 +54,7 @@ describe("AppShell", () => {
         userName="Ada"
         userEmail="ada@example.com"
         householdSwitcher={null}
+        tourState={{ autoStart: true, seenVersions: {} }}
       >
         {null}
       </AppShell>,

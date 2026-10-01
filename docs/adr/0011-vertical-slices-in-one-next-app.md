@@ -35,7 +35,7 @@ apps/web/src/
   lib/                     tiny pure helpers with no domain (interpolate, format-date, cn)
 ```
 
-The slice list is the module list already fixed in CLAUDE.md: `auth`, `households`, `sync`, `market-data`, `ledger`, `reserve`, `banking-intel`, `analysis`, plus two app-level slices, `shell` (navigation, sidebar, tab bar, user menu) and `theme`. Cross-cutting jobs compose slices rather than owning logic: the daily cron handler calls one exported step per slice.
+The slice list is the module list already fixed in CLAUDE.md: `auth`, `households`, `sync`, `market-data`, `ledger`, `reserve`, `banking-intel`, `analysis`, plus two app-level slices, `shell` (navigation, sidebar, tab bar, user menu, guided tours; amended 2026-10-01, #95) and `theme`. Cross-cutting jobs compose slices rather than owning logic: the daily cron handler calls one exported step per slice.
 
 `packages/core/src/<slice>/` keeps the deterministic layer (architecture principle 1) and mirrors the slice names, so a reader finds the maths for `reserve` in `packages/core/src/reserve` and everything else about it in `apps/web/src/modules/reserve`.
 
@@ -64,3 +64,7 @@ Boundaries are enforced by lint, not convention (`no-restricted-imports` and `no
 ## Amendment 2026-10-01 (#94): a third app-level slice, `guide`
 
 The "Como usar" page (`/como-usar`) is static help copy that describes every other slice without owning any of their data, so it lives in its own app-level slice, `guide`, next to `shell` and `theme`, instead of inflating `shell` (navigation only). It exports the page component and the anchors other slices deep-link to (the connect-bank wizard links to `#meu-pluggy`); a unit test checks that every "Ir para" link still resolves to a route under `app/(app)/`.
+
+## Amendment 2026-10-01 (#95): `shell` owns the guided tours
+
+The per-screen guided tour is part of the app frame, like the user menu that reopens it, so it lives in `shell` instead of a new slice: the overlay and its provider, the `user_tour` table with `user.tours_auto_start` (user-scoped, ADR-0001), and the server actions that record outcomes. The tour definitions (id, version, screen, steps and their copy) sit in one registry, `shell/tours.ts`, rather than in each screen's slice. The server validates a recorded tour id and stamps the tour's current version from that registry, and `shell` must not import domain slices to collect it. Owning slices only mark their elements with `data-tour="<tour>.<step>"` and keep a rendered test that every step's target exists on their screen, importing the registry through `@/modules/shell/test/tours`. A new tour (Reserva, Bancos) is added to the registry, never to the owning slice.

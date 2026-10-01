@@ -24,7 +24,7 @@ export function MembersTable({
   const isLastMember = members.length === 1;
 
   return (
-    <Table>
+    <Table data-tour="household.members">
       <TableHeader>
         <TableRow>
           <TableHead className="text-muted-foreground text-[11px] tracking-wide uppercase">

@@ -9,13 +9,15 @@ export function MonthSwitcher({
   monthLabel,
   previousHref,
   nextHref,
+  tourTarget,
 }: {
   monthLabel: string;
   previousHref: string;
   nextHref: string | null;
+  tourTarget?: string;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" data-tour={tourTarget}>
       <Button
         variant="ghost"
         size="icon"

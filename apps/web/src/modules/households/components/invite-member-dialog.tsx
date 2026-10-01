@@ -39,7 +39,7 @@ export function InviteMemberDialog() {
         setOpen(nextOpen);
       }}
     >
-      <DialogTrigger render={<Button type="button" />}>
+      <DialogTrigger render={<Button type="button" data-tour="household.invite" />}>
         <UserPlus className="size-4" />
         {t.casa.inviteAction}
       </DialogTrigger>
