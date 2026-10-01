@@ -34,6 +34,13 @@ export type AverageFixedCost = {
   isEstimate: boolean;
 };
 
+export type AverageFixedCostMonth = { month: YearMonth; fixedCentavos: number | null };
+
+export type AverageFixedCostDetail = {
+  average: AverageFixedCost | null;
+  months: AverageFixedCostMonth[];
+};
+
 export type LedgerDashboard = {
   totals: MonthTotals;
   savingsRateBasisPoints: number | null;
@@ -108,27 +115,47 @@ function computeSeries(lines: readonly DashboardLine[], month: YearMonth): Month
   });
 }
 
-function computeAverageFixedCost(
-  lines: readonly DashboardLine[],
-  month: YearMonth,
-): AverageFixedCost | null {
+// Public (unlike the rest of this file's helpers) so the reserve target and
+// the Visão geral tile read the exact same number from the exact same
+// window: six months strictly before `month`, filtered to the household's
+// own currency (ADR-0002). `months` names every window month whether or not
+// it counted, `fixedCentavos: null` marking a gap (a month with nothing
+// categorized yet) rather than a silent zero that would pull the average
+// down (CONTEXT.md, "Average fixed cost").
+export function averageFixedCost(input: {
+  month: YearMonth;
+  lines: readonly DashboardLine[];
+}): AverageFixedCostDetail {
+  const lines = input.lines.filter((line) => line.currency === HOUSEHOLD_CURRENCY);
   const windowMonths = Array.from({ length: AVERAGE_WINDOW_MONTHS }, (_, index) =>
-    shiftYearMonth(month, index - AVERAGE_WINDOW_MONTHS),
+    shiftYearMonth(input.month, index - AVERAGE_WINDOW_MONTHS),
   );
-  const monthsUsed = windowMonths.filter((windowMonth) =>
-    lines.some((line) => line.month === windowMonth && line.kind !== null),
-  );
-  if (monthsUsed.length === 0) return null;
 
-  const sumCentavos = monthsUsed.reduce(
-    (total, usedMonth) => total + netForKind(linesInMonth(lines, usedMonth), "fixed", "debit"),
-    0,
+  const months = windowMonths.map((windowMonth) => {
+    const monthLines = linesInMonth(lines, windowMonth);
+    const isGap = !monthLines.some((monthLine) => monthLine.kind !== null);
+    return {
+      month: windowMonth,
+      fixedCentavos: isGap ? null : netForKind(monthLines, "fixed", "debit"),
+    };
+  });
+
+  const monthsUsed = months.filter(
+    (entry): entry is { month: YearMonth; fixedCentavos: number } => entry.fixedCentavos !== null,
   );
+  if (monthsUsed.length === 0) {
+    return { average: null, months };
+  }
+
+  const sumCentavos = monthsUsed.reduce((total, entry) => total + entry.fixedCentavos, 0);
   const averageCentavos = roundHalfAwayFromZero(sumCentavos / monthsUsed.length);
   return {
-    averageCentavos,
-    monthsUsed,
-    isEstimate: monthsUsed.length < MINIMUM_MONTHS_FOR_AVERAGE,
+    average: {
+      averageCentavos,
+      monthsUsed: monthsUsed.map((entry) => entry.month),
+      isEstimate: monthsUsed.length < MINIMUM_MONTHS_FOR_AVERAGE,
+    },
+    months,
   };
 }
 
@@ -155,6 +182,6 @@ export function buildLedgerDashboard(input: {
     savingsRateBasisPoints: computeSavingsRateBasisPoints(totals),
     spendingByCategory: computeSpendingByCategory(currentMonthLines),
     series: computeSeries(linesInRange, month),
-    averageFixedCost: computeAverageFixedCost(linesInRange, month),
+    averageFixedCost: averageFixedCost({ month, lines }).average,
   };
 }

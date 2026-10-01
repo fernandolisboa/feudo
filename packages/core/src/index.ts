@@ -101,12 +101,25 @@ export { summarizeLedger } from "./ledger/totals";
 
 export type {
   AverageFixedCost,
+  AverageFixedCostDetail,
+  AverageFixedCostMonth,
   CategorySpending,
   DashboardLine,
   LedgerDashboard,
   MonthTotals,
   MonthlyPoint,
 } from "./ledger/dashboard";
-export { buildLedgerDashboard, dashboardMonthRange } from "./ledger/dashboard";
+export { averageFixedCost, buildLedgerDashboard, dashboardMonthRange } from "./ledger/dashboard";
 
 export { formatBasisPointsPercent, formatCompactReais } from "./money/format";
+
+export {
+  DEFAULT_RESERVE_MULTIPLE,
+  MAX_RESERVE_MULTIPLE,
+  MIN_RESERVE_MULTIPLE,
+  RESERVE_TARGET_NOTICE_THRESHOLD_BASIS_POINTS,
+} from "./reserve/constants";
+export type { ReserveTarget } from "./reserve/target";
+export { computeReserveTarget, InvalidReserveMultipleError } from "./reserve/target";
+export type { ReserveTargetNoticeInput } from "./reserve/notice";
+export { shouldNotifyReserveTargetChange } from "./reserve/notice";
