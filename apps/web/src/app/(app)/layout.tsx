@@ -5,15 +5,19 @@ import {
   HouseholdSwitcherSelect,
   requireHouseholdSession,
 } from "@/modules/households";
-import { AppShell, readSidebarCollapsed } from "@/modules/shell";
+import { AppShell, getTourState, readSidebarCollapsed } from "@/modules/shell";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { name, email, theme, householdId } = await requireHouseholdSession();
+  const session = await requireHouseholdSession();
+  const { name, email, theme, householdId } = session;
 
   const shell = shellLayoutFor(resolveTheme(theme));
   const sidebarCollapsed = shell === "sidebar" ? await readSidebarCollapsed() : false;
-  const switcherProps = await getHouseholdSwitcherProps(householdId);
+  const [switcherProps, tourState] = await Promise.all([
+    getHouseholdSwitcherProps(householdId),
+    getTourState(session),
+  ]);
   const householdSwitcher = switcherProps ? <HouseholdSwitcherSelect {...switcherProps} /> : null;
 
   return (
@@ -23,6 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       userName={name}
       userEmail={email}
       householdSwitcher={householdSwitcher}
+      tourState={tourState}
     >
       {children}
     </AppShell>

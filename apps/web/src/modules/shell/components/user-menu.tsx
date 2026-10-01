@@ -15,11 +15,14 @@ import { SignOutMenuItem } from "@/modules/auth";
 import { GUIDE_PATH } from "@/modules/guide";
 
 import { t } from "../strings";
+import { TourMenuItem } from "./tour-menu-item";
 
 export function UserMenu({ name, email }: { name: string; email: string }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label={name} />}>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon" aria-label={name} data-tour="overview.help" />}
+      >
         <User className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -40,6 +43,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
           <CircleHelp className="size-4" />
           {t.userMenu.guide}
         </DropdownMenuItem>
+        <TourMenuItem />
         <DropdownMenuSeparator />
         <SignOutMenuItem />
       </DropdownMenuContent>

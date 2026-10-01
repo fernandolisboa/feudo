@@ -137,10 +137,25 @@ export async function signUpAndSignIn(
   );
 }
 
-export async function createHouseholdOnboarding(page: Page, name: string): Promise<void> {
+export async function createHouseholdOnboarding(
+  page: Page,
+  name: string,
+  options: { keepTutorials?: boolean } = {},
+): Promise<void> {
   await page.getByLabel("Nome da casa").fill(name);
   await page.getByRole("button", { name: "Criar casa" }).click();
   await expect(page).toHaveURL(/\/$/);
+  if (!options.keepTutorials) {
+    await turnOffTutorials(page);
+  }
+}
+
+// A new user's first visit to each screen starts that screen's guided tour,
+// whose scrim covers the page. Specs that test something else turn the tours
+// off once, from the first one, so no later screen is covered either.
+export async function turnOffTutorials(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Não mostrar tutoriais" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
 export async function signUpVerifyAndSignIn(

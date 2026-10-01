@@ -22,6 +22,7 @@ export const user = pgTable("user", {
   termsVersion: text("terms_version").notNull(),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }).notNull(),
   theme: themeEnum("theme").notNull().default("caderno"),
+  toursAutoStart: boolean("tours_auto_start").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

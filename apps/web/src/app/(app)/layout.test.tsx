@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const requireHouseholdSessionMock = vi.hoisted(() => vi.fn());
 const getHouseholdSwitcherPropsMock = vi.hoisted(() => vi.fn());
 const readSidebarCollapsedMock = vi.hoisted(() => vi.fn());
+const getTourStateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/households", () => ({
   requireHouseholdSession: requireHouseholdSessionMock,
@@ -14,6 +15,7 @@ vi.mock("@/modules/households", () => ({
 }));
 vi.mock("@/modules/shell", () => ({
   readSidebarCollapsed: readSidebarCollapsedMock,
+  getTourState: getTourStateMock,
   AppShell: ({ householdSwitcher }: { householdSwitcher: ReactNode }) => (
     <>
       <div data-testid="nav-slot">{householdSwitcher}</div>
@@ -36,6 +38,8 @@ beforeEach(() => {
     theme: "caderno",
   });
   readSidebarCollapsedMock.mockResolvedValue(false);
+  getTourStateMock.mockReset();
+  getTourStateMock.mockResolvedValue({ autoStart: true, seenVersions: {} });
 });
 
 afterEach(() => {

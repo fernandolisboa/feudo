@@ -59,7 +59,7 @@ export function TransactionsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((transaction) => (
+        {transactions.map((transaction, index) => (
           <TableRow key={transaction.id} className="h-[var(--density-row)]">
             <TableCell className={`text-muted-foreground tabular-nums ${DESKTOP_ONLY_CLASS}`}>
               {formatIsoDate(transaction.date)}
@@ -95,7 +95,10 @@ export function TransactionsTable({
                 currency: transaction.currency,
               })}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell
+              className="text-right"
+              data-tour={index === 0 ? "transactions.category" : undefined}
+            >
               <CategorizeTransactionDialog transaction={transaction.categorize} groups={groups} />
             </TableCell>
           </TableRow>

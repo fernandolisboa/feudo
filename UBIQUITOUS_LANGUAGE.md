@@ -55,3 +55,4 @@
 | Net real yield                              | rendimento real líquido                        | "depois do imposto e da inflação"                                            |
 | FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                                       |
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"                                                   |
+| Guided tour                                 | tour                                           | the per-screen walkthrough; "tutoriais" in settings, "Pular tour" to skip    |

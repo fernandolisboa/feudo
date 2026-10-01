@@ -57,7 +57,7 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
         </section>
       ) : null}
 
-      <section className="mb-8">
+      <section className="mb-8" data-tour="categories.rules">
         <SectionHeader title={t.categoriesPage.rulesTitle} />
         {rules.length === 0 ? (
           <p className="text-muted-foreground text-[13px]">{t.categoriesPage.rulesEmpty}</p>
@@ -108,15 +108,18 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
           }
         />
         <div className="grid gap-x-10 gap-y-6 lg:grid-cols-2">
-          {categories.map((category) => (
+          {categories.map((category, categoryIndex) => (
             <div key={category.categoryId}>
               <h3 className="font-heading border-line-soft border-b pb-1 text-[15px]">
                 {category.label}
               </h3>
               <ul className="divide-line-soft divide-y">
-                {category.subcategories.map((subcategory) => (
+                {category.subcategories.map((subcategory, subcategoryIndex) => (
                   <li
                     key={subcategory.value}
+                    data-tour={
+                      categoryIndex === 0 && subcategoryIndex === 0 ? "categories.kind" : undefined
+                    }
                     className="flex min-h-[var(--density-row)] items-center justify-between gap-3"
                   >
                     <span className="flex items-center gap-2">

@@ -44,7 +44,9 @@ export function AddSubcategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
+      <DialogTrigger
+        render={<Button type="button" variant="outline" size="sm" data-tour="categories.add" />}
+      >
         <Plus className="size-4" />
         {t.categoriesPage.addAction}
       </DialogTrigger>

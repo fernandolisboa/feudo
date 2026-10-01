@@ -17,7 +17,7 @@ export function TopNav({
   return (
     <nav className="app-shell-nav" data-shell="topnav">
       <span className="app-shell-wordmark">Feudo</span>
-      <ul className="app-shell-nav-list-horizontal">
+      <ul className="app-shell-nav-list-horizontal" data-tour="overview.nav">
         {items.map((item) => (
           <li key={item.id}>
             <NavLink item={item} showLabel />

@@ -114,6 +114,7 @@ export function TransactionsView({
         actions={
           <>
             <MonthSwitcher
+              tourTarget="transactions.month"
               monthLabel={monthLabel}
               previousHref={transactionsHref({
                 month: previousMonth,
@@ -152,7 +153,12 @@ export function TransactionsView({
         />
       ) : null}
       {accounts.length > 0 ? (
-        <p className="text-muted-foreground mb-3 text-[13px] tabular-nums">{totalsLine(totals)}</p>
+        <p
+          className="text-muted-foreground mb-3 text-[13px] tabular-nums"
+          data-tour="transactions.totals"
+        >
+          {totalsLine(totals)}
+        </p>
       ) : null}
       {uncategorized.count > 0 && !uncategorizedOnly ? (
         <Notice

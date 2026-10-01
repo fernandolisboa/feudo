@@ -4,3 +4,4 @@ export { marketData } from "../../modules/market-data/schema.ts";
 export * from "../../modules/sync/schema.ts";
 export * from "../../modules/ledger/schema.ts";
 export * from "../../modules/reserve/schema.ts";
+export * from "../../modules/shell/schema.ts";
