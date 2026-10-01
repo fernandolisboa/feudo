@@ -12,13 +12,6 @@ const en = {
   userMenu: {
     preferences: "Preferences",
   },
-  comingSoon: {
-    reserve: {
-      overline: "Coming soon",
-      title: "Reserve",
-      body: "Your emergency reserve will show up here once this page ships.",
-    },
-  },
 };
 
 const ptBR = {
@@ -34,13 +27,6 @@ const ptBR = {
   },
   userMenu: {
     preferences: "Preferências",
-  },
-  comingSoon: {
-    reserve: {
-      overline: "Em breve",
-      title: "Reserva",
-      body: "Sua reserva de emergência aparecerá aqui quando esta página chegar.",
-    },
   },
 } satisfies typeof en;
 

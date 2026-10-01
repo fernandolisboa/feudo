@@ -15,13 +15,20 @@ export type TwoUsers = {
   householdB: string;
 };
 
-async function seedHousehold(db: Database, name: string): Promise<string> {
+// Exported so another slice's integration test can build a household/user
+// topology withTwoUsers does not cover (three or more households, for
+// example), without duplicating this seeding logic.
+export async function seedHousehold(db: Database, name: string): Promise<string> {
   const id = crypto.randomUUID();
   await db.insert(organization).values({ id, name, slug: id, createdAt: new Date() });
   return id;
 }
 
-async function seedUser(db: Database, name: string, householdId: string): Promise<SeededUser> {
+export async function seedUser(
+  db: Database,
+  name: string,
+  householdId: string,
+): Promise<SeededUser> {
   const id = crypto.randomUUID();
   await db.insert(user).values({
     id,

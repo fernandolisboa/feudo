@@ -8,6 +8,7 @@ import {
   OverviewView,
   type OverviewSearchParams,
 } from "@/modules/ledger";
+import { getReserveNoticeBannerProps, ReserveNoticeBanner } from "@/modules/reserve";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
 async function OverviewContent({
@@ -26,6 +27,11 @@ async function AccountsSectionContent({ session }: { session: HouseholdSession }
   return <AccountsSection {...props} />;
 }
 
+async function ReserveNoticeBannerContent({ session }: { session: HouseholdSession }) {
+  const props = await getReserveNoticeBannerProps(session);
+  return props ? <ReserveNoticeBanner {...props} /> : null;
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -36,6 +42,9 @@ export default async function Home({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <ReserveNoticeBannerContent session={session} />
+      </Suspense>
       <OverviewErrorBoundary>
         <Suspense fallback={<OverviewSkeleton />}>
           <OverviewContent session={session} searchParams={params} />

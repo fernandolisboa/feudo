@@ -1,0 +1,219 @@
+import {
+  averageFixedCost,
+  computeReserveTarget,
+  DEFAULT_RESERVE_MULTIPLE,
+  formatMoney,
+  formatYearMonth,
+  HOUSEHOLD_CURRENCY,
+  yearMonthOf,
+  type AverageFixedCostMonth,
+  type ReserveTarget,
+  type YearMonth,
+} from "@feudo/core";
+
+import {
+  DEFAULT_TIME_ZONE,
+  getHouseholdSettings,
+  householdScope,
+  type HouseholdScope,
+  type HouseholdSession,
+} from "@/modules/households";
+import { householdHasAccounts, readHouseholdDashboardLines } from "@/modules/ledger";
+
+import { interpolate, interpolateAll } from "@/lib/interpolate";
+import { getDb, type Database } from "@/platform/db/client";
+import type { StatTileView } from "@/ui/stat-tile";
+import { createReserveTargetNoticeRepository } from "./repository";
+import { t } from "./strings";
+
+export type { StatTileView };
+
+export type MonthlyFixedCostRow = { monthLabel: string; amountLabel: string | null };
+
+export type ReserveNoticeView = { id: string; message: string };
+
+export type ReservePageProps = {
+  monthLabel: string;
+  multiple: number;
+  hasAccounts: boolean;
+  hasHistory: boolean;
+  headline: string;
+  tiles: {
+    target: StatTileView;
+    averageFixedCost: StatTileView;
+    currentReserve: StatTileView;
+    coverage: StatTileView;
+  } | null;
+  monthlyFixedCosts: MonthlyFixedCostRow[];
+  notice: ReserveNoticeView | null;
+};
+
+function joinMonthLabels(months: readonly YearMonth[]): string {
+  const labels = months.map(formatYearMonth);
+  if (labels.length <= 1) {
+    return labels[0] ?? "";
+  }
+  return `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1] ?? ""}`;
+}
+
+function targetTile(target: ReserveTarget): StatTileView {
+  return {
+    label: t.tiles.target,
+    value: formatMoney({ amountCentavos: target.targetCentavos, currency: HOUSEHOLD_CURRENCY }),
+    meta: interpolate(t.tiles.targetMeta, "{multiple}", String(target.multiple)),
+  };
+}
+
+function averageFixedCostTile(
+  target: ReserveTarget,
+  monthsUsed: readonly YearMonth[],
+): StatTileView {
+  const value = formatMoney({
+    amountCentavos: target.averageFixedCostCentavos,
+    currency: HOUSEHOLD_CURRENCY,
+  });
+  if (target.isEstimate) {
+    return {
+      label: t.tiles.averageFixedCost,
+      value,
+      meta: interpolate(t.tiles.averageFixedCostEstimate, "{months}", joinMonthLabels(monthsUsed)),
+    };
+  }
+  if (target.monthsUsed === 6) {
+    return { label: t.tiles.averageFixedCost, value, meta: t.tiles.averageFixedCostFull };
+  }
+  return {
+    label: t.tiles.averageFixedCost,
+    value,
+    meta: interpolate(t.tiles.averageFixedCostPartial, "{months}", joinMonthLabels(monthsUsed)),
+  };
+}
+
+function currentReserveTile(): StatTileView {
+  return { label: t.tiles.currentReserve, value: "—", meta: t.tiles.currentReserveMeta };
+}
+
+function coverageTile(): StatTileView {
+  return { label: t.tiles.coverage, value: "—", meta: t.tiles.coverageMeta };
+}
+
+function monthlyFixedCostRows(months: readonly AverageFixedCostMonth[]): MonthlyFixedCostRow[] {
+  return months.map((entry) => ({
+    monthLabel: formatYearMonth(entry.month),
+    amountLabel:
+      entry.fixedCentavos === null
+        ? null
+        : formatMoney({ amountCentavos: entry.fixedCentavos, currency: HOUSEHOLD_CURRENCY }),
+  }));
+}
+
+function headlineFor(target: ReserveTarget): string {
+  const amount = formatMoney({
+    amountCentavos: target.targetCentavos,
+    currency: HOUSEHOLD_CURRENCY,
+  });
+  return target.isEstimate
+    ? interpolate(t.headline.estimate, "{amount}", amount)
+    : interpolate(t.headline.target, "{amount}", amount);
+}
+
+async function noticeView(scope: HouseholdScope, db: Database): Promise<ReserveNoticeView | null> {
+  const notice = await createReserveTargetNoticeRepository(scope).getUndismissed(db);
+  if (!notice) return null;
+  return {
+    id: notice.id,
+    message: interpolateAll(t.notice.message, {
+      from: formatMoney({
+        amountCentavos: notice.previousTargetCentavos,
+        currency: HOUSEHOLD_CURRENCY,
+      }),
+      to: formatMoney({ amountCentavos: notice.newTargetCentavos, currency: HOUSEHOLD_CURRENCY }),
+      month: formatYearMonth(notice.closedMonth),
+    }),
+  };
+}
+
+export type ReserveNoticeBannerProps = { message: string } | null;
+
+// The compact notice rendered at the top of Visão geral (point 8 of the
+// ticket): the ledger slice composes this, never importing the reserve
+// slice itself, so the dependency only ever runs app -> reserve, app ->
+// ledger, never ledger -> reserve.
+export async function getReserveNoticeBannerProps(
+  session: HouseholdSession,
+): Promise<ReserveNoticeBannerProps> {
+  const db = getDb();
+  const notice = await noticeView(householdScope(session), db);
+  return notice ? { message: notice.message } : null;
+}
+
+// Everything the Reserva page renders, so the page stays a composition of
+// this slice's components (ADR-0011). Reads LIVE numbers through the same
+// window and the same read path the month-close job and the Visão geral
+// tile use (readHouseholdDashboardLines, packages/core's averageFixedCost),
+// so the three can never disagree; the recorded table only backs the
+// notice, never the numbers shown here.
+export async function getReservePageProps(
+  session: HouseholdSession,
+  now: Date = new Date(),
+): Promise<ReservePageProps> {
+  const db = getDb();
+  const scope = householdScope(session);
+
+  const [settings, hasAccounts, notice] = await Promise.all([
+    getHouseholdSettings(scope, db),
+    householdHasAccounts(db, scope),
+    noticeView(scope, db),
+  ]);
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
+  const multiple = settings?.reserveMultiple ?? DEFAULT_RESERVE_MULTIPLE;
+  const month = yearMonthOf(now, timeZone);
+
+  if (!hasAccounts) {
+    return {
+      monthLabel: formatYearMonth(month),
+      multiple,
+      hasAccounts,
+      hasHistory: false,
+      headline: t.headline.noAccounts,
+      tiles: null,
+      monthlyFixedCosts: [],
+      notice,
+    };
+  }
+
+  const lines = await readHouseholdDashboardLines(db, scope, month, timeZone);
+  const detail = averageFixedCost({ month, lines });
+  const monthlyFixedCosts = monthlyFixedCostRows(detail.months);
+
+  if (detail.average === null) {
+    return {
+      monthLabel: formatYearMonth(month),
+      multiple,
+      hasAccounts,
+      hasHistory: false,
+      headline: t.headline.noHistory,
+      tiles: null,
+      monthlyFixedCosts,
+      notice,
+    };
+  }
+
+  const target = computeReserveTarget(detail.average, multiple);
+
+  return {
+    monthLabel: formatYearMonth(month),
+    multiple,
+    hasAccounts,
+    hasHistory: true,
+    headline: headlineFor(target),
+    tiles: {
+      target: targetTile(target),
+      averageFixedCost: averageFixedCostTile(target, detail.average.monthsUsed),
+      currentReserve: currentReserveTile(),
+      coverage: coverageTile(),
+    },
+    monthlyFixedCosts,
+    notice,
+  };
+}

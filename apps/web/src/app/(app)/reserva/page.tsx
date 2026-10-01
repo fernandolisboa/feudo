@@ -1,12 +1,26 @@
-import { PageHeader } from "@/ui/page-header";
+import { Suspense } from "react";
 
-import { t } from "@/modules/shell";
+import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
+import {
+  getReservePageProps,
+  ReserveErrorBoundary,
+  ReserveSkeleton,
+  ReserveView,
+} from "@/modules/reserve";
 
-export default function ReservePage() {
+async function ReserveContent({ session }: { session: HouseholdSession }) {
+  const props = await getReservePageProps(session);
+  return <ReserveView {...props} />;
+}
+
+export default async function ReservePage() {
+  const session = await requireHouseholdSession();
+
   return (
-    <>
-      <PageHeader overline={t.comingSoon.reserve.overline} title={t.comingSoon.reserve.title} />
-      <p className="font-heading text-foreground text-[18px]">{t.comingSoon.reserve.body}</p>
-    </>
+    <ReserveErrorBoundary>
+      <Suspense fallback={<ReserveSkeleton />}>
+        <ReserveContent session={session} />
+      </Suspense>
+    </ReserveErrorBoundary>
   );
 }
