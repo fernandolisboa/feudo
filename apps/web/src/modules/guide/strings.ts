@@ -64,7 +64,7 @@ const en = {
         },
         {
           title: "Moving an account",
-          body: "In Your connections, Move takes an account to another household you belong to, with its balance and its transaction history. Accounts the same connection lists later go to that household too.",
+          body: "In Your connections, Move takes an account to another household you belong to, with its balance and its transaction history. Categorization rules stay behind: the other household's rules apply there. Accounts the same connection lists later go to that household too.",
         },
         {
           title: "When someone leaves",
@@ -273,7 +273,7 @@ const ptBR = {
         },
         {
           title: "Mover uma conta",
-          body: "Em Suas conexões, Mover leva a conta para outra casa da qual você participa, com o saldo e o histórico de transações. As contas que essa conexão trouxer depois também vão para essa casa.",
+          body: "Em Suas conexões, Mover leva a conta para outra casa da qual você participa, com o saldo e o histórico de transações. As regras de categorização não vão junto: lá valem as regras da outra casa. As contas que essa conexão trouxer depois também vão para essa casa.",
         },
         {
           title: "Quando alguém sai da casa",
