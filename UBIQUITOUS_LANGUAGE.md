@@ -46,6 +46,7 @@
 | Savings rate                                | taxa de poupança                               |                                                                              |
 | Reserve target                              | meta da reserva                                |                                                                              |
 | Reserve multiple                            | meses de reserva                               | "6 meses de custo fixo"                                                      |
+| Reserve target notice                       | aviso da meta                                  | "A meta da reserva mudou de R$ X para R$ Y..."; action "Entendi"             |
 | Reserve position                            | posição da reserva                             | "faz parte da reserva"                                                       |
 | Average fixed cost                          | custo fixo médio                               |                                                                              |
 | Bank profile                                | perfil do banco                                |                                                                              |

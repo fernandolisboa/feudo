@@ -115,11 +115,15 @@ Income minus spending, as a share of income, for a month.
 ### Reserve
 
 **Reserve target**:
-The amount the household should hold as an emergency reserve: the reserve multiple times the average monthly fixed cost.
+The amount the household should hold as an emergency reserve: the reserve multiple times the average monthly fixed cost. The Reserva page always shows the live target, computed the same way and from the same six-month window as the Visão geral tile, so the two numbers can never disagree. Once a day, the daily job also records the target for the household-local month that just closed (the month before the household's own current month, resolved in its time zone); this recorded history is what a notice compares against, not what the page displays.
 _Avoid_: emergency fund goal, safety net
 
 **Reserve multiple**:
-How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12.
+How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12. Changing it recomputes the live target at once; it never records a month-close entry or triggers a notice by itself.
+
+**Reserve target notice**:
+A household-wide notice, created only when a month close moves the recorded target by strictly more than 10% from the latest earlier recorded one. The previous record's average fixed cost is rescaled to the household's _current_ reserve multiple before the comparison, so a household that only changed its multiple is never notified for that reason alone. Any member can dismiss it, for the whole household.
+_Avoid_: reserve alert, target warning
 
 **Reserve position**:
 An account, including an investment position, that the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
