@@ -14,7 +14,7 @@ function monthsUsedArb(count: number): YearMonth[] {
 
 const averageArb: fc.Arbitrary<AverageFixedCost> = fc
   .record({
-    averageCentavos: fc.integer({ min: 0, max: 1_000_000_00 }),
+    averageCentavos: fc.integer({ min: -1_000_000_00, max: 1_000_000_00 }),
     monthsUsedCount: fc.integer({ min: 0, max: 6 }),
   })
   .map(({ averageCentavos, monthsUsedCount }) => ({
@@ -26,16 +26,25 @@ const averageArb: fc.Arbitrary<AverageFixedCost> = fc
 const multipleArb = fc.integer({ min: MIN_RESERVE_MULTIPLE, max: MAX_RESERVE_MULTIPLE });
 
 describe("computeReserveTarget property tests", () => {
-  it("is exactly the average fixed cost times the multiple", () => {
+  it("is the floored-at-zero average fixed cost times the multiple", () => {
     fc.assert(
       fc.property(averageArb, multipleArb, (average, multiple) => {
         const result = computeReserveTarget(average, multiple);
-        expect(result.targetCentavos).toBe(average.averageCentavos * multiple);
+        expect(result.targetCentavos).toBe(Math.max(0, average.averageCentavos) * multiple);
       }),
     );
   });
 
-  it("is monotonic (non-decreasing) in the multiple for a non-negative average", () => {
+  it("is never negative", () => {
+    fc.assert(
+      fc.property(averageArb, multipleArb, (average, multiple) => {
+        const result = computeReserveTarget(average, multiple);
+        expect(result.targetCentavos).toBeGreaterThanOrEqual(0);
+      }),
+    );
+  });
+
+  it("is monotonic (non-decreasing) in the multiple", () => {
     fc.assert(
       fc.property(averageArb, multipleArb, multipleArb, (average, a, b) => {
         const low = Math.min(a, b);

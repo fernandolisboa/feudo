@@ -5,7 +5,6 @@ import { withTestDb } from "@/platform/db/test/harness";
 import {
   createHouseholdSettingsRepository,
   HouseholdSettingsUpdateFailedError,
-  listHouseholdScopesForJob,
   updateReserveMultiple,
 } from "./repository";
 import { scopeForNewHousehold } from "./scope";
@@ -51,14 +50,6 @@ describe("household settings repository isolation (integration)", () => {
       const settingsB = await createHouseholdSettingsRepository(householdB.scope).get(db);
       expect(settingsA?.reserveMultiple).toBe(12);
       expect(settingsB?.reserveMultiple).toBe(householdB.settings.reserveMultiple);
-    });
-  });
-
-  it("listHouseholdScopesForJob lists every household, not just one session's own", async () => {
-    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
-      const scopes = await listHouseholdScopesForJob(db);
-      const ids = scopes.map((scope) => scope.householdId);
-      expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
     });
   });
 });

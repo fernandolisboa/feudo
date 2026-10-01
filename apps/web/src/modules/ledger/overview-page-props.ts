@@ -1,6 +1,5 @@
 import {
   buildLedgerDashboard,
-  dashboardMonthRange,
   formatBasisPointsPercent,
   formatCompactReais,
   formatMoney,
@@ -23,8 +22,7 @@ import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 import type { StatTileView } from "@/ui/stat-tile";
 
-import { toDashboardLines } from "./dashboard-lines";
-import { readHouseholdLedger } from "./ledger-read";
+import { readHouseholdDashboardLines } from "./dashboard-lines";
 import { createHouseholdLedgerRepository } from "./repository";
 import { t } from "./strings";
 import { overviewSearchParamsSchema, type OverviewSearchParams } from "./validation";
@@ -185,9 +183,10 @@ function seriesPoints(series: readonly MonthlyPoint[]): MonthlyBarPointView[] {
 // Everything / renders above the accounts table, so the page stays a
 // composition of this slice's components (ADR-0011). The month defaults to
 // today's in the household's time zone and never moves past it, even from a
-// crafted URL. Reads once over dashboardMonthRange's window (the current
-// month plus the six months behind it) through readHouseholdLedger, the read
-// path shared with /transacoes and /categorias, then hands the rows to
+// crafted URL. Reads once, through readHouseholdDashboardLines — the same
+// entry point the Reserva page and the reserve month-close job call, so the
+// three can never disagree over dashboardMonthRange's window (the current
+// month plus the six months behind it) — then hands the lines to
 // packages/core's buildLedgerDashboard: every number on this page is
 // computed there, never guessed at in this file.
 export async function getOverviewPageProps(
@@ -209,14 +208,7 @@ export async function getOverviewPageProps(
   const requestedMonth = params.mes ?? currentMonth;
   const month = requestedMonth > currentMonth ? currentMonth : requestedMonth;
 
-  const readRange = dashboardMonthRange(month);
-  const dayRange = {
-    from: yearMonthDayRange(readRange.from).from,
-    to: yearMonthDayRange(month).to,
-  };
-
-  const { kinds, rows } = await readHouseholdLedger(db, scope, dayRange, null, timeZone);
-  const lines = toDashboardLines(rows, kinds);
+  const { rows, lines } = await readHouseholdDashboardLines(db, scope, month, timeZone);
   const dashboard = buildLedgerDashboard({ month, lines });
 
   const monthDays = yearMonthDayRange(month);

@@ -6,7 +6,7 @@ export type ReserveTarget = {
   targetCentavos: number;
   multiple: number;
   averageFixedCostCentavos: number;
-  monthsUsed: number;
+  monthsUsedCount: number;
   isEstimate: boolean;
 };
 
@@ -32,36 +32,25 @@ function assertValidMultiple(multiple: number): void {
   }
 }
 
-// Reserve target = reserve multiple × average fixed cost (CONTEXT.md). With
-// no average yet (no categorized month in the window at all), the target is
-// zero rather than undefined, so a caller can still show "0 months of
-// history" instead of branching on null everywhere; isEstimate stays true,
-// since zero history is the extreme case of "fewer than the minimum months".
-export function computeReserveTarget(
-  average: AverageFixedCost | null,
-  multiple: number,
-): ReserveTarget {
+// Reserve target = reserve multiple × average fixed cost (CONTEXT.md),
+// floored at zero: a household whose fixed-cost refunds exceeded its fixed
+// debits in the window has a negative average, and a negative target has no
+// meaning to hold against (shouldNotifyReserveTargetChange, notice.ts,
+// compares against this same floored value). averageFixedCostCentavos still
+// carries the raw, possibly negative average, since the tile that shows it
+// is telling the household a fact, not a target.
+export function computeReserveTarget(average: AverageFixedCost, multiple: number): ReserveTarget {
   assertValidMultiple(multiple);
-
-  if (average === null) {
-    return {
-      targetCentavos: 0,
-      multiple,
-      averageFixedCostCentavos: 0,
-      monthsUsed: 0,
-      isEstimate: true,
-    };
-  }
 
   if (!Number.isInteger(average.averageCentavos)) {
     throw new NonIntegerAmountError(average.averageCentavos);
   }
 
   return {
-    targetCentavos: average.averageCentavos * multiple,
+    targetCentavos: Math.max(0, average.averageCentavos) * multiple,
     multiple,
     averageFixedCostCentavos: average.averageCentavos,
-    monthsUsed: average.monthsUsed.length,
+    monthsUsedCount: average.monthsUsed.length,
     isEstimate: average.isEstimate,
   };
 }

@@ -533,6 +533,22 @@ export async function updateMemberRole(
   }
 }
 
+// A plain scoped read, not a Better Auth API call (unlike listMembers,
+// which needs the request's own headers to authenticate against the
+// plugin): a caller that only needs the session's own role, and must stay
+// callable with no request in scope — reserve's getReservePageProps and
+// updateReserveMultipleAction (CONTEXT.md, "Role": only owner and admin
+// administer settings) — uses this instead. Defaults to "member" when no
+// membership row exists, the least-privileged case every other role check
+// in this file falls back to as well.
+export async function getViewerRole(
+  session: HouseholdSession,
+  db: Database,
+): Promise<HouseholdRole> {
+  const row = await activeMemberRow(db, session.householdId, session.userId);
+  return (row?.role as HouseholdRole | undefined) ?? "member";
+}
+
 async function activeMemberRow(
   db: Database,
   householdId: string,

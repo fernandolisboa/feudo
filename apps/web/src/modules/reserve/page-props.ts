@@ -14,7 +14,9 @@ import {
 import {
   DEFAULT_TIME_ZONE,
   getHouseholdSettings,
+  getViewerRole,
   householdScope,
+  type HouseholdRole,
   type HouseholdScope,
   type HouseholdSession,
 } from "@/modules/households";
@@ -32,9 +34,16 @@ export type MonthlyFixedCostRow = { monthLabel: string; amountLabel: string | nu
 
 export type ReserveNoticeView = { id: string; message: string };
 
+// Only owner and admin administer settings (CONTEXT.md, "Role"); changing
+// the reserve multiple is a settings change, so a member sees it read-only.
+function canManageReserveMultiple(role: HouseholdRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export type ReservePageProps = {
   monthLabel: string;
   multiple: number;
+  canManage: boolean;
   hasAccounts: boolean;
   hasHistory: boolean;
   headline: string;
@@ -79,7 +88,7 @@ function averageFixedCostTile(
       meta: interpolate(t.tiles.averageFixedCostEstimate, "{months}", joinMonthLabels(monthsUsed)),
     };
   }
-  if (target.monthsUsed === 6) {
+  if (target.monthsUsedCount === 6) {
     return { label: t.tiles.averageFixedCost, value, meta: t.tiles.averageFixedCostFull };
   }
   return {
@@ -160,19 +169,22 @@ export async function getReservePageProps(
   const db = getDb();
   const scope = householdScope(session);
 
-  const [settings, hasAccounts, notice] = await Promise.all([
+  const [settings, hasAccounts, notice, viewerRole] = await Promise.all([
     getHouseholdSettings(scope, db),
     householdHasAccounts(db, scope),
     noticeView(scope, db),
+    getViewerRole(session, db),
   ]);
   const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
   const multiple = settings?.reserveMultiple ?? DEFAULT_RESERVE_MULTIPLE;
   const month = yearMonthOf(now, timeZone);
+  const canManage = canManageReserveMultiple(viewerRole);
 
   if (!hasAccounts) {
     return {
       monthLabel: formatYearMonth(month),
       multiple,
+      canManage,
       hasAccounts,
       hasHistory: false,
       headline: t.headline.noAccounts,
@@ -182,7 +194,7 @@ export async function getReservePageProps(
     };
   }
 
-  const lines = await readHouseholdDashboardLines(db, scope, month, timeZone);
+  const { lines } = await readHouseholdDashboardLines(db, scope, month, timeZone);
   const detail = averageFixedCost({ month, lines });
   const monthlyFixedCosts = monthlyFixedCostRows(detail.months);
 
@@ -190,6 +202,7 @@ export async function getReservePageProps(
     return {
       monthLabel: formatYearMonth(month),
       multiple,
+      canManage,
       hasAccounts,
       hasHistory: false,
       headline: t.headline.noHistory,
@@ -204,6 +217,7 @@ export async function getReservePageProps(
   return {
     monthLabel: formatYearMonth(month),
     multiple,
+    canManage,
     hasAccounts,
     hasHistory: true,
     headline: headlineFor(target),

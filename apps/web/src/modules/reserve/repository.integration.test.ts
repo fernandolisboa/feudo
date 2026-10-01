@@ -6,6 +6,7 @@ import { withTestDb } from "@/platform/db/test/harness";
 import {
   createReserveTargetNoticeRepository,
   createReserveTargetRecordRepository,
+  listHouseholdIdsForMonthClose,
 } from "./repository";
 import type { HouseholdScope } from "@/modules/households";
 
@@ -166,6 +167,78 @@ describe("reserve target notice repository isolation (integration)", () => {
         householdA.scope,
       ).getUndismissed(db);
       expect(afterDismissal).toBeUndefined();
+    });
+  });
+
+  it("dismissing an already-dismissed notice is idempotent: ok again, not not_found", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createReserveTargetNoticeRepository(householdA.scope);
+      await repository.insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      const notice = await repository.getUndismissed(db);
+      if (!notice) throw new Error("test setup: notice was not created");
+
+      const first = await repository.dismiss(db, notice.id);
+      const second = await repository.dismiss(db, notice.id);
+
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+    });
+  });
+
+  it("dismissing one notice also supersedes every older undismissed notice of the same household", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const repository = createReserveTargetNoticeRepository(householdA.scope);
+      await repository.insert(db, {
+        closedMonth: "2026-07",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      await repository.insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 200000,
+        newTargetCentavos: 300000,
+      });
+      const otherHouseholdRepository = createReserveTargetNoticeRepository(householdB.scope);
+      await otherHouseholdRepository.insert(db, {
+        closedMonth: "2026-07",
+        previousTargetCentavos: 50000,
+        newTargetCentavos: 90000,
+      });
+
+      const latest = await repository.getUndismissed(db);
+      if (!latest || latest.closedMonth !== "2026-08") {
+        throw new Error("test setup: latest notice was not the August one");
+      }
+
+      const dismissed = await repository.dismiss(db, latest.id);
+
+      expect(dismissed).toBe(true);
+      expect(await repository.getUndismissed(db)).toBeUndefined();
+      expect(await otherHouseholdRepository.getUndismissed(db)).not.toBeUndefined();
+    });
+  });
+});
+
+describe("listHouseholdIdsForMonthClose (integration)", () => {
+  it("lists every household, not just one session's own", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const scopes = await listHouseholdIdsForMonthClose(db);
+      const ids = scopes.map((scope) => scope.householdId);
+      expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
+    });
+  });
+
+  it("orders households deterministically by id", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const scopes = await listHouseholdIdsForMonthClose(db);
+      const ids = scopes.map((scope) => scope.householdId);
+      const sorted = [...ids].sort();
+      expect(ids).toEqual(sorted);
+      expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
     });
   });
 });

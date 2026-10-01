@@ -8,7 +8,11 @@ import {
   OverviewView,
   type OverviewSearchParams,
 } from "@/modules/ledger";
-import { getReserveNoticeBannerProps, ReserveNoticeBanner } from "@/modules/reserve";
+import {
+  getReserveNoticeBannerProps,
+  ReserveNoticeBanner,
+  ReserveNoticeBannerErrorBoundary,
+} from "@/modules/reserve";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
 async function OverviewContent({
@@ -42,9 +46,11 @@ export default async function Home({
 
   return (
     <>
-      <Suspense fallback={null}>
-        <ReserveNoticeBannerContent session={session} />
-      </Suspense>
+      <ReserveNoticeBannerErrorBoundary>
+        <Suspense fallback={null}>
+          <ReserveNoticeBannerContent session={session} />
+        </Suspense>
+      </ReserveNoticeBannerErrorBoundary>
       <OverviewErrorBoundary>
         <Suspense fallback={<OverviewSkeleton />}>
           <OverviewContent session={session} searchParams={params} />

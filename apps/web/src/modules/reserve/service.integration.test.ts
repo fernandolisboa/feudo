@@ -245,9 +245,61 @@ describe("runReserveMonthCloseStep (integration)", () => {
 
       const result = await runReserveMonthCloseStep(db, NOW);
 
-      expect(result).toEqual({ ok: false, recorded: 1, notified: 0, skipped: 1, failed: 1 });
+      expect(result).toEqual({
+        ok: false,
+        recorded: 1,
+        notified: 0,
+        skipped: 1,
+        failed: 1,
+        unreached: 0,
+      });
       const recordC = await createReserveTargetRecordRepository(scopeC).getByMonth(db, "2026-08");
       expect(recordC).toBeUndefined();
+    });
+  });
+
+  it("stops before the deadline and reports the rest unreached, without touching them", async () => {
+    await withTestDb(async (db) => {
+      const householdA = await seedHousehold(db, "Household A");
+      const userA = await seedUser(db, "Ana", householdA);
+      const scopeA = householdScope(userA.session);
+      await seedFixedHistory(db, userA, scopeA, ["2026-06", "2026-07", "2026-08"], 80000);
+
+      const householdB = await seedHousehold(db, "Household B");
+      const userB = await seedUser(db, "Bia", householdB);
+      const scopeB = householdScope(userB.session);
+      await seedFixedHistory(db, userB, scopeB, ["2026-06", "2026-07", "2026-08"], 60000);
+
+      const alreadyPastDeadline = new Date(0);
+      const result = await runReserveMonthCloseStep(db, NOW, alreadyPastDeadline);
+
+      expect(result).toEqual({
+        ok: true,
+        recorded: 0,
+        notified: 0,
+        skipped: 0,
+        failed: 0,
+        unreached: 2,
+      });
+      const recordA = await createReserveTargetRecordRepository(scopeA).getByMonth(db, "2026-08");
+      const recordB = await createReserveTargetRecordRepository(scopeB).getByMonth(db, "2026-08");
+      expect(recordA).toBeUndefined();
+      expect(recordB).toBeUndefined();
+    });
+  });
+
+  it("orders households deterministically by id, so a cut-short run resumes progress tomorrow", async () => {
+    await withTestDb(async (db) => {
+      const householdA = await seedHousehold(db, "Household A");
+      await seedUser(db, "Ana", householdA);
+      const householdB = await seedHousehold(db, "Household B");
+      await seedUser(db, "Bia", householdB);
+
+      const first = await runReserveMonthCloseStep(db, NOW, new Date(0));
+      const second = await runReserveMonthCloseStep(db, NOW, new Date(0));
+
+      expect(first).toMatchObject({ unreached: 2 });
+      expect(second).toMatchObject({ unreached: 2 });
     });
   });
 });

@@ -12,6 +12,7 @@ function buildProps(overrides: Partial<ReservePageProps> = {}): ReservePageProps
   return {
     monthLabel: "setembro de 2026",
     multiple: 6,
+    canManage: true,
     hasAccounts: true,
     hasHistory: true,
     headline: "Sua meta é R$ 5.883,00.",
@@ -50,7 +51,6 @@ describe("ReserveView", () => {
       />,
     );
 
-    expect(screen.getByText(t.empty.noAccounts)).not.toBeNull();
     expect(screen.getByRole("link", { name: t.empty.connectAction })).not.toBeNull();
     expect(screen.queryByText(t.tiles.target)).toBeNull();
     expect(screen.getByRole("heading", { name: t.headline.noAccounts })).not.toBeNull();
@@ -68,7 +68,6 @@ describe("ReserveView", () => {
       />,
     );
 
-    expect(screen.getByText(t.empty.noHistory)).not.toBeNull();
     const link = screen.getByRole("link", { name: t.empty.categorizeAction });
     expect(link.getAttribute("href")).toBe("/transacoes");
     expect(screen.getByRole("heading", { name: t.headline.noHistory })).not.toBeNull();
@@ -93,10 +92,17 @@ describe("ReserveView", () => {
     expect(within(table).getByText(t.monthlyTable.gap)).not.toBeNull();
   });
 
-  it("shows the reserve multiple selector with the current multiple", () => {
-    render(<ReserveView {...buildProps({ multiple: 9 })} />);
+  it("shows the reserve multiple selector with the current multiple when the viewer can manage settings", () => {
+    render(<ReserveView {...buildProps({ multiple: 9, canManage: true })} />);
 
     expect(within(screen.getByRole("combobox")).getByText("9")).not.toBeNull();
+  });
+
+  it("shows the multiple read-only, with no select, when the viewer is a member", () => {
+    render(<ReserveView {...buildProps({ multiple: 9, canManage: false })} />);
+
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByText("9 meses")).not.toBeNull();
   });
 
   it("shows the notice panel with a dismiss action when there is an undismissed notice", () => {

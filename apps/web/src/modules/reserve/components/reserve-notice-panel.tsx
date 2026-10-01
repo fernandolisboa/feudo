@@ -19,9 +19,10 @@ export function ReserveNoticePanel({ id, message }: { id: string; message: strin
 
   return (
     <Notice
+      tone={errorMessage ? "danger" : undefined}
       action={
         <Button variant="outline" size="sm" onClick={handleDismiss} disabled={isPending}>
-          {t.notice.action}
+          {errorMessage ? t.error.retry : t.notice.action}
         </Button>
       }
     >

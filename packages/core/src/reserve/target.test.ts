@@ -23,7 +23,7 @@ describe("computeReserveTarget", () => {
       targetCentavos: 540000,
       multiple: 6,
       averageFixedCostCentavos: 90000,
-      monthsUsed: 1,
+      monthsUsedCount: 1,
       isEstimate: false,
     });
   });
@@ -37,18 +37,13 @@ describe("computeReserveTarget", () => {
       6,
     );
     expect(result.isEstimate).toBe(true);
-    expect(result.monthsUsed).toBe(2);
+    expect(result.monthsUsedCount).toBe(2);
   });
 
-  it("returns a zero target with no history when there is no average yet", () => {
-    const result = computeReserveTarget(null, 6);
-    expect(result).toEqual({
-      targetCentavos: 0,
-      multiple: 6,
-      averageFixedCostCentavos: 0,
-      monthsUsed: 0,
-      isEstimate: true,
-    });
+  it("floors the target at zero when the average fixed cost is negative", () => {
+    const result = computeReserveTarget(average({ averageCentavos: -50000 }), 6);
+    expect(result.targetCentavos).toBe(0);
+    expect(result.averageFixedCostCentavos).toBe(-50000);
   });
 
   it("accepts the minimum multiple (3)", () => {

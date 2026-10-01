@@ -54,6 +54,7 @@ describe("GET /api/cron/daily", () => {
       notified: 0,
       skipped: 0,
       failed: 0,
+      unreached: 0,
     });
   });
 
@@ -189,6 +190,7 @@ describe("GET /api/cron/daily", () => {
       notified: 0,
       skipped: 0,
       failed: 1,
+      unreached: 0,
     });
 
     const response = await callCronRoute();
@@ -205,6 +207,7 @@ describe("GET /api/cron/daily", () => {
       notified: 0,
       skipped: 0,
       failed: 1,
+      unreached: 0,
     });
   });
 });

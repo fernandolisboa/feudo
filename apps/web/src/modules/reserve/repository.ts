@@ -1,4 +1,6 @@
-import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt, lte } from "drizzle-orm";
+
+import { organization } from "@/modules/auth/schema";
 
 import { reserveTargetNotice, reserveTargetRecord } from "./schema";
 
@@ -28,6 +30,28 @@ export type NewReserveTargetRecord = {
   currency: string;
 };
 
+const reserveTargetRecordColumns = {
+  id: reserveTargetRecord.id,
+  closedMonth: reserveTargetRecord.closedMonth,
+  averageFixedCostCentavos: reserveTargetRecord.averageFixedCostCentavos,
+  monthsUsed: reserveTargetRecord.monthsUsed,
+  isEstimate: reserveTargetRecord.isEstimate,
+  reserveMultiple: reserveTargetRecord.reserveMultiple,
+  targetCentavos: reserveTargetRecord.targetCentavos,
+  currency: reserveTargetRecord.currency,
+  createdAt: reserveTargetRecord.createdAt,
+};
+
+// `closed_month` is a plain text column (Drizzle infers `string`); every
+// value in it was itself written as a YearMonth (insert's own parameter
+// type below), so this is the one place that narrows the column back to
+// the branded type the rest of the codebase relies on.
+function toRecordRow(
+  row: Omit<ReserveTargetRecordRow, "closedMonth"> & { closedMonth: string },
+): ReserveTargetRecordRow {
+  return { ...row, closedMonth: row.closedMonth as YearMonth };
+}
+
 // Every repository is constructed with the household taken from the session
 // or job scope (ADR-0001): no method below accepts a household id, only the
 // scope closed over at construction time.
@@ -38,7 +62,7 @@ export function createReserveTargetRecordRepository(scope: HouseholdScope) {
       closedMonth: YearMonth,
     ): Promise<ReserveTargetRecordRow | undefined> {
       const rows = await db
-        .select()
+        .select(reserveTargetRecordColumns)
         .from(reserveTargetRecord)
         .where(
           and(
@@ -47,7 +71,7 @@ export function createReserveTargetRecordRepository(scope: HouseholdScope) {
           ),
         )
         .limit(1);
-      return rows[0] as ReserveTargetRecordRow | undefined;
+      return rows[0] ? toRecordRow(rows[0]) : undefined;
     },
 
     // The most recent record strictly before `closedMonth`, whatever its own
@@ -59,7 +83,7 @@ export function createReserveTargetRecordRepository(scope: HouseholdScope) {
       closedMonth: YearMonth,
     ): Promise<ReserveTargetRecordRow | undefined> {
       const rows = await db
-        .select()
+        .select(reserveTargetRecordColumns)
         .from(reserveTargetRecord)
         .where(
           and(
@@ -69,7 +93,7 @@ export function createReserveTargetRecordRepository(scope: HouseholdScope) {
         )
         .orderBy(desc(reserveTargetRecord.closedMonth))
         .limit(1);
-      return rows[0] as ReserveTargetRecordRow | undefined;
+      return rows[0] ? toRecordRow(rows[0]) : undefined;
     },
 
     // onConflictDoNothing against the (household, month) unique constraint is
@@ -84,8 +108,8 @@ export function createReserveTargetRecordRepository(scope: HouseholdScope) {
         .insert(reserveTargetRecord)
         .values({ householdId: scope.householdId, ...record })
         .onConflictDoNothing()
-        .returning();
-      return rows[0] as ReserveTargetRecordRow | undefined;
+        .returning(reserveTargetRecordColumns);
+      return rows[0] ? toRecordRow(rows[0]) : undefined;
     },
   };
 }
@@ -107,11 +131,26 @@ export type NewReserveTargetNotice = {
   newTargetCentavos: number;
 };
 
+const reserveTargetNoticeColumns = {
+  id: reserveTargetNotice.id,
+  closedMonth: reserveTargetNotice.closedMonth,
+  previousTargetCentavos: reserveTargetNotice.previousTargetCentavos,
+  newTargetCentavos: reserveTargetNotice.newTargetCentavos,
+  createdAt: reserveTargetNotice.createdAt,
+  dismissedAt: reserveTargetNotice.dismissedAt,
+};
+
+function toNoticeRow(
+  row: Omit<ReserveTargetNoticeRow, "closedMonth"> & { closedMonth: string },
+): ReserveTargetNoticeRow {
+  return { ...row, closedMonth: row.closedMonth as YearMonth };
+}
+
 export function createReserveTargetNoticeRepository(scope: HouseholdScope) {
   return {
     async getUndismissed(db: DatabaseOrTransaction): Promise<ReserveTargetNoticeRow | undefined> {
       const rows = await db
-        .select()
+        .select(reserveTargetNoticeColumns)
         .from(reserveTargetNotice)
         .where(
           and(
@@ -121,7 +160,7 @@ export function createReserveTargetNoticeRepository(scope: HouseholdScope) {
         )
         .orderBy(desc(reserveTargetNotice.closedMonth))
         .limit(1);
-      return rows[0] as ReserveTargetNoticeRow | undefined;
+      return rows[0] ? toNoticeRow(rows[0]) : undefined;
     },
 
     async insert(db: DatabaseOrTransaction, notice: NewReserveTargetNotice): Promise<void> {
@@ -131,24 +170,63 @@ export function createReserveTargetNoticeRepository(scope: HouseholdScope) {
         .onConflictDoNothing();
     },
 
-    // A no-op (not an error) when the id does not exist, or belongs to
-    // another household: the caller turns an empty result into "not_found"
-    // without this repository ever accepting an unscoped id (ADR-0001).
+    // Idempotent and household-wide (CONTEXT.md, "Reserve target notice"):
+    // dismissing an id that exists in this household marks it, and every
+    // other undismissed notice of this household created up to the same
+    // month, as dismissed — a household never has an older unread notice
+    // hanging around once a later one has been seen. Dismissing a notice
+    // that is already dismissed still returns true (nothing left to update,
+    // but the id is real and belongs here); an unknown id, or one from
+    // another household, returns false without writing anything
+    // (ADR-0001: never accepts an unscoped id).
     async dismiss(db: Database, noticeId: string): Promise<boolean> {
-      const updated = await db
-        .update(reserveTargetNotice)
-        .set({ dismissedAt: new Date() })
-        .where(
-          and(
-            eq(reserveTargetNotice.id, noticeId),
-            eq(reserveTargetNotice.householdId, scope.householdId),
-            isNull(reserveTargetNotice.dismissedAt),
-          ),
-        )
-        .returning({ id: reserveTargetNotice.id });
-      return updated.length > 0;
+      return db.transaction(async (tx) => {
+        const rows = await tx
+          .select({ closedMonth: reserveTargetNotice.closedMonth })
+          .from(reserveTargetNotice)
+          .where(
+            and(
+              eq(reserveTargetNotice.id, noticeId),
+              eq(reserveTargetNotice.householdId, scope.householdId),
+            ),
+          )
+          .limit(1);
+        const notice = rows[0];
+        if (!notice) {
+          return false;
+        }
+
+        await tx
+          .update(reserveTargetNotice)
+          .set({ dismissedAt: new Date() })
+          .where(
+            and(
+              eq(reserveTargetNotice.householdId, scope.householdId),
+              lte(reserveTargetNotice.closedMonth, notice.closedMonth),
+              isNull(reserveTargetNotice.dismissedAt),
+            ),
+          );
+        return true;
+      });
     },
   };
 }
 
 export type ReserveTargetNoticeRepository = ReturnType<typeof createReserveTargetNoticeRepository>;
+
+// Job-only (ADR-0001, amended 2026-10-01): a daily cron step runs once per
+// household, not once per session, so it needs every household rather than
+// the session-derived scope every other caller gets. Lives in this slice's
+// own repository, not on households' public index, the same way sync's
+// listConnectionsToSync lives in sync's own repository — never imported by
+// request-handling code, and never fed a client-supplied id. Ordered by id
+// so a run cut short by runReserveMonthCloseStep's deadline still makes
+// deterministic progress the next day instead of restarting from wherever
+// the database happened to return rows first.
+export async function listHouseholdIdsForMonthClose(db: Database): Promise<HouseholdScope[]> {
+  const rows = await db
+    .select({ householdId: organization.id })
+    .from(organization)
+    .orderBy(asc(organization.id));
+  return rows.map((row) => ({ householdId: row.householdId }));
+}

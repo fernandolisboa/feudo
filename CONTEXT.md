@@ -119,10 +119,10 @@ The amount the household should hold as an emergency reserve: the reserve multip
 _Avoid_: emergency fund goal, safety net
 
 **Reserve multiple**:
-How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12. Changing it recomputes the live target at once; it never records a month-close entry or triggers a notice by itself.
+How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12. Changing it recomputes the live target at once; it never records a month-close entry or triggers a notice by itself. Only the household's owner or admin can change it (Role); a member sees it read-only.
 
 **Reserve target notice**:
-A household-wide notice, created only when a month close moves the recorded target by strictly more than 10% from the latest earlier recorded one. The previous record's average fixed cost is rescaled to the household's _current_ reserve multiple before the comparison, so a household that only changed its multiple is never notified for that reason alone. Any member can dismiss it, for the whole household.
+A household-wide notice, created only when a month close moves the recorded target by strictly more than 10% from the latest earlier recorded one. The previous record's average fixed cost is rescaled to the household's _current_ reserve multiple before the comparison, so a household that only changed its multiple is never notified for that reason alone. Any member can dismiss it, for the whole household. Shown as a dismissible panel on the Reserva page and, compactly, as a banner on Visão geral; in-app only until web push ships (#29).
 _Avoid_: reserve alert, target warning
 
 **Reserve position**:

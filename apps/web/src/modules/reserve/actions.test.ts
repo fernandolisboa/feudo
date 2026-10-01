@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireHouseholdSessionMock = vi.hoisted(() =>
   vi.fn().mockResolvedValue({ userId: "user-1", householdId: "household-1" }),
 );
+const getViewerRoleMock = vi.hoisted(() => vi.fn().mockResolvedValue("owner"));
 const setHouseholdReserveMultipleMock = vi.hoisted(() => vi.fn());
 const dismissReserveNoticeMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
@@ -11,6 +12,7 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
 vi.mock("@/modules/households", () => ({
   requireHouseholdSession: requireHouseholdSessionMock,
+  getViewerRole: getViewerRoleMock,
   householdScope: (session: { householdId: string }) => ({ householdId: session.householdId }),
 }));
 vi.mock("./service", () => ({
@@ -24,6 +26,7 @@ import { t } from "./strings";
 
 beforeEach(() => {
   requireHouseholdSessionMock.mockClear();
+  getViewerRoleMock.mockReset().mockResolvedValue("owner");
   setHouseholdReserveMultipleMock.mockReset();
   dismissReserveNoticeMock.mockReset();
   revalidatePathMock.mockClear();
@@ -81,6 +84,44 @@ describe("updateReserveMultipleAction", () => {
     );
 
     expect(result).toEqual({ status: "error", message: t.errors.failed });
+  });
+
+  it("rejects a member before reaching the service (CONTEXT.md: only owner/admin administer settings)", async () => {
+    getViewerRoleMock.mockResolvedValue("member");
+
+    const result = await updateReserveMultipleAction(
+      initialActionState,
+      formDataWith({ reserveMultiple: "9" }),
+    );
+
+    expect(result).toEqual({ status: "error", message: t.errors.notAllowed });
+    expect(setHouseholdReserveMultipleMock).not.toHaveBeenCalled();
+  });
+
+  it("allows an admin to change the multiple", async () => {
+    getViewerRoleMock.mockResolvedValue("admin");
+    setHouseholdReserveMultipleMock.mockResolvedValue({ status: "ok" });
+
+    const result = await updateReserveMultipleAction(
+      initialActionState,
+      formDataWith({ reserveMultiple: "9" }),
+    );
+
+    expect(result).toEqual({ status: "success", message: t.multipleUpdated });
+    expect(setHouseholdReserveMultipleMock).toHaveBeenCalled();
+  });
+
+  it("allows the owner to change the multiple", async () => {
+    getViewerRoleMock.mockResolvedValue("owner");
+    setHouseholdReserveMultipleMock.mockResolvedValue({ status: "ok" });
+
+    const result = await updateReserveMultipleAction(
+      initialActionState,
+      formDataWith({ reserveMultiple: "9" }),
+    );
+
+    expect(result).toEqual({ status: "success", message: t.multipleUpdated });
+    expect(setHouseholdReserveMultipleMock).toHaveBeenCalled();
   });
 });
 

@@ -11,7 +11,7 @@ export function ReserveSkeleton() {
       </div>
       <div className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
         {TILE_KEYS.map((key) => (
-          <div key={key} className="bg-card flex flex-col gap-2 p-4">
+          <div key={key} className="bg-card flex flex-col gap-1 p-4">
             <Skeleton className="h-3 w-16" />
             <Skeleton className="h-7 w-24" />
           </div>

@@ -2,6 +2,7 @@ export { ReserveView } from "./components/reserve-view";
 export { ReserveSkeleton } from "./components/reserve-skeleton";
 export { ReserveErrorBoundary } from "./components/reserve-error-boundary";
 export { ReserveNoticeBanner } from "./components/reserve-notice-banner";
+export { ReserveNoticeBannerErrorBoundary } from "./components/reserve-notice-banner-error-boundary";
 export { getReservePageProps, getReserveNoticeBannerProps } from "./page-props";
 export type { ReservePageProps, ReserveNoticeBannerProps } from "./page-props";
 export { runReserveMonthCloseStep } from "./service";

@@ -8,6 +8,7 @@ const en = {
   },
   multipleSelect: {
     label: "Reserve multiple",
+    readOnly: "{multiple} months",
   },
   tiles: {
     target: "Reserve target",
@@ -37,9 +38,7 @@ const en = {
   multipleUpdated: "Reserve multiple updated.",
   noticeDismissed: "Notice dismissed.",
   empty: {
-    noAccounts: "Connect a bank to see the household's reserve target here.",
     connectAction: "Connect bank",
-    noHistory: "Categorize at least one month of spending to see the reserve target here.",
     categorizeAction: "Go to transactions",
   },
   error: {
@@ -50,6 +49,7 @@ const en = {
     invalidInput: "Check the fields and try again.",
     failed: "Couldn't save right now. Try again.",
     noticeNotFound: "That notice is no longer available in this household.",
+    notAllowed: "Only the household's owner or admin can change the reserve multiple.",
   },
 };
 
@@ -63,6 +63,7 @@ const ptBR = {
   },
   multipleSelect: {
     label: "Meses de reserva",
+    readOnly: "{multiple} meses",
   },
   tiles: {
     target: "Meta da reserva",
@@ -92,9 +93,7 @@ const ptBR = {
   multipleUpdated: "Meses de reserva atualizados.",
   noticeDismissed: "Aviso dispensado.",
   empty: {
-    noAccounts: "Conecte um banco para ver a meta da reserva da casa aqui.",
     connectAction: "Conectar banco",
-    noHistory: "Categorize pelo menos um mês de gastos para ver a meta da reserva aqui.",
     categorizeAction: "Ir para transações",
   },
   error: {
@@ -105,6 +104,7 @@ const ptBR = {
     invalidInput: "Confira os campos e tente de novo.",
     failed: "Não deu para salvar agora. Tente de novo.",
     noticeNotFound: "Esse aviso não está mais disponível nesta casa.",
+    notAllowed: "Só quem administra a casa (dono ou admin) pode alterar os meses de reserva.",
   },
 } satisfies typeof en;
 

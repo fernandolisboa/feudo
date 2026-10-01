@@ -10,7 +10,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         currentMultiple: 6,
         nextTargetCentavos: 600000,
       }),
-    ).toBe(false);
+    ).toEqual({ notify: false, previousTargetCentavos: 0 });
   });
 
   it("notifies when the rescaled previous target moves by strictly more than 10%", () => {
@@ -22,7 +22,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         currentMultiple: 6,
         nextTargetCentavos: 660001,
       }),
-    ).toBe(true);
+    ).toEqual({ notify: true, previousTargetCentavos: 600000 });
   });
 
   it("does not notify at exactly 10%", () => {
@@ -31,7 +31,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 100000,
         currentMultiple: 6,
         nextTargetCentavos: 660000,
-      }),
+      }).notify,
     ).toBe(false);
   });
 
@@ -41,7 +41,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 100000,
         currentMultiple: 6,
         nextTargetCentavos: 659999,
-      }),
+      }).notify,
     ).toBe(false);
   });
 
@@ -51,7 +51,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 100000,
         currentMultiple: 6,
         nextTargetCentavos: 540000,
-      }),
+      }).notify,
     ).toBe(false);
   });
 
@@ -61,7 +61,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 100000,
         currentMultiple: 6,
         nextTargetCentavos: 539999,
-      }),
+      }).notify,
     ).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 100000,
         currentMultiple: 9,
         nextTargetCentavos: 900000,
-      }),
+      }).notify,
     ).toBe(false);
   });
 
@@ -84,7 +84,7 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 0,
         currentMultiple: 6,
         nextTargetCentavos: 1,
-      }),
+      }).notify,
     ).toBe(true);
   });
 
@@ -94,7 +94,27 @@ describe("shouldNotifyReserveTargetChange", () => {
         previousAverageFixedCostCentavos: 0,
         currentMultiple: 6,
         nextTargetCentavos: 0,
-      }),
+      }).notify,
     ).toBe(false);
+  });
+
+  it("floors a negative previous average at zero, so an unchanged floored target never notifies", () => {
+    expect(
+      shouldNotifyReserveTargetChange({
+        previousAverageFixedCostCentavos: -50000,
+        currentMultiple: 6,
+        nextTargetCentavos: 0,
+      }),
+    ).toEqual({ notify: false, previousTargetCentavos: 0 });
+  });
+
+  it("flooring a negative previous average still notifies on a real move away from zero", () => {
+    expect(
+      shouldNotifyReserveTargetChange({
+        previousAverageFixedCostCentavos: -50000,
+        currentMultiple: 6,
+        nextTargetCentavos: 600000,
+      }).notify,
+    ).toBe(true);
   });
 });
