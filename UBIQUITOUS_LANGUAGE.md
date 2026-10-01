@@ -28,7 +28,7 @@
 | Bank-connection consent                     | consentimento                                  | the recorded acceptance that precedes every connection                       |
 | Sync                                        | sincronização                                  | "sincronizar" as the verb; never "importar"                                  |
 | Manual sync                                 | sincronização manual                           | the button reads "Sincronizar agora"; three per household per day            |
-| Freshness                                   | atualização                                    | "Atualização: hoje, 06:10"; stale past 48 hours                              |
+| Freshness                                   | atualização                                    | column "Atualização", cell "hoje, 06:10"; stale past 48h                     |
 | Account                                     | conta                                          | bank account only                                                            |
 | Unassigned account                          | sem casa                                       | shown to the owner only, e.g. "Sem casa"                                     |
 | Shared account                              | conta da casa                                  |                                                                              |

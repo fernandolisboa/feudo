@@ -2,7 +2,7 @@ import { formatMoney } from "@feudo/core";
 
 import { Badge } from "@/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
-import { describeFreshness, freshnessLabel } from "../freshness";
+import { describeFreshness, freshnessLabel, isStale } from "../freshness";
 import type { HouseholdAccount } from "../repository";
 import { AccountRowActions } from "./account-row-actions";
 import { t } from "../strings";
@@ -52,7 +52,7 @@ export function AccountsTable({
               <TableCell className="text-muted-foreground">{account.connectedByName}</TableCell>
               <TableCell
                 className={
-                  freshness.stale
+                  isStale(account, now)
                     ? "text-warning tabular-nums"
                     : "text-muted-foreground tabular-nums"
                 }

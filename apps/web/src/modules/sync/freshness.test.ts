@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeFreshness, freshnessLabel, STALE_AFTER_MS } from "./freshness";
+import { describeFreshness, freshnessLabel, isStale, STALE_AFTER_MS } from "./freshness";
 
 const SAO_PAULO = "America/Sao_Paulo";
 
@@ -12,7 +12,7 @@ describe("describeFreshness", () => {
       SAO_PAULO,
     );
 
-    expect(freshness).toEqual({ day: "today", date: "01/10/2026", time: "06:10", stale: false });
+    expect(freshness).toEqual({ day: "today", date: "01/10/2026", time: "06:10" });
     expect(freshnessLabel(freshness)).toBe("hoje, 06:10");
   });
 
@@ -47,16 +47,30 @@ describe("describeFreshness", () => {
     expect(freshness.day).toBe("earlier");
     expect(freshnessLabel(freshness)).toBe("28/09/2026, 06:10");
   });
+});
 
-  it("calls data stale only once it is more than 48 hours old", () => {
-    const syncedAt = new Date("2026-09-29T09:00:00Z");
+describe("isStale", () => {
+  const lastRead = new Date("2026-09-29T09:00:00Z");
 
-    expect(
-      describeFreshness(syncedAt, new Date(syncedAt.getTime() + STALE_AFTER_MS), SAO_PAULO).stale,
-    ).toBe(false);
-    expect(
-      describeFreshness(syncedAt, new Date(syncedAt.getTime() + STALE_AFTER_MS + 1), SAO_PAULO)
-        .stale,
-    ).toBe(true);
+  it("calls data stale only once the connection's last read is more than 48 hours old", () => {
+    const account = { syncedAt: lastRead, connectionSyncedAt: lastRead };
+
+    expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS))).toBe(false);
+    expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS + 1))).toBe(true);
+  });
+
+  it("does not flag an account the provider stopped listing while its connection keeps syncing", () => {
+    const account = {
+      syncedAt: new Date("2026-09-01T09:00:00Z"),
+      connectionSyncedAt: new Date("2026-10-01T09:00:00Z"),
+    };
+
+    expect(isStale(account, new Date("2026-10-01T15:00:00Z"))).toBe(false);
+  });
+
+  it("falls back to the account's own stamp when the connection has none", () => {
+    const account = { syncedAt: lastRead, connectionSyncedAt: null };
+
+    expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS + 1))).toBe(true);
   });
 });

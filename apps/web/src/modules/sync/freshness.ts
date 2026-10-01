@@ -11,7 +11,6 @@ export type Freshness = {
   day: "today" | "yesterday" | "earlier";
   date: string;
   time: string;
-  stale: boolean;
 };
 
 function formatTime(instant: Date, timeZone: string): string {
@@ -34,8 +33,20 @@ export function describeFreshness(syncedAt: Date, now: Date, timeZone: string): 
     day,
     date: formatIsoDate(syncedDay),
     time: formatTime(syncedAt, timeZone),
-    stale: now.getTime() - syncedAt.getTime() > STALE_AFTER_MS,
   };
+}
+
+// Stale is a fact about the connection's last successful read, not the
+// account's own stamp: an account the provider stops listing (a fully
+// redeemed position) keeps its old stamp forever, and no sync could ever
+// clear a warning keyed on it. A connection that never synced falls back to
+// the account's stamp.
+export function isStale(
+  account: { syncedAt: Date; connectionSyncedAt: Date | null },
+  now: Date,
+): boolean {
+  const lastRead = account.connectionSyncedAt ?? account.syncedAt;
+  return now.getTime() - lastRead.getTime() > STALE_AFTER_MS;
 }
 
 export function freshnessLabel(freshness: Freshness): string {

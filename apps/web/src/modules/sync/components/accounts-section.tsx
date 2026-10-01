@@ -41,7 +41,7 @@ export function AccountsSection({
         />
         {householdAccounts.length > 0 ? (
           <>
-            <SyncNotices accounts={householdAccounts} now={now} timeZone={timeZone} />
+            <SyncNotices accounts={householdAccounts} now={now} />
             <ManualSyncControl
               remaining={manualSyncQuota.remaining}
               limit={manualSyncQuota.limit}

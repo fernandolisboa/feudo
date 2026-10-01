@@ -1,7 +1,7 @@
 import { Notice } from "@/ui/notice";
 import { interpolateAll } from "@/lib/interpolate";
 
-import { describeFreshness } from "../freshness";
+import { isStale } from "../freshness";
 import type { HouseholdAccount } from "../repository";
 import { parseSyncFailure } from "../sync-status";
 import { t } from "../strings";
@@ -25,18 +25,8 @@ function failedConnections(accounts: HouseholdAccount[]): (FailedConnection & { 
   return [...byConnection.values()];
 }
 
-export function SyncNotices({
-  accounts,
-  now,
-  timeZone,
-}: {
-  accounts: HouseholdAccount[];
-  now: Date;
-  timeZone: string;
-}) {
-  const staleCount = accounts.filter(
-    (account) => describeFreshness(account.syncedAt, now, timeZone).stale,
-  ).length;
+export function SyncNotices({ accounts, now }: { accounts: HouseholdAccount[]; now: Date }) {
+  const staleCount = accounts.filter((account) => isStale(account, now)).length;
   const failures = failedConnections(accounts);
 
   return (

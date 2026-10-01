@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
+import { errorName } from "@/lib/error-name";
 import { interpolate } from "@/lib/interpolate";
 import { requireHouseholdSession } from "@/modules/households";
 
@@ -289,7 +290,8 @@ export async function syncNowAction(): Promise<ActionState> {
   let outcome: HouseholdSyncOutcome;
   try {
     outcome = await runHouseholdSyncNow(session, getDb(), deps);
-  } catch {
+  } catch (error) {
+    console.warn(`sync: manual sync failed (${errorName(error)})`);
     return { status: "error", message: t.manualSync.unexpected };
   }
 

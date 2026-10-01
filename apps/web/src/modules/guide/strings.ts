@@ -188,7 +188,7 @@ const en = {
       topics: [
         {
           title: "My transaction did not show up",
-          body: "Meu Pluggy updates your banks once a day and Feudo reads Meu Pluggy once a day, so a new transaction can take up to two days. Sync now brings it as soon as Meu Pluggy has it. Also check the month, clear the filters and make sure the account is in this household.",
+          body: "Meu Pluggy updates your banks once a day and Feudo reads Meu Pluggy once a day, so a new transaction can take up to two days. Sync now brings it as soon as it reaches Meu Pluggy. Also check the month, clear the filters and make sure the account is in this household.",
         },
         {
           title: "The sync failed",
@@ -397,7 +397,7 @@ const ptBR = {
       topics: [
         {
           title: "Minha transação não apareceu",
-          body: "O Meu Pluggy atualiza seus bancos uma vez por dia e o Feudo lê o Meu Pluggy uma vez por dia, então uma transação nova pode levar até dois dias. Sincronizar agora traz a transação assim que o Meu Pluggy tiver. Confira também o mês, limpe os filtros e veja se a conta está nesta casa.",
+          body: "O Meu Pluggy atualiza seus bancos uma vez por dia e o Feudo lê o Meu Pluggy uma vez por dia, então uma transação nova pode levar até dois dias. Sincronizar agora traz a transação assim que ela chegar ao Meu Pluggy. Confira também o mês, limpe os filtros e veja se a conta está nesta casa.",
         },
         {
           title: "A sincronização falhou",

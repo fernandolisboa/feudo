@@ -29,6 +29,7 @@ const base: HouseholdAccount = {
   connectedByUserId: "user-1",
   connectedByName: "Ana",
   syncedAt: new Date("2026-10-01T09:10:00Z"),
+  connectionSyncedAt: new Date("2026-10-01T09:10:00Z"),
   lastSyncError: null,
 };
 
@@ -38,7 +39,13 @@ describe("AccountsTable freshness", () => {
       <AccountsTable
         accounts={[
           base,
-          { ...base, id: "acc-2", name: "Poupança", syncedAt: new Date("2026-09-28T09:10:00Z") },
+          {
+            ...base,
+            id: "acc-2",
+            name: "Poupança",
+            syncedAt: new Date("2026-09-28T09:10:00Z"),
+            connectionSyncedAt: new Date("2026-09-28T09:10:00Z"),
+          },
         ]}
         viewerUserId="someone-else"
         timeZone="America/Sao_Paulo"

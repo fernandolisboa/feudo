@@ -718,8 +718,6 @@ export function createManualSyncQuotaRepository(scope: HouseholdScope) {
   };
 }
 
-export type ManualSyncQuotaRepository = ReturnType<typeof createManualSyncQuotaRepository>;
-
 export type AccountLabel = "individual" | "shared";
 
 export type HouseholdAccount = {
@@ -738,6 +736,7 @@ export type HouseholdAccount = {
   connectedByUserId: string;
   connectedByName: string;
   syncedAt: Date;
+  connectionSyncedAt: Date | null;
   lastSyncError: string | null;
 };
 
@@ -766,6 +765,7 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope, owner: 
           connectedByUserId: bankConnection.userId,
           connectedByName: user.name,
           syncedAt: bankAccount.syncedAt,
+          connectionSyncedAt: bankConnection.lastSyncedAt,
           lastSyncError: bankConnection.lastSyncError,
         })
         .from(bankAccount)

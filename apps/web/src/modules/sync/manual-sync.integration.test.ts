@@ -7,6 +7,7 @@ import type { Database } from "@/platform/db/client";
 import { encryptSecret } from "./crypto";
 import { createDocumentHasher } from "./document-hash";
 import { createFakeProvider } from "./provider/fake-provider";
+import type { AuthenticateOutcome, DataProvider } from "./provider/provider";
 import {
   createManualSyncQuotaRepository,
   createSyncUserRepository,
@@ -262,6 +263,29 @@ describe("syncHouseholdNow (integration)", () => {
         lastSyncedAt: SEEDED_AT,
         lastSyncError: "no_credentials",
       });
+    });
+  });
+
+  it("does not report success when the household's only connection was deleted mid-run", async () => {
+    await withTwoUsers(async ({ db, userA, householdA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedConnection(db, userA, householdA, "item-a");
+      const deletingProvider: DataProvider = {
+        name: "fake",
+        async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+          await db.delete(bankConnection).where(eq(bankConnection.id, connectionId));
+          return deps.provider.authenticate(credentials, options);
+        },
+      };
+
+      const outcome = await syncHouseholdNow(
+        userA.session,
+        db,
+        { ...deps, provider: deletingProvider },
+        runAt(NOW),
+      );
+
+      expect(outcome).toMatchObject({ status: "failed" });
     });
   });
 });

@@ -860,11 +860,13 @@ export type HouseholdSyncOutcome =
   | ({ status: "ok" | "partial" | "failed" } & ManualSyncQuota)
   | { status: "nothing_to_sync" | "quota_exhausted" };
 
+// A run where every connection was deleted mid-run read nothing, so it is not
+// reported as a success.
 function householdSyncStatus(result: ConnectionsSyncResult): "ok" | "partial" | "failed" {
-  if (result.failed === 0 && result.unreached === 0) {
-    return "ok";
+  if (result.synced === 0) {
+    return "failed";
   }
-  return result.synced > 0 ? "partial" : "failed";
+  return result.failed === 0 && result.unreached === 0 ? "ok" : "partial";
 }
 
 // A member's "Sincronizar agora" (ADR-0005): re-reads every connection with
@@ -906,7 +908,7 @@ const RUN_HEADROOM_MS = 15_000;
 
 // The Server Action's own time limit: the maxDuration exported by the page
 // that renders the button (app/(app)/page.tsx), which must stay in step.
-const MANUAL_SYNC_BUDGET_MS = 60_000;
+export const MANUAL_SYNC_BUDGET_MS = 60_000;
 
 export async function runHouseholdSyncNow(
   session: HouseholdSession,

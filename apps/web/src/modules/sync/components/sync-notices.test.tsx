@@ -28,13 +28,14 @@ function account(overrides: Partial<HouseholdAccount>): HouseholdAccount {
     connectedByUserId: "user-1",
     connectedByName: "Ana",
     syncedAt: new Date("2026-10-01T09:10:00Z"),
+    connectionSyncedAt: new Date("2026-10-01T09:10:00Z"),
     lastSyncError: null,
     ...overrides,
   };
 }
 
 function renderNotices(accounts: HouseholdAccount[]) {
-  render(<SyncNotices accounts={accounts} now={NOW} timeZone="America/Sao_Paulo" />);
+  render(<SyncNotices accounts={accounts} now={NOW} />);
 }
 
 describe("SyncNotices", () => {
@@ -47,9 +48,10 @@ describe("SyncNotices", () => {
   it("calls out accounts older than 48 hours", () => {
     const stale = new Date(NOW.getTime() - 49 * 60 * 60 * 1000);
     renderNotices([
-      account({ id: "a", syncedAt: stale }),
-      account({ id: "b", syncedAt: stale }),
+      account({ id: "a", syncedAt: stale, connectionSyncedAt: stale }),
+      account({ id: "b", connectionId: "conn-2", syncedAt: stale, connectionSyncedAt: stale }),
       account({ id: "c" }),
+      account({ id: "d", syncedAt: stale }),
     ]);
 
     expect(
