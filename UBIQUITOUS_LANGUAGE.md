@@ -17,7 +17,7 @@
 | Owner                                       | responsável                                    | one per household                                                            |
 | Admin                                       | administrador                                  |                                                                              |
 | Member                                      | membro                                         |                                                                              |
-| Active household                            | casa atual                                     |                                                                              |
+| Active household                            | casa ativa                                     |                                                                              |
 | Role                                        | papel                                          |                                                                              |
 | Transfer ownership                          | transferir a responsabilidade                  | "Transferir responsabilidade" — never "posse"                                |
 | Invite                                      | convite                                        |                                                                              |
