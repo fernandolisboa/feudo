@@ -20,7 +20,7 @@ const en = {
         },
         {
           title: "More than one household",
-          body: "You can belong to several households and work in one at a time. Switch the active household in the Household selector, in the navigation bar (at the top of the screen on a phone): every screen then shows that household's data.",
+          body: "You can belong to several households and work in one at a time. Switch the active household in the Household selector, in the navigation bar (with the side menu expanded; on a phone, at the top of the screen): every screen then shows that household's data.",
         },
       ],
     },
@@ -42,11 +42,11 @@ const en = {
         },
         {
           title: "Each person connects with their own CPF",
-          body: "Meu Pluggy is personal: one account per CPF, with only that person's banks. So each member of the household connects their own banks with their own credentials, and Feudo never shares them. Only you see and manage your connections; the household sees the accounts and balances.",
+          body: "Meu Pluggy is personal: one account per CPF, with only that person's banks. So each member of the household connects their own banks with their own credentials, and Feudo never shares them. Only you see and manage your connections; the household sees the accounts, balances and transactions.",
         },
         {
           title: "Consent and attempt limit",
-          body: "Before each connection, Feudo explains what it reads and asks for your authorization. You can make 5 connection attempts every 15 minutes, failed ones and added connections included. Past that, wait 15 minutes without trying: each attempt in the meantime restarts the wait.",
+          body: "Before the first connection, Feudo explains what it reads and asks for your authorization; each new connection asks for it again. You can make 5 connection attempts every 15 minutes, failed ones and added connections included. Past that, wait 15 minutes without trying: each attempt in the meantime restarts the wait.",
         },
       ],
     },
@@ -56,7 +56,7 @@ const en = {
       topics: [
         {
           title: "Individual account and household account",
-          body: "The accounts you connect join your active household as individual accounts. In Accounts, at the bottom of the Overview, whoever connected an account can mark it as a household account. Everyone in the household sees the accounts and balances, whatever the label.",
+          body: "The accounts you connect join your active household as individual accounts. In Accounts, at the bottom of the Overview, whoever connected an account can mark it as a household account. Everyone in the household sees the accounts, balances and transactions, whatever the label.",
         },
         {
           title: "No household",
@@ -175,7 +175,7 @@ const en = {
         },
         {
           title: "Stopping",
-          body: "In Your connections, removing your credentials stops the sync and destroys them on the spot, and deleting a connection removes its accounts and their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what Feudo has already read stays here until you remove your credentials and delete your connections.",
+          body: "In Your connections, removing your credentials stops the sync and destroys them on the spot, and deleting a connection removes its accounts and their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what Feudo has already read stays here until you remove your credentials and delete your connections. After you remove your credentials, your accounts show “Last sync failed”; that is expected.",
         },
         {
           title: "Export and deletion",
@@ -229,7 +229,7 @@ const ptBR = {
         },
         {
           title: "Mais de uma casa",
-          body: "Você pode participar de várias casas e trabalha em uma de cada vez. Mude a casa ativa no seletor Casa, na barra de navegação (no celular, no topo da tela): todas as telas passam a mostrar os dados dela.",
+          body: "Você pode participar de várias casas e trabalha em uma de cada vez. Mude a casa ativa no seletor Casa, na barra de navegação (com o menu lateral expandido; no celular, no topo da tela): todas as telas passam a mostrar os dados dela.",
         },
       ],
     },
@@ -251,11 +251,11 @@ const ptBR = {
         },
         {
           title: "Cada pessoa conecta com o próprio CPF",
-          body: "O Meu Pluggy é pessoal: uma conta por CPF, só com os bancos daquela pessoa. Por isso cada membro da casa conecta os próprios bancos com as próprias credenciais, e o Feudo nunca as compartilha. Só você vê e administra suas conexões; a casa vê as contas e os saldos.",
+          body: "O Meu Pluggy é pessoal: uma conta por CPF, só com os bancos daquela pessoa. Por isso cada membro da casa conecta os próprios bancos com as próprias credenciais, e o Feudo nunca as compartilha. Só você vê e administra suas conexões; a casa vê as contas, os saldos e as transações.",
         },
         {
           title: "Consentimento e limite de tentativas",
-          body: "Antes de cada conexão, o Feudo explica o que vai ler e pede sua autorização. Dá para fazer 5 tentativas de conexão a cada 15 minutos, contando as que falharam e as conexões adicionadas. Passou disso, espere 15 minutos sem tentar: cada tentativa nesse meio-tempo recomeça a espera.",
+          body: "Antes da primeira conexão, o Feudo explica o que vai ler e pede sua autorização; cada conexão nova pede a autorização de novo. Dá para fazer 5 tentativas de conexão a cada 15 minutos, contando as que falharam e as conexões adicionadas. Passou disso, espere 15 minutos sem tentar: cada tentativa nesse meio-tempo recomeça a espera.",
         },
       ],
     },
@@ -265,7 +265,7 @@ const ptBR = {
       topics: [
         {
           title: "Conta individual e conta da casa",
-          body: "As contas que você conecta entram na sua casa ativa como conta individual. Em Contas, no fim da Visão geral, quem conectou a conta pode marcá-la como conta da casa. Todos na casa veem as contas e os saldos, independentemente do rótulo.",
+          body: "As contas que você conecta entram na sua casa ativa como conta individual. Em Contas, no fim da Visão geral, quem conectou a conta pode marcá-la como conta da casa. Todos na casa veem as contas, os saldos e as transações, independentemente do rótulo.",
         },
         {
           title: "Sem casa",
@@ -384,7 +384,7 @@ const ptBR = {
         },
         {
           title: "Como parar",
-          body: "Em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão remove as contas dela, com todas as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que o Feudo já leu continua aqui até você remover suas credenciais e excluir suas conexões.",
+          body: "Em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão remove as contas dela, com todas as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que o Feudo já leu continua aqui até você remover suas credenciais e excluir suas conexões. Depois de remover as credenciais, suas contas passam a mostrar “Última sincronização falhou”, e isso é esperado.",
         },
         {
           title: "Exportar e excluir",
