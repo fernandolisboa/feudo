@@ -1,21 +1,17 @@
 import {
   buildLedgerDashboard,
-  categoryOf,
   dashboardMonthRange,
   formatBasisPointsPercent,
   formatCompactReais,
   formatMoney,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
-  parseYearMonth,
   shiftYearMonth,
   summarizeUncategorized,
   yearMonthDayRange,
   yearMonthOf,
   type AverageFixedCost,
   type CategorySpending,
-  type DashboardLine,
-  type KindContext,
   type MonthlyPoint,
   type MonthTotals,
   type YearMonth,
@@ -25,14 +21,15 @@ import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import type { StatTileView } from "@/ui/stat-tile";
 
+import { toDashboardLines } from "./dashboard-lines";
 import { readHouseholdLedger } from "./ledger-read";
 import { createHouseholdLedgerRepository } from "./repository";
-import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { t } from "./strings";
 import { overviewSearchParamsSchema, type OverviewSearchParams } from "./validation";
 
-export type StatTileView = { label: string; value: string; meta: string | null };
+export type { StatTileView };
 
 export type CategoryBarView = { key: string; label: string; amountLabel: string; fraction: number };
 
@@ -69,21 +66,6 @@ export type OverviewPageProps = {
   categorySpending: CategoryBarView[];
   series: MonthlyBarPointView[];
 };
-
-function monthOfDate(date: string): YearMonth {
-  return parseYearMonth(date.slice(0, 7));
-}
-
-function toDashboardLine(row: ResolvedLedgerRow, kinds: KindContext): DashboardLine {
-  return {
-    month: monthOfDate(row.date),
-    kind: row.kind,
-    type: row.type,
-    amountCentavos: row.amountCentavos,
-    categoryId: row.categorization ? categoryOf(row.categorization.subcategory, kinds) : null,
-    currency: row.currency,
-  };
-}
 
 // pt-BR short month names ("set.", "ago.") carry a trailing period Feudo
 // never uses in a chart axis (DESIGN.md's formatting rules); UTC keeps the
@@ -234,7 +216,7 @@ export async function getOverviewPageProps(
   };
 
   const { kinds, rows } = await readHouseholdLedger(db, scope, dayRange, null, timeZone);
-  const lines = rows.map((row) => toDashboardLine(row, kinds));
+  const lines = toDashboardLines(rows, kinds);
   const dashboard = buildLedgerDashboard({ month, lines });
 
   const monthDays = yearMonthDayRange(month);
