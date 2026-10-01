@@ -46,3 +46,7 @@ Sync runs automatically once a day and can be triggered manually up to three tim
 ## Amendment 2026-10-01 (#94): the manual trigger is not built yet
 
 As of this date only the daily cron (`/api/cron/sync`) and the immediate sync when a connection is created or added exist. The manual trigger and its per-household quota described above are still the plan, tracked in #14; user-facing copy (the "Como usar" guide) does not mention them until they ship.
+
+## Amendment 2026-10-01 (#14): the manual trigger ships
+
+"Sincronizar agora", on Visão geral, re-reads every connection with an account in the member's active household, each under its own owner's credentials, through the same per-connection loop as the daily job (deadline, half-run slices, attempt stamping, failure recording). Any member can press it. The quota is three per household per calendar day in the household's time zone, counted in `manual_sync_trigger` (household-scoped, additive migration 0017). Counting and inserting happen in one transaction under a `no key update` lock on the household's row, so concurrent presses never grant a fourth. A press spends one unit before the read, whether the read succeeds or not, because a failed read still costs the provider the same requests. A household with no account spends nothing. The action runs inside the page's own function, whose `maxDuration` (60 seconds) the service mirrors as its budget. Rows are pruned by the daily job once they are 48 hours old. The Amendment of 2026-10-01 (#94) is superseded: the guide now describes the button.

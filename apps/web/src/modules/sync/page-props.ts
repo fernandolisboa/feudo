@@ -18,6 +18,7 @@ import {
   type OwnedAccount,
 } from "./repository";
 import { userScope } from "./scope";
+import { getManualSyncQuota, type ManualSyncQuota } from "./service";
 
 export type AccountsSectionProps = {
   domesticAccounts: HouseholdAccount[];
@@ -29,6 +30,8 @@ export type AccountsSectionProps = {
   credentialsSavedAt: Date | null;
   viewerUserId: string;
   timeZone: string;
+  now: Date;
+  manualSyncQuota: ManualSyncQuota;
 };
 
 // Everything the "Contas" section of the overview renders, so the page stays
@@ -48,6 +51,10 @@ export async function getAccountsSectionProps(
       getHouseholdSettings(householdScope(session), db),
     ]);
 
+  const now = new Date();
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
+  const manualSyncQuota = await getManualSyncQuota(householdScope(session), db, { now, timeZone });
+
   // Only BRL accounts ever enter a household total (#12); the split is made
   // here, once, so no component decides which currency counts.
   // HOUSEHOLD_CURRENCY lives in packages/core/src/money (ADR-0002) so core's
@@ -61,6 +68,8 @@ export async function getAccountsSectionProps(
     hasCredentials: credential !== undefined,
     credentialsSavedAt: credential?.lastValidatedAt ?? null,
     viewerUserId: session.userId,
-    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+    timeZone,
+    now,
+    manualSyncQuota,
   };
 }

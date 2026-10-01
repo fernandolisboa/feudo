@@ -171,6 +171,28 @@ export const bankAccount = pgTable(
   ],
 );
 
+// Household-scoped (ADR-0001): one row per manual sync a member started,
+// counted against the household's daily quota (ADR-0005). local_day is the
+// household's calendar day at that moment, so the quota resets at the
+// household's own midnight rather than UTC's.
+export const manualSyncTrigger = pgTable(
+  "manual_sync_trigger",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    triggeredByUserId: text("triggered_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    localDay: date("local_day", { mode: "string" }).notNull(),
+    triggeredAt: timestamp("triggered_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("manual_sync_trigger_household_day_idx").on(table.householdId, table.localDay)],
+);
+
 // Household-scoped through its account (ADR-0001): a transaction has no
 // household column of its own, so reassigning an account moves its history
 // with it and an unassigned account's transactions are visible to nobody.

@@ -2,8 +2,7 @@ import { formatMoney } from "@feudo/core";
 
 import { Badge } from "@/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
-import { formatShortDateTime } from "@/lib/format-date";
-
+import { describeFreshness, freshnessLabel, isStale } from "../freshness";
 import type { HouseholdAccount } from "../repository";
 import { AccountRowActions } from "./account-row-actions";
 import { t } from "../strings";
@@ -14,10 +13,12 @@ export function AccountsTable({
   accounts,
   viewerUserId,
   timeZone,
+  now,
 }: {
   accounts: HouseholdAccount[];
   viewerUserId: string;
   timeZone: string;
+  now: Date;
 }) {
   return (
     <Table>
@@ -34,39 +35,51 @@ export function AccountsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {accounts.map((account) => (
-          <TableRow key={account.id} className="h-[var(--density-row)]">
-            <TableCell>{account.institutionName}</TableCell>
-            <TableCell className="font-medium">{account.name}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {t.accounts.types[account.type]}
-            </TableCell>
-            <TableCell>
-              <Badge variant={account.label === "shared" ? "default" : "outline"}>
-                {t.accounts.labels[account.label]}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-muted-foreground">{account.connectedByName}</TableCell>
-            <TableCell className="text-muted-foreground tabular-nums">
-              {formatShortDateTime(account.syncedAt, timeZone)}
-              {account.lastSyncError ? (
-                <span className="text-destructive block text-xs">{t.accounts.syncFailed}</span>
-              ) : null}
-            </TableCell>
-            <TableCell className="font-heading text-right tabular-nums">
-              {formatMoney({ amountCentavos: account.balanceCentavos, currency: account.currency })}
-            </TableCell>
-            <TableCell className="text-right">
-              {account.connectedByUserId === viewerUserId ? (
-                <AccountRowActions
-                  accountId={account.id}
-                  accountName={account.name}
-                  label={account.label}
-                />
-              ) : null}
-            </TableCell>
-          </TableRow>
-        ))}
+        {accounts.map((account) => {
+          const freshness = describeFreshness(account.syncedAt, now, timeZone);
+          return (
+            <TableRow key={account.id} className="h-[var(--density-row)]">
+              <TableCell>{account.institutionName}</TableCell>
+              <TableCell className="font-medium">{account.name}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {t.accounts.types[account.type]}
+              </TableCell>
+              <TableCell>
+                <Badge variant={account.label === "shared" ? "default" : "outline"}>
+                  {t.accounts.labels[account.label]}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-muted-foreground">{account.connectedByName}</TableCell>
+              <TableCell
+                className={
+                  isStale(account, now)
+                    ? "text-warning tabular-nums"
+                    : "text-muted-foreground tabular-nums"
+                }
+              >
+                {freshnessLabel(freshness)}
+                {account.lastSyncError ? (
+                  <span className="text-destructive block text-xs">{t.accounts.syncFailed}</span>
+                ) : null}
+              </TableCell>
+              <TableCell className="font-heading text-right tabular-nums">
+                {formatMoney({
+                  amountCentavos: account.balanceCentavos,
+                  currency: account.currency,
+                })}
+              </TableCell>
+              <TableCell className="text-right">
+                {account.connectedByUserId === viewerUserId ? (
+                  <AccountRowActions
+                    accountId={account.id}
+                    accountName={account.name}
+                    label={account.label}
+                  />
+                ) : null}
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

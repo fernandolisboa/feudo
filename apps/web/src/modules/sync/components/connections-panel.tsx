@@ -9,6 +9,7 @@ import { DeleteConnectionDialog } from "./delete-connection-dialog";
 import { MoveAccountDialog } from "./move-account-dialog";
 import { RemoveCredentialsDialog } from "./remove-credentials-dialog";
 import { RenameConnectionDialog } from "./rename-connection-dialog";
+import { parseSyncFailure } from "../sync-status";
 import { t } from "../strings";
 
 export function ConnectionsPanel({
@@ -75,9 +76,7 @@ export function ConnectionsPanel({
                       )
                     : t.connections.neverSynced}
                 </span>
-                {connection.lastSyncError ? (
-                  <span className="text-destructive text-xs">{t.accounts.syncFailed}</span>
-                ) : null}
+                <ConnectionFailure lastSyncError={connection.lastSyncError} />
                 <ConnectionAccounts
                   accounts={ownedAccounts.filter(
                     (account) => account.connectionId === connection.id,
@@ -144,5 +143,17 @@ function ConnectionAccounts({
         );
       })}
     </ul>
+  );
+}
+
+function ConnectionFailure({ lastSyncError }: { lastSyncError: string | null }) {
+  const failure = parseSyncFailure(lastSyncError);
+  if (failure === null) {
+    return null;
+  }
+  return (
+    <span className="text-destructive text-xs">
+      {interpolate(t.connections.syncFailedBecause, "{cause}", t.syncNotices.causes[failure])}
+    </span>
   );
 }
