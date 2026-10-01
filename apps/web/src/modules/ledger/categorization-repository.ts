@@ -356,20 +356,40 @@ export function createCategorizationRepository(scope: HouseholdScope) {
         return "not_found";
       }
 
+      // The write repeats the tenancy predicate (INSERT ... SELECT, columns in
+      // schema order as in setTransferMark below): an account moved to another
+      // household between the check above and this insert must not receive a
+      // choice no member of its new household made (#13).
       const target = transactionCategorizationTargetColumns(subcategory, scope.householdId);
+      const values = db
+        .select({
+          transactionId: sql<string>`${transactionId}::text`.as("transaction_id"),
+          productSubcategoryId: sql<string | null>`${target.productSubcategoryId}::text`.as(
+            "product_subcategory_id",
+          ),
+          householdSubcategoryId: sql<string | null>`${target.householdSubcategoryId}::text`.as(
+            "household_subcategory_id",
+          ),
+          subcategoryHouseholdId: sql<string | null>`${target.subcategoryHouseholdId}::text`.as(
+            "subcategory_household_id",
+          ),
+          categorizedByUserId: sql<string>`${userId}::text`.as("categorized_by_user_id"),
+          categorizedAt: sql<Date>`now()`.as("categorized_at"),
+        })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(scopedToHousehold(transactionId))
+        .limit(1);
       try {
-        await db
+        const written = await db
           .insert(transactionCategorization)
-          .values({
-            transactionId,
-            categorizedByUserId: userId,
-            ...target,
-          })
+          .select(values)
           .onConflictDoUpdate({
             target: [transactionCategorization.transactionId],
-            set: { categorizedByUserId: userId, categorizedAt: new Date(), ...target },
-          });
-        return "ok";
+            set: { categorizedByUserId: userId, categorizedAt: sql`now()`, ...target },
+          })
+          .returning({ transactionId: transactionCategorization.transactionId });
+        return written.length > 0 ? "ok" : "not_found";
       } catch (error) {
         if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
           return "not_found";

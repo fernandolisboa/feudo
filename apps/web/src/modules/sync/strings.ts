@@ -127,7 +127,7 @@ const en = {
     moveDialog: {
       title: "Move {account} to another household",
       description:
-        "Its balance and transaction history go with it, including categories chosen by hand and internal-transfer marks. Categorization rules don't: the other household's own rules apply there. Accounts this connection lists later go to the same household.",
+        "Its balance and transaction history go with it, including internal-transfer marks and categories chosen by hand, except ones the source household created for itself. Categorization rules don't: the other household's own rules apply there. Accounts this connection lists later go to the same household.",
       label: "Household",
       submit: "Move",
       cancel: "Cancel",
@@ -292,7 +292,7 @@ const ptBR = {
     moveDialog: {
       title: "Mover {account} para outra casa",
       description:
-        "O saldo e o histórico de transações vão junto, inclusive as categorias escolhidas à mão e as marcações de transferência interna. As regras de categorização não vão: lá valem as regras da outra casa. As contas que essa conexão passar a listar depois também vão para essa casa.",
+        "O saldo e o histórico de transações vão junto, inclusive as marcações de transferência interna e as categorias escolhidas à mão, menos as que a casa de origem criou para si. As regras de categorização não vão: lá valem as regras da outra casa. As contas que essa conexão passar a listar depois também vão para essa casa.",
       label: "Casa",
       submit: "Mover",
       cancel: "Cancelar",

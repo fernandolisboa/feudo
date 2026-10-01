@@ -724,8 +724,8 @@ describe("getTransactionsPageProps (integration)", () => {
       expect(
         before.transactions
           .filter((row) => row.description === "TRANSFERENCIA CASA")
-          .every((row) => row.categorize.isInternalTransfer),
-      ).toBe(true);
+          .map((row) => row.categorize.isInternalTransfer),
+      ).toEqual([true, true]);
       expect(
         before.transactions.find((row) => row.description === "PAGAMENTO LOJA XYZ")?.category
           ?.sourceLabel,

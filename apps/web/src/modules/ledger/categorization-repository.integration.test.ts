@@ -13,6 +13,7 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
+import { transactionCategorization } from "./schema";
 
 import type { Database } from "@/platform/db/client";
 
@@ -28,6 +29,55 @@ async function transactionIdFor(db: Database, providerTransactionId: string): Pr
     throw new Error(`seed did not create transaction ${providerTransactionId}`);
   }
   return row.id;
+}
+
+// Runs sideEffect right after the first read through db resolves, before the
+// caller's next statement: a deterministic stand-in for another request
+// committing between a repository's scope check and its write.
+function afterFirstRead(db: Database, sideEffect: () => Promise<unknown>): Database {
+  let fired = false;
+  const wrap = (builder: object): object =>
+    new Proxy(builder, {
+      get(target, prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (typeof value !== "function") {
+          return value;
+        }
+        const method = value as (...args: unknown[]) => unknown;
+        if (prop === "then") {
+          return (
+            onFulfilled?: (rows: unknown) => unknown,
+            onRejected?: (error: unknown) => unknown,
+          ) =>
+            (
+              method.call(target, async (rows: unknown) => {
+                await sideEffect();
+                return rows;
+              }) as Promise<unknown>
+            ).then(onFulfilled, onRejected);
+        }
+        return (...args: unknown[]) => {
+          const result = method.apply(target, args);
+          return result !== null && typeof result === "object" ? wrap(result) : result;
+        };
+      },
+    });
+  return new Proxy(db, {
+    get(target, prop) {
+      const value: unknown = Reflect.get(target, prop, target);
+      if (typeof value !== "function") {
+        return value;
+      }
+      const method = value as (...args: unknown[]) => unknown;
+      if (prop === "select" && !fired) {
+        return (...args: unknown[]) => {
+          fired = true;
+          return wrap(method.apply(target, args) as object);
+        };
+      }
+      return method.bind(target);
+    },
+  });
 }
 
 describe("categorization repository (integration)", () => {
@@ -472,6 +522,38 @@ describe("categorization repository (integration)", () => {
 
       expect(await repoA.setTransferMark(db, transactionId, false, userA.id)).toBe("not_found");
       expect(await repoA.clearTransferMark(db, transactionId)).toBe("not_found");
+    });
+  });
+
+  it("refuses a manual choice when the account moves to another household between the scope check and the write (#13)", async () => {
+    await withTwoUsers(async ({ db, userA, householdB }) => {
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "move-race-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "move-race-1");
+      await joinHousehold(db, userA.id, householdB);
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      const racingDb = afterFirstRead(db, () =>
+        moveSeededAccount(db, userA, accountId, householdB),
+      );
+
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      expect(
+        await repoA.setManual(
+          racingDb,
+          transactionId,
+          { type: "product", id: "housing.condo" },
+          userA.id,
+        ),
+      ).toBe("not_found");
+
+      expect(
+        await db
+          .select()
+          .from(transactionCategorization)
+          .where(eq(transactionCategorization.transactionId, transactionId)),
+      ).toEqual([]);
     });
   });
 
