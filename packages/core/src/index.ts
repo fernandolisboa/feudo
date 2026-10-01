@@ -34,6 +34,7 @@ export {
   isYearMonth,
   localDateOf,
   parseYearMonth,
+  shiftIsoDate,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,

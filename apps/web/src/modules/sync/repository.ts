@@ -8,6 +8,7 @@ import {
   bankConnection,
   bankConnectionConsent,
   bankTransaction,
+  manualSyncTrigger,
   providerAuthAttempt,
   providerCredential,
 } from "./schema";
@@ -629,6 +630,94 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
     );
 }
 
+// Household-scoped work list for a manual sync (ADR-0005): every connection,
+// whoever owns it, with at least one account in the household. Each is then
+// read under its own owner's scope and credentials, exactly as the daily job
+// does; nothing here hands one member another member's secret.
+export async function listHouseholdConnectionsToSync(
+  db: Database,
+  scope: HouseholdScope,
+): Promise<ConnectionToSync[]> {
+  return db
+    .select({
+      id: bankConnection.id,
+      userId: bankConnection.userId,
+      providerItemId: bankConnection.providerItemId,
+      lastSyncedAt: bankConnection.lastSyncedAt,
+      firstSyncSince: bankConnection.firstSyncSince,
+      lastSyncError: bankConnection.lastSyncError,
+    })
+    .from(bankConnection)
+    .where(
+      exists(
+        db
+          .select({ id: bankAccount.id })
+          .from(bankAccount)
+          .where(
+            and(
+              eq(bankAccount.connectionId, bankConnection.id),
+              eq(bankAccount.householdId, scope.householdId),
+            ),
+          ),
+      ),
+    )
+    .orderBy(
+      sql`${bankConnection.lastSyncAttemptedAt} asc nulls first`,
+      asc(bankConnection.createdAt),
+    );
+}
+
+export type ManualSyncReservation = { reserved: boolean; used: number };
+
+// The household's daily quota of manual syncs (ADR-0005), keyed by the
+// household's own calendar day. No method takes a household id: the scope
+// comes from the session at construction.
+export function createManualSyncQuotaRepository(scope: HouseholdScope) {
+  async function countOn(db: Database, localDay: string): Promise<number> {
+    const [row] = await db
+      .select({ total: count() })
+      .from(manualSyncTrigger)
+      .where(
+        and(
+          eq(manualSyncTrigger.householdId, scope.householdId),
+          eq(manualSyncTrigger.localDay, localDay),
+        ),
+      );
+    return row?.total ?? 0;
+  }
+
+  return {
+    countOn,
+
+    // Counting and inserting under a lock on the household's own row, so two
+    // members pressing the button together cannot both read "two used" and
+    // both start a third. `no key update` does not block the key-share locks
+    // that inserts referencing the household take.
+    async reserve(
+      db: Database,
+      input: { localDay: string; triggeredBy: UserScope; limit: number },
+    ): Promise<ManualSyncReservation> {
+      return db.transaction(async (tx) => {
+        await tx
+          .select({ id: organization.id })
+          .from(organization)
+          .where(eq(organization.id, scope.householdId))
+          .for("no key update");
+        const used = await countOn(tx, input.localDay);
+        if (used >= input.limit) {
+          return { reserved: false, used };
+        }
+        await tx.insert(manualSyncTrigger).values({
+          householdId: scope.householdId,
+          triggeredByUserId: input.triggeredBy.userId,
+          localDay: input.localDay,
+        });
+        return { reserved: true, used: used + 1 };
+      });
+    },
+  };
+}
+
 export type AccountLabel = "individual" | "shared";
 
 export type HouseholdAccount = {
@@ -647,6 +736,7 @@ export type HouseholdAccount = {
   connectedByUserId: string;
   connectedByName: string;
   syncedAt: Date;
+  connectionSyncedAt: Date | null;
   lastSyncError: string | null;
 };
 
@@ -675,6 +765,7 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope, owner: 
           connectedByUserId: bankConnection.userId,
           connectedByName: user.name,
           syncedAt: bankAccount.syncedAt,
+          connectionSyncedAt: bankConnection.lastSyncedAt,
           lastSyncError: bankConnection.lastSyncError,
         })
         .from(bankAccount)
@@ -719,6 +810,16 @@ export async function pruneOldAuthAttempts(db: Database, olderThan: Date): Promi
     .delete(providerAuthAttempt)
     .where(lt(providerAuthAttempt.attemptedAt, olderThan))
     .returning({ id: providerAuthAttempt.id });
+  return deleted.length;
+}
+
+// Not scoped: housekeeping for the daily cron. A trigger only ever counts on
+// its own household day, so once that day is over everywhere it says nothing.
+export async function pruneOldManualSyncTriggers(db: Database, olderThan: Date): Promise<number> {
+  const deleted = await db
+    .delete(manualSyncTrigger)
+    .where(lt(manualSyncTrigger.triggeredAt, olderThan))
+    .returning({ id: manualSyncTrigger.id });
   return deleted.length;
 }
 

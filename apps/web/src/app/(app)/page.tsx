@@ -15,6 +15,10 @@ import {
 } from "@/modules/reserve";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
+// "Sincronizar agora" runs inside this page's function; sync's
+// MANUAL_SYNC_BUDGET_MS mirrors it (page.test.ts pins the two together).
+export const maxDuration = 60;
+
 async function OverviewContent({
   session,
   searchParams,

@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import type { CurrentSession } from "@/modules/auth";
 import type { HouseholdScope, HouseholdSession } from "@/modules/households";
-import { householdScope, lockMembershipScope } from "@/modules/households";
+import {
+  DEFAULT_TIME_ZONE,
+  getHouseholdSettings,
+  householdScope,
+  lockMembershipScope,
+} from "@/modules/households";
+import { localDateOf } from "@feudo/core";
 
 import { errorName } from "@/lib/error-name";
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
@@ -34,8 +40,10 @@ import { getDataProvider } from "./provider/select";
 import {
   ConnectionNotOwnedError,
   createHouseholdAccountsRepository,
+  createManualSyncQuotaRepository,
   createSyncUserRepository,
   listConnectionsToSync,
+  listHouseholdConnectionsToSync,
   type ConnectionToSync,
   type DataProviderKind,
   type SyncUserRepository,
@@ -711,7 +719,21 @@ const MIN_CONNECTION_SLICE_MS = PROVIDER_REQUEST_TIMEOUT_MS;
 export async function syncAllConnections(
   db: Database,
   deps: SyncDeps,
-  options: { now?: Date; deadline: Date; clock?: () => Date },
+  options: SyncRunOptions,
+): Promise<ConnectionsSyncResult> {
+  return syncConnections(db, deps, await listConnectionsToSync(db), options);
+}
+
+type SyncRunOptions = { now?: Date; deadline: Date; clock?: () => Date };
+
+// One run over a given work list: the daily job's (every connection) or a
+// household's manual sync (the connections with an account there). Both
+// share the same deadline, slices, queue stamping and failure recording.
+async function syncConnections(
+  db: Database,
+  deps: SyncDeps,
+  connections: ConnectionToSync[],
+  options: SyncRunOptions,
 ): Promise<ConnectionsSyncResult> {
   const now = options.now ?? new Date();
   const clock = options.clock ?? (() => new Date());
@@ -720,7 +742,6 @@ export async function syncAllConnections(
   const totalBudgetMs = deadline.getTime() - runStartedAt.getTime();
   const maxConnectionSliceMs = totalBudgetMs / 2;
 
-  const connections = await listConnectionsToSync(db);
   const credentials: CredentialsCache = new Map();
   const invalidCredentials: InvalidCredentialsCache = new Set();
 
@@ -811,6 +832,72 @@ export async function syncAllConnections(
   return { ok: synced > 0 || failed === 0, synced, failed, gone, unreached };
 }
 
+export const MANUAL_SYNCS_PER_DAY = 3;
+
+export type ManualSyncQuota = { limit: number; used: number; remaining: number };
+
+function quotaFrom(used: number): ManualSyncQuota {
+  return {
+    limit: MANUAL_SYNCS_PER_DAY,
+    used,
+    remaining: Math.max(0, MANUAL_SYNCS_PER_DAY - used),
+  };
+}
+
+export async function getManualSyncQuota(
+  household: HouseholdScope,
+  db: Database,
+  options: { now: Date; timeZone: string },
+): Promise<ManualSyncQuota> {
+  const used = await createManualSyncQuotaRepository(household).countOn(
+    db,
+    localDateOf(options.now, options.timeZone),
+  );
+  return quotaFrom(used);
+}
+
+export type HouseholdSyncOutcome =
+  | ({ status: "ok" | "partial" | "failed" } & ManualSyncQuota)
+  | { status: "nothing_to_sync" | "quota_exhausted" };
+
+// A run where every connection was deleted mid-run read nothing, so it is not
+// reported as a success.
+function householdSyncStatus(result: ConnectionsSyncResult): "ok" | "partial" | "failed" {
+  if (result.synced === 0) {
+    return "failed";
+  }
+  return result.failed === 0 && result.unreached === 0 ? "ok" : "partial";
+}
+
+// A member's "Sincronizar agora" (ADR-0005): re-reads every connection with
+// an account in the session's household, each under its own owner's
+// credentials, and spends one of the household's manual syncs for the day.
+// A household with nothing to read spends nothing. The quota is spent before
+// the read, so a run that fails still counts: it still cost the provider the
+// same requests.
+export async function syncHouseholdNow(
+  session: HouseholdSession,
+  db: Database,
+  deps: SyncDeps,
+  options: SyncRunOptions & { timeZone: string },
+): Promise<HouseholdSyncOutcome> {
+  const household = householdScope(session);
+  const connections = await listHouseholdConnectionsToSync(db, household);
+  if (connections.length === 0) {
+    return { status: "nothing_to_sync" };
+  }
+  const reservation = await createManualSyncQuotaRepository(household).reserve(db, {
+    localDay: localDateOf(options.now ?? new Date(), options.timeZone),
+    triggeredBy: userScope(session),
+    limit: MANUAL_SYNCS_PER_DAY,
+  });
+  if (!reservation.reserved) {
+    return { status: "quota_exhausted" };
+  }
+  const result = await syncConnections(db, deps, connections, options);
+  return { status: householdSyncStatus(result), ...quotaFrom(reservation.used) };
+}
+
 export type ConnectionsSyncStep = ConnectionsSyncResult | { error: string };
 
 // Route.ts owns the function's real time limit (`maxDuration`) and passes it
@@ -818,6 +905,22 @@ export type ConnectionsSyncStep = ConnectionsSyncResult | { error: string };
 // does not observe the deadline, so it must be short) and the JSON response
 // need back once the last connection's read returns.
 const RUN_HEADROOM_MS = 15_000;
+
+// The Server Action's own time limit: the maxDuration exported by the page
+// that renders the button (app/(app)/page.tsx), which must stay in step.
+export const MANUAL_SYNC_BUDGET_MS = 60_000;
+
+export async function runHouseholdSyncNow(
+  session: HouseholdSession,
+  db: Database,
+  deps: SyncDeps,
+): Promise<HouseholdSyncOutcome> {
+  const settings = await getHouseholdSettings(householdScope(session), db);
+  return syncHouseholdNow(session, db, deps, {
+    deadline: new Date(Date.now() + MANUAL_SYNC_BUDGET_MS - RUN_HEADROOM_MS),
+    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+  });
+}
 
 export async function runConnectionsSyncStep(
   db: Database,
