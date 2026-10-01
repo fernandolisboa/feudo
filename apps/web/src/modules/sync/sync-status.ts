@@ -1,12 +1,28 @@
-export type ConnectionSyncFailure =
-  | "no_credentials"
-  | "credentials_unreadable"
-  | "invalid_credentials"
-  | "provider_unavailable"
-  | "listing_too_long"
-  | "timed_out"
-  | "too_slow"
-  | "failed";
+export const CONNECTION_SYNC_FAILURES = [
+  "no_credentials",
+  "credentials_unreadable",
+  "invalid_credentials",
+  "provider_unavailable",
+  "listing_too_long",
+  "timed_out",
+  "too_slow",
+  "failed",
+] as const;
+
+export type ConnectionSyncFailure = (typeof CONNECTION_SYNC_FAILURES)[number];
+
+// last_sync_error is plain text in the database: a value written by an older
+// release, or by hand, still reads as a failure, just without a specific cause.
+function isSyncFailure(value: string): value is ConnectionSyncFailure {
+  return (CONNECTION_SYNC_FAILURES as readonly string[]).includes(value);
+}
+
+export function parseSyncFailure(stored: string | null): ConnectionSyncFailure | null {
+  if (stored === null) {
+    return null;
+  }
+  return isSyncFailure(stored) ? stored : "failed";
+}
 
 // Failures that mean this connection's own listing is the likely reason, not
 // the run's clock or its place in the queue, so a first sync's window

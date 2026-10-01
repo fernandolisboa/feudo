@@ -7,6 +7,8 @@ import { SectionHeader } from "@/ui/section-header";
 import type { AccountsSectionProps } from "../page-props";
 import { AccountsTable } from "./accounts-table";
 import { ConnectionsPanel } from "./connections-panel";
+import { ManualSyncControl } from "./manual-sync-control";
+import { SyncNotices } from "./sync-notices";
 import { t } from "../strings";
 
 export function AccountsSection({
@@ -19,7 +21,10 @@ export function AccountsSection({
   credentialsSavedAt,
   viewerUserId,
   timeZone,
+  now,
+  manualSyncQuota,
 }: AccountsSectionProps) {
+  const householdAccounts = [...domesticAccounts, ...foreignAccounts];
   return (
     <>
       <section>
@@ -34,6 +39,16 @@ export function AccountsSection({
             )
           }
         />
+        {householdAccounts.length > 0 ? (
+          <>
+            <SyncNotices accounts={householdAccounts} now={now} timeZone={timeZone} />
+            <ManualSyncControl
+              remaining={manualSyncQuota.remaining}
+              limit={manualSyncQuota.limit}
+              hasFailures={householdAccounts.some((account) => account.lastSyncError !== null)}
+            />
+          </>
+        ) : null}
         {domesticAccounts.length === 0 ? (
           <p className="font-heading text-sm">{t.accounts.empty}</p>
         ) : (
@@ -41,6 +56,7 @@ export function AccountsSection({
             accounts={domesticAccounts}
             viewerUserId={viewerUserId}
             timeZone={timeZone}
+            now={now}
           />
         )}
       </section>
@@ -53,6 +69,7 @@ export function AccountsSection({
             accounts={foreignAccounts}
             viewerUserId={viewerUserId}
             timeZone={timeZone}
+            now={now}
           />
         </section>
       ) : null}

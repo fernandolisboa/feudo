@@ -82,15 +82,15 @@ const en = {
       topics: [
         {
           title: "Once a day",
-          body: "Feudo reads every connection once a day, before dawn. The first sync brings up to 12 months of history; after that it reads the most recent days. Connecting a bank or adding a connection syncs it right away.",
+          body: "Feudo reads every connection once a day, before dawn. The first sync brings up to 12 months of history; after that it reads the most recent days. Connecting a bank or adding a connection syncs it right away. Sync now, above Accounts, reads the household's connections again on the spot, up to 3 times a day per household; it only brings what Meu Pluggy has already updated.",
         },
         {
           title: "Where to see it",
-          body: "Your connections shows when each connection last synced. Accounts flags with “Last sync failed” an account whose last sync did not go through.",
+          body: "The Last update column in Accounts shows when Feudo last read each account, and a notice appears when one has gone more than 48 hours without an update. Accounts flags with “Last sync failed” an account whose last sync did not go through, and a notice says why; the button then reads Try again. Your connections shows when each connection last synced.",
         },
         {
           title: "When a sync fails",
-          body: "If Meu Pluggy was down, the next day's sync tries again on its own. If your credentials stopped working, remove them in Your connections and paste the new ones in Connect bank; if it then says the connection is already in Feudo, the new credentials were saved anyway. If your bank asks to be reconnected in Meu Pluggy, do it there: Feudo picks it up on the next sync.",
+          body: "If Meu Pluggy was down, use Try again later, or let the next day's sync try on its own. If your credentials stopped working, remove them in Your connections and paste the new ones in Connect bank; if it then says the connection is already in Feudo, the new credentials were saved anyway. If your bank asks to be reconnected in Meu Pluggy, do it there: Feudo picks it up on the next sync.",
         },
       ],
     },
@@ -188,7 +188,7 @@ const en = {
       topics: [
         {
           title: "My transaction did not show up",
-          body: "Meu Pluggy updates your banks once a day and Feudo reads Meu Pluggy once a day, so a new transaction can take up to two days. Also check the month, clear the filters and make sure the account is in this household.",
+          body: "Meu Pluggy updates your banks once a day and Feudo reads Meu Pluggy once a day, so a new transaction can take up to two days. Sync now brings it as soon as Meu Pluggy has it. Also check the month, clear the filters and make sure the account is in this household.",
         },
         {
           title: "The sync failed",
@@ -291,15 +291,15 @@ const ptBR = {
       topics: [
         {
           title: "Uma vez por dia",
-          body: "O Feudo lê cada conexão uma vez por dia, de madrugada. A primeira sincronização traz até 12 meses de histórico; depois, ele lê só os dias mais recentes. Ao conectar um banco ou adicionar uma conexão, ela é sincronizada na hora.",
+          body: "O Feudo lê cada conexão uma vez por dia, de madrugada. A primeira sincronização traz até 12 meses de histórico; depois, ele lê só os dias mais recentes. Ao conectar um banco ou adicionar uma conexão, ela é sincronizada na hora. O botão Sincronizar agora, acima de Contas, lê de novo as conexões da casa na hora, até 3 vezes por dia por casa; ele só traz o que o Meu Pluggy já atualizou.",
         },
         {
           title: "Onde acompanhar",
-          body: "Suas conexões mostra quando cada conexão foi sincronizada pela última vez. Em Contas, o aviso “Última sincronização falhou” marca a conta cuja última leitura não deu certo.",
+          body: "Em Contas, a coluna Atualização mostra quando o Feudo leu cada conta pela última vez, e um aviso aparece quando alguma passa de 48 horas sem atualização. O aviso “Última sincronização falhou” marca a conta cuja última leitura não deu certo, e outro aviso explica o motivo; o botão passa a se chamar Tentar de novo. Suas conexões mostra quando cada conexão foi sincronizada pela última vez.",
         },
         {
           title: "Quando a sincronização falha",
-          body: "Se o Meu Pluggy estava fora do ar, a sincronização do dia seguinte tenta de novo sozinha. Se suas credenciais pararam de funcionar, remova-as em Suas conexões e cole as novas em Conectar banco; se ele avisar que a conexão já está no Feudo, as credenciais novas foram salvas mesmo assim. Se o seu banco pedir uma nova conexão no Meu Pluggy, refaça por lá: o Feudo pega na próxima sincronização.",
+          body: "Se o Meu Pluggy estava fora do ar, use Tentar de novo mais tarde ou deixe a sincronização do dia seguinte tentar sozinha. Se suas credenciais pararam de funcionar, remova-as em Suas conexões e cole as novas em Conectar banco; se ele avisar que a conexão já está no Feudo, as credenciais novas foram salvas mesmo assim. Se o seu banco pedir uma nova conexão no Meu Pluggy, refaça por lá: o Feudo pega na próxima sincronização.",
         },
       ],
     },
@@ -397,7 +397,7 @@ const ptBR = {
       topics: [
         {
           title: "Minha transação não apareceu",
-          body: "O Meu Pluggy atualiza seus bancos uma vez por dia e o Feudo lê o Meu Pluggy uma vez por dia, então uma transação nova pode levar até dois dias. Confira também o mês, limpe os filtros e veja se a conta está nesta casa.",
+          body: "O Meu Pluggy atualiza seus bancos uma vez por dia e o Feudo lê o Meu Pluggy uma vez por dia, então uma transação nova pode levar até dois dias. Sincronizar agora traz a transação assim que o Meu Pluggy tiver. Confira também o mês, limpe os filtros e veja se a conta está nesta casa.",
         },
         {
           title: "A sincronização falhou",

@@ -84,3 +84,24 @@ describe("ConnectionsPanel accounts", () => {
     expect(screen.getByRole("button", { name: "Mover Poupança" })).toBeDefined();
   });
 });
+
+describe("ConnectionsPanel sync failure", () => {
+  it("says why the connection's last sync failed", () => {
+    render(
+      <ConnectionsPanel
+        connections={[{ ...connection, lastSyncError: "provider_unavailable" }]}
+        ownedAccounts={[]}
+        ownHouseholds={[]}
+        hasCredentials
+        credentialsSavedAt={new Date("2026-09-01T00:00:00Z")}
+        timeZone="America/Sao_Paulo"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Última sincronização falhou: o Meu Pluggy não respondeu. Tente de novo mais tarde.",
+      ),
+    ).toBeDefined();
+  });
+});

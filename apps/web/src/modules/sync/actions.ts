@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
+import { interpolate } from "@/lib/interpolate";
 import { requireHouseholdSession } from "@/modules/households";
 
 import { InvalidDataProviderError, MissingSecretError } from "./env";
@@ -14,10 +15,13 @@ import {
   connectProvider,
   createSyncDeps,
   deleteConnection,
+  MANUAL_SYNCS_PER_DAY,
   moveAccount,
   relabelAccount,
   removeCredentials,
   renameConnection,
+  runHouseholdSyncNow,
+  type HouseholdSyncOutcome,
   type SyncDeps,
 } from "./service";
 import { t } from "./strings";
@@ -273,5 +277,39 @@ export async function moveAccountAction(
       return { status: "error", message: t.errors.notAMember };
     case "failed":
       return { status: "error", message: t.errors.moveFailed };
+  }
+}
+
+export async function syncNowAction(): Promise<ActionState> {
+  const deps = syncDepsOrMisconfigured();
+  if (isActionState(deps)) {
+    return deps;
+  }
+  const session = await requireHouseholdSession();
+  let outcome: HouseholdSyncOutcome;
+  try {
+    outcome = await runHouseholdSyncNow(session, getDb(), deps);
+  } catch {
+    return { status: "error", message: t.manualSync.unexpected };
+  }
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/");
+      return { status: "success", message: t.manualSync.done };
+    case "partial":
+      revalidatePath("/");
+      return { status: "error", message: t.manualSync.partial };
+    case "failed":
+      revalidatePath("/");
+      return { status: "error", message: t.manualSync.failed };
+    case "nothing_to_sync":
+      return { status: "error", message: t.manualSync.nothingToSync };
+    case "quota_exhausted":
+      revalidatePath("/");
+      return {
+        status: "error",
+        message: interpolate(t.manualSync.exhausted, "{limit}", String(MANUAL_SYNCS_PER_DAY)),
+      };
   }
 }

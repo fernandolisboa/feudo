@@ -61,7 +61,7 @@ const en = {
       type: "Type",
       label: "Label",
       connectedBy: "Connected by",
-      updated: "Updated",
+      updated: "Last update",
       balance: "Balance",
       actions: "Actions",
     },
@@ -82,6 +82,41 @@ const en = {
     syncFailed: "Last sync failed",
     relabelled: "Label updated.",
   },
+  freshness: {
+    today: "today, {time}",
+    yesterday: "yesterday, {time}",
+  },
+  manualSync: {
+    action: "Sync now",
+    retry: "Try again",
+    pending: "Syncing…",
+    remaining: "{remaining} of today's {limit} manual syncs left.",
+    remainingOne: "1 of today's {limit} manual syncs left.",
+    exhausted: "Your household used today's {limit} manual syncs. The daily sync runs before dawn.",
+    done: "Accounts synced.",
+    partial: "Some connections did not sync. When there is a reason, it shows in the notice above.",
+    failed: "No connection synced. The reason for each shows in the notice above.",
+    nothingToSync: "This household has no account to sync.",
+    unexpected: "We could not sync now. Try again.",
+  },
+  syncNotices: {
+    staleOne: "One account in this household has not been updated for more than 48 hours.",
+    staleMany: "{count} accounts in this household have not been updated for more than 48 hours.",
+    failed: "The last sync of {institution} ({person}) failed: {cause}",
+    causes: {
+      no_credentials:
+        "the Meu Pluggy credentials were removed. Only the person who connected it can save them again, in Connect bank.",
+      credentials_unreadable:
+        "the saved credentials could not be read. The person who connected it needs to remove them and enter them again.",
+      invalid_credentials:
+        "Meu Pluggy refused the credentials. The person who connected it needs to remove them and enter them again.",
+      provider_unavailable: "Meu Pluggy did not answer. Try again later.",
+      listing_too_long: "Meu Pluggy returned too much data to read at once. Try again later.",
+      timed_out: "the read did not fit in the time available. Try again.",
+      too_slow: "Meu Pluggy took too long to answer. Try again later.",
+      failed: "something went wrong while saving the data. Try again.",
+    },
+  },
   connections: {
     sectionTitle: "Your connections",
     intro: "Connections use your Meu Pluggy credentials. Only you see and manage them.",
@@ -99,6 +134,7 @@ const en = {
     syncedAt: "Synced {date}",
     neverSynced: "Never synced",
     syncStopped: "Sync stopped: credentials removed.",
+    syncFailedBecause: "Last sync failed: {cause}",
     empty: "No connection yet.",
     addDialog: {
       title: "Add a connection",
@@ -228,7 +264,7 @@ const ptBR = {
       type: "Tipo",
       label: "Rótulo",
       connectedBy: "Conectada por",
-      updated: "Atualizada em",
+      updated: "Atualização",
       balance: "Saldo",
       actions: "Ações",
     },
@@ -249,6 +285,43 @@ const ptBR = {
     syncFailed: "Última sincronização falhou",
     relabelled: "Rótulo atualizado.",
   },
+  freshness: {
+    today: "hoje, {time}",
+    yesterday: "ontem, {time}",
+  },
+  manualSync: {
+    action: "Sincronizar agora",
+    retry: "Tentar de novo",
+    pending: "Sincronizando…",
+    remaining: "Restam {remaining} das {limit} sincronizações manuais de hoje.",
+    remainingOne: "Resta 1 das {limit} sincronizações manuais de hoje.",
+    exhausted:
+      "Sua casa já usou as {limit} sincronizações manuais de hoje. A sincronização diária roda de madrugada.",
+    done: "Contas sincronizadas.",
+    partial: "Algumas conexões não sincronizaram. Quando há um motivo, ele aparece no aviso acima.",
+    failed: "Nenhuma conexão sincronizou. O motivo de cada uma aparece no aviso acima.",
+    nothingToSync: "Esta casa não tem contas para sincronizar.",
+    unexpected: "Não foi possível sincronizar agora. Tente de novo.",
+  },
+  syncNotices: {
+    staleOne: "Uma conta desta casa está sem atualização há mais de 48 horas.",
+    staleMany: "{count} contas desta casa estão sem atualização há mais de 48 horas.",
+    failed: "A última sincronização de {institution} ({person}) falhou: {cause}",
+    causes: {
+      no_credentials:
+        "as credenciais do Meu Pluggy foram removidas. Só quem conectou pode salvá-las de novo, em Conectar banco.",
+      credentials_unreadable:
+        "não foi possível ler as credenciais salvas. Quem conectou precisa removê-las e informá-las de novo.",
+      invalid_credentials:
+        "o Meu Pluggy recusou as credenciais. Quem conectou precisa removê-las e informá-las de novo.",
+      provider_unavailable: "o Meu Pluggy não respondeu. Tente de novo mais tarde.",
+      listing_too_long:
+        "o Meu Pluggy devolveu dados demais para ler de uma vez. Tente de novo mais tarde.",
+      timed_out: "a leitura não coube no tempo disponível. Tente de novo.",
+      too_slow: "o Meu Pluggy demorou demais para responder. Tente de novo mais tarde.",
+      failed: "algo deu errado ao salvar os dados. Tente de novo.",
+    },
+  },
   connections: {
     sectionTitle: "Suas conexões",
     intro: "As conexões usam suas credenciais do Meu Pluggy. Só você as vê e administra.",
@@ -266,6 +339,7 @@ const ptBR = {
     syncedAt: "Sincronizada em {date}",
     neverSynced: "Nunca sincronizada",
     syncStopped: "Sincronização interrompida: credenciais removidas.",
+    syncFailedBecause: "Última sincronização falhou: {cause}",
     empty: "Nenhuma conexão ainda.",
     addDialog: {
       title: "Adicionar conexão",
