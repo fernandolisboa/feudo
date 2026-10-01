@@ -628,6 +628,147 @@ describe("getTransactionsPageProps (integration)", () => {
     });
   });
 
+  it("moves an account with its manual choices and marks, leaves the source household's rules and the pair's other account behind (#13)", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdB }) => {
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "stay-debit",
+            providerAccountId: "acc-1",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "debit",
+            amountCentavos: -50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "move-credit",
+            providerAccountId: "acc-2",
+            date: "2026-09-10",
+            description: "TRANSFERENCIA CASA",
+            type: "credit",
+            amountCentavos: 50000,
+          }),
+          seedTransaction({
+            providerTransactionId: "move-rule",
+            providerAccountId: "acc-2",
+            date: "2026-09-11",
+            description: "PAGAMENTO LOJA XYZ",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -3000,
+          }),
+          seedTransaction({
+            providerTransactionId: "move-manual",
+            providerAccountId: "acc-2",
+            date: "2026-09-12",
+            description: "PIX ENVIADO FULANO",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -4000,
+          }),
+          seedTransaction({
+            providerTransactionId: "move-destination-rule",
+            providerAccountId: "acc-2",
+            date: "2026-09-14",
+            description: "PIX ENVIADO MERCADINHO",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -2500,
+          }),
+          seedTransaction({
+            providerTransactionId: "move-mark",
+            providerAccountId: "acc-2",
+            date: "2026-09-13",
+            description: "PIX ENVIADO PROPRIO",
+            providerCategory: null,
+            type: "debit",
+            amountCentavos: -6000,
+          }),
+        ],
+      });
+      const categorizationA = createCategorizationRepository(householdScope(userA.session));
+      await categorizationA.saveRule(
+        db,
+        {
+          pattern: "LOJA XYZ",
+          direction: "debit",
+          subcategory: { type: "product", id: "shopping.electronics" },
+        },
+        userA.id,
+      );
+      await categorizationA.setManual(
+        db,
+        await transactionIdFor(db, "move-manual"),
+        { type: "product", id: "other.donations" },
+        userA.id,
+      );
+      await categorizationA.setTransferMark(
+        db,
+        await transactionIdFor(db, "move-mark"),
+        true,
+        userA.id,
+      );
+      await createCategorizationRepository(householdScope(userB.session)).saveRule(
+        db,
+        {
+          pattern: "PIX ENVIADO",
+          direction: "debit",
+          subcategory: { type: "product", id: "leisure.gaming" },
+        },
+        userB.id,
+      );
+
+      const before = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      expect(
+        before.transactions
+          .filter((row) => row.description === "TRANSFERENCIA CASA")
+          .map((row) => row.categorize.isInternalTransfer),
+      ).toEqual([true, true]);
+      expect(
+        before.transactions.find((row) => row.description === "PAGAMENTO LOJA XYZ")?.category
+          ?.sourceLabel,
+      ).toBe(t.category.sources.rule);
+
+      await joinHousehold(db, userA.id, householdB);
+      const savingsId = seeded.accountIdsByProvider.get("acc-2") ?? "";
+      expect(await moveSeededAccount(db, userA, savingsId, householdB)).toBe("ok");
+
+      const source = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
+      expect(source.transactions.map((row) => row.description)).toEqual(["TRANSFERENCIA CASA"]);
+      expect(source.transactions[0]?.categorize.isInternalTransfer).toBe(false);
+      expect(source.accounts.map((account) => account.name)).toEqual(["Conta corrente"]);
+
+      const destination = await getTransactionsPageProps(userB.session, { mes: "2026-09" }, NOW);
+      const byDescription = new Map(destination.transactions.map((row) => [row.description, row]));
+      expect(destination.total).toBe(5);
+      expect(byDescription.get("TRANSFERENCIA CASA")?.categorize.isInternalTransfer).toBe(false);
+      expect(byDescription.get("PAGAMENTO LOJA XYZ")?.category).toBeNull();
+      expect(byDescription.get("PIX ENVIADO MERCADINHO")?.category).toEqual({
+        label: t.subcategories["leisure.gaming"],
+        categoryLabel: t.categories.leisure,
+        sourceLabel: t.category.sources.rule,
+      });
+      expect(byDescription.get("PIX ENVIADO FULANO")?.category).toEqual({
+        label: t.subcategories["other.donations"],
+        categoryLabel: t.categories.other,
+        sourceLabel: t.category.sources.manual,
+      });
+      expect(byDescription.get("PIX ENVIADO PROPRIO")?.categorize).toMatchObject({
+        isInternalTransfer: true,
+        hasTransferMark: true,
+      });
+
+      const ownerInDestination = await getTransactionsPageProps(
+        { ...userA.session, householdId: householdB },
+        { mes: "2026-09" },
+        NOW,
+      );
+      expect(ownerInDestination.transactions).toEqual(destination.transactions);
+    });
+  });
+
   it("lets a member's mark override a detected pair, and force a lone transaction into being one, at the read boundary", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, {
