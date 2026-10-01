@@ -33,6 +33,7 @@ const en = {
     title: "Paste your credentials",
     intro:
       "Feudo validates the credentials against Meu Pluggy before saving them. They are stored encrypted and never shown again.",
+    guideLink: "Not sure where to find these?",
     clientIdLabel: "Client id",
     clientSecretLabel: "Client secret",
     itemIdLabel: "Item ID of the connection",
@@ -200,6 +201,7 @@ const ptBR = {
     title: "Cole suas credenciais",
     intro:
       "O Feudo valida as credenciais no Meu Pluggy antes de salvar. Elas ficam criptografadas e nunca são exibidas de novo.",
+    guideLink: "Não sabe onde achar isso?",
     clientIdLabel: "Client id",
     clientSecretLabel: "Client secret",
     itemIdLabel: "Item ID da conexão",

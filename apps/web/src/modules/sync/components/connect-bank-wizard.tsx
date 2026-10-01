@@ -11,6 +11,7 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
 import { interpolate } from "@/lib/interpolate";
+import { MEU_PLUGGY_GUIDE_HREF } from "@/modules/guide";
 
 import { acceptConsentAction, connectProviderAction, type AcceptConsentState } from "../actions";
 import { CONSENT_SCOPE_VERSION } from "../consent-text";
@@ -118,7 +119,17 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
         <p className="page-header-overline">{t.form.overline}</p>
         <h1 className="font-heading text-[22px]">{t.form.title}</h1>
       </div>
-      <p className="text-sm leading-relaxed">{t.form.intro}</p>
+      <p className="text-sm leading-relaxed">
+        {t.form.intro}{" "}
+        <Link
+          href={MEU_PLUGGY_GUIDE_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand hover:text-brand-hover underline underline-offset-4"
+        >
+          {t.form.guideLink}
+        </Link>
+      </p>
 
       {state.status === "error" ? (
         <Alert variant="destructive">

@@ -11,6 +11,7 @@ const en = {
   },
   userMenu: {
     preferences: "Preferences",
+    guide: "How to use",
   },
   comingSoon: {
     reserve: {
@@ -34,6 +35,7 @@ const ptBR = {
   },
   userMenu: {
     preferences: "Preferências",
+    guide: "Como usar",
   },
   comingSoon: {
     reserve: {

@@ -60,3 +60,7 @@ Boundaries are enforced by lint, not convention (`no-restricted-imports` and `no
 - `apps/web/e2e/`, `apps/web/drizzle/` and `apps/web/scripts/` stay where they are: Playwright and drizzle-kit expect them at the app root.
 - Every new slice ships with `index.ts`, `schema.ts` when it owns tables, and an isolation test (ADR-0001, ADR-0008). The reviewer-architecture lens checks the boundaries; ESLint blocks the imports.
 - Docs that cite paths (`docs/runbooks/*.md`, `CLAUDE.md` architecture principle 4) are updated in the same PR as the move.
+
+## Amendment 2026-10-01 (#94): a third app-level slice, `guide`
+
+The "Como usar" page (`/como-usar`) is static help copy that describes every other slice without owning any of their data, so it lives in its own app-level slice, `guide`, next to `shell` and `theme`, instead of inflating `shell` (navigation only). It exports the page component and the anchors other slices deep-link to (the connect-bank wizard links to `#meu-pluggy`); a unit test checks that every "Ir para" link still resolves to a route under `app/(app)/`.
