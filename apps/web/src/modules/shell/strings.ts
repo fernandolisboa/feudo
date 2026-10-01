@@ -11,6 +11,7 @@ const en = {
   },
   userMenu: {
     preferences: "Preferences",
+    guide: "How to use",
   },
 };
 
@@ -27,6 +28,7 @@ const ptBR = {
   },
   userMenu: {
     preferences: "Preferências",
+    guide: "Como usar",
   },
 } satisfies typeof en;
 

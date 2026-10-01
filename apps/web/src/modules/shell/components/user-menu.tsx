@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings, User } from "lucide-react";
+import { CircleHelp, Settings, User } from "lucide-react";
 
 import { Button } from "@/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { SignOutMenuItem } from "@/modules/auth";
+import { GUIDE_PATH } from "@/modules/guide";
 
 import { t } from "../strings";
 
@@ -34,6 +35,10 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         <DropdownMenuItem render={<Link href="/preferencias" />}>
           <Settings className="size-4" />
           {t.userMenu.preferences}
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href={GUIDE_PATH} />}>
+          <CircleHelp className="size-4" />
+          {t.userMenu.guide}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <SignOutMenuItem />
