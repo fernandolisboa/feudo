@@ -23,7 +23,7 @@ vi.mock("@/modules/sync", () => ({
   getAccountsSectionProps: vi.fn(() => new Promise(() => undefined)),
 }));
 
-import { TOURS } from "@/modules/shell";
+import { TOURS } from "@/modules/shell/test/tours";
 
 import Home from "./page";
 

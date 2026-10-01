@@ -23,8 +23,8 @@ function toActionState(outcome: TourWriteOutcome, successMessage: string): Actio
   }
 }
 
-export async function recordTourOutcomeAction(input: unknown): Promise<ActionState> {
-  return toActionState(await recordTourOutcome(input), "");
+export async function recordTourOutcomeAction(input: unknown): Promise<TourWriteOutcome> {
+  return recordTourOutcome(input);
 }
 
 export async function updateTourAutoStartAction(

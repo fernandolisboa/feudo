@@ -12,7 +12,7 @@ vi.mock("../actions", () => ({
   transferOwnershipAction: vi.fn(),
 }));
 
-import { TOURS } from "@/modules/shell";
+import { TOURS } from "@/modules/shell/test/tours";
 
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { MembersTable } from "./members-table";

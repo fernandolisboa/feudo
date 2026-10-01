@@ -22,7 +22,6 @@ const en = {
     finish: "Done",
     neverShow: "Don't show tutorials",
     fullGuide: "Read the full guide",
-    saveFailed: "Could not save your tour progress. It may show again.",
     steps: {
       overview: {
         nav: {
@@ -31,7 +30,7 @@ const en = {
         },
         household: {
           title: "Your household",
-          body: "Household holds the members and the invites. If you belong to more than one household, a switcher shows up next to the menu to change the active one.",
+          body: "Household holds the members and the invites. If you belong to more than one household, change the active one in the household switcher.",
         },
         accounts: {
           title: "Your accounts",
@@ -128,7 +127,6 @@ const ptBR = {
     finish: "Concluir",
     neverShow: "Não mostrar tutoriais",
     fullGuide: "Ver o guia completo",
-    saveFailed: "Não deu para salvar o andamento do tour. Ele pode aparecer de novo.",
     steps: {
       overview: {
         nav: {
@@ -137,7 +135,7 @@ const ptBR = {
         },
         household: {
           title: "Sua casa",
-          body: "Em Casa ficam os membros e os convites. Se você participa de mais de uma casa, aparece um seletor ao lado do menu para trocar a casa ativa.",
+          body: "Em Casa ficam os membros e os convites. Se você participa de mais de uma casa, troque a casa ativa no seletor de casas.",
         },
         accounts: {
           title: "Suas contas",

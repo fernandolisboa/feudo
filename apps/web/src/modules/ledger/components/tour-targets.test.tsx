@@ -13,7 +13,7 @@ vi.mock("../actions", () => ({
   setTransferMarkAction: vi.fn(),
 }));
 
-import { TOURS } from "@/modules/shell";
+import { TOURS } from "@/modules/shell/test/tours";
 
 import type { TransactionsPageProps } from "../page-props";
 import { CategoriesView } from "./categories-view";

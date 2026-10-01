@@ -22,7 +22,7 @@ function rect(width: number, height: number): DOMRect {
 
 beforeEach(() => {
   recordTourOutcomeActionMock.mockReset();
-  recordTourOutcomeActionMock.mockResolvedValue({ status: "success", message: "" });
+  recordTourOutcomeActionMock.mockResolvedValue({ status: "ok" });
   pathnameMock.mockReturnValue("/");
   // jsdom lays nothing out: every element measures 0×0, which the tour reads
   // as "not on screen". Give tour targets a size unless a test hides them.
@@ -218,6 +218,34 @@ describe("TourProvider", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "start" }));
+    expect(await screen.findByRole("dialog", { name: navStep?.title })).not.toBeNull();
+  });
+
+  it("ends without recording anything when the person leaves the screen mid-tour", async () => {
+    const view = renderOverview(fresh);
+    expect(await screen.findByRole("dialog", { name: navStep?.title })).not.toBeNull();
+
+    pathnameMock.mockReturnValue("/preferencias");
+    view.rerender(
+      <TourProvider initialState={fresh}>
+        <StartButton />
+      </TourProvider>,
+    );
+    await vi.waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(recordTourOutcomeActionMock).not.toHaveBeenCalled();
+
+    pathnameMock.mockReturnValue("/");
+    view.rerender(
+      <TourProvider initialState={fresh}>
+        {overview.steps.map((step) => (
+          <div key={step.target} data-tour={step.target}>
+            {step.target}
+          </div>
+        ))}
+      </TourProvider>,
+    );
     expect(await screen.findByRole("dialog", { name: navStep?.title })).not.toBeNull();
   });
 

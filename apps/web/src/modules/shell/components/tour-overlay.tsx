@@ -13,13 +13,16 @@ import {
   PopoverHeader,
   PopoverTitle,
 } from "@/ui/popover";
-import { interpolate } from "@/lib/interpolate";
+import { interpolateAll } from "@/lib/interpolate";
 import { GUIDE_PATH } from "@/modules/guide";
 
 import { spotlightBox, type Box } from "../spotlight";
 import { t } from "../strings";
 import { isOnScreen, prefersReducedMotion } from "../tour-dom";
 import type { TourStep } from "../tours";
+
+// DESIGN.md hit targets: at least 44px under 768px, 36px above.
+const HIT_TARGET = "h-11 md:h-9";
 
 export type TourEnd =
   | { outcome: "completed"; turnOffAutoStart: false }
@@ -156,23 +159,22 @@ export function TourOverlay({
             <PopoverDescription className="text-foreground text-sm">{step.body}</PopoverDescription>
           </PopoverHeader>
           <p className="text-muted-foreground text-xs tabular-nums">
-            {interpolate(
-              interpolate(t.tour.progress, "{step}", String(index + 1)),
-              "{total}",
-              String(steps.length),
-            )}
+            {interpolateAll(t.tour.progress, {
+              step: String(index + 1),
+              total: String(steps.length),
+            })}
           </p>
           <div className="flex items-center justify-between gap-2">
-            <PopoverClose render={<Button type="button" variant="ghost" size="sm" />}>
+            <PopoverClose render={<Button type="button" variant="ghost" className={HIT_TARGET} />}>
               {t.tour.skip}
             </PopoverClose>
             <div className="flex items-center gap-2">
               {isFirst ? null : (
-                <Button type="button" variant="outline" size="sm" onClick={goBack}>
+                <Button type="button" variant="outline" className={HIT_TARGET} onClick={goBack}>
                   {t.tour.back}
                 </Button>
               )}
-              <Button ref={primaryRef} type="button" size="sm" onClick={goNext}>
+              <Button ref={primaryRef} type="button" className={HIT_TARGET} onClick={goNext}>
                 {isLast ? t.tour.finish : t.tour.next}
               </Button>
             </div>
@@ -181,8 +183,7 @@ export function TourOverlay({
             <Button
               type="button"
               variant="link"
-              size="sm"
-              className="self-start px-0"
+              className={`${HIT_TARGET} self-start px-0`}
               onClick={() => {
                 onEnd({ outcome: "dismissed", turnOffAutoStart: true });
               }}
@@ -193,8 +194,7 @@ export function TourOverlay({
           {isLast ? (
             <Button
               variant="link"
-              size="sm"
-              className="self-start px-0"
+              className={`${HIT_TARGET} self-start px-0`}
               render={
                 <Link
                   href={GUIDE_PATH}

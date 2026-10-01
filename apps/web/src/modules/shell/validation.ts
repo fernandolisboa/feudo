@@ -8,8 +8,6 @@ export const recordTourOutcomeSchema = z.object({
   turnOffAutoStart: z.boolean(),
 });
 
-export type RecordTourOutcomeInput = z.infer<typeof recordTourOutcomeSchema>;
-
 export const tourAutoStartFormSchema = z.object({
   autoStart: z.enum(["on", "off"]).transform((value) => value === "on"),
 });
