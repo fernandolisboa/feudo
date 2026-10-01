@@ -20,11 +20,16 @@ vi.mock("@/modules/sync", () => ({
   runDailyPruneStep: vi.fn(),
 }));
 
+vi.mock("@/modules/reserve", () => ({
+  runReserveMonthCloseStep: vi.fn(),
+}));
+
 const { GET } = await import("./route");
 const { runDailyRefreshStep } = await import("@/modules/market-data");
 const { runDailyPruneStep: runAuthPruneStep } = await import("@/modules/auth");
 const { runDailyPruneStep: runHouseholdsPruneStep } = await import("@/modules/households");
 const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
+const { runReserveMonthCloseStep } = await import("@/modules/reserve");
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 
@@ -43,6 +48,14 @@ describe("GET /api/cron/daily", () => {
     vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runDailyRefreshStep).mockResolvedValue({ ok: true, results: [] });
+    vi.mocked(runReserveMonthCloseStep).mockResolvedValue({
+      ok: true,
+      recorded: 0,
+      notified: 0,
+      skipped: 0,
+      failed: 0,
+      unreached: 0,
+    });
   });
 
   afterEach(() => {
@@ -146,5 +159,71 @@ describe("GET /api/cron/daily", () => {
     expect(body.steps.pruneConsents).toEqual({ error: "Error" });
     expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the reserve month-close step fails", async () => {
+    vi.mocked(runReserveMonthCloseStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneVerification: { deleted: number };
+        pruneInvitations: { deleted: number };
+        pruneConsents: { deleted: number };
+        reserveMonthClose: { error: string };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.reserveMonthClose).toEqual({ error: "Error" });
+    expect(body.steps.pruneConsents).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("derives the reserve month-close deadline from the route's own maxDuration, stamped at request start", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T03:00:00.000Z"));
+    try {
+      await callCronRoute();
+
+      expect(runReserveMonthCloseStep).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(Date),
+        new Date("2026-10-01T03:00:45.000Z"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns 500 when the reserve month-close step reports internal failures even without a top-level error", async () => {
+    vi.mocked(runReserveMonthCloseStep).mockResolvedValue({
+      ok: false,
+      recorded: 1,
+      notified: 0,
+      skipped: 0,
+      failed: 1,
+      unreached: 0,
+    });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: { reserveMonthClose: { ok: boolean; failed: number } };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.reserveMonthClose).toEqual({
+      ok: false,
+      recorded: 1,
+      notified: 0,
+      skipped: 0,
+      failed: 1,
+      unreached: 0,
+    });
   });
 });

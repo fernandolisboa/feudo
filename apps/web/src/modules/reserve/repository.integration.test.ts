@@ -1,0 +1,244 @@
+import { describe, expect, it } from "vitest";
+
+import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
+import { withTestDb } from "@/platform/db/test/harness";
+
+import {
+  createReserveTargetNoticeRepository,
+  createReserveTargetRecordRepository,
+  listHouseholdIdsForMonthClose,
+} from "./repository";
+import type { HouseholdScope } from "@/modules/households";
+
+const RECORD = {
+  closedMonth: "2026-08" as const,
+  averageFixedCostCentavos: 90000,
+  monthsUsed: 3,
+  isEstimate: false,
+  reserveMultiple: 6,
+  targetCentavos: 540000,
+  currency: "BRL",
+};
+
+describe("reserve target record repository isolation (integration)", () => {
+  it("reads only the scoped household's own records", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createReserveTargetRecordRepository(householdA.scope).insert(db, RECORD);
+      await createReserveTargetRecordRepository(householdB.scope).insert(db, {
+        ...RECORD,
+        averageFixedCostCentavos: 50000,
+        targetCentavos: 300000,
+      });
+
+      const recordA = await createReserveTargetRecordRepository(householdA.scope).getByMonth(
+        db,
+        "2026-08",
+      );
+      const recordB = await createReserveTargetRecordRepository(householdB.scope).getByMonth(
+        db,
+        "2026-08",
+      );
+
+      expect(recordA?.targetCentavos).toBe(540000);
+      expect(recordB?.targetCentavos).toBe(300000);
+    });
+  });
+
+  it("does not let one household's insert collide with another's unique (household, month) constraint", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createReserveTargetRecordRepository(householdA.scope).insert(db, RECORD);
+      const insertedB = await createReserveTargetRecordRepository(householdB.scope).insert(
+        db,
+        RECORD,
+      );
+
+      expect(insertedB).not.toBeUndefined();
+    });
+  });
+
+  it("getLatestBefore never returns another household's record", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createReserveTargetRecordRepository(householdB.scope).insert(db, {
+        ...RECORD,
+        closedMonth: "2026-07",
+      });
+
+      const latestForA = await createReserveTargetRecordRepository(
+        householdA.scope,
+      ).getLatestBefore(db, "2026-08");
+
+      expect(latestForA).toBeUndefined();
+    });
+  });
+
+  it("onConflictDoNothing makes a second insert for the same household and month a no-op", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createReserveTargetRecordRepository(householdA.scope);
+      const first = await repository.insert(db, RECORD);
+      const second = await repository.insert(db, { ...RECORD, targetCentavos: 999999 });
+
+      expect(first).not.toBeUndefined();
+      expect(second).toBeUndefined();
+      const stored = await repository.getByMonth(db, "2026-08");
+      expect(stored?.targetCentavos).toBe(540000);
+    });
+  });
+});
+
+describe("reserve target notice repository isolation (integration)", () => {
+  it("reads only the scoped household's own undismissed notice", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createReserveTargetNoticeRepository(householdA.scope).insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 300000,
+        newTargetCentavos: 400000,
+      });
+      await createReserveTargetNoticeRepository(householdB.scope).insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+
+      const noticeA = await createReserveTargetNoticeRepository(householdA.scope).getUndismissed(
+        db,
+      );
+      const noticeB = await createReserveTargetNoticeRepository(householdB.scope).getUndismissed(
+        db,
+      );
+
+      expect(noticeA?.newTargetCentavos).toBe(400000);
+      expect(noticeB?.newTargetCentavos).toBe(200000);
+    });
+  });
+
+  it("cannot dismiss another household's notice: the call is a no-op, not an error", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createReserveTargetNoticeRepository(householdB.scope).insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      const noticeB = await createReserveTargetNoticeRepository(householdB.scope).getUndismissed(
+        db,
+      );
+      if (!noticeB) throw new Error("test setup: notice B was not created");
+
+      const dismissedByA = await createReserveTargetNoticeRepository(householdA.scope).dismiss(
+        db,
+        noticeB.id,
+      );
+
+      expect(dismissedByA).toBe(false);
+      const stillUndismissed = await createReserveTargetNoticeRepository(
+        householdB.scope,
+      ).getUndismissed(db);
+      expect(stillUndismissed?.id).toBe(noticeB.id);
+    });
+  });
+
+  it("dismissing an unknown notice id is a no-op, not an error", async () => {
+    await withTestDb(async (db) => {
+      const scope: HouseholdScope = { householdId: crypto.randomUUID() };
+      const dismissed = await createReserveTargetNoticeRepository(scope).dismiss(
+        db,
+        crypto.randomUUID(),
+      );
+      expect(dismissed).toBe(false);
+    });
+  });
+
+  it("dismisses the scoped household's own notice", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await createReserveTargetNoticeRepository(householdA.scope).insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      const notice = await createReserveTargetNoticeRepository(householdA.scope).getUndismissed(db);
+      if (!notice) throw new Error("test setup: notice was not created");
+
+      const dismissed = await createReserveTargetNoticeRepository(householdA.scope).dismiss(
+        db,
+        notice.id,
+      );
+
+      expect(dismissed).toBe(true);
+      const afterDismissal = await createReserveTargetNoticeRepository(
+        householdA.scope,
+      ).getUndismissed(db);
+      expect(afterDismissal).toBeUndefined();
+    });
+  });
+
+  it("dismissing an already-dismissed notice is idempotent: ok again, not not_found", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createReserveTargetNoticeRepository(householdA.scope);
+      await repository.insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      const notice = await repository.getUndismissed(db);
+      if (!notice) throw new Error("test setup: notice was not created");
+
+      const first = await repository.dismiss(db, notice.id);
+      const second = await repository.dismiss(db, notice.id);
+
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+    });
+  });
+
+  it("dismissing one notice also supersedes every older undismissed notice of the same household", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const repository = createReserveTargetNoticeRepository(householdA.scope);
+      await repository.insert(db, {
+        closedMonth: "2026-07",
+        previousTargetCentavos: 100000,
+        newTargetCentavos: 200000,
+      });
+      await repository.insert(db, {
+        closedMonth: "2026-08",
+        previousTargetCentavos: 200000,
+        newTargetCentavos: 300000,
+      });
+      const otherHouseholdRepository = createReserveTargetNoticeRepository(householdB.scope);
+      await otherHouseholdRepository.insert(db, {
+        closedMonth: "2026-07",
+        previousTargetCentavos: 50000,
+        newTargetCentavos: 90000,
+      });
+
+      const latest = await repository.getUndismissed(db);
+      if (!latest || latest.closedMonth !== "2026-08") {
+        throw new Error("test setup: latest notice was not the August one");
+      }
+
+      const dismissed = await repository.dismiss(db, latest.id);
+
+      expect(dismissed).toBe(true);
+      expect(await repository.getUndismissed(db)).toBeUndefined();
+      expect(await otherHouseholdRepository.getUndismissed(db)).not.toBeUndefined();
+    });
+  });
+});
+
+describe("listHouseholdIdsForMonthClose (integration)", () => {
+  it("lists every household, not just one session's own", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const scopes = await listHouseholdIdsForMonthClose(db);
+      const ids = scopes.map((scope) => scope.householdId);
+      expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
+    });
+  });
+
+  it("orders households deterministically by id", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const scopes = await listHouseholdIdsForMonthClose(db);
+      const ids = scopes.map((scope) => scope.householdId);
+      const sorted = [...ids].sort();
+      expect(ids).toEqual(sorted);
+      expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
+    });
+  });
+});

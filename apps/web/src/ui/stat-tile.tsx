@@ -1,12 +1,6 @@
-export function StatTile({
-  label,
-  value,
-  meta,
-}: {
-  label: string;
-  value: string;
-  meta: string | null;
-}) {
+export type StatTileView = { label: string; value: string; meta: string | null };
+
+export function StatTile({ label, value, meta }: StatTileView) {
   return (
     <div className="bg-card flex flex-col gap-1 p-4">
       <p className="text-muted-foreground text-[12px]">{label}</p>

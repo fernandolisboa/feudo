@@ -48,6 +48,8 @@ Bank connections belong to the user who authorized them, never to a household. E
 
 Repositories are constructed with the household (or user) taken from the session; no repository method accepts a household id as a parameter. Every new table ships with an isolation test proving household A cannot read, write or trigger jobs for household B.
 
+**Job-only enumeration (amended 2026-10-01).** A daily job step may list every household or every user inside its own slice: sync's connection queue (`sync.listConnectionsToSync`) and reserve's month close (`reserve.listHouseholdIdsForMonthClose`) both do, because the job runs once per tenant, not once per session, and has no session to take a scope from. Each list stays private to the slice that needs it — never exported from a module's public index — and is read only by that slice's own cron step (`runConnectionsSyncStep`, `runReserveMonthCloseStep`), never from request-handling code and never fed a client-supplied id. This is not an exception to "no query path accepts an unscoped id": the job still constructs one scope per row before using it, the same as every other caller; it is simply the one caller with legitimate reason to read every row in a single call.
+
 ## Considered options
 
 - **Auth.js / NextAuth**: mature, but organizations, invitations and magic links are all custom code there. Rejected.

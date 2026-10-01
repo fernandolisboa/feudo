@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildLedgerDashboard, dashboardMonthRange, type DashboardLine } from "./dashboard";
+import {
+  averageFixedCost,
+  buildLedgerDashboard,
+  dashboardMonthRange,
+  type DashboardLine,
+} from "./dashboard";
 import { parseYearMonth, shiftYearMonth, type YearMonth } from "./year-month";
 
 const MONTH = parseYearMonth("2026-06");
@@ -322,6 +327,68 @@ describe("averageFixedCost", () => {
       monthsUsed: [withinWindow],
       isEstimate: true,
     });
+  });
+});
+
+describe("averageFixedCost (public, with month breakdown)", () => {
+  function fixedLine(month: YearMonth, amountCentavos: number): DashboardLine {
+    return line({ month, kind: "fixed", type: "debit", amountCentavos });
+  }
+
+  it("names every window month, oldest first, whether or not it counted", () => {
+    const withinWindow = shiftYearMonth(MONTH, -1);
+    const result = averageFixedCost({ month: MONTH, lines: [fixedLine(withinWindow, 50000)] });
+    expect(result.months.map((entry) => entry.month)).toEqual([
+      shiftYearMonth(MONTH, -6),
+      shiftYearMonth(MONTH, -5),
+      shiftYearMonth(MONTH, -4),
+      shiftYearMonth(MONTH, -3),
+      shiftYearMonth(MONTH, -2),
+      withinWindow,
+    ]);
+  });
+
+  it("marks a month with nothing categorized as a gap (null), not a zero", () => {
+    const gapMonth = shiftYearMonth(MONTH, -2);
+    const dataMonth = shiftYearMonth(MONTH, -1);
+    const result = averageFixedCost({
+      month: MONTH,
+      lines: [
+        line({ month: gapMonth, kind: null, type: "debit", amountCentavos: 1000 }),
+        fixedLine(dataMonth, 60000),
+      ],
+    });
+    const gapEntry = result.months.find((entry) => entry.month === gapMonth);
+    const dataEntry = result.months.find((entry) => entry.month === dataMonth);
+    expect(gapEntry?.fixedCentavos).toBeNull();
+    expect(dataEntry?.fixedCentavos).toBe(60000);
+  });
+
+  it("reports a categorized month with zero fixed spending as 0, not a gap", () => {
+    const month = shiftYearMonth(MONTH, -1);
+    const result = averageFixedCost({
+      month: MONTH,
+      lines: [line({ month, kind: "variable", type: "debit", amountCentavos: 5000 })],
+    });
+    const entry = result.months.find((item) => item.month === month);
+    expect(entry?.fixedCentavos).toBe(0);
+  });
+
+  it("matches buildLedgerDashboard's averageFixedCost field exactly", () => {
+    const m1 = shiftYearMonth(MONTH, -3);
+    const m2 = shiftYearMonth(MONTH, -2);
+    const m3 = shiftYearMonth(MONTH, -1);
+    const lines = [fixedLine(m1, 90000), fixedLine(m2, 100000), fixedLine(m3, 110000)];
+    expect(averageFixedCost({ month: MONTH, lines }).average).toEqual(
+      buildLedgerDashboard({ month: MONTH, lines }).averageFixedCost,
+    );
+  });
+
+  it("returns a null average with a fully-populated month breakdown when every month is a gap", () => {
+    const result = averageFixedCost({ month: MONTH, lines: [] });
+    expect(result.average).toBeNull();
+    expect(result.months).toHaveLength(6);
+    expect(result.months.every((entry) => entry.fixedCentavos === null)).toBe(true);
   });
 });
 

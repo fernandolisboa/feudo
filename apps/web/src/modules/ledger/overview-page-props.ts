@@ -1,21 +1,16 @@
 import {
   buildLedgerDashboard,
-  categoryOf,
-  dashboardMonthRange,
   formatBasisPointsPercent,
   formatCompactReais,
   formatMoney,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
-  parseYearMonth,
   shiftYearMonth,
   summarizeUncategorized,
   yearMonthDayRange,
   yearMonthOf,
   type AverageFixedCost,
   type CategorySpending,
-  type DashboardLine,
-  type KindContext,
   type MonthlyPoint,
   type MonthTotals,
   type YearMonth,
@@ -25,14 +20,14 @@ import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import type { StatTileView } from "@/ui/stat-tile";
 
-import { readHouseholdLedger } from "./ledger-read";
+import { readHouseholdDashboardLines } from "./dashboard-lines";
 import { createHouseholdLedgerRepository } from "./repository";
-import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { t } from "./strings";
 import { overviewSearchParamsSchema, type OverviewSearchParams } from "./validation";
 
-export type StatTileView = { label: string; value: string; meta: string | null };
+export type { StatTileView };
 
 export type CategoryBarView = { key: string; label: string; amountLabel: string; fraction: number };
 
@@ -69,21 +64,6 @@ export type OverviewPageProps = {
   categorySpending: CategoryBarView[];
   series: MonthlyBarPointView[];
 };
-
-function monthOfDate(date: string): YearMonth {
-  return parseYearMonth(date.slice(0, 7));
-}
-
-function toDashboardLine(row: ResolvedLedgerRow, kinds: KindContext): DashboardLine {
-  return {
-    month: monthOfDate(row.date),
-    kind: row.kind,
-    type: row.type,
-    amountCentavos: row.amountCentavos,
-    categoryId: row.categorization ? categoryOf(row.categorization.subcategory, kinds) : null,
-    currency: row.currency,
-  };
-}
 
 // pt-BR short month names ("set.", "ago.") carry a trailing period Feudo
 // never uses in a chart axis (DESIGN.md's formatting rules); UTC keeps the
@@ -203,9 +183,10 @@ function seriesPoints(series: readonly MonthlyPoint[]): MonthlyBarPointView[] {
 // Everything / renders above the accounts table, so the page stays a
 // composition of this slice's components (ADR-0011). The month defaults to
 // today's in the household's time zone and never moves past it, even from a
-// crafted URL. Reads once over dashboardMonthRange's window (the current
-// month plus the six months behind it) through readHouseholdLedger, the read
-// path shared with /transacoes and /categorias, then hands the rows to
+// crafted URL. Reads once, through readHouseholdDashboardLines — the same
+// entry point the Reserva page and the reserve month-close job call, so the
+// three can never disagree over dashboardMonthRange's window (the current
+// month plus the six months behind it) — then hands the lines to
 // packages/core's buildLedgerDashboard: every number on this page is
 // computed there, never guessed at in this file.
 export async function getOverviewPageProps(
@@ -227,14 +208,7 @@ export async function getOverviewPageProps(
   const requestedMonth = params.mes ?? currentMonth;
   const month = requestedMonth > currentMonth ? currentMonth : requestedMonth;
 
-  const readRange = dashboardMonthRange(month);
-  const dayRange = {
-    from: yearMonthDayRange(readRange.from).from,
-    to: yearMonthDayRange(month).to,
-  };
-
-  const { kinds, rows } = await readHouseholdLedger(db, scope, dayRange, null, timeZone);
-  const lines = rows.map((row) => toDashboardLine(row, kinds));
+  const { rows, lines } = await readHouseholdDashboardLines(db, scope, month, timeZone);
   const dashboard = buildLedgerDashboard({ month, lines });
 
   const monthDays = yearMonthDayRange(month);

@@ -1,9 +1,7 @@
 import { z } from "zod";
+import { DEFAULT_RESERVE_MULTIPLE, MAX_RESERVE_MULTIPLE, MIN_RESERVE_MULTIPLE } from "@feudo/core";
 
 export const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
-export const DEFAULT_RESERVE_MULTIPLE = 6;
-export const MIN_RESERVE_MULTIPLE = 3;
-export const MAX_RESERVE_MULTIPLE = 12;
 
 export const IANA_TIME_ZONES: readonly string[] = Intl.supportedValuesOf("timeZone");
 const timeZoneSet = new Set(IANA_TIME_ZONES);

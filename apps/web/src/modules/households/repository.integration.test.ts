@@ -5,6 +5,7 @@ import { withTestDb } from "@/platform/db/test/harness";
 import {
   createHouseholdSettingsRepository,
   HouseholdSettingsUpdateFailedError,
+  updateReserveMultiple,
 } from "./repository";
 import { scopeForNewHousehold } from "./scope";
 import { withTwoHouseholds } from "./test/with-two-households";
@@ -38,6 +39,17 @@ describe("household settings repository isolation (integration)", () => {
       await expect(
         createHouseholdSettingsRepository(scope).update(db, { reserveMultiple: 12 }),
       ).rejects.toThrow(HouseholdSettingsUpdateFailedError);
+    });
+  });
+
+  it("updateReserveMultiple changes only the scoped household's own multiple", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await updateReserveMultiple(householdA.scope, 12, db);
+
+      const settingsA = await createHouseholdSettingsRepository(householdA.scope).get(db);
+      const settingsB = await createHouseholdSettingsRepository(householdB.scope).get(db);
+      expect(settingsA?.reserveMultiple).toBe(12);
+      expect(settingsB?.reserveMultiple).toBe(householdB.settings.reserveMultiple);
     });
   });
 });

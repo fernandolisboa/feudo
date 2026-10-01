@@ -8,16 +8,11 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { initialActionState } from "@/lib/action-state";
+import { DEFAULT_RESERVE_MULTIPLE, MAX_RESERVE_MULTIPLE, MIN_RESERVE_MULTIPLE } from "@feudo/core";
 
 import { createHouseholdAction } from "../actions";
 import { t } from "../strings";
-import {
-  DEFAULT_RESERVE_MULTIPLE,
-  DEFAULT_TIME_ZONE,
-  IANA_TIME_ZONES,
-  MAX_RESERVE_MULTIPLE,
-  MIN_RESERVE_MULTIPLE,
-} from "../validation";
+import { DEFAULT_TIME_ZONE, IANA_TIME_ZONES } from "../validation";
 
 const TIME_ZONE_ITEMS = IANA_TIME_ZONES.map((timeZone) => ({ value: timeZone, label: timeZone }));
 

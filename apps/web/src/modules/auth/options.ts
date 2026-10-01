@@ -4,7 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
 import { and, count, eq, like } from "drizzle-orm";
-import { evaluateRegistrationMode } from "@feudo/core";
+import { DEFAULT_RESERVE_MULTIPLE, evaluateRegistrationMode } from "@feudo/core";
 
 import { householdSettings } from "@/modules/households/schema";
 import {
@@ -41,13 +41,15 @@ import {
 // user is already generous headroom and keeps a compromised account from
 // spraying orgs.
 const ORGANIZATION_LIMIT = 20;
-// Mirrors households/validation.ts's DEFAULT_TIME_ZONE/DEFAULT_RESERVE_MULTIPLE.
-// Duplicated as literals, not imported: auth must never depend on households
+// Mirrors households/validation.ts's DEFAULT_TIME_ZONE. Duplicated as a
+// literal, not imported: auth must never depend on households
 // (docs/adr/0001), and this is the fallback the raw /organization/create
 // endpoint gets if it is ever called outside households.createHousehold,
-// which immediately overwrites it with the caller's chosen values.
+// which immediately overwrites it with the caller's chosen values. The
+// reserve multiple's own default is a domain constant (packages/core), not a
+// households-slice one, so it is imported directly rather than duplicated.
 const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
-const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = 6;
+const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = DEFAULT_RESERVE_MULTIPLE;
 const OWNER_ROLE = "owner";
 // households/membership.ts stores and reads back a single role per member
 // (beforeCreateInvitation below rejects a multi-role invitation outright),

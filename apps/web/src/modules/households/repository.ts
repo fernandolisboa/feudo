@@ -62,3 +62,11 @@ export async function getHouseholdSettings(
 ): Promise<HouseholdSettings | undefined> {
   return createHouseholdSettingsRepository(scope).get(db);
 }
+
+export async function updateReserveMultiple(
+  scope: HouseholdScope,
+  reserveMultiple: number,
+  db: Database,
+): Promise<void> {
+  await createHouseholdSettingsRepository(scope).update(db, { reserveMultiple });
+}

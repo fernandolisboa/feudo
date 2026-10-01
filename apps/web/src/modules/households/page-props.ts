@@ -4,6 +4,7 @@ import { getDb } from "@/platform/db/client";
 
 import type { CurrentSession } from "@/modules/auth";
 import {
+  canManageHouseholdSettings,
   listMembers,
   listMyPendingInvitations,
   listPendingInvitations,
@@ -37,7 +38,7 @@ export async function getCasaPageProps(session: HouseholdSession): Promise<CasaP
   const members = await listMembers(session, requestHeaders);
   const viewer = members.find((member) => member.userId === session.userId);
   const viewerRole = viewer?.role ?? "member";
-  const canManage = viewerRole === "owner" || viewerRole === "admin";
+  const canManage = canManageHouseholdSettings(viewerRole);
 
   const invitations = canManage ? await listPendingInvitations(session, db) : [];
   const settings = await getHouseholdSettings(householdScope(session), db);

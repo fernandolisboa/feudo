@@ -5,6 +5,7 @@ import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
+import { StatTile } from "@/ui/stat-tile";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 
 import { transactionsHref } from "../href";
@@ -14,7 +15,6 @@ import { t } from "../strings";
 import { BarList } from "./bar-list";
 import { MonthlyBars } from "./monthly-bars";
 import { MonthSwitcher } from "./month-switcher";
-import { StatTile } from "./stat-tile";
 
 function withProgress(sentence: string, inProgress: boolean): string {
   if (!inProgress) {

@@ -19,6 +19,16 @@ function apiErrorCode(error: unknown): string | undefined {
 
 export type HouseholdRole = "owner" | InvitableRole;
 
+// Only owner and admin administer settings (CONTEXT.md, "Role"); a member
+// does not. The one allow-list every caller checking "can this role manage
+// settings" uses — reserve's updateReserveMultipleAction and
+// getReservePageProps, households' own getCasaPageProps and
+// MemberRowActions — so a role model change needs updating here once, not
+// at every call site.
+export function canManageHouseholdSettings(role: HouseholdRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export type HouseholdMember = {
   id: string;
   userId: string;
@@ -531,6 +541,22 @@ export async function updateMemberRole(
     }
     return { status: "failed" };
   }
+}
+
+// A plain scoped read, not a Better Auth API call (unlike listMembers,
+// which needs the request's own headers to authenticate against the
+// plugin): a caller that only needs the session's own role, and must stay
+// callable with no request in scope — reserve's getReservePageProps and
+// updateReserveMultipleAction (CONTEXT.md, "Role": only owner and admin
+// administer settings) — uses this instead. Defaults to "member" when no
+// membership row exists, the least-privileged case every other role check
+// in this file falls back to as well.
+export async function getViewerRole(
+  session: HouseholdSession,
+  db: Database,
+): Promise<HouseholdRole> {
+  const row = await activeMemberRow(db, session.householdId, session.userId);
+  return (row?.role as HouseholdRole | undefined) ?? "member";
 }
 
 async function activeMemberRow(
