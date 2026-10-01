@@ -1,3 +1,4 @@
+import { MEU_PLUGGY_GUIDE_HREF } from "@/modules/guide";
 import { requireHouseholdSession } from "@/modules/households";
 import { ConnectBankWizard } from "@/modules/sync";
 
@@ -6,7 +7,7 @@ export default async function ConnectBankPage() {
 
   return (
     <div className="max-w-2xl">
-      <ConnectBankWizard />
+      <ConnectBankWizard guideHref={MEU_PLUGGY_GUIDE_HREF} />
     </div>
   );
 }

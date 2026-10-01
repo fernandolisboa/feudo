@@ -11,7 +11,6 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
 import { interpolate } from "@/lib/interpolate";
-import { MEU_PLUGGY_GUIDE_HREF } from "@/modules/guide";
 
 import { acceptConsentAction, connectProviderAction, type AcceptConsentState } from "../actions";
 import { CONSENT_SCOPE_VERSION } from "../consent-text";
@@ -109,7 +108,15 @@ function GuideStep({ onBack, onContinue }: { onBack: () => void; onContinue: () 
   );
 }
 
-function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () => void }) {
+function CredentialsStep({
+  consentId,
+  guideHref,
+  onBack,
+}: {
+  consentId: string;
+  guideHref: string;
+  onBack: () => void;
+}) {
   const [state, formAction, isPending] = useActionState(connectProviderAction, initialActionState);
 
   return (
@@ -122,7 +129,7 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
       <p className="text-sm leading-relaxed">
         {t.form.intro}{" "}
         <Link
-          href={MEU_PLUGGY_GUIDE_HREF}
+          href={guideHref}
           target="_blank"
           rel="noopener noreferrer"
           className="text-brand hover:text-brand-hover underline underline-offset-4"
@@ -187,7 +194,7 @@ function CredentialsStep({ consentId, onBack }: { consentId: string; onBack: () 
   );
 }
 
-export function ConnectBankWizard() {
+export function ConnectBankWizard({ guideHref }: { guideHref: string }) {
   const [step, setStep] = useState<Step>({ kind: "consent" });
 
   switch (step.kind) {
@@ -214,6 +221,7 @@ export function ConnectBankWizard() {
       return (
         <CredentialsStep
           consentId={step.consentId}
+          guideHref={guideHref}
           onBack={() => {
             setStep({ kind: "guide", consentId: step.consentId });
           }}

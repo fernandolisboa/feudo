@@ -42,3 +42,7 @@ Sync runs automatically once a day and can be triggered manually up to three tim
 - End-to-end tests run against an in-repo fake `DataProvider` with Pluggy-shaped fixtures; Meu Pluggy has no sandbox, so the real provider is exercised by a manual smoke test on the owner's own credentials.
 - A manual trigger from household A re-reads every connection with an account in A, so other households sharing one of those connections get an up-to-date read without spending their own quota; how fresh that read is still depends on Meu Pluggy's own daily refresh, not on the trigger. Accepted.
 - CLAUDE.md's stack section (Connect widget, "MeuPluggy only for local development", billing per item) was aligned with this ADR in the same PR.
+
+## Amendment 2026-10-01 (#94): the manual trigger is not built yet
+
+As of this date only the daily cron (`/api/cron/sync`) and the immediate sync when a connection is created or added exist. The manual trigger and its per-household quota described above are still the plan, tracked in #14; user-facing copy (the "Como usar" guide) does not mention them until they ship.

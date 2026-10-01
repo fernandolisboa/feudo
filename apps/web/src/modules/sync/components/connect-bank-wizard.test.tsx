@@ -16,8 +16,8 @@ afterEach(() => {
 });
 
 describe("ConnectBankWizard", () => {
-  it("links the credentials step to the guide's Meu Pluggy section in a new tab", async () => {
-    const { container } = render(<ConnectBankWizard />);
+  it("links the credentials step to the guide it is given, in a new tab", async () => {
+    const { container } = render(<ConnectBankWizard guideHref="/como-usar#meu-pluggy" />);
 
     await act(() => {
       fireEvent.submit(container.querySelector("form") as HTMLFormElement);

@@ -2,7 +2,7 @@ const en = {
   overline: "Help",
   title: "How to use Feudo",
   intro:
-    "What each screen does and the steps nobody can guess on their own. Start with the first two sections if you have just signed up.",
+    "What each screen does and the steps nobody can guess on their own. If you are just getting started, begin with the first two sections.",
   tocLabel: "On this page",
   goTo: "Go to {screen}",
   sections: {
@@ -16,11 +16,11 @@ const en = {
         },
         {
           title: "Invite your partner",
-          body: "On the Household screen, the owner and the admins invite people by email. The invite expires in 24 hours; if it expires, resend it from Pending invites.",
+          body: "On the Household screen, the owner and the admins invite people by email. The invite expires in 24 hours; if it expires, send a new one.",
         },
         {
           title: "More than one household",
-          body: "You can belong to several households and work in one at a time. Switch the active household in the Household selector in the menu: every screen then shows that household's data.",
+          body: "You can belong to several households and work in one at a time. Switch the active household in the Household selector, in the navigation bar (at the top of the screen on a phone): every screen then shows that household's data.",
         },
       ],
     },
@@ -46,7 +46,7 @@ const en = {
         },
         {
           title: "Consent and attempt limit",
-          body: "Before the first connection, Feudo explains what it reads and asks for your authorization. You can try your credentials 5 times every 15 minutes, failed attempts included. Past that, wait 15 minutes without trying: each attempt in the meantime restarts the wait.",
+          body: "Before each connection, Feudo explains what it reads and asks for your authorization. You can make 5 connection attempts every 15 minutes, failed ones and added connections included. Past that, wait 15 minutes without trying: each attempt in the meantime restarts the wait.",
         },
       ],
     },
@@ -90,7 +90,7 @@ const en = {
         },
         {
           title: "When a sync fails",
-          body: "If Meu Pluggy was down, the next day's sync tries again on its own. If your credentials stopped working, remove them in Your connections and enter them again. If your bank asks to be reconnected in Meu Pluggy, do it there: Feudo picks it up on the next sync.",
+          body: "If Meu Pluggy was down, the next day's sync tries again on its own. If your credentials stopped working, remove them in Your connections and paste the new ones in Connect bank; if it then says the connection is already in Feudo, the new credentials were saved anyway. If your bank asks to be reconnected in Meu Pluggy, do it there: Feudo picks it up on the next sync.",
         },
       ],
     },
@@ -104,7 +104,7 @@ const en = {
         },
         {
           title: "Categorizing",
-          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains a piece of text, check the rule option: the rule becomes the household's and applies to past and future transactions. Back to automatic undoes a choice made by hand.",
+          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains certain words, check the rule option: the rule becomes the household's, matches whole words, covers only incoming or only outgoing transactions (like the one you are categorizing) and applies to past and future transactions. Back to automatic undoes a choice made by hand.",
         },
         {
           title: "Transactions without a category",
@@ -122,7 +122,7 @@ const en = {
     },
     categories: {
       title: "Categories",
-      screen: "Categories",
+      screen: "Categories and rules",
       topics: [
         {
           title: "Categories and subcategories",
@@ -175,7 +175,7 @@ const en = {
         },
         {
           title: "Stopping",
-          body: "In Your connections, removing your credentials stops the sync and destroys them on the spot, and deleting a connection removes its accounts. Revoking Feudo's access in Meu Pluggy has the same effect.",
+          body: "In Your connections, removing your credentials stops the sync and destroys them on the spot, and deleting a connection removes its accounts and their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what Feudo has already read stays here until you remove your credentials and delete your connections.",
         },
         {
           title: "Export and deletion",
@@ -196,7 +196,7 @@ const en = {
         },
         {
           title: "The invite expired",
-          body: "Invites last 24 hours. Ask the household's owner or an admin to resend it on the Household screen.",
+          body: "Invites last 24 hours. Ask the household's owner or an admin to send you a new one on the Household screen.",
         },
         {
           title: "I can't see the other members' accounts",
@@ -211,7 +211,7 @@ const ptBR = {
   overline: "Ajuda",
   title: "Como usar o Feudo",
   intro:
-    "O que cada tela faz e os passos que ninguém descobre sozinho. Se você acabou de se cadastrar, comece pelas duas primeiras seções.",
+    "O que cada tela faz e os passos que ninguém descobre sozinho. Se está chegando agora, comece pelas duas primeiras seções.",
   tocLabel: "Nesta página",
   goTo: "Ir para {screen}",
   sections: {
@@ -225,11 +225,11 @@ const ptBR = {
         },
         {
           title: "Convide quem divide as contas com você",
-          body: "Na tela Casa, o responsável e os administradores convidam pessoas por e-mail. O convite vale por 24 horas; se expirar, é só reenviá-lo em Convites pendentes.",
+          body: "Na tela Casa, o responsável e os administradores convidam pessoas por e-mail. O convite vale por 24 horas; se expirar, é só mandar um novo.",
         },
         {
           title: "Mais de uma casa",
-          body: "Você pode participar de várias casas e trabalha em uma de cada vez. Mude a casa ativa no seletor Casa, no menu: todas as telas passam a mostrar os dados dela.",
+          body: "Você pode participar de várias casas e trabalha em uma de cada vez. Mude a casa ativa no seletor Casa, na barra de navegação (no celular, no topo da tela): todas as telas passam a mostrar os dados dela.",
         },
       ],
     },
@@ -255,7 +255,7 @@ const ptBR = {
         },
         {
           title: "Consentimento e limite de tentativas",
-          body: "Antes da primeira conexão, o Feudo explica o que vai ler e pede sua autorização. Dá para testar as credenciais 5 vezes a cada 15 minutos, contando as que falharam. Passou disso, espere 15 minutos sem tentar: cada tentativa nesse meio-tempo recomeça a espera.",
+          body: "Antes de cada conexão, o Feudo explica o que vai ler e pede sua autorização. Dá para fazer 5 tentativas de conexão a cada 15 minutos, contando as que falharam e as conexões adicionadas. Passou disso, espere 15 minutos sem tentar: cada tentativa nesse meio-tempo recomeça a espera.",
         },
       ],
     },
@@ -299,7 +299,7 @@ const ptBR = {
         },
         {
           title: "Quando a sincronização falha",
-          body: "Se o Meu Pluggy estava fora do ar, a sincronização do dia seguinte tenta de novo sozinha. Se suas credenciais pararam de funcionar, remova-as em Suas conexões e informe de novo. Se o seu banco pedir uma nova conexão no Meu Pluggy, refaça por lá: o Feudo pega na próxima sincronização.",
+          body: "Se o Meu Pluggy estava fora do ar, a sincronização do dia seguinte tenta de novo sozinha. Se suas credenciais pararam de funcionar, remova-as em Suas conexões e cole as novas em Conectar banco; se ele avisar que a conexão já está no Feudo, as credenciais novas foram salvas mesmo assim. Se o seu banco pedir uma nova conexão no Meu Pluggy, refaça por lá: o Feudo pega na próxima sincronização.",
         },
       ],
     },
@@ -313,7 +313,7 @@ const ptBR = {
         },
         {
           title: "Categorizar",
-          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha um certo texto, marque a opção de regra: ela passa a valer para a casa inteira, nas transações passadas e futuras. Voltar ao automático desfaz uma escolha feita à mão.",
+          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha certas palavras, marque a opção de regra: ela passa a valer para a casa inteira, procura palavras inteiras, vale só para entradas ou só para saídas (como a transação que você está categorizando) e se aplica às transações passadas e futuras. Voltar ao automático desfaz uma escolha feita à mão.",
         },
         {
           title: "Transações sem categoria",
@@ -331,7 +331,7 @@ const ptBR = {
     },
     categories: {
       title: "Categorias",
-      screen: "Categorias",
+      screen: "Categorias e regras",
       topics: [
         {
           title: "Categorias e subcategorias",
@@ -384,7 +384,7 @@ const ptBR = {
         },
         {
           title: "Como parar",
-          body: "Em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão remove as contas dela. Revogar o acesso do Feudo no Meu Pluggy tem o mesmo efeito.",
+          body: "Em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão remove as contas dela, com todas as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que o Feudo já leu continua aqui até você remover suas credenciais e excluir suas conexões.",
         },
         {
           title: "Exportar e excluir",
@@ -405,7 +405,7 @@ const ptBR = {
         },
         {
           title: "O convite expirou",
-          body: "O convite vale por 24 horas. Peça ao responsável pela casa ou a um administrador que o reenvie na tela Casa.",
+          body: "O convite vale por 24 horas. Peça ao responsável pela casa ou a um administrador que mande um novo, na tela Casa.",
         },
         {
           title: "Não vejo as contas de quem divide a casa comigo",
