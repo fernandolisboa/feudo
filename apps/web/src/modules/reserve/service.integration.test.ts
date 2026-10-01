@@ -157,13 +157,11 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
       const scope = householdScope(userA.session);
       const months = ["2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
       await seedFixedHistory(db, userA, scope, months, 100000);
-      await db
-        .insert(householdSettings)
-        .values({
-          householdId: scope.householdId,
-          timeZone: "America/Sao_Paulo",
-          reserveMultiple: 6,
-        });
+      await db.insert(householdSettings).values({
+        householdId: scope.householdId,
+        timeZone: "America/Sao_Paulo",
+        reserveMultiple: 6,
+      });
 
       const firstClose = new Date("2026-10-01T01:30:00.000Z");
       const first = await closeReserveTargetMonthForHousehold(db, scope, firstClose);
