@@ -31,7 +31,7 @@ An offer, sent to an email address, to join a household with a given role.
 ### Banks and accounts
 
 **Bank connection**:
-A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it. Meu Pluggy has no endpoint that lists a user's connections, so the user identifies the one to bring into Feudo by pasting its **Item ID**, Pluggy's own identifier, which is kept verbatim in copy for that reason. The connection's institution name is its owner's own label, typed when connecting or later through "Renomear"; left blank, it falls back to the provider's connector name, which Pluggy reports as "MeuPluggy" for every Meu Pluggy connection, never the underlying bank (ADR-0005). It is free text for display, not a reference to an **Institution**.
+A user's authorization for Feudo to read data from one institution through a data provider. It belongs to the user who authorized it; no other user can see, update or remove it. Meu Pluggy has no endpoint that lists a user's connections, so the user identifies the one to bring into Feudo by pasting its **Item ID**, Pluggy's own identifier, which is kept verbatim in copy for that reason. The connection's institution name is its owner's own label, typed when connecting or later through "Renomear"; left blank, it falls back to the provider's connector name, which Pluggy reports as "MeuPluggy" for every Meu Pluggy connection, never the underlying bank (ADR-0005). It is free text, not a reference to an **Institution**; the reserve reads it only as a default for which institution holds or issued an account, which the household can override (**Reserve mark**).
 _Avoid_: item (Pluggy's term) to mean the connection itself, link, integration
 
 **Bank-connection consent**:
@@ -132,15 +132,23 @@ A household-wide notice, created only when a month close moves the recorded targ
 _Avoid_: reserve alert, target warning
 
 **Reserve position**:
-An account, including an investment position, that the household marks as part of its reserve. The product suggests liquid instruments and warns when a marked position is not liquid or its liquidity is unknown.
+An account, including an investment position, that the household marks as part of its reserve. Any member can mark or unmark one; the mark belongs to the household, so an account moved to another household arrives unmarked there. The product suggests liquid, protected accounts that are not marked yet and warns when a marked position is not liquid or its liquidity is unknown. Coverage is the sum of the BRL balances of the household's reserve positions, shown in reais, as a share of the reserve target and in months of average fixed cost, each floored so it never claims more than there is.
 _Avoid_: reserve account, emergency fund holding
 
+**Reserve mark**:
+What one household says about one of its accounts for the reserve: whether it is a reserve position; whether it can be redeemed within one business day, asked only where the product type cannot tell (a CDB, LCI or fund can; a checking account, poupança and Tesouro Selic always can); and which institution issued it, asked only for deposits and bank-issued instruments. The issuer defaults to the institution the connection's label names (`matchInstitutionByLabel`), and the household can pick another or say it is outside the reference list, which leaves its FGC coverage unverified.
+_Avoid_: reserve flag, reserve setting
+
+**Placement ranking**:
+The answer to "where should the next reais of the reserve go" (ADR-0009): every account of the household that can hold money (not a credit card) is evaluated; those redeemable within one business day and covered (FGC or FGCoop with headroom left for the holder, or Tesouro Selic) are ranked by net real yield, ties broken by FGC headroom, Tesouro Selic first; the top three are shown as the ranking and the rest under "também avaliados", each ranked one with its place and each excluded one with every reason that applies. A balance at a payment institution (Nubank, PicPay, Mercado Pago) is not covered, while what the same conglomerate's bank issues is.
+_Avoid_: recommendation, best investment
+
 **Net real yield**:
-What a reserve position earns after income tax, compared against the 12-month accumulated IPCA. The number the placement ranking orders by.
+What a reserve position earns after income tax, compared against the 12-month accumulated IPCA. The number the placement ranking orders by. The rate is first converted to an annual nominal rate: % of CDI compounded over 252 business days, a fixed annual rate as is, IPCA+ over the 12-month IPCA, Tesouro Selic at the effective Selic (the daily series, annualised), poupança by its legal rule on the Selic target without TR, and nothing for a checking account. Income tax is the regressive bracket for the position's real holding age today, the worst bracket when the acquisition date is unknown, and none for LCI, LCA, LIG and poupança.
 _Avoid_: real return, net rate
 
 **FGC headroom**:
-How much more a CPF can hold in one financial conglomerate (as the Central Bank publishes it) while staying inside the FGC coverage limit. For a credit cooperative covered by FGCoop, the limit applies per cooperative instead.
+How much more a CPF can hold in one financial conglomerate (as the Central Bank publishes it) while staying inside the FGC coverage limit. For a credit cooperative covered by FGCoop, the limit applies per cooperative instead; since the provider does not name the cooperative, every Sicoob position of a holder shares one limit, which can only understate the headroom. Computed over the household's own covered BRL positions of that holder; a position without a holder document is its own group. A holder with no headroom left in a conglomerate is excluded there.
 _Avoid_: FGC room, remaining coverage
 
 **Average fixed cost**:

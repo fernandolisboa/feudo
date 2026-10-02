@@ -1,4 +1,8 @@
-import { accumulate12MonthIpca, parsePercentToRatePpm } from "@feudo/core";
+import {
+  accumulate12MonthIpca,
+  annualizeDailyPercentToRatePpm,
+  parsePercentToRatePpm,
+} from "@feudo/core";
 import { describe, expect, it } from "vitest";
 
 import { withTestDb } from "@/platform/db/test/harness";
@@ -93,6 +97,31 @@ describe("getLatestIndicators ipca12Month (integration)", () => {
         referenceDate: "2025-07-01",
         source: "sgs",
       });
+    });
+  });
+});
+
+describe("getLatestIndicators selicAnnual (integration)", () => {
+  it("annualises the latest daily Selic (SGS 11) over 252 business days", async () => {
+    await withTestDb(async (db) => {
+      await upsertMarketData(db, "11", [
+        { referenceDate: "2026-09-29", value: "0.055131" },
+        { referenceDate: "2026-09-30", value: "0.055131" },
+      ]);
+
+      const indicators = await getLatestIndicators(db);
+
+      expect(indicators.selicAnnual).toEqual({
+        ratePpm: annualizeDailyPercentToRatePpm("0.055131"),
+        referenceDate: "2026-09-30",
+        source: "computed",
+      });
+    });
+  });
+
+  it("is undefined before the daily Selic was ever fetched", async () => {
+    await withTestDb(async (db) => {
+      expect((await getLatestIndicators(db)).selicAnnual).toBeUndefined();
     });
   });
 });

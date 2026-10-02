@@ -61,6 +61,7 @@ export async function seedSyncedConnection(
   options: {
     household: HouseholdScope;
     itemId?: string;
+    institutionName?: string;
     accounts?: NormalizedAccount[];
     transactions?: NormalizedTransaction[];
     syncedAt?: Date;
@@ -72,7 +73,7 @@ export async function seedSyncedConnection(
   const connectionId = await repository.createConnection(db, {
     provider: "pluggy",
     providerItemId: options.itemId ?? SEED_ITEM_ID,
-    institutionName: "Banco Fixture",
+    institutionName: options.institutionName ?? "Banco Fixture",
     institutionProviderId: "601",
     consentId,
     defaultHousehold: options.household,

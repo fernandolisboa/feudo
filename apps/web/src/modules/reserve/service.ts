@@ -21,9 +21,11 @@ import { errorName } from "@/lib/error-name";
 import type { SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import {
+  createReserveMarkRepository,
   createReserveTargetNoticeRepository,
   createReserveTargetRecordRepository,
   listHouseholdIdsForMonthClose,
+  type ReserveMarkInput,
 } from "./repository";
 
 export type MonthCloseOutcome = { status: "skipped" } | { status: "recorded"; notified: boolean };
@@ -131,6 +133,21 @@ export async function dismissReserveNotice(
 ): Promise<DismissReserveNoticeOutcome> {
   const dismissed = await createReserveTargetNoticeRepository(scope).dismiss(db, noticeId);
   return dismissed ? { status: "ok" } : { status: "not_found" };
+}
+
+export type SetReserveMarkOutcome = SimpleOutcome<"ok" | "not_found">;
+
+// Any member of the active household may mark its accounts (CONTEXT.md,
+// "Reserve position"): a mark is a household fact, like dismissing the
+// notice, not a settings change.
+export async function setReserveMark(
+  scope: HouseholdScope,
+  userId: string,
+  input: ReserveMarkInput,
+  db: Database,
+): Promise<SetReserveMarkOutcome> {
+  const status = await createReserveMarkRepository(scope).set(db, input, userId);
+  return { status };
 }
 
 export type ReserveMonthCloseResult = {

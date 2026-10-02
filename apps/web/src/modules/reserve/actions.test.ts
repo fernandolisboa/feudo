@@ -6,6 +6,7 @@ const requireHouseholdSessionMock = vi.hoisted(() =>
 const getViewerRoleMock = vi.hoisted(() => vi.fn().mockResolvedValue("owner"));
 const setHouseholdReserveMultipleMock = vi.hoisted(() => vi.fn());
 const dismissReserveNoticeMock = vi.hoisted(() => vi.fn());
+const setReserveMarkMock = vi.hoisted(() => vi.fn());
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
@@ -19,10 +20,15 @@ vi.mock("@/modules/households", () => ({
 vi.mock("./service", () => ({
   setHouseholdReserveMultiple: setHouseholdReserveMultipleMock,
   dismissReserveNotice: dismissReserveNoticeMock,
+  setReserveMark: setReserveMarkMock,
 }));
 
 import { initialActionState } from "@/lib/action-state";
-import { dismissReserveNoticeAction, updateReserveMultipleAction } from "./actions";
+import {
+  dismissReserveNoticeAction,
+  updateReserveMarkAction,
+  updateReserveMultipleAction,
+} from "./actions";
 import { t } from "./strings";
 
 beforeEach(() => {
@@ -30,6 +36,7 @@ beforeEach(() => {
   getViewerRoleMock.mockReset().mockResolvedValue("owner");
   setHouseholdReserveMultipleMock.mockReset();
   dismissReserveNoticeMock.mockReset();
+  setReserveMarkMock.mockReset();
   revalidatePathMock.mockClear();
 });
 
@@ -169,5 +176,65 @@ describe("dismissReserveNoticeAction", () => {
     );
 
     expect(result).toEqual({ status: "error", message: t.errors.noticeNotFound });
+  });
+});
+
+describe("updateReserveMarkAction", () => {
+  const VALID = {
+    accountId: "account-1",
+    isReserve: "true",
+    liquidity: "daily",
+    institutionId: "inter",
+  };
+
+  it("saves the mark for the session's household, whatever the member's role", async () => {
+    getViewerRoleMock.mockResolvedValue("member");
+    setReserveMarkMock.mockResolvedValue({ status: "ok" });
+
+    const result = await updateReserveMarkAction(initialActionState, formDataWith(VALID));
+
+    expect(result).toEqual({ status: "success", message: t.markSaved });
+    expect(setReserveMarkMock).toHaveBeenCalledWith(
+      { householdId: "household-1" },
+      "user-1",
+      { accountId: "account-1", isReserve: true, liquidity: "daily", institutionId: "inter" },
+      {},
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/reserva");
+  });
+
+  it("maps 'automatic' and 'don't know' to no override", async () => {
+    setReserveMarkMock.mockResolvedValue({ status: "ok" });
+
+    await updateReserveMarkAction(
+      initialActionState,
+      formDataWith({ ...VALID, isReserve: "false", liquidity: "unknown", institutionId: "auto" }),
+    );
+
+    expect(setReserveMarkMock).toHaveBeenCalledWith(
+      { householdId: "household-1" },
+      "user-1",
+      { accountId: "account-1", isReserve: false, liquidity: null, institutionId: null },
+      {},
+    );
+  });
+
+  it("rejects an institution outside the reference dataset before reaching the service", async () => {
+    const result = await updateReserveMarkAction(
+      initialActionState,
+      formDataWith({ ...VALID, institutionId: "banco-inventado" }),
+    );
+
+    expect(result).toEqual({ status: "error", message: t.errors.invalidInput });
+    expect(setReserveMarkMock).not.toHaveBeenCalled();
+  });
+
+  it("says so when the account is not in the household", async () => {
+    setReserveMarkMock.mockResolvedValue({ status: "not_found" });
+
+    const result = await updateReserveMarkAction(initialActionState, formDataWith(VALID));
+
+    expect(result).toEqual({ status: "error", message: t.errors.accountNotFound });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

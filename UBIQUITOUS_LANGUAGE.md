@@ -50,6 +50,9 @@
 | Reserve multiple                            | meses de reserva                               | "6 meses de custo fixo"                                                      |
 | Reserve target notice                       | aviso da meta                                  | "A meta da reserva mudou de R$ X para R$ Y..."; action "Entendi"             |
 | Reserve position                            | posição da reserva                             | "faz parte da reserva"                                                       |
+| Reserve mark                                | ajuste da reserva                              | action "Ajustar"; "Instituição emissora", "Resgate"                          |
+| Placement ranking                           | onde colocar os próximos reais                 | the rest under "Também avaliados"; places "1º", "2º"                         |
+| Liquidity (redeemable within D+1)           | liquidez                                       | "até D+1", "acima de D+1", unknown "confirme"                                |
 | Average fixed cost                          | custo fixo médio                               |                                                                              |
 | Bank profile                                | perfil do banco                                | scores "nota de 0 a 100"                                                     |
 | Insufficient evidence                       | evidência insuficiente                         | a criterion with no citable source; shown without a score                    |
