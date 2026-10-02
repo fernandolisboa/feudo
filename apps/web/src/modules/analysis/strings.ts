@@ -52,7 +52,7 @@ const ptBR = {
     title: "Leitura do analista",
     empty:
       "Ainda não há leitura do analista. A primeira chega no início do próximo mês, ou gere agora.",
-    tradeOffs: "Trade-offs",
+    tradeOffs: "Prós e contras",
     counterArgument: "Contra-argumento",
     inputsUsed: "Números usados",
     kinds: {
