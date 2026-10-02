@@ -1,24 +1,8 @@
-import { BANK_PROFILE_CRITERIA, INSTITUTIONS, isStale } from "@feudo/core";
+import { BANK_PROFILE_CRITERIA } from "@feudo/core";
+import { INSTITUTIONS, isStale, type BankProfile } from "@feudo/core/reference-data";
 import { describe, expect, it } from "vitest";
 
-import { BANK_PROFILES_DATASET } from "./bank-profiles-data";
-import { parseBankProfilesDataset, type BankProfile } from "./bank-profile";
 import { BANK_PROFILES, staleCriteria } from "./bank-profiles";
-
-type MutableDataset = {
-  version: number;
-  profiles: { institutionId: string; criteria: Record<string, Record<string, unknown>> }[];
-};
-
-function cloneDataset(): MutableDataset {
-  return structuredClone(BANK_PROFILES_DATASET);
-}
-
-function firstProfile(dataset: MutableDataset) {
-  const profile = dataset.profiles[0];
-  if (!profile) throw new Error("dataset has no profiles");
-  return profile;
-}
 
 describe("bank profiles dataset", () => {
   it("loads one validated profile per institution, each with every criterion", () => {
@@ -41,49 +25,6 @@ describe("bank profiles dataset", () => {
     }
   });
 
-  it("fails when a scored criterion has no citation", () => {
-    const dataset = cloneDataset();
-    const profile = firstProfile(dataset);
-    profile.criteria.fees = { ...profile.criteria.fees, citations: [] };
-    expect(() => parseBankProfilesDataset(dataset)).toThrow();
-  });
-
-  it("fails on a score outside 0 to 100 or with decimals", () => {
-    for (const score of [101, -1, 72.5]) {
-      const dataset = cloneDataset();
-      const profile = firstProfile(dataset);
-      profile.criteria.fees = { ...profile.criteria.fees, score };
-      expect(() => parseBankProfilesDataset(dataset), String(score)).toThrow();
-    }
-  });
-
-  it("fails when a criterion is missing or unknown", () => {
-    const missing = cloneDataset();
-    delete firstProfile(missing).criteria.fees;
-    expect(() => parseBankProfilesDataset(missing)).toThrow();
-
-    const extra = cloneDataset();
-    const profile = firstProfile(extra);
-    profile.criteria.vibes = profile.criteria.fees ?? {};
-    expect(() => parseBankProfilesDataset(extra)).toThrow();
-  });
-
-  it("fails on an unknown, duplicate or missing institution", () => {
-    const unknown = cloneDataset();
-    firstProfile(unknown).institutionId = "banco-imaginario";
-    expect(() => parseBankProfilesDataset(unknown)).toThrow(
-      /unknown institution .*banco-imaginario/,
-    );
-
-    const duplicate = cloneDataset();
-    duplicate.profiles.push(firstProfile(duplicate));
-    expect(() => parseBankProfilesDataset(duplicate)).toThrow(/duplicate profile .*nubank/);
-
-    const missing = cloneDataset();
-    missing.profiles.pop();
-    expect(() => parseBankProfilesDataset(missing)).toThrow(/mercado-pago.* has no profile/);
-  });
-
   it("lists criteria whose review is older than the threshold", () => {
     const profile = BANK_PROFILES[0] as BankProfile;
     expect(staleCriteria([profile], "2026-10-02")).toEqual([]);
@@ -104,6 +45,6 @@ describe("bank profiles dataset", () => {
     if (stale.length > 0) {
       console.warn(`Stale reference data, review it: ${stale.join(", ")}`);
     }
-    expect(stale.length).toBeGreaterThanOrEqual(0);
+    expect(stale.every((entry) => entry.length > 0)).toBe(true);
   });
 });

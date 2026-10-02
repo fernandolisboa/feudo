@@ -1,36 +1,43 @@
+import { z } from "zod";
+
+import { institutionIdSchema } from "../institutions/institution";
+import { INSTITUTIONS } from "../institutions/institutions";
+import { citationSchema, isoDateSchema, reviewPredatesEvidence } from "../reference-data/review";
+
 import {
   BANK_PROFILE_CRITERIA,
   BANK_PROFILE_SCORE_MAX,
   BANK_PROFILE_SCORE_MIN,
-  INSTITUTIONS,
-  citationSchema,
-  isoDateSchema,
   type BankProfileCriterion,
-} from "@feudo/core";
-import { z } from "zod";
+} from "./criteria";
 
-const criterionSchema = z.discriminatedUnion("status", [
-  z.object({
-    status: z.literal("scored"),
-    score: z.int().min(BANK_PROFILE_SCORE_MIN).max(BANK_PROFILE_SCORE_MAX),
-    evidence: z.string().trim().min(1),
-    citations: z.array(citationSchema).min(1),
-    reviewedAt: isoDateSchema,
-  }),
-  z.object({
-    status: z.literal("insufficient-evidence"),
-    reason: z.string().trim().min(1),
-    citations: z.array(citationSchema).optional(),
-    reviewedAt: isoDateSchema,
-  }),
-]);
+const criterionSchema = z
+  .discriminatedUnion("status", [
+    z.object({
+      status: z.literal("scored"),
+      score: z.int().min(BANK_PROFILE_SCORE_MIN).max(BANK_PROFILE_SCORE_MAX),
+      evidence: z.string().trim().min(1),
+      citations: z.array(citationSchema).min(1),
+      reviewedAt: isoDateSchema,
+    }),
+    z.object({
+      status: z.literal("insufficient-evidence"),
+      reason: z.string().trim().min(1),
+      citations: z.array(citationSchema).min(1).optional(),
+      reviewedAt: isoDateSchema,
+    }),
+  ])
+  .refine((entry) => !reviewPredatesEvidence(entry.reviewedAt, entry.citations), {
+    message: "reviewedAt is earlier than a citation's checkedAt",
+    path: ["reviewedAt"],
+  });
 
 const criteriaShape = Object.fromEntries(
   BANK_PROFILE_CRITERIA.map((criterion) => [criterion, criterionSchema]),
 ) as Record<BankProfileCriterion, typeof criterionSchema>;
 
 export const bankProfileSchema = z.object({
-  institutionId: z.string().min(1),
+  institutionId: institutionIdSchema,
   criteria: z.strictObject(criteriaShape),
 });
 

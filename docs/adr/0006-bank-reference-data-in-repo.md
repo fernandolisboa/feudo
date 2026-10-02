@@ -17,5 +17,5 @@ Banking intelligence scores institutions on evidence that changes slowly and mus
 
 ## Consequences
 
-- Every profile change is a reviewed diff with sources, which is the audit trail, and requires the owner's explicit approval before merge. A research job that proposes profile updates is a later ticket.
+- Every profile change is a reviewed diff with sources, which is the audit trail. The agent that changes the data verifies each fact against a primary source where one exists and records the URL, the date checked and what was read; a fact that rests only on a secondary source is labelled as such. The owner's approval before merge is no longer required (waived by the owner on 2026-10-02, #21): an error found later is fixed by another pull request. A research job that proposes profile updates is a later ticket.
 - The household-facing "last reviewed" date comes straight from the data, so stale evidence is visible, not hidden.

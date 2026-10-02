@@ -71,7 +71,7 @@ A member's "Sincronizar agora": the same read as the daily sync, limited to the 
 When Feudo last read an account successfully, shown in the household's time zone as "hoje, 06:10", "ontem, 22:15" or a date. An account not read for more than 48 hours is stale and the household is told so; a connection whose last sync failed says why, in plain language, and offers a retry through the manual sync.
 
 **Institution**:
-A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation. Distinct from a bank connection's institution name, which is a label its owner types and may not match.
+A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation. The legal entity that holds the account can differ from the entity that carries the deposit guarantee: a payment institution (Nubank, PicPay, Mercado Pago) is not an FGC member, and the guarantee belongs to the bank or financing company in the same financial conglomerate. Distinct from a bank connection's institution name, which is a label its owner types and may not match.
 _Avoid_: bank (in code; "bank" is fine in user-facing text), connector
 
 ### Ledger

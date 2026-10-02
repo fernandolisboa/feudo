@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-import { citationSchema, isoDateSchema } from "../reference-data/review";
+import { citationSchema, isoDateSchema, reviewPredatesEvidence } from "../reference-data/review";
+
+export const institutionIdSchema = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 
 const cnpjBaseSchema = z.string().regex(/^\d{8}$/);
 
@@ -25,7 +27,7 @@ const depositGuaranteeSchema = z.discriminatedUnion("fund", [
 ]);
 
 export const institutionSchema = z.object({
-  id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+  id: institutionIdSchema,
   name: z.string().trim().min(1),
   reviewedAt: isoDateSchema,
   accountHolder: z.object({
@@ -53,6 +55,13 @@ export const institutionsDatasetSchema = z
   .superRefine((dataset, ctx) => {
     const seen = new Set<string>();
     dataset.institutions.forEach((institution, index) => {
+      if (reviewPredatesEvidence(institution.reviewedAt, institution.citations)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `institution "${institution.id}" reviewedAt is earlier than a citation's checkedAt`,
+          path: ["institutions", index, "reviewedAt"],
+        });
+      }
       if (seen.has(institution.id)) {
         ctx.addIssue({
           code: "custom",

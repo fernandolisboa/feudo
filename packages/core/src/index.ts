@@ -125,23 +125,7 @@ export { computeReserveTarget, InvalidReserveMultipleError } from "./reserve/tar
 export type { ReserveTargetNoticeInput } from "./reserve/notice";
 export { shouldNotifyReserveTargetChange } from "./reserve/notice";
 
-export type { Citation } from "./reference-data/review";
-export {
-  REFERENCE_DATA_STALE_AFTER_DAYS,
-  citationSchema,
-  daysSinceReview,
-  isStale,
-  isoDateSchema,
-} from "./reference-data/review";
-
-export {
-  FGC_FOUR_YEAR_CAP,
-  FGC_LIMIT_PER_CONGLOMERATE,
-  FGCOOP_LIMIT_PER_INSTITUTION,
-} from "./institutions/fgc";
-export type { DepositGuarantee, Institution } from "./institutions/institution";
-export { parseInstitutionsDataset } from "./institutions/institution";
-export { INSTITUTIONS, institutionById } from "./institutions/institutions";
+export { FGC_LIMIT_PER_CONGLOMERATE, FGCOOP_LIMIT_PER_INSTITUTION } from "./institutions/fgc";
 
 export type { BankProfileCriterion } from "./banking-intel/criteria";
 export {

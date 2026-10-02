@@ -70,6 +70,12 @@ describe("institutions dataset", () => {
     expect(() => parseInstitutionsDataset(dataset)).toThrow();
   });
 
+  it("fails when the review date predates a citation", () => {
+    const dataset = cloneDataset();
+    dataset.institutions[0] = { ...dataset.institutions[0], reviewedAt: "2026-09-01" };
+    expect(() => parseInstitutionsDataset(dataset)).toThrow(/earlier than a citation/);
+  });
+
   it("fails on a duplicate id", () => {
     const dataset = cloneDataset();
     dataset.institutions.push(dataset.institutions[0] as Record<string, unknown>);

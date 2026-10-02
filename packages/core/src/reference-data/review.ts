@@ -15,9 +15,16 @@ export const citationSchema = z.object({
 
 export type Citation = z.infer<typeof citationSchema>;
 
+export function reviewPredatesEvidence(
+  reviewedAt: string,
+  citations: readonly Citation[] | undefined,
+): boolean {
+  return (citations ?? []).some((citation) => citation.checkedAt > reviewedAt);
+}
+
 export function daysSinceReview(reviewedAt: string, today: string): number {
-  const reviewed = Date.parse(`${reviewedAt}T00:00:00Z`);
-  const now = Date.parse(`${today}T00:00:00Z`);
+  const reviewed = Date.parse(`${isoDateSchema.parse(reviewedAt)}T00:00:00Z`);
+  const now = Date.parse(`${isoDateSchema.parse(today)}T00:00:00Z`);
   return Math.floor((now - reviewed) / MILLISECONDS_PER_DAY);
 }
 

@@ -1,7 +1,6 @@
-import { isStale } from "@feudo/core";
+import { isStale, parseBankProfilesDataset, type BankProfile } from "@feudo/core/reference-data";
 
 import { BANK_PROFILES_DATASET } from "./bank-profiles-data";
-import { parseBankProfilesDataset, type BankProfile } from "./bank-profile";
 
 export const BANK_PROFILES: readonly BankProfile[] =
   parseBankProfilesDataset(BANK_PROFILES_DATASET);

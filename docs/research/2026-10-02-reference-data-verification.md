@@ -53,6 +53,11 @@ converted as `score × 20`. No intermediate value was invented: finer difference
 criterion is re-reviewed with new evidence. Every criterion reads "higher is better for the
 household"; lock-in 100 means the easiest bank to leave.
 
+Public reviews are the exception: the score is the Reclame Aqui reputation (0–10) × 10, so 7.2
+becomes 72. The 2026-09-09 0–5 proposals for this criterion grouped reputations into bands that
+left some banks with a worse reputation ahead of banks with a better one; deriving the score from
+the published number keeps the order the source shows.
+
 A proposed score with no citable URL became **insufficient evidence** instead of a number: Banco do
 Brasil security, Caixa card benefits, Santander card benefits and security, C6 app quality, BTG app
 quality and security.
@@ -64,6 +69,10 @@ quality and security.
 - Inter fees 100 → 80: the registry lists TED up to R$ 15.00, packages R$ 20–45 and a basic card
   annuity up to R$ 80, so Inter no longer ties with the all-zero registries.
 - PicPay fees: insufficient evidence → 100, from PicPay Bank's all-zero registry entry.
+- Public reviews re-derived as Reclame Aqui reputation × 10: Nubank 87, Inter 85, Itaú 81, Bradesco
+  69, Banco do Brasil 75, Caixa 72, Santander 57, C6 72, BTG 74, XP 79, Sicoob 66, PicPay 86,
+  Mercado Pago 80.
+- Nubank fees `reviewedAt` moved to 2026-10-02, the date its registry citation was checked.
 - Sicoob and Mercado Pago fees stay insufficient evidence: each Sicoob cooperative has its own table
   and Mercado Pago's payment institution reports none.
 

@@ -1,4 +1,4 @@
-import type { BankProfilesDatasetInput } from "./bank-profile";
+import type { BankProfilesDatasetInput } from "@feudo/core/reference-data";
 
 export const BANK_PROFILES_DATASET = {
   version: 1,
@@ -110,7 +110,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "The registry says this institution did not report its tariffs.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-02",
         },
         lockIn: {
           status: "scored",
@@ -129,7 +129,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 80,
+          score: 87,
           evidence:
             "Reclame Aqui: reputation 8.7/10, consumer average 7.72, 99.6% response, 92.9% resolution, 81.1% would do business again. consumidor.gov.br rendered no data.",
           citations: [
@@ -277,7 +277,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
+          score: 85,
           evidence:
             "Reclame Aqui: 8.5/10, 98.4% response, 90% resolution, 78% would do business again, average response 9 days 13 hours.",
           citations: [
@@ -391,7 +391,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
+          score: 81,
           evidence:
             "Reclame Aqui: 8.1/10, consumer average 7.02, 97.5% response, 85.4% resolution, 74.2% would do business again.",
           citations: [
@@ -527,7 +527,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 40,
+          score: 69,
           evidence:
             "Reclame Aqui: 6.9/10, consumer average 5.54, 100% response but 68.5% resolution, 58.3% would do business again.",
           citations: [
@@ -641,7 +641,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
+          score: 75,
           evidence:
             "Reclame Aqui: 7.5/10 (February to July 2026), 76.5% resolution, 68.4% would do business again, average response 9 days 16 hours.",
           citations: [
@@ -742,7 +742,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
+          score: 72,
           evidence:
             "Reclame Aqui: 7.2/10 (March to August 2026), 69.9% resolution, 65.6% would do business again.",
           citations: [
@@ -847,7 +847,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 20,
+          score: 57,
           evidence:
             "Reclame Aqui: 5.7/10 (March to August 2026), 52.6% resolution, 44.3% would do business again.",
           citations: [
@@ -961,7 +961,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
+          score: 72,
           evidence:
             "Reclame Aqui: 7.2/10, 76.8% resolution and 59.6% would do business again (January to June 2026).",
           citations: [
@@ -1060,7 +1060,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 80,
+          score: 74,
           evidence:
             "Reclame Aqui is split by entity: BTG+ banking 7.39/10 (87.6% resolution), BTG Pactual Investimentos 8.6/10 (90.9% resolution).",
           citations: [
@@ -1171,7 +1171,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 80,
+          score: 79,
           evidence:
             "Reclame Aqui: 7.9/10, 83% resolution, 67.6% would do business again; recurring complaint about advisors pushing commissioned products.",
           citations: [
@@ -1284,8 +1284,9 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 60,
-          evidence: "Reclame Aqui: 6.8/10 overall, 96.3% response, consumer average 5.51/10.",
+          score: 66,
+          evidence:
+            "Reclame Aqui: 6.6/10 over the last six months (6.8 overall), 96.3% response, consumer average 5.51/10.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/sicoob/",
@@ -1393,7 +1394,7 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 100,
+          score: 86,
           evidence:
             "Reclame Aqui: 8.6/10 with the RA1000 seal, 97.6% response, 91.3% resolution, 76.6% would do business again; won the 2025 Reclame Aqui award.",
           citations: [

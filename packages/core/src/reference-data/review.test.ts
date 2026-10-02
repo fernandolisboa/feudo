@@ -5,6 +5,7 @@ import {
   citationSchema,
   daysSinceReview,
   isStale,
+  reviewPredatesEvidence,
 } from "./review";
 
 describe("daysSinceReview", () => {
@@ -14,11 +15,31 @@ describe("daysSinceReview", () => {
   });
 });
 
+describe("reviewPredatesEvidence", () => {
+  const checked = (checkedAt: string) => ({
+    url: "https://www.bcb.gov.br/",
+    kind: "primary" as const,
+    checkedAt,
+    finding: "Read.",
+  });
+
+  it("is true only when a citation was checked after the review date", () => {
+    expect(reviewPredatesEvidence("2026-09-09", [checked("2026-10-02")])).toBe(true);
+    expect(reviewPredatesEvidence("2026-10-02", [checked("2026-10-02")])).toBe(false);
+    expect(reviewPredatesEvidence("2026-10-02", undefined)).toBe(false);
+  });
+});
+
 describe("isStale", () => {
   it("is fresh up to and including the threshold and stale one day after", () => {
     expect(REFERENCE_DATA_STALE_AFTER_DAYS).toBe(180);
     expect(isStale("2026-01-01", "2026-06-30")).toBe(false);
     expect(isStale("2026-01-01", "2026-07-01")).toBe(true);
+  });
+
+  it("rejects a date that is not ISO instead of calling it fresh", () => {
+    expect(() => isStale("2026-09-09", "02/10/2026")).toThrow();
+    expect(() => isStale("", "2026-10-02")).toThrow();
   });
 });
 
