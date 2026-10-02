@@ -42,10 +42,10 @@ function Reading({ reading }: { reading: AnalystReadingView }) {
             {reading.inputsUsed.map((input) => (
               <div
                 key={input.key}
-                className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+                className="flex flex-col gap-1 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
               >
                 <dt className="text-muted-foreground">{input.label}</dt>
-                <dd className="tabular-nums sm:text-right">{input.value}</dd>
+                <dd className="font-heading tabular-nums sm:text-right">{input.value}</dd>
               </div>
             ))}
           </dl>

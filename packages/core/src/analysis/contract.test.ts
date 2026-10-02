@@ -74,9 +74,9 @@ describe("analysisFactSchema", () => {
     ).toThrow();
   });
 
-  it("rejects a value over 300 characters", () => {
+  it("rejects a value over 600 characters", () => {
     expect(() =>
-      analysisFactSchema.parse({ key: "reserve.target", label: "x", value: "y".repeat(301) }),
+      analysisFactSchema.parse({ key: "reserve.target", label: "x", value: "y".repeat(601) }),
     ).toThrow();
   });
 });

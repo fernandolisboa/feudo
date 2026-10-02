@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
-import { createAnalysisDeps, runMonthlyAnalysisStep } from "@/modules/analysis";
+import { runMonthlyAnalysisStep } from "@/modules/analysis";
 
 // Each household's deep analysis is one long model call, so this job gets
 // its own function and the longest budget instead of sharing /api/cron/daily.
@@ -18,7 +18,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const requestStartedAt = Date.now();
-  const monthlyAnalysis = await runMonthlyAnalysisStep(getDb(), createAnalysisDeps(), {
+  const monthlyAnalysis = await runMonthlyAnalysisStep(getDb(), {
     now: new Date(),
     deadline: new Date(requestStartedAt + maxDuration * 1000 - RUN_HEADROOM_MS),
   });

@@ -5,7 +5,6 @@ vi.mock("@/platform/db/client", () => ({
 }));
 
 vi.mock("@/modules/analysis", () => ({
-  createAnalysisDeps: () => ({}),
   runMonthlyAnalysisStep: vi.fn(),
 }));
 
@@ -54,7 +53,7 @@ describe("GET /api/cron/analysis", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, steps: { monthlyAnalysis: RESULT } });
-    const options = vi.mocked(runMonthlyAnalysisStep).mock.calls[0]?.[2];
+    const options = vi.mocked(runMonthlyAnalysisStep).mock.calls[0]?.[1];
     expect(options?.deadline.getTime()).toBeLessThanOrEqual(before + 300_000);
     expect(options?.deadline.getTime()).toBeGreaterThan(before + 200_000);
   });

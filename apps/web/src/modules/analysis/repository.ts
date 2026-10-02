@@ -37,6 +37,13 @@ export type StoredAnalysis = {
   completedAt: Date | null;
 };
 
+export class AnalysisRepositoryInvariantError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AnalysisRepositoryInvariantError";
+  }
+}
+
 export type OnDemandReservation =
   { status: "reserved"; id: string; used: number } | { status: "quota_exhausted" | "in_progress" };
 
@@ -99,7 +106,7 @@ export function createAnalysisRepository(scope: HouseholdScope) {
       .values({ householdId: scope.householdId, kind, ...row })
       .returning({ id: householdAnalysis.id });
     if (!inserted) {
-      throw new Error("household_analysis insert returned no row");
+      throw new AnalysisRepositoryInvariantError("household_analysis insert returned no row");
     }
     return inserted.id;
   }

@@ -1,4 +1,9 @@
-const NUMBER_TOKEN_PATTERN = /\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?/g;
+// A minus sign (hyphen or U+2212) counts only when it starts a word, so a
+// date or range such as "2026-09" keeps its parts unsigned; it may sit before
+// "R$", as Intl writes a negative amount ("-R$ 1.234,56"). The sign is part of
+// the token: an answer that drops it turns a deficit into a surplus.
+const NUMBER_TOKEN_PATTERN =
+  /(?:(?<![\p{L}\p{N}])([-\u2212])(?:R\$[^\S\r\n]?)?)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?)/gu;
 
 function stripLeadingZeros(digits: string): string {
   return digits.replace(/^0+(?=\d)/, "");
@@ -20,5 +25,8 @@ function canonicalizeNumberToken(rawToken: string): string {
 }
 
 export function extractNumberTokens(text: string): string[] {
-  return (text.match(NUMBER_TOKEN_PATTERN) ?? []).map(canonicalizeNumberToken);
+  return [...text.matchAll(NUMBER_TOKEN_PATTERN)].map(([, sign, digits = ""]) => {
+    const magnitude = canonicalizeNumberToken(digits);
+    return sign === undefined || magnitude === "0" ? magnitude : `-${magnitude}`;
+  });
 }

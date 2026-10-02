@@ -10,7 +10,7 @@ export const analysisFactSchema = z.object({
     .max(80)
     .regex(/^[a-z0-9_]+(\.[a-z0-9_]+)*$/),
   label: z.string().trim().min(1).max(200),
-  value: z.string().trim().min(1).max(300),
+  value: z.string().trim().min(1).max(600),
 });
 
 export type AnalysisFact = z.infer<typeof analysisFactSchema>;

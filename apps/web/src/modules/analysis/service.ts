@@ -75,8 +75,15 @@ export function createAnalysisDeps(env: AnalysisEnv = process.env): AnalysisDeps
   }
 }
 
+// A misconfigured AI_PROVIDER turns the analyst off instead of breaking the
+// pages that host it; the cron's response reports the error.
 export function isAnalysisEnabled(env: AnalysisEnv = process.env): boolean {
-  return readAiProviderName(env) !== "off";
+  try {
+    return readAiProviderName(env) !== "off";
+  } catch (error) {
+    console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
+    return false;
+  }
 }
 
 type HouseholdClock = { timeZone: string; localDay: string; analysedMonth: YearMonth };
@@ -122,9 +129,11 @@ export async function buildAnalysisInput(
   });
 }
 
+export type GenerationFailure = AiFailure | "invalid_output" | "contract_violation" | "no_time";
+
 export type GenerationResult =
   | { status: "succeeded"; output: AnalysisOutput; model: string; usage: AiUsage | null }
-  | { status: "failed"; reason: string; model: string | null; usage: AiUsage | null };
+  | { status: "failed"; reason: GenerationFailure; model: string | null; usage: AiUsage | null };
 
 function addUsage(total: AiUsage | null, usage: AiUsage | null): AiUsage | null {
   if (usage === null) {
@@ -154,7 +163,7 @@ export async function generateReading(
   let usage: AiUsage | null = null;
   let model: string | null = null;
   let correction: string | null = null;
-  let reason = "no_time";
+  let reason: GenerationFailure = "no_time";
 
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
     const remainingMs = deadline.getTime() - Date.now();
@@ -231,12 +240,22 @@ export async function requestOnDemandAnalysis(
     return { status: "disabled" };
   }
   const scope = householdScope(session);
+  const repository = createAnalysisRepository(scope);
   const clock = await householdClock(db, scope, options.now);
+  const staleBefore = new Date(options.now.getTime() - RUNNING_STALE_MS);
+  // A cheap read before the input is built: a refused press must not cost
+  // the three page reads behind it. reserveOnDemand re-checks under the lock.
+  if (await repository.hasRunningSince(db, staleBefore)) {
+    return { status: "in_progress" };
+  }
+  if ((await repository.countOnDemandOn(db, clock.localDay)) >= ON_DEMAND_ANALYSES_PER_DAY) {
+    return { status: "quota_exhausted" };
+  }
   const input = await buildAnalysisInput(scope, "on_demand", clock, options.now);
   if (input === null) {
     return { status: "no_accounts" };
   }
-  const reservation = await createAnalysisRepository(scope).reserveOnDemand(db, {
+  const reservation = await repository.reserveOnDemand(db, {
     row: {
       period: input.month,
       localDay: clock.localDay,
@@ -246,7 +265,7 @@ export async function requestOnDemandAnalysis(
       requestedByUserId: session.userId,
     },
     limit: ON_DEMAND_ANALYSES_PER_DAY,
-    staleBefore: new Date(options.now.getTime() - RUNNING_STALE_MS),
+    staleBefore,
   });
   if (reservation.status !== "reserved") {
     return { status: reservation.status };
@@ -266,6 +285,9 @@ export async function runOnDemandAnalysis(
   session: HouseholdSession,
   db: Database,
 ): Promise<OnDemandOutcome> {
+  if (!isAnalysisEnabled()) {
+    return { status: "disabled" };
+  }
   return requestOnDemandAnalysis(session, db, createAnalysisDeps(), {
     now: new Date(),
     deadline: new Date(Date.now() + ON_DEMAND_BUDGET_MS - RUN_HEADROOM_MS),
@@ -322,7 +344,7 @@ export type MonthlyAnalysisStep = MonthlyAnalysisResult | { error: string };
 // daily run settles each month's readings over the first days of the month
 // and is cheap afterwards. One household's error is caught, counted and
 // logged by household id, never failing the rest of the run.
-export async function runMonthlyAnalysisStep(
+export async function runMonthlyAnalysis(
   db: Database,
   deps: AnalysisDeps,
   options: { now: Date; deadline: Date },
@@ -365,4 +387,17 @@ export async function runMonthlyAnalysisStep(
   } catch (error) {
     return { error: errorName(error) };
   }
+}
+
+export async function runMonthlyAnalysisStep(
+  db: Database,
+  options: { now: Date; deadline: Date },
+): Promise<MonthlyAnalysisStep> {
+  let deps: AnalysisDeps;
+  try {
+    deps = createAnalysisDeps();
+  } catch (error) {
+    return { error: errorName(error) };
+  }
+  return runMonthlyAnalysis(db, deps, options);
 }

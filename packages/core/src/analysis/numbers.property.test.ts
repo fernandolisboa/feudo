@@ -25,23 +25,38 @@ describe("extractNumberTokens property tests", () => {
     );
   });
 
-  it("renders formatBasisPointsPercent as exactly one token, magnitude only", () => {
+  it("renders a negative formatMoney as exactly one token carrying the sign", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: 999_999_999_999 }), (magnitude) => {
+        const [positive] = extractNumberTokens(
+          formatMoney({ amountCentavos: magnitude, currency: "BRL" }),
+        );
+        const tokens = extractNumberTokens(
+          formatMoney({ amountCentavos: -magnitude, currency: "BRL" }),
+        );
+        expect(tokens).toEqual([positive === "0" ? "0" : `-${positive ?? ""}`]);
+      }),
+    );
+  });
+
+  it("renders formatBasisPointsPercent as exactly one token with its sign", () => {
     fc.assert(
       fc.property(basisPointsArb, (basisPoints) => {
         const tokens = extractNumberTokens(formatBasisPointsPercent(basisPoints));
         const tenths = Math.abs(roundHalfAwayFromZero(basisPoints / 10));
         const whole = Math.trunc(tenths / 10);
         const decimal = tenths % 10;
-        const expected = decimal === 0 ? String(whole) : `${String(whole)}.${String(decimal)}`;
-        expect(tokens).toEqual([expected]);
+        const magnitude = decimal === 0 ? String(whole) : `${String(whole)}.${String(decimal)}`;
+        const negative = roundHalfAwayFromZero(basisPoints / 10) < 0;
+        expect(tokens).toEqual([negative ? `-${magnitude}` : magnitude]);
       }),
     );
   });
 
-  it("tokenizes a space-joined concatenation as the concatenation of each side's tokens", () => {
+  it("tokenizes a line-joined concatenation as the concatenation of each side's tokens", () => {
     fc.assert(
       fc.property(tokenTextArb, tokenTextArb, (a, b) => {
-        const joined = extractNumberTokens(`${a} ${b}`);
+        const joined = extractNumberTokens(`${a}\n${b}`);
         const expected = [...extractNumberTokens(a), ...extractNumberTokens(b)];
         expect(joined).toEqual(expected);
       }),

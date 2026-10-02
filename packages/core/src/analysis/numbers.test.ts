@@ -51,8 +51,28 @@ describe("extractNumberTokens", () => {
     expect(extractNumberTokens(formatted)).toEqual(["3600000"]);
   });
 
-  it("ignores the sign of a negative amount", () => {
-    expect(extractNumberTokens("-R$ 1.234,56")).toEqual(["1234.56"]);
+  it("keeps the sign of a negative amount, with or without a space after R$", () => {
+    expect(extractNumberTokens("-R$ 1.234,56")).toEqual(["-1234.56"]);
+    expect(extractNumberTokens(formatMoney({ amountCentavos: -123456, currency: "BRL" }))).toEqual([
+      "-1234.56",
+    ]);
+  });
+
+  it("keeps the sign of a negative percentage, hyphen or minus sign alike", () => {
+    expect(extractNumberTokens("-12,5%")).toEqual(["-12.5"]);
+    expect(extractNumberTokens("\u221212,5%")).toEqual(["-12.5"]);
+  });
+
+  it("reads a hyphen inside a date or range as a separator, not a sign", () => {
+    expect(extractNumberTokens("2026-09 e 1-3")).toEqual(["2026", "9", "1", "3"]);
+  });
+
+  it("reads a hyphen spaced from the number as punctuation", () => {
+    expect(extractNumberTokens("renda - R$ 5,00")).toEqual(["5"]);
+  });
+
+  it("drops the sign of a negative zero", () => {
+    expect(extractNumberTokens("-0,0%")).toEqual(["0"]);
   });
 
   it("canonicalizes a percentage", () => {

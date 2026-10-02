@@ -55,6 +55,32 @@ describe("findAnalysisViolations", () => {
     ]);
   });
 
+  it("rejects a negative figure quoted without its sign", () => {
+    const deficit = input({
+      facts: [{ key: "savings_rate", label: "Taxa de poupança", value: "-12,5%" }],
+    });
+    const violations = findAnalysisViolations(
+      deficit,
+      output({
+        reading: "A taxa de poupança foi de 12,5%.",
+        citedKeys: ["savings_rate"],
+      }),
+    );
+    expect(violations).toEqual([{ kind: "unsupported_number", token: "12.5", field: "reading" }]);
+  });
+
+  it("accepts a negative figure quoted with its sign", () => {
+    const deficit = input({
+      facts: [{ key: "savings_rate", label: "Taxa de poupança", value: "-12,5%" }],
+    });
+    expect(
+      findAnalysisViolations(
+        deficit,
+        output({ reading: "A taxa de poupança foi de -12,5%.", citedKeys: ["savings_rate"] }),
+      ),
+    ).toEqual([]);
+  });
+
   it("accepts the same percentage spelled with a trailing zero", () => {
     const violations = findAnalysisViolations(
       input(),

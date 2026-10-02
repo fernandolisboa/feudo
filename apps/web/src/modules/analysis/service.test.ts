@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AiClient, AiRequest, AiResult } from "./ai-client";
 import { CURRENT_ANALYST_PROMPT } from "./prompts";
-import { generateReading } from "./service";
+import { generateReading, isAnalysisEnabled } from "./service";
 import { FIXTURE_INPUT, FIXTURE_OUTPUT } from "./test/fixtures";
 
 const USAGE = { inputTokens: 1000, outputTokens: 200 };
@@ -178,5 +178,15 @@ describe("generateReading", () => {
     );
 
     expect(client.requests[0]?.timeoutMs).toBeLessThanOrEqual(60_000);
+  });
+});
+
+describe("isAnalysisEnabled", () => {
+  it("turns the analyst off, instead of throwing, when AI_PROVIDER is misconfigured", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(isAnalysisEnabled({ AI_PROVIDER: "openai" })).toBe(false);
+    expect(isAnalysisEnabled({ AI_PROVIDER: "fake", VERCEL_ENV: "production" })).toBe(false);
+    expect(isAnalysisEnabled({ AI_PROVIDER: "fake", VERCEL_ENV: "preview" })).toBe(true);
+    warn.mockRestore();
   });
 });

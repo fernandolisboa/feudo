@@ -17,7 +17,7 @@ import { createAnalysisRepository } from "./repository";
 import { householdAnalysis } from "./schema";
 import {
   requestOnDemandAnalysis,
-  runMonthlyAnalysisStep,
+  runMonthlyAnalysis,
   RUNNING_STALE_MS,
   type AnalysisDeps,
 } from "./service";
@@ -232,13 +232,13 @@ describe("requestOnDemandAnalysis (integration)", () => {
   });
 });
 
-describe("runMonthlyAnalysisStep (integration)", () => {
+describe("runMonthlyAnalysis (integration)", () => {
   it("writes one deep reading per household with an account, and skips them on the next run", async () => {
     await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
       await seedLedger(db, userA, householdA);
       await seedLedger(db, userB, householdB);
 
-      expect(await runMonthlyAnalysisStep(db, fakeDeps, options())).toEqual({
+      expect(await runMonthlyAnalysis(db, fakeDeps, options())).toEqual({
         ok: true,
         disabled: false,
         succeeded: 2,
@@ -246,7 +246,7 @@ describe("runMonthlyAnalysisStep (integration)", () => {
         skipped: 0,
         unreached: 0,
       });
-      expect(await runMonthlyAnalysisStep(db, fakeDeps, options())).toMatchObject({
+      expect(await runMonthlyAnalysis(db, fakeDeps, options())).toMatchObject({
         succeeded: 0,
         skipped: 2,
       });
@@ -270,12 +270,12 @@ describe("runMonthlyAnalysisStep (integration)", () => {
       const failing = failingDeps("unavailable");
 
       for (let run = 0; run < 3; run += 1) {
-        expect(await runMonthlyAnalysisStep(db, failing, options())).toMatchObject({
+        expect(await runMonthlyAnalysis(db, failing, options())).toMatchObject({
           ok: false,
           failed: 1,
         });
       }
-      expect(await runMonthlyAnalysisStep(db, failing, options())).toMatchObject({
+      expect(await runMonthlyAnalysis(db, failing, options())).toMatchObject({
         ok: true,
         failed: 0,
         skipped: 1,
@@ -288,7 +288,7 @@ describe("runMonthlyAnalysisStep (integration)", () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
       const off: AnalysisDeps = { client: null, prompt: CURRENT_ANALYST_PROMPT };
-      expect(await runMonthlyAnalysisStep(db, off, options())).toMatchObject({ disabled: true });
+      expect(await runMonthlyAnalysis(db, off, options())).toMatchObject({ disabled: true });
       expect(await rowsOf(db, householdA)).toEqual([]);
     });
   });
