@@ -25,4 +25,14 @@ Ranking "where to keep the emergency reserve" has to be explainable to a househo
 
 - The `reserve` module depends on the `institutions` reference dataset (ADR-0006) for conglomerate and FGC participation, and on the SGS market data for CDI and IPCA; it never depends on `banking-intel`.
 - Every rejection by the hard filter is a first-class output, so the screen and the AI interpretation can state it.
-- `getLatestIndicators()` surfaces the Selic **target** rate (series 432), already an annual figure; whether Tesouro Selic's ranking needs the daily Selic series (11) instead or in addition is undecided and left to #22.
+- `getLatestIndicators()` surfaces the Selic **target** rate (series 432), already an annual figure, and (since #22) the effective Selic, the daily series (11) annualised over 252 business days.
+
+## Amendment 2026-10-02 (#22): what the first implementation settled
+
+- **Tesouro Selic earns the effective Selic** (series 11, annualised), not the target: the bond accrues the daily Selic, and the target sits a few basis points above it, which would hand Tesouro Selic an edge over CDI-linked positions it does not have. Poupança keeps the target (432), because its legal rule is written on the target; TR is not fetched, so poupança is understated by the period's TR, and the screen says "Poupança sem TR".
+- **Which institution guarantees a position.** A deposit (checking or poupança) is covered by the institution that holds the account, and is not covered at all when that is a payment institution; a bank-issued instrument (CDB, RDB, LC, LCI, LCA, LIG) is covered by its issuer's conglomerate. The issuer defaults to the institution the connection's own label names (`matchInstitutionByLabel` in `packages/core`, shared with the bank comparison), and the household's reserve mark can name another or say it is outside the reference list. An unidentified institution excludes the position ("institution not identified"); it is never assumed covered.
+- **Product types** are data in `packages/core/src/reserve/products.ts`: each says how liquidity, guarantee, yield and tax are settled. A provider product type that is neither a known covered instrument nor a known uncovered one (funds, equities, corporate debt, COE) is "product not recognised", never assumed uncovered. Tesouro Selic is told apart from other Tesouro bonds by its name, since the provider types them all as `TREASURY`.
+- **FGCoop** limits are per cooperative, which the provider does not name, so all of a holder's Sicoob positions share one limit (understating headroom, never overstating it).
+- **Holder with no headroom left** in a conglomerate fails the filter ("FGC limit reached"); the next reais there would not be covered.
+- **The screen** shows the top three as the ranking and the rest under "também avaliados", ranked ones with their place, excluded ones with every reason that applies.
+- **Known gap:** a fully redeemed investment keeps its last balance until #102 is fixed (sync never removes a position the provider stops listing), so it can still appear in the ranking and, if marked, in the coverage.

@@ -1,6 +1,17 @@
-import { bigint, boolean, integer, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
 
-import { organization } from "../auth/schema.ts";
+import { organization, user } from "../auth/schema.ts";
+import { bankAccount } from "../sync/schema.ts";
 
 // Household-scoped (ADR-0001): one row per household per closed month, the
 // result the daily month-close job (reserve/service.ts) recorded. The unique
@@ -51,4 +62,35 @@ export const reserveTargetNotice = pgTable(
   (table) => [
     unique("reserve_target_notice_household_month_unique").on(table.householdId, table.closedMonth),
   ],
+);
+
+export const reserveLiquidityEnum = pgEnum("reserve_liquidity", ["daily", "not_daily"]);
+
+// Household-scoped (ADR-0001): what one household says about one of its
+// accounts for the reserve (CONTEXT.md, "Reserve position"): whether it is
+// part of the reserve, whether it can be redeemed within one business day
+// when the product type cannot tell (ADR-0009), and which institution issued
+// it when the connection's own label does not say, or names the wrong one.
+// institution_id is an id from packages/core's institutions dataset, or
+// "unlisted" for an issuer outside it; null means "use the label". A mark is
+// read only while its account is assigned to the same household, so an
+// account moved elsewhere leaves its old household's mark behind, unread.
+export const reserveMark = pgTable(
+  "reserve_mark",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => bankAccount.id, { onDelete: "cascade" }),
+    isReserve: boolean("is_reserve").notNull(),
+    liquidity: reserveLiquidityEnum("liquidity"),
+    institutionId: text("institution_id"),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.accountId] })],
 );

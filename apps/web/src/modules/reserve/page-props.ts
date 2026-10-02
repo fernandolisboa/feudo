@@ -1,12 +1,16 @@
 import {
   averageFixedCost,
+  computeReserveCoverage,
   computeReserveTarget,
   DEFAULT_RESERVE_MULTIPLE,
   formatMoney,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
+  localDateOf,
   yearMonthOf,
   type AverageFixedCostMonth,
+  type ReserveCoverage,
+  type ReserveMarketRates,
   type ReserveTarget,
   type YearMonth,
 } from "@feudo/core";
@@ -21,14 +25,37 @@ import {
   type HouseholdSession,
 } from "@/modules/households";
 import { householdHasAccounts, readHouseholdDashboardLines } from "@/modules/ledger";
+import { getLatestIndicators, type LatestIndicators } from "@/modules/market-data";
 
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb, type Database } from "@/platform/db/client";
 import type { StatTileView } from "@/ui/stat-tile";
-import { createReserveTargetNoticeRepository } from "./repository";
+import {
+  buildCoverageView,
+  buildPlacementViews,
+  INSTITUTION_OPTIONS,
+  type InstitutionOption,
+  type PlacementRankingView,
+  type ReserveCoverageView,
+  type ReservePositionView,
+} from "./placement-views";
+import {
+  createReserveMarkRepository,
+  createReserveTargetNoticeRepository,
+  type ReservePositionRow,
+} from "./repository";
 import { t } from "./strings";
 
 export type { StatTileView };
+export type {
+  ExcludedPlacementView,
+  InstitutionOption,
+  PlacementRankingView,
+  PlacementRowView,
+  ReserveCoverageView,
+  ReserveMarkEdit,
+  ReservePositionView,
+} from "./placement-views";
 
 export type MonthlyFixedCostRow = { monthLabel: string; amountLabel: string | null };
 
@@ -47,8 +74,12 @@ export type ReservePageProps = {
     currentReserve: StatTileView;
     coverage: StatTileView;
   } | null;
+  coverage: ReserveCoverageView | null;
   monthlyFixedCosts: MonthlyFixedCostRow[];
   notice: ReserveNoticeView | null;
+  positions: ReservePositionView[];
+  ranking: PlacementRankingView | null;
+  institutionOptions: InstitutionOption[];
 };
 
 function joinMonthLabels(months: readonly YearMonth[]): string {
@@ -92,12 +123,34 @@ function averageFixedCostTile(
   };
 }
 
-function currentReserveTile(): StatTileView {
-  return { label: t.tiles.currentReserve, value: "—", meta: t.tiles.currentReserveMeta };
+function currentReserveTile(coverage: ReserveCoverage, reserveCount: number): StatTileView {
+  if (reserveCount === 0) {
+    return { label: t.tiles.currentReserve, value: "—", meta: t.tiles.currentReserveMeta };
+  }
+  return {
+    label: t.tiles.currentReserve,
+    value: formatMoney({ amountCentavos: coverage.currentCentavos, currency: HOUSEHOLD_CURRENCY }),
+    meta:
+      reserveCount === 1
+        ? t.tiles.currentReserveOne
+        : interpolate(t.tiles.currentReserveCount, "{count}", String(reserveCount)),
+  };
 }
 
-function coverageTile(): StatTileView {
-  return { label: t.tiles.coverage, value: "—", meta: t.tiles.coverageMeta };
+function coverageTile(view: ReserveCoverageView, reserveCount: number): StatTileView {
+  if (reserveCount === 0 || view.percentLabel === null) {
+    return { label: t.tiles.coverage, value: "—", meta: t.tiles.coverageMeta };
+  }
+  return { label: t.tiles.coverage, value: view.percentLabel, meta: view.monthsLabel };
+}
+
+function marketRates(indicators: LatestIndicators): ReserveMarketRates {
+  return {
+    cdiAnnualPpm: indicators.cdiAnnual?.ratePpm ?? null,
+    selicAnnualPpm: indicators.selicAnnual?.ratePpm ?? null,
+    selicTargetPpm: indicators.selicTarget?.ratePpm ?? null,
+    ipca12MonthPpm: indicators.ipca12Month?.ratePpm ?? null,
+  };
 }
 
 function monthlyFixedCostRows(months: readonly AverageFixedCostMonth[]): MonthlyFixedCostRow[] {
@@ -173,55 +226,76 @@ export async function getReservePageProps(
   const multiple = settings?.reserveMultiple ?? DEFAULT_RESERVE_MULTIPLE;
   const month = yearMonthOf(now, timeZone);
   const canManage = canManageHouseholdSettings(viewerRole);
+  const base = {
+    monthLabel: formatYearMonth(month),
+    multiple,
+    canManage,
+    hasAccounts,
+    notice,
+    institutionOptions: INSTITUTION_OPTIONS,
+  };
 
   if (!hasAccounts) {
     return {
-      monthLabel: formatYearMonth(month),
-      multiple,
-      canManage,
-      hasAccounts,
+      ...base,
       hasHistory: false,
       headline: t.headline.noAccounts,
       tiles: null,
+      coverage: null,
       monthlyFixedCosts: [],
-      notice,
+      positions: [],
+      ranking: null,
     };
   }
 
-  const { lines } = await readHouseholdDashboardLines(db, scope, month, timeZone);
+  const [{ lines }, positionRows, indicators] = await Promise.all([
+    readHouseholdDashboardLines(db, scope, month, timeZone),
+    createReserveMarkRepository(scope).listPositions(db),
+    getLatestIndicators(db),
+  ]);
+  const { positions, ranking } = buildPlacementViews(
+    positionRows,
+    marketRates(indicators),
+    localDateOf(now, timeZone),
+  );
   const detail = averageFixedCost({ month, lines });
   const monthlyFixedCosts = monthlyFixedCostRows(detail.months);
 
   if (detail.average === null) {
     return {
-      monthLabel: formatYearMonth(month),
-      multiple,
-      canManage,
-      hasAccounts,
+      ...base,
       hasHistory: false,
       headline: t.headline.noHistory,
       tiles: null,
+      coverage: null,
       monthlyFixedCosts,
-      notice,
+      positions,
+      ranking,
     };
   }
 
   const target = computeReserveTarget(detail.average, multiple);
+  const reserveRows = positionRows.filter((row: ReservePositionRow) => row.isReserve);
+  const coverage = computeReserveCoverage({
+    reservePositions: reserveRows,
+    targetCentavos: target.targetCentavos,
+    averageFixedCostCentavos: target.averageFixedCostCentavos,
+  });
+  const coverageView = buildCoverageView(coverage, target.targetCentavos);
 
   return {
-    monthLabel: formatYearMonth(month),
-    multiple,
-    canManage,
-    hasAccounts,
+    ...base,
     hasHistory: true,
     headline: headlineFor(target),
     tiles: {
       target: targetTile(target),
       averageFixedCost: averageFixedCostTile(target, detail.average.monthsUsed),
-      currentReserve: currentReserveTile(),
-      coverage: coverageTile(),
+      currentReserve: currentReserveTile(coverage, reserveRows.length),
+      coverage: coverageTile(coverageView, reserveRows.length),
     },
+    coverage: reserveRows.length === 0 ? null : coverageView,
     monthlyFixedCosts,
-    notice,
+    positions,
+    ranking,
   };
 }

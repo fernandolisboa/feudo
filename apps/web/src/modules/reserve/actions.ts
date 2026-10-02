@@ -11,9 +11,13 @@ import {
 
 import type { ActionState } from "@/lib/action-state";
 import { getDb } from "@/platform/db/client";
-import { dismissReserveNotice, setHouseholdReserveMultiple } from "./service";
+import { dismissReserveNotice, setHouseholdReserveMultiple, setReserveMark } from "./service";
 import { t } from "./strings";
-import { dismissNoticeFormSchema, updateReserveMultipleFormSchema } from "./validation";
+import {
+  dismissNoticeFormSchema,
+  updateReserveMarkFormSchema,
+  updateReserveMultipleFormSchema,
+} from "./validation";
 
 export async function updateReserveMultipleAction(
   _prevState: ActionState,
@@ -72,5 +76,36 @@ export async function dismissReserveNoticeAction(
       return { status: "success", message: t.noticeDismissed };
     case "not_found":
       return { status: "error", message: t.errors.noticeNotFound };
+  }
+}
+
+export async function updateReserveMarkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = updateReserveMarkFormSchema.safeParse({
+    accountId: formData.get("accountId"),
+    isReserve: formData.get("isReserve"),
+    liquidity: formData.get("liquidity"),
+    institutionId: formData.get("institutionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+
+  const session = await requireHouseholdSession();
+  const outcome = await setReserveMark(
+    householdScope(session),
+    session.userId,
+    parsed.data,
+    getDb(),
+  );
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/reserva");
+      return { status: "success", message: t.markSaved };
+    case "not_found":
+      return { status: "error", message: t.errors.accountNotFound };
   }
 }

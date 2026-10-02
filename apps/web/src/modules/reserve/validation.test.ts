@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { dismissNoticeFormSchema, updateReserveMultipleFormSchema } from "./validation";
+import {
+  dismissNoticeFormSchema,
+  UNLISTED_INSTITUTION,
+  updateReserveMarkFormSchema,
+  updateReserveMultipleFormSchema,
+} from "./validation";
 
 describe("updateReserveMultipleFormSchema", () => {
   it("accepts the minimum multiple (3)", () => {
@@ -51,5 +56,37 @@ describe("dismissNoticeFormSchema", () => {
 
   it("rejects a missing notice id", () => {
     expect(dismissNoticeFormSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("updateReserveMarkFormSchema", () => {
+  const VALID = { accountId: "a", isReserve: "true", liquidity: "not_daily", institutionId: "btg" };
+
+  it("parses a full mark", () => {
+    expect(updateReserveMarkFormSchema.parse(VALID)).toEqual({
+      accountId: "a",
+      isReserve: true,
+      liquidity: "not_daily",
+      institutionId: "btg",
+    });
+  });
+
+  it("keeps an issuer outside the dataset as 'unlisted'", () => {
+    expect(
+      updateReserveMarkFormSchema.parse({ ...VALID, institutionId: UNLISTED_INSTITUTION })
+        .institutionId,
+    ).toBe(UNLISTED_INSTITUTION);
+  });
+
+  it.each([
+    { isReserve: "on" },
+    { isReserve: null },
+    { liquidity: "weekly" },
+    { liquidity: null },
+    { institutionId: "not-an-institution" },
+    { institutionId: null },
+    { accountId: "  " },
+  ])("rejects %j", (override) => {
+    expect(updateReserveMarkFormSchema.safeParse({ ...VALID, ...override }).success).toBe(false);
   });
 });

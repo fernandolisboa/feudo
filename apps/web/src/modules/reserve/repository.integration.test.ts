@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 
+import { householdScope } from "@/modules/households";
 import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
+import {
+  moveSeededAccount,
+  seedAccount,
+  seedSyncedConnection,
+} from "@/modules/sync/test/seed-synced-connection";
+import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users";
 import { withTestDb } from "@/platform/db/test/harness";
 
 import {
+  createReserveMarkRepository,
   createReserveTargetNoticeRepository,
   createReserveTargetRecordRepository,
   listHouseholdIdsForMonthClose,
@@ -239,6 +247,127 @@ describe("listHouseholdIdsForMonthClose (integration)", () => {
       const sorted = [...ids].sort();
       expect(ids).toEqual(sorted);
       expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
+    });
+  });
+});
+
+const MARK = { isReserve: true, liquidity: "daily" as const, institutionId: "inter" };
+
+describe("reserve mark repository isolation (integration)", () => {
+  it("lists only the scoped household's accounts, never a credit card, each with its own mark", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const scopeA = householdScope(userA.session);
+      const scopeB = householdScope(userB.session);
+      const seededA = await seedSyncedConnection(db, userA, {
+        household: scopeA,
+        accounts: [
+          seedAccount({ providerAccountId: "a-checking" }),
+          seedAccount({ providerAccountId: "a-card", type: "credit_card", name: "Cartão" }),
+        ],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: scopeB,
+        accounts: [seedAccount({ providerAccountId: "b-checking", name: "Conta da B" })],
+      });
+      const checkingA = seededA.accountIdsByProvider.get("a-checking") ?? "";
+      expect(
+        await createReserveMarkRepository(scopeA).set(
+          db,
+          { accountId: checkingA, ...MARK },
+          userA.id,
+        ),
+      ).toBe("ok");
+
+      const positionsA = await createReserveMarkRepository(scopeA).listPositions(db);
+      const positionsB = await createReserveMarkRepository(scopeB).listPositions(db);
+
+      expect(positionsA.map((row) => [row.accountId, row.isReserve, row.liquidity])).toEqual([
+        [checkingA, true, "daily"],
+      ]);
+      expect(positionsB.map((row) => [row.name, row.isReserve, row.liquidity])).toEqual([
+        ["Conta da B", false, null],
+      ]);
+    });
+  });
+
+  it("refuses to mark another household's account, writing nothing", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const scopeA = householdScope(userA.session);
+      const scopeB = householdScope(userB.session);
+      const seededB = await seedSyncedConnection(db, userB, {
+        household: scopeB,
+        accounts: [seedAccount({ providerAccountId: "b-checking" })],
+      });
+      const accountB = seededB.accountIdsByProvider.get("b-checking") ?? "";
+
+      const outcome = await createReserveMarkRepository(scopeA).set(
+        db,
+        { accountId: accountB, ...MARK },
+        userA.id,
+      );
+
+      expect(outcome).toBe("not_found");
+      const [rowB] = await createReserveMarkRepository(scopeB).listPositions(db);
+      expect(rowB?.isReserve).toBe(false);
+      expect(rowB?.institutionId).toBeNull();
+    });
+  });
+
+  it("refuses to mark a credit card or an unknown account", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const scopeA = householdScope(userA.session);
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: scopeA,
+        accounts: [seedAccount({ providerAccountId: "card", type: "credit_card" })],
+      });
+      const repository = createReserveMarkRepository(scopeA);
+
+      expect(
+        await repository.set(
+          db,
+          { accountId: seeded.accountIdsByProvider.get("card") ?? "", ...MARK },
+          userA.id,
+        ),
+      ).toBe("not_found");
+      expect(await repository.set(db, { accountId: "missing", ...MARK }, userA.id)).toBe(
+        "not_found",
+      );
+    });
+  });
+
+  it("updates a mark in place", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const scopeA = householdScope(userA.session);
+      const seeded = await seedSyncedConnection(db, userA, { household: scopeA });
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      const repository = createReserveMarkRepository(scopeA);
+
+      await repository.set(db, { accountId, ...MARK }, userA.id);
+      await repository.set(
+        db,
+        { accountId, isReserve: false, liquidity: null, institutionId: "unlisted" },
+        userA.id,
+      );
+
+      expect(await repository.listPositions(db)).toMatchObject([
+        { accountId, isReserve: false, liquidity: null, institutionId: "unlisted" },
+      ]);
+    });
+  });
+
+  it("leaves a household's mark behind when its account moves to another household", async () => {
+    await withTwoUsers(async ({ db, userA, householdB }) => {
+      const scopeA = householdScope(userA.session);
+      const seeded = await seedSyncedConnection(db, userA, { household: scopeA });
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      await createReserveMarkRepository(scopeA).set(db, { accountId, ...MARK }, userA.id);
+      await joinHousehold(db, userA.id, householdB);
+
+      expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("ok");
+
+      const inB = await createReserveMarkRepository({ householdId: householdB }).listPositions(db);
+      expect(inB).toMatchObject([{ accountId, isReserve: false, liquidity: null }]);
+      expect(await createReserveMarkRepository(scopeA).listPositions(db)).toEqual([]);
     });
   });
 });

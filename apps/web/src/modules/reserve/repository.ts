@@ -1,12 +1,14 @@
-import { and, asc, desc, eq, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { organization } from "@/modules/auth/schema";
+import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
-import { reserveTargetNotice, reserveTargetRecord } from "./schema";
+import { reserveMark, reserveTargetNotice, reserveTargetRecord } from "./schema";
 
-import type { YearMonth } from "@feudo/core";
+import type { LiquidityMark, RateType, ReserveAccountType, YearMonth } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
+import { hasSqlState } from "@/platform/db/sql-state";
 
 export type ReserveTargetRecordRow = {
   id: string;
@@ -230,3 +232,136 @@ export async function listHouseholdIdsForMonthClose(db: Database): Promise<House
     .orderBy(asc(organization.id));
   return rows.map((row) => ({ householdId: row.householdId }));
 }
+
+const POSTGRES_FOREIGN_KEY_VIOLATION = "23503";
+
+const RESERVE_ACCOUNT_TYPES: ReserveAccountType[] = ["checking", "savings", "investment"];
+
+export type ReservePositionRow = {
+  accountId: string;
+  name: string;
+  type: ReserveAccountType;
+  productType: string | null;
+  balanceCentavos: number;
+  currency: string;
+  rateType: RateType | null;
+  ratePpm: number | null;
+  acquisitionDate: string | null;
+  holderDocumentHash: string | null;
+  connectionLabel: string;
+  isReserve: boolean;
+  liquidity: LiquidityMark | null;
+  institutionId: string | null;
+};
+
+export type ReserveMarkInput = {
+  accountId: string;
+  isReserve: boolean;
+  liquidity: LiquidityMark | null;
+  institutionId: string | null;
+};
+
+// Household-scoped (ADR-0001): every account of the session's household that
+// can hold reserve money (a credit card cannot), each with this household's
+// own mark, if it made one. The mark is joined on the household too, so a
+// mark left behind by an account's previous household is never read here.
+export function createReserveMarkRepository(scope: HouseholdScope) {
+  return {
+    async listPositions(db: DatabaseOrTransaction): Promise<ReservePositionRow[]> {
+      const rows = await db
+        .select({
+          accountId: bankAccount.id,
+          name: bankAccount.name,
+          type: bankAccount.type,
+          productType: bankAccount.productType,
+          balanceCentavos: bankAccount.balanceCentavos,
+          currency: bankAccount.currency,
+          rateType: bankAccount.rateType,
+          ratePpm: bankAccount.ratePpm,
+          acquisitionDate: bankAccount.acquisitionDate,
+          holderDocumentHash: bankAccount.holderDocumentHash,
+          connectionLabel: bankConnection.institutionName,
+          isReserve: reserveMark.isReserve,
+          liquidity: reserveMark.liquidity,
+          institutionId: reserveMark.institutionId,
+        })
+        .from(bankAccount)
+        .innerJoin(bankConnection, eq(bankConnection.id, bankAccount.connectionId))
+        .leftJoin(
+          reserveMark,
+          and(
+            eq(reserveMark.accountId, bankAccount.id),
+            eq(reserveMark.householdId, scope.householdId),
+          ),
+        )
+        .where(
+          and(
+            eq(bankAccount.householdId, scope.householdId),
+            inArray(bankAccount.type, RESERVE_ACCOUNT_TYPES),
+          ),
+        )
+        .orderBy(asc(bankConnection.institutionName), asc(bankAccount.name), asc(bankAccount.id));
+      return rows.map((row) => ({
+        ...row,
+        type: row.type as ReserveAccountType,
+        isReserve: row.isReserve ?? false,
+      }));
+    },
+
+    // The write repeats the tenancy predicate (INSERT ... SELECT, columns in
+    // schema order): an account moved to another household, or never in
+    // this one, gets no mark from this household, even between a read and
+    // this write. "not_found" covers both, and an account deleted mid-write.
+    async set(
+      db: DatabaseOrTransaction,
+      input: ReserveMarkInput,
+      userId: string,
+    ): Promise<"ok" | "not_found"> {
+      const values = db
+        .select({
+          householdId: sql<string>`${scope.householdId}::text`.as("household_id"),
+          accountId: bankAccount.id,
+          isReserve: sql<boolean>`${input.isReserve}::boolean`.as("is_reserve"),
+          liquidity: sql<LiquidityMark | null>`${input.liquidity}::reserve_liquidity`.as(
+            "liquidity",
+          ),
+          institutionId: sql<string | null>`${input.institutionId}::text`.as("institution_id"),
+          updatedByUserId: sql<string>`${userId}::text`.as("updated_by_user_id"),
+          updatedAt: sql<Date>`now()`.as("updated_at"),
+        })
+        .from(bankAccount)
+        .where(
+          and(
+            eq(bankAccount.id, input.accountId),
+            eq(bankAccount.householdId, scope.householdId),
+            inArray(bankAccount.type, RESERVE_ACCOUNT_TYPES),
+          ),
+        )
+        .limit(1);
+      try {
+        const written = await db
+          .insert(reserveMark)
+          .select(values)
+          .onConflictDoUpdate({
+            target: [reserveMark.householdId, reserveMark.accountId],
+            set: {
+              isReserve: input.isReserve,
+              liquidity: input.liquidity,
+              institutionId: input.institutionId,
+              updatedByUserId: userId,
+              updatedAt: sql`now()`,
+            },
+          })
+          .returning({ accountId: reserveMark.accountId });
+        return written.length > 0 ? "ok" : "not_found";
+      } catch (error) {
+        if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
+          return "not_found";
+        }
+        throw error;
+      }
+    },
+  };
+}
+
+export type ReserveMarkRepository = ReturnType<typeof createReserveMarkRepository>;

@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import { formatMoney, formatYearMonth } from "@feudo/core";
 
 import { householdScope } from "@/modules/households";
+import { marketData } from "@/modules/market-data/schema";
+import {
+  FAKE_ITEM_BANCO_FIXTURE,
+  FAKE_ITEM_CORRETORA_FIXTURE,
+  readFakeProviderItem,
+} from "@/modules/sync/test/fake-provider-item";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import {
+  createReserveMarkRepository,
   createReserveTargetNoticeRepository,
   createReserveTargetRecordRepository,
 } from "./repository";
@@ -125,6 +132,119 @@ describe("getReservePageProps (integration)", () => {
       const props = await getReservePageProps(userA.session, NOW);
 
       expect(props.notice).toBeNull();
+    });
+  });
+
+  it("ranks the fake provider's positions end to end: filter, net real yield, reasons and coverage", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const scope = householdScope(userA.session);
+      const bancoAccounts = await readFakeProviderItem(FAKE_ITEM_BANCO_FIXTURE);
+      const corretoraAccounts = await readFakeProviderItem(FAKE_ITEM_CORRETORA_FIXTURE);
+      const checkingProviderId = "a1000000-0000-4000-8000-000000000001";
+      const banco = await seedSyncedConnection(db, userA, {
+        household: scope,
+        itemId: FAKE_ITEM_BANCO_FIXTURE,
+        institutionName: "Banco Inter",
+        accounts: bancoAccounts,
+        transactions: ["2026-06-10", "2026-07-10", "2026-08-10"].map((date) =>
+          seedTransaction({
+            providerTransactionId: `fixed-${date}`,
+            providerAccountId: checkingProviderId,
+            date,
+            description: "PIX ENVIADO CONDOMINIO",
+            type: "debit",
+            amountCentavos: -80000,
+          }),
+        ),
+      });
+      const corretora = await seedSyncedConnection(db, userA, {
+        household: scope,
+        itemId: FAKE_ITEM_CORRETORA_FIXTURE,
+        institutionName: "MeuPluggy",
+        accounts: corretoraAccounts,
+      });
+      // Another household's identical positions never reach this one.
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: FAKE_ITEM_BANCO_FIXTURE,
+        accounts: bancoAccounts,
+      });
+      await db.insert(marketData).values([
+        { seriesCode: "12", referenceDate: "2026-09-29", value: "0.055131" },
+        { seriesCode: "11", referenceDate: "2026-09-29", value: "0.055131" },
+        { seriesCode: "432", referenceDate: "2026-09-29", value: "15.00" },
+        { seriesCode: "433", referenceDate: "2026-08-01", value: "0.45" },
+        { seriesCode: "13522", referenceDate: "2026-08-01", value: "5.20" },
+      ]);
+      const cdb = banco.accountIdsByProvider.get("b1000000-0000-4000-8000-000000000001") ?? "";
+      const tesouro =
+        corretora.accountIdsByProvider.get("b2000000-0000-4000-8000-000000000001") ?? "";
+      const marks = createReserveMarkRepository(scope);
+      await marks.set(
+        db,
+        { accountId: cdb, isReserve: true, liquidity: "daily", institutionId: null },
+        userA.id,
+      );
+      await marks.set(
+        db,
+        { accountId: tesouro, isReserve: true, liquidity: null, institutionId: null },
+        userA.id,
+      );
+
+      const props = await getReservePageProps(userA.session, NOW);
+
+      expect(props.ranking?.top.map((row) => [row.placeLabel, row.name])).toEqual([
+        ["1º", "CDB Fixture 110% CDI"],
+        ["2º", "Tesouro Selic 2029"],
+        ["3º", "Poupança"],
+      ]);
+      expect(props.ranking?.top[0]).toMatchObject({
+        institutionLabel: "Inter",
+        taxLabel: "17,5%",
+      });
+      expect(props.ranking?.top[1]?.guaranteeLabel).toBe(t.ranking.sovereign);
+      expect(props.ranking?.alsoRanked.map((row) => [row.placeLabel, row.name])).toEqual([
+        ["4º", "Conta corrente"],
+      ]);
+      expect(props.ranking?.excluded.map((row) => [row.name, row.reasonsLabel]).sort()).toEqual(
+        [
+          ["Conta global", t.ranking.reasons.foreign_currency],
+          ["LCI Fixture 92% CDI", t.ranking.reasons.liquidity_unknown],
+        ].sort(),
+      );
+      expect(props.positions.map((row) => row.name)).not.toContain("Cartão Fixture Platinum");
+      expect(props.positions).toHaveLength(6);
+
+      const reserveCentavos = 1_025_075 + 1_500_040;
+      expect(props.tiles?.currentReserve.value).toBe(
+        formatMoney({ amountCentavos: reserveCentavos, currency: "BRL" }),
+      );
+      expect(props.coverage?.summaryLabel).toContain(
+        formatMoney({ amountCentavos: reserveCentavos, currency: "BRL" }),
+      );
+      expect(props.tiles?.coverage.meta).toBe(props.coverage?.monthsLabel);
+    });
+  });
+
+  it("shows positions and the ranking before any month is categorized", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const scope = householdScope(userA.session);
+      await seedSyncedConnection(db, userA, {
+        household: scope,
+        itemId: FAKE_ITEM_CORRETORA_FIXTURE,
+        accounts: await readFakeProviderItem(FAKE_ITEM_CORRETORA_FIXTURE),
+      });
+
+      const props = await getReservePageProps(userA.session, NOW);
+
+      expect(props.hasHistory).toBe(false);
+      expect(props.coverage).toBeNull();
+      expect(props.positions.map((row) => row.name)).toEqual(["Tesouro Selic 2029"]);
+      expect(props.ranking?.top).toEqual([]);
+      expect(props.ranking?.excluded[0]?.reasonsLabel).toBe(
+        t.ranking.reasons.market_data_unavailable,
+      );
+      expect(props.ranking?.indicatorsLabel).toBe(t.ranking.indicatorsMissing);
     });
   });
 });
