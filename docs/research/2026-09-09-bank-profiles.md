@@ -1,6 +1,8 @@
 # Bank profiles research (input for ticket #21)
 
-Three research passes, one per group of institutions, checked 2026-09-09. Every fact carries its
+Three research passes, one per group of institutions, checked 2026-09-09. Re-verified against
+primary sources on 2026-10-02: see `2026-10-02-reference-data-verification.md`, which supersedes the
+FGC and conglomerate gaps below. Every fact carries its
 source; every unverified fact is flagged inline. This file is research, not data: the `institutions`
 and `bank-profiles` datasets are written in ticket #21 only after the owner approves the proposed
 scores.

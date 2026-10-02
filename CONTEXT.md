@@ -140,7 +140,7 @@ What a reserve position earns after income tax, compared against the 12-month ac
 _Avoid_: real return, net rate
 
 **FGC headroom**:
-How much more a CPF can hold in one financial conglomerate while staying inside the FGC coverage limit.
+How much more a CPF can hold in one financial conglomerate (as the Central Bank publishes it) while staying inside the FGC coverage limit. For a credit cooperative covered by FGCoop, the limit applies per cooperative instead.
 _Avoid_: FGC room, remaining coverage
 
 **Average fixed cost**:
@@ -155,11 +155,11 @@ _Avoid_: indicators (ambiguous with dashboard stat tiles), rates table
 ### Banking intelligence
 
 **Bank profile**:
-Reference data about an institution: card benefits, investment access, app quality, security, fees, lock-in and public customer reviews (Reclame Aqui, consumidor.gov.br), each scored with cited evidence and a review date. Maintained by the product, not by households.
+Reference data about an institution: card benefits, investment access, app quality, security, fees, lock-in and public customer reviews (Reclame Aqui, consumidor.gov.br), each scored as an integer from 0 to 100 with cited evidence and a review date, or marked as insufficient evidence when no source backs a score. Higher is always better for the household. Maintained by the product, not by households.
 _Avoid_: bank rating, bank review
 
 **Lock-in**:
-How hard an institution makes it for a customer to leave or move money out: arbitrary limits, pushed products, friction on transfers, portability and account closure. A property of the bank, scored from evidence; Feudo itself only reads data.
+How hard an institution makes it for a customer to leave or move money out: arbitrary limits, pushed products, friction on transfers, portability and account closure. A property of the bank, scored from evidence so that 100 means the easiest to leave; Feudo itself only reads data.
 _Avoid_: stickiness, retention tactics
 
 **Bank comparison**:
