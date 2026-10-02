@@ -41,6 +41,7 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
   linked("categorias", t.sections.categories, "/categorias"),
   linked("visao-geral", t.sections.overview, "/"),
   linked("reserva", t.sections.reserve, "/reserva"),
+  linked("bancos", t.sections.banks, "/bancos"),
   unlinked("privacidade", t.sections.privacy),
   unlinked("perguntas-frequentes", t.sections.faq),
 ];

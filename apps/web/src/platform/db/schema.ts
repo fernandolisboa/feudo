@@ -5,3 +5,4 @@ export * from "../../modules/sync/schema.ts";
 export * from "../../modules/ledger/schema.ts";
 export * from "../../modules/reserve/schema.ts";
 export * from "../../modules/shell/schema.ts";
+export * from "../../modules/banking-intel/schema.ts";

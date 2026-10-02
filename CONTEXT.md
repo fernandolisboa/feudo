@@ -171,8 +171,8 @@ How hard an institution makes it for a customer to leave or move money out: arbi
 _Avoid_: stickiness, retention tactics
 
 **Bank comparison**:
-A ranked list of two or three candidate institutions for a household, each with pros and cons against the institutions the household already uses, weighted by the household's own criteria weights.
+A ranked list of up to three candidate institutions for a household, each with pros and cons against the institutions the household already uses, weighted by the household's own criteria weights. An institution's score is the mean of its evidenced criterion scores weighted by the household's weights, rounded to an integer from 0 to 100; a weighted criterion with insufficient evidence is left out of the mean and named, never guessed. Candidates are the top-scored institutions the household does not use, among those with a score; with thirteen profiled institutions there are three in practice. A pro or a con is a weighted criterion where the candidate is at least 10 points above or below the best score the household's own institutions reach on it. The institutions a household uses are inferred from the institution names of the connections behind its accounts, matched to an **Institution** by name or Open Finance brand; a name that matches none ("MeuPluggy") is shown as unrecognised, and a household with no recognised institution is compared with the median bank instead. Computed deterministically in `packages/core`; nothing is stored.
 _Avoid_: bank ranking, recommendation engine
 
 **Criteria weights**:
-How much each bank-profile criterion counts for a household. The product ships defaults; the household can adjust them.
+How much each bank-profile criterion counts for a household, an integer from 0 ("não conta", the criterion is left out) to 5. The product ships defaults; the household's owner or an admin can adjust them or go back to the defaults, and at least one criterion must count. Weights are normalised, so only their proportions matter. A household that never changed them has no stored row; a criterion added later starts at its default.

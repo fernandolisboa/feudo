@@ -134,6 +134,17 @@ export {
   BANK_PROFILE_SCORE_MIN,
 } from "./banking-intel/criteria";
 
+export type { CriteriaWeights } from "./banking-intel/weights";
+export {
+  CRITERION_WEIGHT_MAX,
+  CRITERION_WEIGHT_MIN,
+  DEFAULT_CRITERIA_WEIGHTS,
+  hasActiveCriterion,
+  resolveCriteriaWeights,
+} from "./banking-intel/weights";
+export type { BankCandidate, BankScore, CriterionComparison } from "./banking-intel/scoring";
+export { compareBanks } from "./banking-intel/scoring";
+
 export type {
   LiquidityMark,
   RateType,

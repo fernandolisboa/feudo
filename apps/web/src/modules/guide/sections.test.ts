@@ -22,6 +22,7 @@ describe("GUIDE_SECTIONS", () => {
       "categorias",
       "visao-geral",
       "reserva",
+      "bancos",
       "privacidade",
       "perguntas-frequentes",
     ]);
