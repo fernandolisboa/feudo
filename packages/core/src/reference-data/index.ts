@@ -3,6 +3,7 @@ export { REFERENCE_DATA_STALE_AFTER_DAYS, citationSchema, isStale, isoDateSchema
 
 export type { DepositGuarantee, Institution } from "../institutions/institution";
 export { INSTITUTIONS, institutionById } from "../institutions/institutions";
+export { matchInstitutionByLabel } from "../institutions/match";
 
 export type {
   BankProfile,
