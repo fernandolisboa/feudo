@@ -3,6 +3,7 @@ import {
   BANK_PROFILE_CRITERIA,
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
+  hasActiveCriterion,
   type BankProfileCriterion,
   type CriteriaWeights,
 } from "@feudo/core";
@@ -41,7 +42,7 @@ export function parseCriteriaWeightsForm(formData: FormData): CriteriaWeightsFor
   if (!parsed.success) {
     return { status: "invalid" };
   }
-  return BANK_PROFILE_CRITERIA.some((criterion) => parsed.data[criterion] > 0)
+  return hasActiveCriterion(parsed.data)
     ? { status: "ok", weights: parsed.data }
     : { status: "all_zero" };
 }
