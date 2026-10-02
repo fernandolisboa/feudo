@@ -217,13 +217,14 @@ function evaluate(
   }
 
   const gross = grossAnnualYield(product.yield, position, rates);
+  const taxBp = taxBasisPoints(tax);
   let placementYield: PlacementYield | null = null;
   if (gross.status !== "ok") {
     exclusions.push(gross.status);
   } else if (rates.ipca12MonthPpm === null) {
     exclusions.push("market_data_unavailable");
-  } else {
-    const netAnnualPpm = netAnnualYield(gross.annualPpm, taxBasisPoints(tax));
+  } else if (taxBp !== null) {
+    const netAnnualPpm = netAnnualYield(gross.annualPpm, taxBp);
     placementYield = {
       grossAnnualPpm: gross.annualPpm,
       netAnnualPpm,

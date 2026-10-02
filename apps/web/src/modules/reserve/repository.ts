@@ -237,6 +237,10 @@ const POSTGRES_FOREIGN_KEY_VIOLATION = "23503";
 
 const RESERVE_ACCOUNT_TYPES: ReserveAccountType[] = ["checking", "savings", "investment"];
 
+function isReserveAccountType(type: string): type is ReserveAccountType {
+  return (RESERVE_ACCOUNT_TYPES as string[]).includes(type);
+}
+
 export type ReservePositionRow = {
   accountId: string;
   name: string;
@@ -301,11 +305,11 @@ export function createReserveMarkRepository(scope: HouseholdScope) {
           ),
         )
         .orderBy(asc(bankConnection.institutionName), asc(bankAccount.name), asc(bankAccount.id));
-      return rows.map((row) => ({
-        ...row,
-        type: row.type as ReserveAccountType,
-        isReserve: row.isReserve ?? false,
-      }));
+      return rows.flatMap((row) =>
+        isReserveAccountType(row.type)
+          ? [{ ...row, type: row.type, isReserve: row.isReserve ?? false }]
+          : [],
+      );
     },
 
     // The write repeats the tenancy predicate (INSERT ... SELECT, columns in

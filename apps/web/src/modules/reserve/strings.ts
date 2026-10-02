@@ -23,7 +23,6 @@ const en = {
     currentReserveOne: "1 account in the reserve",
     coverage: "Coverage",
     coverageMeta: "Comes from the reserve's own positions, once there are any.",
-    coverageMonths: "{months} months of fixed cost",
   },
   monthlyTable: {
     title: "Fixed cost by month",
@@ -43,7 +42,6 @@ const en = {
     summary: "{current} of {target}",
     months: "{months} months of fixed cost",
     progressLabel: "Share of the reserve target covered",
-    empty: "Mark the accounts that make up the reserve to see how far it goes.",
   },
   positions: {
     title: "Accounts and investments",
@@ -170,7 +168,6 @@ const ptBR = {
     currentReserveOne: "1 conta na reserva",
     coverage: "Cobertura",
     coverageMeta: "Vem das posições da reserva, quando houver alguma.",
-    coverageMonths: "{months} meses de custo fixo",
   },
   monthlyTable: {
     title: "Custo fixo por mês",
@@ -190,7 +187,6 @@ const ptBR = {
     summary: "{current} de {target}",
     months: "{months} meses de custo fixo",
     progressLabel: "Quanto da meta da reserva está coberto",
-    empty: "Marque as contas que fazem parte da reserva para ver até onde ela vai.",
   },
   positions: {
     title: "Contas e investimentos",
@@ -208,7 +204,7 @@ const ptBR = {
     advice: {
       suggest: "líquida e protegida, pode fazer parte da reserva",
       not_liquid: "está na reserva, mas não resgata em até 1 dia útil",
-      liquidity_unknown: "está na reserva, liquidez desconhecida: confirme",
+      liquidity_unknown: "está na reserva, liquidez desconhecida, confirme",
     },
     empty: "Nenhuma conta ou investimento pode guardar a reserva ainda.",
   },
@@ -245,7 +241,7 @@ const ptBR = {
     reasons: {
       foreign_currency: "moeda estrangeira, fica fora dos totais",
       not_liquid: "não resgata em até 1 dia útil",
-      liquidity_unknown: "liquidez desconhecida: confirme em Ajustar",
+      liquidity_unknown: "liquidez desconhecida, confirme em Ajustar",
       product_unknown: "produto não reconhecido",
       not_covered: "sem FGC e não é Tesouro Selic",
       payment_institution_balance: "saldo em instituição de pagamento, sem FGC",

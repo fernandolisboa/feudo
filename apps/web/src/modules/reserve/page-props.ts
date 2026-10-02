@@ -275,7 +275,9 @@ export async function getReservePageProps(
   }
 
   const target = computeReserveTarget(detail.average, multiple);
-  const reserveRows = positionRows.filter((row: ReservePositionRow) => row.isReserve);
+  const reserveRows = positionRows.filter(
+    (row: ReservePositionRow) => row.isReserve && row.currency === HOUSEHOLD_CURRENCY,
+  );
   const coverage = computeReserveCoverage({
     reservePositions: reserveRows,
     targetCentavos: target.targetCentavos,
@@ -293,7 +295,7 @@ export async function getReservePageProps(
       currentReserve: currentReserveTile(coverage, reserveRows.length),
       coverage: coverageTile(coverageView, reserveRows.length),
     },
-    coverage: reserveRows.length === 0 ? null : coverageView,
+    coverage: reserveRows.length === 0 || target.targetCentavos <= 0 ? null : coverageView,
     monthlyFixedCosts,
     positions,
     ranking,

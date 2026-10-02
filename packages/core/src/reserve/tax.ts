@@ -58,12 +58,13 @@ export function positionTax(
   }
 }
 
-export function taxBasisPoints(tax: PositionTax): number {
+export function taxBasisPoints(tax: PositionTax): number | null {
   switch (tax.kind) {
     case "none":
     case "exempt":
-    case "unknown":
       return 0;
+    case "unknown":
+      return null;
     case "bracket":
     case "acquisition_date_unknown":
       return tax.basisPoints;

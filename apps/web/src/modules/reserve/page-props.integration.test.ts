@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatMoney, formatYearMonth } from "@feudo/core";
 
+import { interpolate } from "@/lib/interpolate";
 import { householdScope } from "@/modules/households";
 import { marketData } from "@/modules/market-data/schema";
 import {
@@ -190,6 +191,13 @@ describe("getReservePageProps (integration)", () => {
         { accountId: tesouro, isReserve: true, liquidity: null, institutionId: null },
         userA.id,
       );
+      const contaGlobal =
+        banco.accountIdsByProvider.get("a1000000-0000-4000-8000-000000000004") ?? "";
+      await marks.set(
+        db,
+        { accountId: contaGlobal, isReserve: true, liquidity: null, institutionId: null },
+        userA.id,
+      );
 
       const props = await getReservePageProps(userA.session, NOW);
 
@@ -216,9 +224,10 @@ describe("getReservePageProps (integration)", () => {
       expect(props.positions).toHaveLength(6);
 
       const reserveCentavos = 1_025_075 + 1_500_040;
-      expect(props.tiles?.currentReserve.value).toBe(
-        formatMoney({ amountCentavos: reserveCentavos, currency: "BRL" }),
-      );
+      expect(props.tiles?.currentReserve).toMatchObject({
+        value: formatMoney({ amountCentavos: reserveCentavos, currency: "BRL" }),
+        meta: interpolate(t.tiles.currentReserveCount, "{count}", "2"),
+      });
       expect(props.coverage?.summaryLabel).toContain(
         formatMoney({ amountCentavos: reserveCentavos, currency: "BRL" }),
       );

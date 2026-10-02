@@ -69,7 +69,7 @@ describe("taxBasisPoints", () => {
   it("charges only bracketed positions", () => {
     expect(taxBasisPoints({ kind: "exempt" })).toBe(0);
     expect(taxBasisPoints({ kind: "none" })).toBe(0);
-    expect(taxBasisPoints({ kind: "unknown" })).toBe(0);
+    expect(taxBasisPoints({ kind: "unknown" })).toBeNull();
     expect(taxBasisPoints({ kind: "bracket", basisPoints: 1500, holdingDays: 800 })).toBe(1500);
     expect(taxBasisPoints({ kind: "acquisition_date_unknown", basisPoints: 2250 })).toBe(2250);
   });

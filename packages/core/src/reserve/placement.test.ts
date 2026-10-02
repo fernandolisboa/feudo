@@ -331,6 +331,28 @@ describe("rankReservePlacements", () => {
     );
     expect(result.excluded[0]?.exclusions).toEqual(["product_unknown", "rate_unknown"]);
   });
+
+  it("shows no yield for a product whose tax it cannot tell, even with a readable rate", () => {
+    const result = rankReservePlacements(
+      [
+        position({
+          id: "fixed-income",
+          productType: "FIXED_INCOME",
+          rateType: "percentage_of_cdi",
+          ratePpm: 1_100_000,
+          liquidityMark: "daily",
+        }),
+        { ...FUND, id: "fund-with-rate", rateType: "fixed_annual", ratePpm: 120_000 },
+      ],
+      RATES,
+      TODAY,
+    );
+    expect(result.ranked).toEqual([]);
+    expect(result.excluded.map((entry) => [entry.position.id, entry.tax, entry.yield])).toEqual([
+      ["fixed-income", { kind: "unknown" }, null],
+      ["fund-with-rate", { kind: "unknown" }, null],
+    ]);
+  });
 });
 
 describe("reservePositionAdvice", () => {
