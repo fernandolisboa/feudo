@@ -133,3 +133,27 @@ export {
   BANK_PROFILE_SCORE_MAX,
   BANK_PROFILE_SCORE_MIN,
 } from "./banking-intel/criteria";
+
+export type { CriteriaWeights } from "./banking-intel/weights";
+export {
+  CRITERION_WEIGHT_MAX,
+  CRITERION_WEIGHT_MIN,
+  DEFAULT_CRITERIA_WEIGHTS,
+  InvalidCriteriaWeightsError,
+  isValidCriterionWeight,
+  resolveCriteriaWeights,
+} from "./banking-intel/weights";
+export type {
+  BankCandidate,
+  BankComparison,
+  BankScore,
+  CriterionComparison,
+  ScorableBankProfile,
+  ScorableCriterionEntry,
+} from "./banking-intel/scoring";
+export {
+  BANK_COMPARISON_CANDIDATES,
+  PRO_CON_MIN_DIFFERENCE,
+  compareBanks,
+  rankBankProfiles,
+} from "./banking-intel/scoring";
