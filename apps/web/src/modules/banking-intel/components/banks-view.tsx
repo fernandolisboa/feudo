@@ -13,6 +13,12 @@ import { CriteriaWeightsEditor } from "./criteria-weights-editor";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
+const CANDIDATE_GRID_COLS: Record<number, string> = {
+  1: "",
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-3",
+};
+
 function Review({ review }: { review: ReviewView }) {
   return (
     <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-[12px] tabular-nums">
@@ -115,7 +121,11 @@ export function BanksView(props: BanksPageProps) {
           title={t.candidates.title}
           actions={<span className="text-muted-foreground text-[12px]">{t.candidates.meta}</span>}
         />
-        <div className="bg-border grid gap-px overflow-hidden rounded-lg border md:grid-cols-3">
+        <div
+          className={`bg-border grid gap-px overflow-hidden rounded-lg border ${
+            CANDIDATE_GRID_COLS[candidates.length] ?? "md:grid-cols-3"
+          }`}
+        >
           {candidates.map((candidate) => (
             <CandidateCard key={candidate.institutionId} candidate={candidate} />
           ))}
@@ -165,7 +175,7 @@ export function BanksView(props: BanksPageProps) {
               {weights.map((entry) => (
                 <li
                   key={entry.criterion}
-                  className="flex min-h-[var(--density-row)] flex-wrap items-center justify-between gap-3 py-2"
+                  className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto] items-center gap-3 py-2"
                 >
                   <div className="flex min-w-0 flex-col">
                     <span className="text-[14px]">{entry.label}</span>

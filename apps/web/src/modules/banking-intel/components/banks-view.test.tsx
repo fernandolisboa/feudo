@@ -89,7 +89,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         cons: ["Aprisionamento: 40 contra 60 (Itaú)"],
         emptyPros: t.candidates.noPros,
         emptyCons: t.candidates.noCons,
-        missingEvidence: "Sem evidência para: Qualidade do app, Segurança.",
+        missingEvidence: "Evidência insuficiente em: Qualidade do app, Segurança.",
       },
     ],
     ...overrides,
@@ -133,7 +133,7 @@ describe("BanksView", () => {
     const btg = within(screen.getByRole("article", { name: "BTG Pactual" }));
     expect(btg.getByText(t.candidates.stale)).not.toBeNull();
     expect(btg.getByText(t.candidates.noPros)).not.toBeNull();
-    expect(btg.getByText("Sem evidência para: Qualidade do app, Segurança.")).not.toBeNull();
+    expect(btg.getByText("Evidência insuficiente em: Qualidade do app, Segurança.")).not.toBeNull();
   });
 
   it("lists the banks the household already uses with their review date", () => {

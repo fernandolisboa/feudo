@@ -81,7 +81,7 @@ export function CriteriaWeightsEditor({
         {weights.map((entry) => (
           <li
             key={entry.criterion}
-            className="flex min-h-[var(--density-row)] flex-wrap items-center justify-between gap-3 py-2"
+            className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto] items-center gap-3 py-2"
           >
             <div className="flex min-w-0 flex-col">
               <span className="text-[14px]">{entry.label}</span>

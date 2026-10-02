@@ -47,8 +47,8 @@ const en = {
     noConsMedian: "Nothing below the median bank.",
     comparison: "{criterion}: {candidate} vs. {baseline} ({bank})",
     median: "median",
-    missingEvidence: "No evidence for: {criteria}.",
-    noScore: "no evidence",
+    missingEvidence: "Insufficient evidence for: {criteria}.",
+    noScore: "insufficient evidence",
   },
   weights: {
     title: "Criteria weights",
@@ -59,7 +59,7 @@ const en = {
     levels: ["Doesn't count", "Very low", "Low", "Medium", "High", "Very high"],
   },
   method:
-    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with no evidence is left out of the average and shown as such. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
+    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
   saved: "Weights saved.",
   resetDone: "Weights back to defaults.",
   error: {
@@ -94,7 +94,7 @@ const ptBR = {
     fees: { label: "Tarifas", help: "quanto custa manter a conta e movimentar dinheiro" },
     lockIn: {
       label: "Aprisionamento",
-      help: "quanto o banco te prende; nota 100 é o mais fácil de deixar",
+      help: "quanto o banco te prende; 100 é o mais fácil de sair",
     },
     publicReviews: {
       label: "Avaliações de clientes",
@@ -129,8 +129,8 @@ const ptBR = {
     noConsMedian: "Nada abaixo do banco mediano.",
     comparison: "{criterion}: {candidate} contra {baseline} ({bank})",
     median: "mediana",
-    missingEvidence: "Sem evidência para: {criteria}.",
-    noScore: "sem evidência",
+    missingEvidence: "Evidência insuficiente em: {criteria}.",
+    noScore: "evidência insuficiente",
   },
   weights: {
     title: "Pesos dos critérios",
@@ -141,7 +141,7 @@ const ptBR = {
     levels: ["Não conta", "Muito baixo", "Baixo", "Médio", "Alto", "Muito alto"],
   },
   method:
-    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério sem evidência fica fora da média e aparece indicado. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
   saved: "Pesos salvos.",
   resetDone: "Pesos de volta ao padrão.",
   error: {

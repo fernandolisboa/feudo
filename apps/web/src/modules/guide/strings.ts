@@ -172,7 +172,7 @@ const en = {
       topics: [
         {
           title: "Candidates and scores",
-          body: "Banks shows the three reviewed banks that best fit your household's weights, among the ones you do not use yet. Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with no evidence stays out of the average and is shown as such. The review date sits under each bank.",
+          body: "Banks shows the three reviewed banks that best fit your household's weights, among the ones you do not use yet. Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with insufficient evidence stays out of the average and is shown as such. The review date sits under each bank.",
         },
         {
           title: "For and against",
@@ -399,7 +399,7 @@ const ptBR = {
       topics: [
         {
           title: "Candidatos e notas",
-          body: "Bancos mostra os três bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam. Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério sem evidência fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco.",
+          body: "Bancos mostra os três bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam. Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco.",
         },
         {
           title: "A favor e contra",
