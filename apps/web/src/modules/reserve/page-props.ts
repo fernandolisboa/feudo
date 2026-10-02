@@ -214,18 +214,28 @@ export async function getReservePageProps(
   now: Date = new Date(),
 ): Promise<ReservePageProps> {
   const db = getDb();
-  const scope = householdScope(session);
+  const viewerRole = await getViewerRole(session, db);
+  return buildReservePageProps(householdScope(session), {
+    now,
+    canManage: canManageHouseholdSettings(viewerRole),
+  });
+}
 
-  const [settings, hasAccounts, notice, viewerRole] = await Promise.all([
+export async function buildReservePageProps(
+  scope: HouseholdScope,
+  options: { now: Date; canManage: boolean },
+): Promise<ReservePageProps> {
+  const db = getDb();
+  const { now, canManage } = options;
+
+  const [settings, hasAccounts, notice] = await Promise.all([
     getHouseholdSettings(scope, db),
     householdHasAccounts(db, scope),
     noticeView(scope, db),
-    getViewerRole(session, db),
   ]);
   const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
   const multiple = settings?.reserveMultiple ?? DEFAULT_RESERVE_MULTIPLE;
   const month = yearMonthOf(now, timeZone);
-  const canManage = canManageHouseholdSettings(viewerRole);
   const base = {
     monthLabel: formatYearMonth(month),
     multiple,

@@ -18,7 +18,7 @@ import {
 
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
-import type { HouseholdSession } from "@/modules/households";
+import type { HouseholdScope, HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 import type { StatTileView } from "@/ui/stat-tile";
 
@@ -194,8 +194,15 @@ export async function getOverviewPageProps(
   searchParams: OverviewSearchParams,
   now: Date = new Date(),
 ): Promise<OverviewPageProps> {
+  return buildOverviewPageProps(householdScope(session), searchParams, now);
+}
+
+export async function buildOverviewPageProps(
+  scope: HouseholdScope,
+  searchParams: OverviewSearchParams,
+  now: Date,
+): Promise<OverviewPageProps> {
   const db = getDb();
-  const scope = householdScope(session);
   const repository = createHouseholdLedgerRepository(scope);
   const params = overviewSearchParamsSchema.parse(searchParams);
 

@@ -62,3 +62,4 @@
 | FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                                       |
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"; 100 = mais fácil de sair                         |
 | Guided tour                                 | tour                                           | the per-screen walkthrough; "tutoriais" in settings, "Pular tour" to skip    |
+| Analyst reading                             | leitura do analista                            | "Gerar nova leitura"; "Leitura mensal de {mês}"; "Números usados"            |

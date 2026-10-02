@@ -148,6 +148,13 @@
       "when": 1790911608740,
       "tag": "0020_bank_criteria_weights",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790977781181,
+      "tag": "0021_household_analysis",
+      "breakpoints": true
     }
   ]
 }
