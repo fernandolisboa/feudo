@@ -51,10 +51,11 @@
 | Reserve target notice                       | aviso da meta                                  | "A meta da reserva mudou de R$ X para R$ Y..."; action "Entendi"             |
 | Reserve position                            | posição da reserva                             | "faz parte da reserva"                                                       |
 | Average fixed cost                          | custo fixo médio                               |                                                                              |
-| Bank profile                                | perfil do banco                                |                                                                              |
+| Bank profile                                | perfil do banco                                | scores "nota de 0 a 100"                                                     |
+| Insufficient evidence                       | evidência insuficiente                         | a criterion with no citable source; shown without a score                    |
 | Bank comparison                             | comparação de bancos                           |                                                                              |
 | Criteria weights                            | pesos dos critérios                            |                                                                              |
 | Net real yield                              | rendimento real líquido                        | "depois do imposto e da inflação"                                            |
 | FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                                       |
-| Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"                                                   |
+| Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"; 100 = mais fácil de sair                         |
 | Guided tour                                 | tour                                           | the per-screen walkthrough; "tutoriais" in settings, "Pular tour" to skip    |

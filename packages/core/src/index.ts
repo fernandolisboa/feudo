@@ -124,3 +124,12 @@ export type { ReserveTarget } from "./reserve/target";
 export { computeReserveTarget, InvalidReserveMultipleError } from "./reserve/target";
 export type { ReserveTargetNoticeInput } from "./reserve/notice";
 export { shouldNotifyReserveTargetChange } from "./reserve/notice";
+
+export { FGC_LIMIT_PER_CONGLOMERATE, FGCOOP_LIMIT_PER_INSTITUTION } from "./institutions/fgc";
+
+export type { BankProfileCriterion } from "./banking-intel/criteria";
+export {
+  BANK_PROFILE_CRITERIA,
+  BANK_PROFILE_SCORE_MAX,
+  BANK_PROFILE_SCORE_MIN,
+} from "./banking-intel/criteria";
