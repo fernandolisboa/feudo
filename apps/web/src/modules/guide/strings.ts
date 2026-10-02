@@ -161,8 +161,16 @@ const en = {
       screen: "Reserve",
       topics: [
         {
-          title: "Coming soon",
-          body: "The reserve screen is not ready yet. Its target will be the number of months of reserve chosen when the household was created multiplied by the average fixed cost, so categorizing well today is what makes that number right.",
+          title: "Target",
+          body: "The target is the reserve multiple times the average fixed cost, so categorizing well is what makes it right. The owner or an admin changes the multiple at the top of the screen.",
+        },
+        {
+          title: "What is part of the reserve",
+          body: "In Accounts and investments, use Adjust to say which accounts make up the reserve. When the product does not tell whether it can be redeemed within one business day, say so there too, and pick the issuing institution when the bank's name does not identify it. Coverage shows how much of the target the reserve holds, in reais, percent and months of fixed cost.",
+        },
+        {
+          title: "Where the next reais should go",
+          body: "Only what can be redeemed within one business day and is protected by the FGC, or is Tesouro Selic, enters the ranking, ordered by what it earns after income tax and inflation. Everything else is listed under Also evaluated with the reason. A balance at a payment institution, such as the Nubank, PicPay or Mercado Pago account, has no FGC.",
         },
       ],
     },
@@ -388,8 +396,16 @@ const ptBR = {
       screen: "Reserva",
       topics: [
         {
-          title: "Em breve",
-          body: "A tela da reserva ainda não está pronta. A meta vai ser os meses de reserva escolhidos ao criar a casa vezes o custo fixo médio, então categorizar bem hoje é o que deixa esse número certo.",
+          title: "Meta",
+          body: "A meta é o número de meses de reserva vezes o custo fixo médio, então categorizar bem é o que deixa esse número certo. Quem administra a casa (dono ou admin) muda os meses no alto da tela.",
+        },
+        {
+          title: "O que faz parte da reserva",
+          body: "Em Contas e investimentos, use Ajustar para dizer quais contas fazem parte da reserva. Quando o produto não deixa claro se dá para resgatar em até 1 dia útil, informe ali também, e escolha a instituição emissora quando o nome do banco não bastar. A cobertura mostra quanto da meta a reserva já tem, em reais, em porcentagem e em meses de custo fixo.",
+        },
+        {
+          title: "Onde colocar os próximos reais",
+          body: "Só entra no ranking o que resgata em até 1 dia útil e tem proteção do FGC, ou é Tesouro Selic, em ordem do que rende depois do IR e da inflação. O resto aparece em Também avaliados, com o motivo. Saldo em instituição de pagamento, como a conta do Nubank, do PicPay ou do Mercado Pago, não tem FGC.",
         },
       ],
     },

@@ -144,3 +144,36 @@ export {
 } from "./banking-intel/weights";
 export type { BankCandidate, BankScore, CriterionComparison } from "./banking-intel/scoring";
 export { compareBanks } from "./banking-intel/scoring";
+
+export type {
+  LiquidityMark,
+  RateType,
+  ReserveAccountType,
+  ReserveProductId,
+} from "./reserve/products";
+export {
+  LIQUIDITY_MARKS,
+  RATE_TYPES,
+  RESERVE_PRODUCTS,
+  classifyReserveProduct,
+} from "./reserve/products";
+export type { PositionTax } from "./reserve/tax";
+export type { ReserveMarketRates } from "./reserve/yield";
+export type {
+  ExclusionReason,
+  PlacementEvaluation,
+  PlacementYield,
+  PositionGuarantee,
+  PositionLiquidity,
+  RankedPlacement,
+  ReservePlacementRanking,
+  ReservePositionAdvice,
+  ReservePositionInput,
+} from "./reserve/placement";
+export {
+  EXCLUSION_REASONS,
+  rankReservePlacements,
+  reservePositionAdvice,
+} from "./reserve/placement";
+export type { ReserveCoverage } from "./reserve/coverage";
+export { computeReserveCoverage } from "./reserve/coverage";

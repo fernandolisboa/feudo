@@ -34,7 +34,11 @@ function buildProps(overrides: Partial<ReservePageProps> = {}): ReservePageProps
       { monthLabel: "abril de 2026", amountLabel: "R$ 980,50" },
       { monthLabel: "maio de 2026", amountLabel: null },
     ],
+    coverage: null,
     notice: null,
+    positions: [],
+    ranking: null,
+    institutionOptions: [],
     ...overrides,
   };
 }
@@ -127,5 +131,137 @@ describe("ReserveView", () => {
     render(<ReserveView {...buildProps({ notice: null })} />);
 
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("shows coverage in reais, share and months with a progress bar", () => {
+    render(
+      <ReserveView
+        {...buildProps({
+          coverage: {
+            summaryLabel: "R$ 2.525,11 de R$ 5.883,00",
+            percentLabel: "42,9%",
+            monthsLabel: "2,5 meses de custo fixo",
+            progressPercent: 42.92,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("R$ 2.525,11 de R$ 5.883,00")).not.toBeNull();
+    expect(screen.getByText("42,9% · 2,5 meses de custo fixo")).not.toBeNull();
+    expect(
+      screen
+        .getByRole("progressbar", { name: t.coverage.progressLabel })
+        .getAttribute("aria-valuenow"),
+    ).toBe("42.92");
+  });
+
+  it("shows the top placements, then the also-ranked ones with their place and the excluded ones with their reasons", () => {
+    const row = (accountId: string, place: number) => ({
+      accountId,
+      placeLabel: `${String(place)}º`,
+      name: `Conta ${accountId}`,
+      institutionLabel: "Inter",
+      realYieldLabel: "8% a.a.",
+      netYieldLabel: "13,6% a.a. depois do IR",
+      taxLabel: "17,5%",
+      guaranteeLabel: "FGC: ainda cabem R$ 236.749,25",
+    });
+    render(
+      <ReserveView
+        {...buildProps({
+          ranking: {
+            top: [row("a", 1), row("b", 2), row("c", 3)],
+            alsoRanked: [row("d", 4)],
+            excluded: [
+              {
+                accountId: "e",
+                name: "LCI Fixture",
+                institutionLabel: "Inter",
+                reasonsLabel: t.ranking.reasons.liquidity_unknown,
+              },
+            ],
+            indicatorsLabel: "Taxas ao ano: CDI 14,9% · Selic 15% · IPCA em 12 meses 5,2%",
+          },
+        })}
+      />,
+    );
+
+    const top = screen.getByRole("list", { name: t.ranking.title });
+    expect(within(top).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(top).getByText("1º")).not.toBeNull();
+    const also = screen.getByRole("list", { name: t.ranking.alsoTitle });
+    expect(within(also).getByText("4º")).not.toBeNull();
+    expect(within(also).getByText(t.ranking.reasons.liquidity_unknown)).not.toBeNull();
+    expect(screen.getByText(/CDI 14,9%/)).not.toBeNull();
+  });
+
+  it("says so when nothing passes the filter", () => {
+    render(
+      <ReserveView
+        {...buildProps({
+          ranking: { top: [], alsoRanked: [], excluded: [], indicatorsLabel: "" },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(t.ranking.empty)).not.toBeNull();
+    expect(screen.queryByRole("list", { name: t.ranking.alsoTitle })).toBeNull();
+  });
+
+  it("lists every account with its liquidity, tax, real yield, reserve tag and advice", () => {
+    render(
+      <ReserveView
+        {...buildProps({
+          positions: [
+            {
+              accountId: "lci",
+              name: "LCI Fixture 92% CDI",
+              institutionLabel: "Inter",
+              balanceLabel: "R$ 4.000,00",
+              liquidityLabel: t.liquidity.unknown,
+              liquidityUnknown: true,
+              taxLabel: t.tax.exempt,
+              realYieldLabel: "7,3% a.a.",
+              isReserve: true,
+              advice: { label: t.positions.advice.liquidity_unknown, tone: "warning" },
+              edit: {
+                isReserve: true,
+                liquidity: "unknown",
+                institutionChoice: "auto",
+                asksLiquidity: true,
+                asksInstitution: true,
+                automaticInstitutionName: "Inter",
+              },
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("LCI Fixture 92% CDI")).not.toBeNull();
+    expect(screen.getByText(t.liquidity.unknown).className).toContain("text-warning");
+    expect(screen.getByText(t.positions.advice.liquidity_unknown).className).toContain(
+      "text-warning",
+    );
+    expect(screen.getByText(t.positions.inReserve)).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Ajustar LCI Fixture 92% CDI" })).not.toBeNull();
+  });
+
+  it("shows positions and the ranking even before there is a target", () => {
+    render(
+      <ReserveView
+        {...buildProps({
+          hasHistory: false,
+          tiles: null,
+          ranking: { top: [], alsoRanked: [], excluded: [], indicatorsLabel: "" },
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: t.empty.categorizeAction })).not.toBeNull();
+    expect(screen.getByText(t.ranking.title)).not.toBeNull();
+    expect(screen.getByText(t.positions.title)).not.toBeNull();
+    expect(screen.queryByText(t.monthlyTable.title)).toBeNull();
   });
 });

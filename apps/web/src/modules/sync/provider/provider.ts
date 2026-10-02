@@ -1,17 +1,13 @@
 import { z } from "zod";
 
+import { RATE_TYPES, type RateType } from "@feudo/core";
+
 import type { Outcome } from "@/lib/outcome";
 
 export const ACCOUNT_TYPES = ["checking", "savings", "credit_card", "investment"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
-export const RATE_TYPES = [
-  "percentage_of_cdi",
-  "fixed_annual",
-  "inflation_linked",
-  "other",
-] as const;
-export type RateType = (typeof RATE_TYPES)[number];
+export { RATE_TYPES, type RateType };
 
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const currencySchema = z.string().regex(/^[A-Z]{3}$/);

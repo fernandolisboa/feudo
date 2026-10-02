@@ -21,6 +21,7 @@ export interface Indicator {
 
 export interface LatestIndicators {
   cdiAnnual: Indicator | undefined;
+  selicAnnual: Indicator | undefined;
   selicTarget: Indicator | undefined;
   ipcaMonthly: Indicator | undefined;
   ipca12Month: Indicator | undefined;
@@ -87,8 +88,9 @@ async function computeIpca12Month(db: Database): Promise<Indicator | undefined> 
 }
 
 export async function getLatestIndicators(db: Database): Promise<LatestIndicators> {
-  const [cdiDaily, selicTarget, ipcaMonthly, ipca12Month] = await Promise.all([
+  const [cdiDaily, selicDaily, selicTarget, ipcaMonthly, ipca12Month] = await Promise.all([
     getLatestObservation(db, SgsSeriesCode.CdiDaily),
+    getLatestObservation(db, SgsSeriesCode.SelicDaily),
     getLatestObservation(db, SgsSeriesCode.SelicTarget),
     getLatestObservation(db, SgsSeriesCode.IpcaMonthly),
     computeIpca12Month(db),
@@ -99,6 +101,13 @@ export async function getLatestIndicators(db: Database): Promise<LatestIndicator
       ? {
           ratePpm: annualizeDailyPercentToRatePpm(cdiDaily.value),
           referenceDate: cdiDaily.referenceDate,
+          source: "computed",
+        }
+      : undefined,
+    selicAnnual: selicDaily
+      ? {
+          ratePpm: annualizeDailyPercentToRatePpm(selicDaily.value),
+          referenceDate: selicDaily.referenceDate,
           source: "computed",
         }
       : undefined,
