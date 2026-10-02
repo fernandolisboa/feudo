@@ -97,7 +97,7 @@
 - `codex exec` refuses a cwd outside a trusted git repo: run it from the review worktree with `--skip-git-repo-check`.
 - Base UI: `Menu.GroupLabel` (shadcn `DropdownMenuLabel`) throws when not inside `Menu.Group`; the popup crashes silently in e2e (menu never appears). Wrap labels in `DropdownMenuGroup`.
 - Worktree on a differently named local branch: `git push origin <branch>` pushes the stale local ref of that name and is rejected as non-fast-forward. Push `HEAD:<branch>`.
-- Vercel Hobby: 2 cron jobs per project, daily only. New housekeeping tasks become steps of `/api/cron/daily`, never new entries.
+- Vercel Hobby: 100 cron jobs per project (was 2), daily only, fired within the hour. Cheap housekeeping stays a step of `/api/cron/daily`; a job whose time budget does not fit there (the analyst reading, 300 s) gets its own entry.
 - GitHub concurrency groups keep one running + one pending job; a newer pending job cancels the older. Jobs of one run sharing a group must be chained with `needs`, or one of them gets cancelled by another branch.
 - Session-limit cutoffs (429 on Sonnet) kill subagents mid-poll; their worktrees keep pushed work. Check `git log origin/<branch>` before relaunching; do not re-run what is already pushed.
 - Reviewer lens verdicts on #42/#50 that were pure duplicates across lenses were merged by keeping the strictest label; Codex found two real CI/a11y items the six lenses missed (pending-job cancellation, collapsed nav links without a name). Keep Codex in the loop.

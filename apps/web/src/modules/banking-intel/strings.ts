@@ -60,6 +60,17 @@ const en = {
   },
   method:
     "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
+  analysisFacts: {
+    weights: "Household criteria weights (0 to 5)",
+    weight: "{criterion} {weight}",
+    current: "Bank the household uses: {bank}",
+    score: "score {score} out of 100",
+    baseline: "Comparison baseline",
+    candidate: "Candidate bank {rank}: {bank}",
+    pros: "In favour of {bank}",
+    cons: "Against {bank}",
+    missingEvidence: "Evidence gaps for {bank}",
+  },
   saved: "Weights saved.",
   resetDone: "Weights back to defaults.",
   error: {
@@ -142,6 +153,17 @@ const ptBR = {
   },
   method:
     "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+  analysisFacts: {
+    weights: "Pesos dos critérios da casa (0 a 5)",
+    weight: "{criterion} {weight}",
+    current: "Banco que a casa usa: {bank}",
+    score: "nota {score} de 100",
+    baseline: "Base da comparação",
+    candidate: "Banco candidato {rank}: {bank}",
+    pros: "A favor de {bank}",
+    cons: "Contra {bank}",
+    missingEvidence: "Evidência insuficiente sobre {bank}",
+  },
   saved: "Pesos salvos.",
   resetDone: "Pesos de volta ao padrão.",
   error: {

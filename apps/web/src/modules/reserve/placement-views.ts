@@ -13,6 +13,7 @@ import {
   type RatePpm,
   type ReserveCoverage,
   type ReserveMarketRates,
+  type ReserveProductId,
 } from "@feudo/core";
 import { INSTITUTIONS, institutionById, matchInstitutionByLabel } from "@feudo/core/reference-data";
 
@@ -52,6 +53,8 @@ export type PlacementRowView = {
   accountId: string;
   placeLabel: string;
   name: string;
+  product: ReserveProductId;
+  institutionName: string | null;
   institutionLabel: string;
   realYieldLabel: string;
   netYieldLabel: string;
@@ -155,9 +158,13 @@ export function resolveInstitutionId(row: ReservePositionRow): string | null {
   return row.institutionId ?? matchInstitutionByLabel(row.connectionLabel);
 }
 
-function institutionLabel(row: ReservePositionRow): string {
+function institutionName(row: ReservePositionRow): string | null {
   const id = resolveInstitutionId(row);
-  return (id === null ? undefined : institutionById(id)?.name) ?? row.connectionLabel;
+  return (id === null ? undefined : institutionById(id)?.name) ?? null;
+}
+
+function institutionLabel(row: ReservePositionRow): string {
+  return institutionName(row) ?? row.connectionLabel;
 }
 
 function markEdit(row: ReservePositionRow, evaluation: PlacementEvaluation): ReserveMarkEdit {
@@ -202,6 +209,8 @@ function placementRow(
     accountId: row.accountId,
     placeLabel: interpolate(t.ranking.place, "{place}", String(evaluation.place)),
     name: row.name,
+    product: evaluation.product,
+    institutionName: institutionName(row),
     institutionLabel: institutionLabel(row),
     realYieldLabel: placementYield ? perYear(placementYield.realAnnualPpm) : t.yield.unknown,
     netYieldLabel: placementYield

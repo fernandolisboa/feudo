@@ -12,3 +12,4 @@ export { getOverviewPageProps } from "./overview-page-props";
 export type { OverviewPageProps } from "./overview-page-props";
 export type { OverviewSearchParams } from "./validation";
 export { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
+export { getLedgerAnalysisFacts } from "./analysis-facts";

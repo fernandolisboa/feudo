@@ -1,5 +1,10 @@
 import { Suspense } from "react";
 
+import {
+  AnalystReading,
+  AnalystReadingErrorBoundary,
+  getAnalystReadingProps,
+} from "@/modules/analysis";
 import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
 import {
   getOverviewPageProps,
@@ -15,8 +20,9 @@ import {
 } from "@/modules/reserve";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
-// "Sincronizar agora" runs inside this page's function; sync's
-// MANUAL_SYNC_BUDGET_MS mirrors it (page.test.ts pins the two together).
+// "Sincronizar agora" and "Gerar nova leitura" run inside this page's
+// function; sync's MANUAL_SYNC_BUDGET_MS and analysis' ON_DEMAND_BUDGET_MS
+// mirror it (page.test.ts pins them together).
 export const maxDuration = 60;
 
 async function OverviewContent({
@@ -33,6 +39,11 @@ async function OverviewContent({
 async function AccountsSectionContent({ session }: { session: HouseholdSession }) {
   const props = await getAccountsSectionProps(session);
   return <AccountsSection {...props} />;
+}
+
+async function AnalystReadingContent({ session }: { session: HouseholdSession }) {
+  const props = await getAnalystReadingProps(session);
+  return props ? <AnalystReading {...props} /> : null;
 }
 
 async function ReserveNoticeBannerContent({ session }: { session: HouseholdSession }) {
@@ -60,6 +71,11 @@ export default async function Home({
           <OverviewContent session={session} searchParams={params} />
         </Suspense>
       </OverviewErrorBoundary>
+      <AnalystReadingErrorBoundary>
+        <Suspense fallback={null}>
+          <AnalystReadingContent session={session} />
+        </Suspense>
+      </AnalystReadingErrorBoundary>
       <div className="mt-10" data-tour="overview.accounts">
         <Suspense fallback={null}>
           <AccountsSectionContent session={session} />

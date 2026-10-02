@@ -277,9 +277,13 @@ and the verification prune share a single route instead of one cron each.
 
 ## Cron jobs
 
-Vercel's Hobby plan allows at most two cron schedules per project, so Feudo runs exactly two:
-`GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC) and `GET /api/cron/daily`
-(`0 7 * * *` UTC), both bearer-protected by `isCronRequestAuthorized`. `daily`
+Vercel's Hobby plan allows 100 cron jobs per project, each at most once a day and fired within the
+scheduled hour (it allowed two until Vercel raised the limit; see
+https://vercel.com/docs/cron-jobs/usage-and-pricing). Feudo runs three, all bearer-protected by
+`isCronRequestAuthorized`: `GET /api/cron/sync` (bank-connection sync, `0 6 * * *` UTC),
+`GET /api/cron/daily` (`0 7 * * *` UTC) and `GET /api/cron/analysis` (the monthly analyst reading,
+`0 8 * * *` UTC, ADR-0004), which has its own function because each household's reading is one long
+model call that needs a 300 s budget. `daily`
 (`apps/web/src/app/api/cron/daily/route.ts`) only checks the bearer token, calls each slice's own
 daily step and composes the response — per ADR-0011, each slice owns its own try/catch around its
 step, so one step failing never stops the others from running: `runDailyPruneStep`
@@ -301,7 +305,8 @@ The two prunes run first deliberately: each is orders of magnitude cheaper than 
 step, and running them after it would let a slow or unreachable Bacen SGS starve them on every
 invocation. The response is `200` when every step succeeded and `500` when any step errored or, for
 market-data, fetched nothing at all. Any new daily housekeeping task becomes a step of this same
-route rather than a new cron entry, since the Hobby limit leaves no room for a third schedule. The
+route rather than a new cron entry; a job gets its own entry only when its time budget does not fit
+here, as the analyst reading's does. The
 invariant for ordering new steps: **cheap, always-must-run housekeeping first; slow network work
 last.** A step that is one cheap query and must run on every invocation (like the prunes) goes
 before the market-data refresh; anything with a network round trip or that can legitimately be

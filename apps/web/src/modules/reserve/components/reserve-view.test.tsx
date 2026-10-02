@@ -161,6 +161,8 @@ describe("ReserveView", () => {
       accountId,
       placeLabel: `${String(place)}º`,
       name: `Conta ${accountId}`,
+      product: "cdb" as const,
+      institutionName: "Inter",
       institutionLabel: "Inter",
       realYieldLabel: "8% a.a.",
       netYieldLabel: "13,6% a.a. depois do IR",

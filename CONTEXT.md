@@ -176,3 +176,9 @@ _Avoid_: bank ranking, recommendation engine
 
 **Criteria weights**:
 How much each bank-profile criterion counts for a household, an integer from 0 ("não conta", the criterion is left out) to 5. The product ships defaults; the household's owner or an admin can adjust them or go back to the defaults, and at least one criterion must count. Weights are normalised, so only their proportions matter. A household that never changed them has no stored row; a criterion added later starts at its default.
+
+### Analysis
+
+**Analyst reading**:
+A short written interpretation of the household's own figures, produced by the AI layer (ADR-0004) and shown as "Leitura do analista" on Visão geral and Reserva. It reads the last closed month of the ledger and the reserve and bank comparison as they stand, quotes only figures the household can find on screen, names the trade-offs (liquidity × yield × risk) and always gives the counter-argument to whatever it leans towards. A **monthly reading** is written once per household per closed month by the daily cron with the deeper model; an **on-demand reading** is asked for with "Gerar nova leitura", three per household per household-local day, shared by every member, each press counting whether the reading succeeds or not. Every reading is stored with the exact facts it was given, the prompt version and the model, and the newest successful one is shown. It never changes a number and is not investment advice; with the analyst turned off, every screen works as before.
+_Avoid_: AI advice, insight, recommendation

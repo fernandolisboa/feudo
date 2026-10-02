@@ -158,6 +158,7 @@ export {
   classifyReserveProduct,
 } from "./reserve/products";
 export type { PositionTax } from "./reserve/tax";
+export { REGRESSIVE_INCOME_TAX_BRACKETS } from "./reserve/tax";
 export type { ReserveMarketRates } from "./reserve/yield";
 export type {
   ExclusionReason,
@@ -177,3 +178,19 @@ export {
 } from "./reserve/placement";
 export type { ReserveCoverage } from "./reserve/coverage";
 export { computeReserveCoverage } from "./reserve/coverage";
+
+export type {
+  AnalysisFact,
+  AnalysisInput,
+  AnalysisKind,
+  AnalysisOutput,
+} from "./analysis/contract";
+export {
+  ANALYSIS_KINDS,
+  analysisFactSchema,
+  analysisInputSchema,
+  analysisOutputSchema,
+} from "./analysis/contract";
+export { extractNumberTokens } from "./analysis/numbers";
+export type { AnalysisViolation } from "./analysis/validate";
+export { describeViolations, findAnalysisViolations } from "./analysis/validate";

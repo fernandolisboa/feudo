@@ -154,6 +154,10 @@ const en = {
           title: "Charts and accounts",
           body: "Spending by category shows where the money went in the month, and Last six months compares income and spending month by month. Transfers, transactions without a category and accounts in other currencies stay out of every number. Accounts and Your connections come right below.",
         },
+        {
+          title: "Analyst's reading",
+          body: "Below the charts, an AI analyst writes a short reading of the last closed month, the reserve and the bank comparison, using only the figures Feudo already shows, and lists the figures it used. A new reading arrives at the start of each month; Generate new reading asks for one now, up to three a day for the whole household. It weighs trade-offs and always gives the counter-argument, but it does not change any number and is not investment advice. The same reading appears on Reserve.",
+        },
       ],
     },
     reserve: {
@@ -202,6 +206,10 @@ const en = {
         {
           title: "Stopping",
           body: "In Your connections, removing your credentials stops the sync and destroys them on the spot, and deleting a connection removes its accounts and their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what Feudo has already read stays here until you remove your credentials and delete your connections. After you remove your credentials, your accounts show “Last sync failed”; that is expected.",
+        },
+        {
+          title: "What the analyst receives",
+          body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials.",
         },
         {
           title: "Export and deletion",
@@ -389,6 +397,10 @@ const ptBR = {
           title: "Gráficos e contas",
           body: "Gastos por categoria mostra para onde foi o dinheiro no mês, e Últimos seis meses compara renda e gastos mês a mês. Transferências, transações sem categoria e contas em outras moedas ficam fora de todos os números. Logo abaixo vêm Contas e Suas conexões.",
         },
+        {
+          title: "Leitura do analista",
+          body: "Abaixo dos gráficos, um analista de IA escreve uma leitura curta do último mês fechado, da reserva e da comparação de bancos, usando só os números que o Feudo já mostra, e lista os números que usou. Uma leitura nova chega no começo de cada mês; Gerar nova leitura pede uma na hora, até três por dia para a casa toda. Ele pesa os prós e contras e sempre traz o contra-argumento, mas não muda nenhum número e não é recomendação de investimento. A mesma leitura aparece na Reserva.",
+        },
       ],
     },
     reserve: {
@@ -437,6 +449,10 @@ const ptBR = {
         {
           title: "Como parar",
           body: "Em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão remove as contas dela, com todas as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que o Feudo já leu continua aqui até você remover suas credenciais e excluir suas conexões. Depois de remover as credenciais, suas contas passam a mostrar “Última sincronização falhou”, e isso é esperado.",
+        },
+        {
+          title: "O que o analista recebe",
+          body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais.",
         },
         {
           title: "Exportar e excluir",

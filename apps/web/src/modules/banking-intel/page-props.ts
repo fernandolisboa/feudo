@@ -16,6 +16,7 @@ import {
   getHouseholdSettings,
   getViewerRole,
   householdScope,
+  type HouseholdScope,
   type HouseholdSession,
 } from "@/modules/households";
 
@@ -152,12 +153,22 @@ export async function getBanksPageProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<BanksPageProps> {
-  const db = getDb();
-  const scope = householdScope(session);
+  const viewerRole = await getViewerRole(session, getDb());
+  return buildBanksPageProps(householdScope(session), {
+    now,
+    canManage: canManageHouseholdSettings(viewerRole),
+  });
+}
 
-  const [settings, viewerRole, weights, institutions] = await Promise.all([
+export async function buildBanksPageProps(
+  scope: HouseholdScope,
+  options: { now: Date; canManage: boolean },
+): Promise<BanksPageProps> {
+  const db = getDb();
+  const { now, canManage } = options;
+
+  const [settings, weights, institutions] = await Promise.all([
     getHouseholdSettings(scope, db),
-    getViewerRole(session, db),
     getHouseholdCriteriaWeights(scope, db),
     getHouseholdInstitutions(scope, db),
   ]);
@@ -174,7 +185,7 @@ export async function getBanksPageProps(
     headline: top
       ? interpolate(t.headline.candidate, "{bank}", institutionName(top.institutionId))
       : t.headline.noCandidate,
-    canManage: canManageHouseholdSettings(viewerRole),
+    canManage,
     weightsAreCustom: weights.isCustom,
     weights: weightViews(weights.weights),
     hasAccounts: institutions.hasAccounts,
