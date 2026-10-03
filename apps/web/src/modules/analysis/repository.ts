@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, gte, isNotNull, lt } from "drizzle-orm";
 import type { AnalysisInput, AnalysisOutput } from "@feudo/core";
 
 import { organization } from "@/modules/auth/schema";
-import type { HouseholdScope } from "@/modules/households";
+import { householdIsNotPendingDeletion, type HouseholdScope } from "@/modules/households";
 import { bankAccount } from "@/modules/sync/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
@@ -225,12 +225,14 @@ export function createAnalysisRepository(scope: HouseholdScope) {
 
 // Job-only enumeration (ADR-0001, amended 2026-10-01): the monthly cron is
 // the one caller that walks every household, and only those with at least
-// one bank account have anything to read.
+// one bank account have anything to read. A household whose deletion is
+// pending is hidden from its members, so it gets no reading either.
 export async function listHouseholdsWithAccounts(db: Database): Promise<HouseholdScope[]> {
   const rows = await db
     .selectDistinct({ householdId: bankAccount.householdId })
     .from(bankAccount)
-    .where(isNotNull(bankAccount.householdId))
+    .innerJoin(organization, eq(organization.id, bankAccount.householdId))
+    .where(householdIsNotPendingDeletion())
     .orderBy(asc(bankAccount.householdId));
   return rows.flatMap((row) =>
     row.householdId === null ? [] : [{ householdId: row.householdId }],

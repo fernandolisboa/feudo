@@ -5,7 +5,8 @@ import { getAuth, type CurrentSession } from "@/modules/auth";
 import { organization } from "@/modules/auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
-import type { Database } from "@/platform/db/client";
+import { getDb, type Database } from "@/platform/db/client";
+import { filterHouseholdsPendingDeletion } from "./household-deletion";
 import { createHouseholdSettingsRepository } from "./repository";
 import { scopeForNewHousehold } from "./scope";
 import type { CreateHouseholdFormInput } from "./validation";
@@ -117,7 +118,13 @@ export type HouseholdSummary = { id: string; name: string };
 
 export async function listHouseholds(requestHeaders: Headers): Promise<HouseholdSummary[]> {
   const organizations = await getAuth().api.listOrganizations({ headers: requestHeaders });
-  return organizations.map((org) => ({ id: org.id, name: org.name }));
+  const pendingDeletion = await filterHouseholdsPendingDeletion(
+    getDb(),
+    organizations.map((org) => org.id),
+  );
+  return organizations
+    .filter((org) => !pendingDeletion.has(org.id))
+    .map((org) => ({ id: org.id, name: org.name }));
 }
 
 export type SwitchHouseholdOutcome = SimpleOutcome<"ok" | "not_a_member" | "failed">;

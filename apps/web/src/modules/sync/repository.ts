@@ -601,7 +601,8 @@ export type ConnectionToSync = {
   lastSyncError: string | null;
 };
 
-// Not scoped: the daily job's work list (ADR-0005). Ordered only by when a
+// Not scoped: the daily job's work list (ADR-0005). A user whose account
+// deletion is pending is never read again (ADR-0008). Ordered only by when a
 // connection was last attempted — succeeding or failing, it doesn't matter
 // — so every connection rotates round-robin regardless of its last outcome.
 // Ordering by last_sync_error/last_synced_at instead let a repeatedly
@@ -624,6 +625,8 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
       lastSyncError: bankConnection.lastSyncError,
     })
     .from(bankConnection)
+    .innerJoin(user, eq(user.id, bankConnection.userId))
+    .where(isNull(user.deletionRequestedAt))
     .orderBy(
       sql`${bankConnection.lastSyncAttemptedAt} asc nulls first`,
       asc(bankConnection.createdAt),
@@ -648,17 +651,21 @@ export async function listHouseholdConnectionsToSync(
       lastSyncError: bankConnection.lastSyncError,
     })
     .from(bankConnection)
+    .innerJoin(user, eq(user.id, bankConnection.userId))
     .where(
-      exists(
-        db
-          .select({ id: bankAccount.id })
-          .from(bankAccount)
-          .where(
-            and(
-              eq(bankAccount.connectionId, bankConnection.id),
-              eq(bankAccount.householdId, scope.householdId),
+      and(
+        isNull(user.deletionRequestedAt),
+        exists(
+          db
+            .select({ id: bankAccount.id })
+            .from(bankAccount)
+            .where(
+              and(
+                eq(bankAccount.connectionId, bankConnection.id),
+                eq(bankAccount.householdId, scope.householdId),
+              ),
             ),
-          ),
+        ),
       ),
     )
     .orderBy(

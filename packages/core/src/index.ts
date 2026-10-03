@@ -194,3 +194,13 @@ export {
 export { extractNumberTokens } from "./analysis/numbers";
 export type { AnalysisViolation } from "./analysis/validate";
 export { describeViolations, findAnalysisViolations } from "./analysis/validate";
+
+export type { YearMonthRange } from "./privacy/deletion";
+export {
+  DELETION_GRACE_DAYS,
+  deletionPurgeAt,
+  deletionPurgeCutoff,
+  groupConsecutiveMonths,
+} from "./privacy/deletion";
+export type { SuccessionCandidate } from "./households/succession";
+export { pickSuccessor } from "./households/succession";

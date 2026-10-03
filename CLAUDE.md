@@ -90,7 +90,7 @@ Confirm with the owner before creating any paid resource.
    data export and deletion flows; audit log of access to financial data. These ship before
    registration opens beyond the first household.
 4. **Deep modules, thin interfaces**: `auth`, `households`, `sync`, `market-data`, `ledger`,
-   `reserve`, `banking-intel`, `analysis`. Each exposes a small entry point; implementation stays
+   `reserve`, `banking-intel`, `analysis`, `privacy`. Each exposes a small entry point; implementation stays
    private. These modules are vertical slices under `apps/web/src/modules/<slice>/` (schema,
    repository, service, actions, components, strings, tests, `index.ts`, per ADR-0011); `app/` is
    routing only (pages, layouts, route handlers), and infrastructure with no domain meaning (the DB

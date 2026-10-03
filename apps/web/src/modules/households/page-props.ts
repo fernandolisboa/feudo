@@ -1,8 +1,15 @@
 import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
+import { deletionPurgeAt } from "@feudo/core";
 
-import { getDb } from "@/platform/db/client";
+import { getDb, type Database } from "@/platform/db/client";
 
 import type { CurrentSession } from "@/modules/auth";
+import { organization } from "@/modules/auth/schema";
+import { formatShortDate } from "@/lib/format-date";
+
+import type { PendingHouseholdDeletionItem } from "./components/pending-household-deletions";
+import { listOwnedHouseholdsPendingDeletion } from "./household-deletion";
 import {
   canManageHouseholdSettings,
   listMembers,
@@ -26,6 +33,7 @@ export type CasaPageProps = {
   canManage: boolean;
   invitations: PendingInvitation[];
   timeZone: string;
+  deletion: { householdName: string; restorableUntil: string } | null;
 };
 
 // Assembles everything /casa's page renders in one call, so the page itself
@@ -42,14 +50,44 @@ export async function getCasaPageProps(session: HouseholdSession): Promise<CasaP
 
   const invitations = canManage ? await listPendingInvitations(session, db) : [];
   const settings = await getHouseholdSettings(householdScope(session), db);
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
 
   return {
     members,
     viewerRole,
     canManage,
     invitations,
-    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+    timeZone,
+    deletion:
+      viewerRole === "owner"
+        ? {
+            householdName: await householdName(db, session.householdId),
+            restorableUntil: formatShortDate(deletionPurgeAt(new Date()), timeZone),
+          }
+        : null,
   };
+}
+
+async function householdName(db: Database, householdId: string): Promise<string> {
+  const [row] = await db
+    .select({ name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, householdId))
+    .limit(1);
+  return row?.name ?? "";
+}
+
+// Used by /preferencias and /comecar: the owner's only way back to a
+// household they asked to delete.
+export async function getPendingHouseholdDeletions(
+  session: CurrentSession,
+): Promise<PendingHouseholdDeletionItem[]> {
+  const households = await listOwnedHouseholdsPendingDeletion(session, getDb());
+  return households.map((household) => ({
+    id: household.id,
+    name: household.name,
+    purgeDate: formatShortDate(household.purgeAt, household.timeZone),
+  }));
 }
 
 // Used by onboarding's "Tenho um convite" tab.

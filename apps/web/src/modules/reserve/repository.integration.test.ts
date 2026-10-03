@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 
+import { organization } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
 import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
 import {
@@ -237,6 +239,20 @@ describe("listHouseholdIdsForMonthClose (integration)", () => {
       const scopes = await listHouseholdIdsForMonthClose(db);
       const ids = scopes.map((scope) => scope.householdId);
       expect(ids).toEqual(expect.arrayContaining([householdA.id, householdB.id]));
+    });
+  });
+
+  it("skips a household pending deletion, so a restore finds nothing written meanwhile", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await db
+        .update(organization)
+        .set({ deletionRequestedAt: new Date() })
+        .where(eq(organization.id, householdA.id));
+
+      const ids = (await listHouseholdIdsForMonthClose(db)).map((scope) => scope.householdId);
+
+      expect(ids).toContain(householdB.id);
+      expect(ids).not.toContain(householdA.id);
     });
   });
 

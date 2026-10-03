@@ -19,9 +19,19 @@ export { SignInForm } from "./components/sign-in-form";
 export { SignOutMenuItem } from "./components/sign-out-menu-item";
 export { SignUpForm } from "./components/sign-up-form";
 export { findLastFakeSentEmail } from "./email/fake-email-repository";
-export { isFakeEmailProvider } from "./env";
-export type { CurrentSession } from "./session";
-export { getCurrentSession } from "./session";
+export { isFakeEmailProvider, readAuthBaseUrl } from "./env";
+export type { CurrentSession, PendingAccountDeletion } from "./session";
+export {
+  ACCOUNT_DELETION_PENDING_ROUTE,
+  getCurrentSession,
+  getPendingAccountDeletion,
+  redirectIfAccountDeletionPending,
+} from "./session";
+export { revokeUserSessions } from "./revoke-sessions";
+export type { EmailCopy } from "./email/render";
+export { renderEmail } from "./email/render";
+export { getEmailSender } from "./email/select";
+export type { EmailSender } from "./email/sender";
 export type { SignInInput, SignInOutcome, SignUpInput, SignUpOutcome } from "./service";
 export { signUp } from "./service";
 export { t } from "./strings";

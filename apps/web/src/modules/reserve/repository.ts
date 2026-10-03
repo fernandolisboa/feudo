@@ -6,7 +6,7 @@ import { bankAccount, bankConnection } from "@/modules/sync/schema";
 import { reserveMark, reserveTargetNotice, reserveTargetRecord } from "./schema";
 
 import type { LiquidityMark, RateType, ReserveAccountType, YearMonth } from "@feudo/core";
-import type { HouseholdScope } from "@/modules/households";
+import { householdIsNotPendingDeletion, type HouseholdScope } from "@/modules/households";
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 import { hasSqlState } from "@/platform/db/sql-state";
 
@@ -224,11 +224,13 @@ export type ReserveTargetNoticeRepository = ReturnType<typeof createReserveTarge
 // request-handling code, and never fed a client-supplied id. Ordered by id
 // so a run cut short by runReserveMonthCloseStep's deadline still makes
 // deterministic progress the next day instead of restarting from wherever
-// the database happened to return rows first.
+// the database happened to return rows first. A household pending deletion
+// is skipped, so a restore brings it back without notices written meanwhile.
 export async function listHouseholdIdsForMonthClose(db: Database): Promise<HouseholdScope[]> {
   const rows = await db
     .select({ householdId: organization.id })
     .from(organization)
+    .where(householdIsNotPendingDeletion())
     .orderBy(asc(organization.id));
   return rows.map((row) => ({ householdId: row.householdId }));
 }

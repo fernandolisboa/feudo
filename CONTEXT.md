@@ -25,6 +25,13 @@ _Avoid_: permission level, tier
 The household a user is currently working in. Everything the user sees and does is scoped to it.
 _Avoid_: current workspace, selected tenant
 
+**User deletion**:
+A user asking to leave Feudo. Their login is hidden and signed out, and their provider credentials are destroyed at once; for a 7-day grace they can sign in only to cancel it. At the end of the grace the user, their bank connections and everything those connections brought are erased from every household, and ownership of any household they owned passes per ADR-0001. Code calls it account deletion (`privacy` slice), as CLAUDE.md names the E2E path; copy says "excluir cadastro".
+_Avoid_: closing the account, cancelling the account (in user-facing text)
+
+**Household deletion**:
+The owner asking to erase a household. It is hidden from every member at once and its invitations are withdrawn; for a 7-day grace only the owner sees it, under Preferências, and can restore it unchanged. At the end of the grace the household and everything scoped to it is erased; bank connections stay with their users and their accounts become unassigned.
+
 **Invite**:
 An offer, sent to an email address, to join a household with a given role.
 
