@@ -55,7 +55,7 @@ export function KindFilterSelect({
     <Select items={items} value={value} onValueChange={handleValueChange}>
       <SelectTrigger
         aria-label={t.kindFilter.label}
-        className="h-11 w-full max-w-none md:h-9 md:w-auto md:max-w-40"
+        className="w-full max-w-none md:w-auto md:max-w-40"
       >
         <SelectValue />
       </SelectTrigger>
