@@ -60,7 +60,7 @@ const en = {
         },
         {
           title: "No household",
-          body: "An account with no household is still yours, but it shows up in no household: only you see it, in Your connections, until you move it to one. It happens when you leave a household or are removed from one.",
+          body: "An account with no household is still yours, but it shows up in no household: only you see it, in Your connections, until you move it to one. It happens when you leave a household or are removed from one, and when a household is erased.",
         },
         {
           title: "Moving an account",
@@ -69,6 +69,10 @@ const en = {
         {
           title: "When someone leaves",
           body: "A member who leaves or is removed takes along the accounts they connected: those accounts leave the household and wait, with no household, until that person moves them. If the last member leaves, the household is deleted.",
+        },
+        {
+          title: "Deleting the household",
+          body: "The owner can delete the household in Household. It disappears for everyone at once, and for 7 days the owner can restore it in Preferences. Meanwhile each person can still move their own accounts to another household in Your connections; once the 7 days are over the household is erased, and the accounts still in it are left with no household, with their transactions, until their owner moves them.",
         },
         {
           title: "Bank name",
@@ -212,8 +216,12 @@ const en = {
           body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials.",
         },
         {
-          title: "Export and deletion",
-          body: "Downloading your data and deleting your account are on the way; this section will explain both when they arrive.",
+          title: "Deleting your account",
+          body: "In Preferences, Delete my account signs you out of every device and destroys your Meu Pluggy credentials at once. For 7 days you can cancel by signing in again; after that your account, your connections and their transactions are erased from every household. Before you confirm, Feudo shows which months each household loses and who becomes the owner of the households you own, and the other members get an email saying the same.",
+        },
+        {
+          title: "Exporting your data",
+          body: "Downloading your data is on the way; this section will explain it when it arrives.",
         },
       ],
     },
@@ -303,7 +311,7 @@ const ptBR = {
         },
         {
           title: "Sem casa",
-          body: "Uma conta sem casa continua sua, mas não aparece em nenhuma casa: só você a vê, em Suas conexões, até movê-la para uma. Isso acontece quando você sai de uma casa ou é removido dela.",
+          body: "Uma conta sem casa continua sua, mas não aparece em nenhuma casa: só você a vê, em Suas conexões, até movê-la para uma. Isso acontece quando você sai de uma casa ou é removido dela, e quando a casa é apagada.",
         },
         {
           title: "Mover uma conta",
@@ -312,6 +320,10 @@ const ptBR = {
         {
           title: "Quando alguém sai da casa",
           body: "Quem sai ou é removido leva consigo as contas que conectou: elas saem da casa e ficam sem casa até essa pessoa movê-las. Se o último membro sair, a casa é excluída.",
+        },
+        {
+          title: "Excluir a casa",
+          body: "O responsável pode excluir a casa em Casa. Ela some para todos na hora e, por 7 dias, o responsável pode restaurá-la em Preferências. Enquanto isso, cada pessoa ainda pode mover as próprias contas para outra casa em Suas conexões; passados os 7 dias, a casa é apagada, e as contas que ficaram nela ficam sem casa, com as transações, até quem as conectou movê-las.",
         },
         {
           title: "Nome do banco",
@@ -455,8 +467,12 @@ const ptBR = {
           body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais.",
         },
         {
-          title: "Exportar e excluir",
-          body: "Baixar seus dados e excluir sua conta estão a caminho; esta seção vai explicar os dois quando chegarem.",
+          title: "Excluir seu cadastro",
+          body: "Em Preferências, Excluir meu cadastro tira você de todos os aparelhos e destrói suas credenciais do Meu Pluggy na hora. Por 7 dias, você pode cancelar entrando de novo; depois disso, seu cadastro, suas conexões e as transações delas são apagadas de todas as casas. Antes de você confirmar, o Feudo mostra quais meses cada casa perde e quem passa a ser o responsável pelas casas de que você é responsável, e os outros membros recebem um e-mail dizendo o mesmo.",
+        },
+        {
+          title: "Exportar seus dados",
+          body: "Baixar seus dados está a caminho; esta seção vai explicar como quando chegar.",
         },
       ],
     },

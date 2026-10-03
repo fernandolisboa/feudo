@@ -1,17 +1,44 @@
 import { PageHeader } from "@/ui/page-header";
-import { requireHouseholdSession } from "@/modules/households";
+import { SectionHeader } from "@/ui/section-header";
+import {
+  getPendingHouseholdDeletions,
+  PendingHouseholdDeletions,
+  requireHouseholdSession,
+  t as householdsT,
+} from "@/modules/households";
+import {
+  DeleteAccountSection,
+  getDeleteAccountSectionProps,
+  t as privacyT,
+} from "@/modules/privacy";
 import { getTourState, TourPreferencesForm } from "@/modules/shell";
 import { resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
 
 export default async function PreferencesPage() {
   const session = await requireHouseholdSession();
-  const tourState = await getTourState(session);
+  const [tourState, pendingHouseholds, deleteAccount] = await Promise.all([
+    getTourState(session),
+    getPendingHouseholdDeletions(session),
+    getDeleteAccountSectionProps(session),
+  ]);
 
   return (
     <>
       <PageHeader overline={t.preferences.overline} title={t.preferences.title} />
       <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
       <TourPreferencesForm autoStart={tourState.autoStart} />
+
+      {pendingHouseholds.length > 0 ? (
+        <section className="mt-8">
+          <SectionHeader title={householdsT.casa.pendingDeletion.title} />
+          <PendingHouseholdDeletions households={pendingHouseholds} />
+        </section>
+      ) : null}
+
+      <section className="mt-8">
+        <SectionHeader title={privacyT.deleteAccount.sectionTitle} />
+        <DeleteAccountSection {...deleteAccount} />
+      </section>
     </>
   );
 }

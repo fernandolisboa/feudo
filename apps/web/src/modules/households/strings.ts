@@ -95,6 +95,27 @@ const en = {
     memberRemoved: "Member removed from the household.",
     roleUpdated: "Role updated.",
     ownershipTransferred: "Household responsibility transferred.",
+    deleteHousehold: {
+      sectionTitle: "Delete the household",
+      description:
+        "Deleting hides the household from every member right away. You have 7 days to restore it; after that its members, categories, rules, reserve settings and analyst readings are erased. Bank connections stay with the people who made them, and their accounts are left with no household until they move them.",
+      action: "Delete household",
+      dialog: {
+        title: "Delete {name}?",
+        description:
+          "Every member loses access now and pending invites are cancelled. Until {date} you can restore it in Preferences; after that it is erased for good.",
+        confirm: "Delete household",
+        cancel: "Cancel",
+      },
+    },
+    pendingDeletion: {
+      title: "Households being deleted",
+      description:
+        "Only you, as the owner, see these. Restoring brings the household back as it was.",
+      item: "{name}, erased on {date}",
+      restore: "Restore",
+      restored: "Household restored.",
+    },
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
@@ -121,6 +142,9 @@ const en = {
     leaveFailed: "We couldn't complete this action. Try again.",
     alreadyOwner: "This person is already the owner.",
     transferOwnershipFailed: "We couldn't transfer responsibility. Try again.",
+    deleteHouseholdFailed: "We couldn't delete the household. Try again.",
+    restoreHouseholdFailed: "We couldn't restore the household. Try again.",
+    householdNotFound: "This household is no longer waiting to be deleted.",
   },
 };
 
@@ -222,6 +246,27 @@ const ptBR = {
     memberRemoved: "Membro removido da casa.",
     roleUpdated: "Papel atualizado.",
     ownershipTransferred: "Responsabilidade transferida.",
+    deleteHousehold: {
+      sectionTitle: "Excluir a casa",
+      description:
+        "A casa some para todos os membros na hora. Você tem 7 dias para restaurá-la; depois disso, membros, categorias, regras, configuração da reserva e leituras do analista são apagados. As conexões bancárias continuam com quem as fez, e as contas delas ficam sem casa até a pessoa movê-las.",
+      action: "Excluir casa",
+      dialog: {
+        title: "Excluir a casa {name}?",
+        description:
+          "Todos os membros perdem o acesso agora, e os convites pendentes são cancelados. Até {date}, você pode restaurá-la em Preferências; depois disso, ela é apagada de vez.",
+        confirm: "Excluir casa",
+        cancel: "Cancelar",
+      },
+    },
+    pendingDeletion: {
+      title: "Casas em exclusão",
+      description:
+        "Só você, como responsável, vê estas casas. Restaurar traz a casa de volta como estava.",
+      item: "{name}, apagada em {date}",
+      restore: "Restaurar",
+      restored: "Casa restaurada.",
+    },
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
@@ -249,6 +294,9 @@ const ptBR = {
     leaveFailed: "Não foi possível concluir esta ação. Tente novamente.",
     alreadyOwner: "Esta pessoa já é o responsável.",
     transferOwnershipFailed: "Não foi possível transferir a responsabilidade. Tente novamente.",
+    deleteHouseholdFailed: "Não foi possível excluir a casa. Tente novamente.",
+    restoreHouseholdFailed: "Não foi possível restaurar a casa. Tente novamente.",
+    householdNotFound: "Esta casa não está mais aguardando exclusão.",
   },
 } satisfies typeof en;
 

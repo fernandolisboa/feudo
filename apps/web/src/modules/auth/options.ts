@@ -3,7 +3,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
-import { and, count, eq, like } from "drizzle-orm";
+import { and, count, eq, isNotNull, like } from "drizzle-orm";
 import { DEFAULT_RESERVE_MULTIPLE, evaluateRegistrationMode } from "@feudo/core";
 
 import { householdSettings } from "@/modules/households/schema";
@@ -123,6 +123,14 @@ function readEmail(body: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+// A user whose account deletion is pending can still sign in, but only to
+// cancel it (privacy slice, ADR-0008): getCurrentSession already refuses
+// them, and these raw endpoints must not let them act on households or
+// change their identity behind its back.
+function isBlockedWhileDeletionPending(path: string): boolean {
+  return path.startsWith("/organization/") || path === "/update-user" || path === "/change-email";
+}
+
 function logSendFailure(label: string, error: unknown): void {
   console.error(`${label} email send failed`, error instanceof Error ? error.name : "UnknownError");
 }
@@ -188,6 +196,22 @@ export function buildAuthOptions(
       .where(and(eq(member.organizationId, organizationId), eq(member.userId, rawSession.user.id)));
     if (!hasInvitationReadRole(callerMembership?.role)) {
       throw new APIError("FORBIDDEN", { message: "owner_or_admin_required" });
+    }
+  }
+
+  async function assertHouseholdNotPendingDeletion(organizationId: string): Promise<void> {
+    const [pending] = await db
+      .select({ id: organizationTable.id })
+      .from(organizationTable)
+      .where(
+        and(
+          eq(organizationTable.id, organizationId),
+          isNotNull(organizationTable.deletionRequestedAt),
+        ),
+      )
+      .limit(1);
+    if (pending) {
+      throw new APIError("FORBIDDEN", { message: "household_deletion_pending" });
     }
   }
 
@@ -261,6 +285,11 @@ export function buildAuthOptions(
           // import theme at runtime (modules/theme owns theme validity).
           defaultValue: "caderno",
         },
+        deletionRequestedAt: {
+          type: "date",
+          required: false,
+          input: false,
+        },
       },
     },
     emailVerification: {
@@ -300,6 +329,13 @@ export function buildAuthOptions(
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         markTimingFloorRequestStart(ctx.path, ctx.context);
+
+        if (isBlockedWhileDeletionPending(ctx.path)) {
+          const rawSession = await getSessionFromCtx(ctx);
+          if (rawSession?.user.deletionRequestedAt) {
+            throw new APIError("FORBIDDEN", { message: "account_deletion_pending" });
+          }
+        }
 
         // Both raw endpoints below return invitation data (pending invitee
         // emails) to any *member* of the organization, not just the people
@@ -481,7 +517,7 @@ export function buildAuthOptions(
           // member, so a multi-role invitation (an array, or a comma-joined
           // string once Better Auth's own parseRoles has run) is rejected
           // outright rather than silently keeping only the first role.
-          beforeCreateInvitation: ({ invitation }) => {
+          beforeCreateInvitation: async ({ invitation }) => {
             // Typed as a plain string, but Better Auth's own parseRoles
             // already comma-joins an array body before this hook runs, and
             // nothing stops a raw caller from sending one directly — the
@@ -493,7 +529,12 @@ export function buildAuthOptions(
             if (role === OWNER_ROLE) {
               throw new APIError("FORBIDDEN", { message: "owner_role_not_invitable" });
             }
-            return Promise.resolve();
+            await assertHouseholdNotPendingDeletion(invitation.organizationId);
+          },
+          // A household whose deletion is pending is hidden from its own
+          // members (ADR-0008); nobody new joins it in the meantime.
+          beforeAcceptInvitation: async ({ organization }) => {
+            await assertHouseholdNotPendingDeletion(organization.id);
           },
           // households.cancelInvitation reports the truth for an invitation
           // that already moved past "pending" (accepted or rejected) instead

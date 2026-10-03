@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
 
-import { AuthShell, SignInForm, getCurrentSession, sanitizeNextPath, t } from "@/modules/auth";
+import {
+  ACCOUNT_DELETION_PENDING_ROUTE,
+  AuthShell,
+  SignInForm,
+  getCurrentSession,
+  getPendingAccountDeletion,
+  sanitizeNextPath,
+  t,
+} from "@/modules/auth";
 
 export default async function SignInPage({
   searchParams,
@@ -13,6 +21,9 @@ export default async function SignInPage({
   const session = await getCurrentSession();
   if (session) {
     redirect(nextPath ?? "/");
+  }
+  if (await getPendingAccountDeletion()) {
+    redirect(ACCOUNT_DELETION_PENDING_ROUTE);
   }
 
   return (

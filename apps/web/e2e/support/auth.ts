@@ -124,7 +124,15 @@ export async function signUpAndSignIn(
   options: { name: string; email: string; password: string },
 ): Promise<void> {
   await signUpAndVerify(page, request, baseURL, options);
+  await signInWithPassword(page, options, /\/comecar$/);
+}
 
+// Expects to start at /entrar.
+export async function signInWithPassword(
+  page: Page,
+  options: { email: string; password: string },
+  landsOn: RegExp,
+): Promise<void> {
   await fillAndAwaitNavigation(
     page,
     "/entrar",
@@ -133,7 +141,7 @@ export async function signUpAndSignIn(
       await page.getByLabel("Senha").fill(options.password);
     },
     "Entrar",
-    /\/comecar$/,
+    landsOn,
   );
 }
 

@@ -23,6 +23,10 @@ export const user = pgTable("user", {
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }).notNull(),
   theme: themeEnum("theme").notNull().default("caderno"),
   toursAutoStart: boolean("tours_auto_start").notNull().default(true),
+  // Owned by the privacy slice (ADR-0008): set when the user asks to delete
+  // their account, cleared if they cancel within the grace, and the row is
+  // hard-deleted once the grace ends.
+  deletionRequestedAt: timestamp("deletion_requested_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -99,6 +103,9 @@ export const organization = pgTable(
     logo: text("logo"),
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
+    // Owned by the households slice (ADR-0008): a household with this set is
+    // hidden from every member until its owner restores it or the grace ends.
+    deletionRequestedAt: timestamp("deletion_requested_at", { withTimezone: true }),
   },
   (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
 );

@@ -18,11 +18,13 @@ import {
   transferOwnership,
   updateMemberRole,
 } from "./membership";
+import { requestHouseholdDeletion, restoreHousehold } from "./household-deletion";
 import { requireHouseholdSession } from "./require-household-session";
 import { createHousehold, switchHousehold } from "./service";
 import { t } from "./strings";
 import {
   createHouseholdFormSchema,
+  householdIdFormSchema,
   inviteMemberFormSchema,
   invitationIdFormSchema,
   memberIdFormSchema,
@@ -311,5 +313,41 @@ export async function transferOwnershipAction(
       return { status: "error", message: t.errors.alreadyOwner };
     case "failed":
       return { status: "error", message: t.errors.transferOwnershipFailed };
+  }
+}
+
+export async function requestHouseholdDeletionAction(): Promise<ActionState> {
+  const session = await requireHouseholdSession();
+  const outcome = await requestHouseholdDeletion(session, getDb(), new Date());
+
+  switch (outcome.status) {
+    case "ok":
+      redirect("/");
+    case "not_allowed":
+      return { status: "error", message: t.errors.notAllowed };
+    case "failed":
+      return { status: "error", message: t.errors.deleteHouseholdFailed };
+  }
+}
+
+export async function restoreHouseholdAction(householdId: string): Promise<ActionState> {
+  const parsed = householdIdFormSchema.safeParse({ householdId });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+
+  const session = await getCurrentSession();
+  if (!session) {
+    return { status: "error", message: t.errors.unauthenticated };
+  }
+  const outcome = await restoreHousehold(parsed.data.householdId, session, getDb());
+
+  switch (outcome.status) {
+    case "ok":
+      redirect("/");
+    case "not_found":
+      return { status: "error", message: t.errors.householdNotFound };
+    case "failed":
+      return { status: "error", message: t.errors.restoreHouseholdFailed };
   }
 }

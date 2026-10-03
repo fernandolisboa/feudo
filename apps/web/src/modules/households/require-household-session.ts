@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 
-import { getCurrentSession, type CurrentSession } from "@/modules/auth";
+import {
+  ACCOUNT_DELETION_PENDING_ROUTE,
+  getCurrentSession,
+  getPendingAccountDeletion,
+  type CurrentSession,
+} from "@/modules/auth";
 
 import { resolveAppRoute } from "./routing";
 
@@ -13,6 +18,9 @@ export type HouseholdSession = CurrentSession & { householdId: string };
 // its layout in tests, or from a future route that has no such layout.
 export async function requireHouseholdSession(): Promise<HouseholdSession> {
   const session = await getCurrentSession();
+  if (!session && (await getPendingAccountDeletion())) {
+    redirect(ACCOUNT_DELETION_PENDING_ROUTE);
+  }
   const redirectTarget = resolveAppRoute(session);
   if (redirectTarget) {
     redirect(redirectTarget);

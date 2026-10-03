@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 import { cache } from "react";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/platform/db/client";
-import { member, session as sessionTable } from "./schema";
+import { member, organization, session as sessionTable } from "./schema";
 
 import type { Database } from "@/platform/db/client";
 import { getAuth } from "./auth";
@@ -28,7 +28,8 @@ const RAW_THEME_FALLBACK = "caderno";
 // the user's most recently joined household when it is missing or stale —
 // this is what makes a second sign-in land back in the same household
 // instead of onboarding, and what stops a removed member's still-valid
-// session from resolving to a household it no longer belongs to.
+// session from resolving to a household it no longer belongs to. A household
+// whose deletion is pending counts as gone for every member (ADR-0008).
 async function resolveHouseholdId(
   db: Database,
   userId: string,
@@ -38,7 +39,8 @@ async function resolveHouseholdId(
   const memberships = await db
     .select({ organizationId: member.organizationId })
     .from(member)
-    .where(eq(member.userId, userId))
+    .innerJoin(organization, eq(organization.id, member.organizationId))
+    .where(and(eq(member.userId, userId), isNull(organization.deletionRequestedAt)))
     .orderBy(desc(member.createdAt));
 
   if (
@@ -65,7 +67,9 @@ async function resolveHouseholdId(
 export const getCurrentSession = cache(async (): Promise<CurrentSession | null> => {
   const requestHeaders = await headers();
   const session = await getAuth().api.getSession({ headers: requestHeaders });
-  if (!session) {
+  // A user whose account deletion is pending is signed in only to cancel it
+  // (getPendingAccountDeletion below); everywhere else they are signed out.
+  if (!session || session.user.deletionRequestedAt) {
     return null;
   }
 
@@ -82,5 +86,31 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
     email: session.user.email,
     householdId,
     theme: session.user.theme ?? RAW_THEME_FALLBACK,
+  };
+});
+
+export const ACCOUNT_DELETION_PENDING_ROUTE = "/exclusao-agendada";
+
+export type PendingAccountDeletion = {
+  userId: string;
+  name: string;
+  email: string;
+  deletionRequestedAt: Date;
+};
+
+// The one session read that sees a user whose account deletion is pending:
+// only the cancel page and its action use it.
+export const getPendingAccountDeletion = cache(async (): Promise<PendingAccountDeletion | null> => {
+  const requestHeaders = await headers();
+  const session = await getAuth().api.getSession({ headers: requestHeaders });
+  const deletionRequestedAt = session?.user.deletionRequestedAt;
+  if (!session || !deletionRequestedAt) {
+    return null;
+  }
+  return {
+    userId: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    deletionRequestedAt: new Date(deletionRequestedAt),
   };
 });
