@@ -9,6 +9,7 @@ export {
 } from "./actions";
 export { getAuth } from "./auth";
 export { clearActiveHouseholdOnSessions } from "./clear-active-household";
+export { AcceptTermsForm } from "./components/accept-terms-form";
 export { AuthShell } from "./components/auth-shell";
 export { ForgotPasswordForm } from "./components/forgot-password-form";
 export { MagicLinkForm } from "./components/magic-link-form";
@@ -26,7 +27,15 @@ export {
   getCurrentSession,
   getPendingAccountDeletion,
   redirectIfAccountDeletionPending,
+  redirectIfTermsOutdated,
 } from "./session";
+export {
+  hasAcceptedCurrentTerms,
+  PRIVACY_POLICY_ROUTE,
+  TERMS_ACCEPTANCE_ROUTE,
+  TERMS_ROUTE,
+  TERMS_VERSION,
+} from "./terms";
 export { revokeUserSessions } from "./revoke-sessions";
 export type { EmailCopy } from "./email/render";
 export { renderEmail } from "./email/render";

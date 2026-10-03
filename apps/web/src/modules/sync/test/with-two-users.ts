@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "@/modules/auth";
 import { member, organization, user } from "@/modules/auth/schema";
 import { withTestDb } from "@/platform/db/test/harness";
 
@@ -42,7 +43,14 @@ export async function seedUser(
   return {
     id,
     scope: scopeForUser(id),
-    session: { userId: id, name, email: `${id}@example.com`, householdId, theme: "caderno" },
+    session: {
+      userId: id,
+      name,
+      email: `${id}@example.com`,
+      householdId,
+      theme: "caderno",
+      termsVersion: TERMS_VERSION,
+    },
   };
 }
 

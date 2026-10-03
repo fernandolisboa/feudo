@@ -13,6 +13,10 @@
 | Password reset                              | redefinir senha                                | request step: "esqueci minha senha" (`/esqueci-a-senha`)                     |
 | Verify email                                | confirmar e-mail                               |                                                                              |
 | Terms acceptance                            | aceite dos termos                              |                                                                              |
+| Terms of use                                | termos de uso                                  | route `/termos`                                                              |
+| Privacy policy                              | política de privacidade                        | route `/privacidade`                                                         |
+| Terms re-acceptance                         | termos atualizados                             | route `/aceitar-termos`                                                      |
+| Data export                                 | baixar meus dados                              | section "Seus dados" in Preferências                                         |
 | Membership                                  | participação                                   | rarely shown; prefer "membro da casa"                                        |
 | Owner                                       | responsável                                    | one per household                                                            |
 | Admin                                       | administrador                                  |                                                                              |

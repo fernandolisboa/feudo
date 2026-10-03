@@ -5,10 +5,24 @@ const en = {
     nameLabel: "Name",
     emailLabel: "Email",
     passwordLabel: "Password",
-    termsLabel: "I accept the terms of use and the privacy policy",
+    termsLabelBefore: "I accept the ",
+    termsLink: "terms of use",
+    termsLabelBetween: " and the ",
+    privacyLink: "privacy policy",
     submit: "Sign up",
     alreadyHaveAccount: "Already signed up?",
     signInLink: "Sign in",
+  },
+  acceptTerms: {
+    title: "Updated terms",
+    body: "Feudo published a new version of its terms of use and privacy policy. Read both and accept them to keep using Feudo.",
+    version: "Version {version}",
+    submit: "Accept and continue",
+    failed: "We couldn't record your acceptance. Try again.",
+    refuse:
+      "If you don't agree, you can still download your data and delete your sign-up below, without accepting.",
+    refuseWithoutHousehold:
+      "If you don't agree, you can still delete your sign-up below, without accepting. To get a copy of your data first, write to the contact in the privacy policy.",
   },
   signIn: {
     title: "Sign in",
@@ -112,10 +126,24 @@ const ptBR = {
     nameLabel: "Nome",
     emailLabel: "E-mail",
     passwordLabel: "Senha",
-    termsLabel: "Aceito os termos de uso e a política de privacidade",
+    termsLabelBefore: "Aceito os ",
+    termsLink: "termos de uso",
+    termsLabelBetween: " e a ",
+    privacyLink: "política de privacidade",
     submit: "Criar cadastro",
     alreadyHaveAccount: "Já tem cadastro?",
     signInLink: "Entrar",
+  },
+  acceptTerms: {
+    title: "Termos atualizados",
+    body: "O Feudo publicou uma nova versão dos termos de uso e da política de privacidade. Leia os dois e aceite para continuar usando o Feudo.",
+    version: "Versão {version}",
+    submit: "Aceitar e continuar",
+    failed: "Não foi possível registrar seu aceite. Tente novamente.",
+    refuse:
+      "Se não concordar, você ainda pode baixar seus dados e excluir seu cadastro abaixo, sem aceitar.",
+    refuseWithoutHousehold:
+      "Se não concordar, você ainda pode excluir seu cadastro abaixo, sem aceitar. Para receber uma cópia dos seus dados antes, escreva para o contato da política de privacidade.",
   },
   signIn: {
     title: "Entrar",

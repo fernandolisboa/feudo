@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { createHouseholdOnboarding, signUpAndSignIn, uniqueEmail } from "./support/auth";
+import {
+  createHouseholdOnboarding,
+  signUpAndSignIn,
+  uniqueEmail,
+  waitForTourOutcome,
+} from "./support/auth";
 
 test("a new user sees the Visão geral tour once, skips it, and reopens it from the menu", async ({
   page,
@@ -36,8 +41,10 @@ test("a new user sees the Visão geral tour once, skips it, and reopens it from 
   });
 
   await test.step("Esc skips the tour and it does not come back on reload", async () => {
+    const recorded = waitForTourOutcome(page);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await recorded;
 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Contas", exact: true })).toBeVisible();

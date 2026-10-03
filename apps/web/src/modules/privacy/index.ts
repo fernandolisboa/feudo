@@ -1,5 +1,10 @@
 export { AccountDeletionPending } from "./components/account-deletion-pending";
 export { DeleteAccountSection } from "./components/delete-account-section";
+export { ExportDataSection } from "./components/export-data-section";
+export type { LegalDocumentKind } from "./components/legal-document-view";
+export { LegalDocumentView } from "./components/legal-document-view";
+export { handleExportRequest } from "./export-request";
+export { legal } from "./legal-documents";
 export type { AccountDeletionPendingPage, DeleteAccountSectionProps } from "./page-props";
 export { getAccountDeletionPendingPage, getDeleteAccountSectionProps } from "./page-props";
 export type { AccountPurgeStep } from "./service";

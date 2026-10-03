@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 
 import type { CurrentSession, PendingAccountDeletion } from "@/modules/auth";
-import { user } from "@/modules/auth/schema";
+import { session as sessionTable, user } from "@/modules/auth/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
@@ -81,4 +81,68 @@ export async function lockAccountDueForDeletion(
 
 export async function deleteUser(tx: DatabaseOrTransaction, userId: string): Promise<void> {
   await tx.delete(user).where(eq(user.id, userId));
+}
+
+export type ExportUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: Date;
+  termsVersion: string;
+  termsAcceptedAt: Date;
+  theme: string;
+};
+
+// The export's own "user" section (#25): read directly off auth's schema,
+// like theme's own repository does for the same table — this slice composes
+// the export document, so it owns the one query nothing else here already
+// exposes.
+export async function getExportUser(
+  db: DatabaseOrTransaction,
+  userId: string,
+): Promise<ExportUserRow | undefined> {
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      termsVersion: user.termsVersion,
+      termsAcceptedAt: user.termsAcceptedAt,
+      theme: user.theme,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return rows[0];
+}
+
+export type ExportSessionRow = {
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
+// The export's own "sessions" section (#25): every sign-in session the
+// policy says Feudo keeps for this user, read directly off auth's schema —
+// never the token, which is the one column that would let the file itself
+// sign in as the user.
+export async function listExportSessions(
+  db: DatabaseOrTransaction,
+  userId: string,
+): Promise<ExportSessionRow[]> {
+  return db
+    .select({
+      createdAt: sessionTable.createdAt,
+      updatedAt: sessionTable.updatedAt,
+      expiresAt: sessionTable.expiresAt,
+      ipAddress: sessionTable.ipAddress,
+      userAgent: sessionTable.userAgent,
+    })
+    .from(sessionTable)
+    .where(eq(sessionTable.userId, userId));
 }

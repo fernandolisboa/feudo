@@ -1,4 +1,14 @@
 const en = {
+  exportData: {
+    sectionTitle: "Your data",
+    description:
+      "Download a JSON file with your sign-up details, your sign-in sessions, the households you belong to, your bank connections, accounts, transactions, your own categorizations and marks, your access log and your tutorial preferences.",
+    scope:
+      "It never includes another member's data, your Meu Pluggy credentials or CPF codes, and it is limited to 3 downloads every 24 hours. Each download shows up in Your recent access, on the Household screen.",
+    privacyLink: "Privacy policy",
+    action: "Download my data",
+    limitReached: "You already downloaded your data 3 times in the last 24 hours. Try again later.",
+  },
   deleteAccount: {
     sectionTitle: "Delete your account",
     description:
@@ -66,6 +76,17 @@ const en = {
 };
 
 const ptBR = {
+  exportData: {
+    sectionTitle: "Seus dados",
+    description:
+      "Baixe um arquivo JSON com seu cadastro, suas sessões de acesso, as casas de que você participa, suas conexões bancárias, contas, transações, suas próprias categorizações e marcações, seu histórico de acessos e suas preferências de tutorial.",
+    scope:
+      "Ele nunca inclui dados de outro membro, suas credenciais do Meu Pluggy ou números de CPF, e é limitado a 3 downloads a cada 24 horas. Cada download aparece em Seus acessos recentes, na tela Casa.",
+    privacyLink: "Política de privacidade",
+    action: "Baixar meus dados",
+    limitReached:
+      "Você já baixou seus dados 3 vezes nas últimas 24 horas. Tente de novo mais tarde.",
+  },
   deleteAccount: {
     sectionTitle: "Excluir seu cadastro",
     description:

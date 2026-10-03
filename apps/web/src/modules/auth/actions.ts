@@ -3,9 +3,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
 import { sanitizeNextPathFromFormData } from "./next-redirect";
+import { getCurrentSession } from "./session";
 import { t } from "./strings";
+import { recordCurrentTermsAcceptance } from "./terms";
 import {
   requestMagicLink,
   requestPasswordReset,
@@ -218,4 +221,23 @@ export async function resetPasswordAction(
     case "failed":
       return { status: "error", message: errors.resetFailed };
   }
+}
+
+export async function acceptTermsAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (formData.get("termsAccepted") === null) {
+    return { status: "error", message: t.errors.termsRequired };
+  }
+  const session = await getCurrentSession();
+  if (!session) {
+    redirect("/entrar");
+  }
+  try {
+    await recordCurrentTermsAcceptance(getDb(), session, new Date());
+  } catch {
+    return { status: "error", message: t.acceptTerms.failed };
+  }
+  redirect("/");
 }

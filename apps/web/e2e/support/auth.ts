@@ -162,8 +162,20 @@ export async function createHouseholdOnboarding(
 // whose scrim covers the page. Specs that test something else turn the tours
 // off once, from the first one, so no later screen is covered either.
 export async function turnOffTutorials(page: Page): Promise<void> {
+  const recorded = waitForTourOutcome(page);
   await page.getByRole("button", { name: "Não mostrar tutoriais" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await recorded;
+}
+
+// Closing a tour stores its outcome through a server action the page does not
+// await; a navigation that wins the race drops the write and the tour returns.
+export function waitForTourOutcome(page: Page): Promise<unknown> {
+  return page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.request().headers()["next-action"] !== undefined,
+  );
 }
 
 export async function signUpVerifyAndSignIn(

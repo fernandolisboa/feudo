@@ -21,6 +21,7 @@ const ownerSession: HouseholdSession = {
   email: "owner@example.com",
   householdId: "household-1",
   theme: "caderno",
+  termsVersion: "test",
 };
 
 function makeChain(result: unknown) {

@@ -8,18 +8,24 @@ import {
 } from "@/modules/households";
 import {
   DeleteAccountSection,
+  ExportDataSection,
   getDeleteAccountSectionProps,
   t as privacyT,
 } from "@/modules/privacy";
 import { getTourState, TourPreferencesForm } from "@/modules/shell";
 import { resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
 
-export default async function PreferencesPage() {
+export default async function PreferencesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ exportacao?: string }>;
+}) {
   const session = await requireHouseholdSession();
-  const [tourState, pendingHouseholds, deleteAccount] = await Promise.all([
+  const [tourState, pendingHouseholds, deleteAccount, { exportacao }] = await Promise.all([
     getTourState(session),
     getPendingHouseholdDeletions(session),
     getDeleteAccountSectionProps(session),
+    searchParams,
   ]);
 
   return (
@@ -34,6 +40,11 @@ export default async function PreferencesPage() {
           <PendingHouseholdDeletions households={pendingHouseholds} />
         </section>
       ) : null}
+
+      <section className="mt-8">
+        <SectionHeader title={privacyT.exportData.sectionTitle} />
+        <ExportDataSection limitReached={exportacao === "limite"} from="/preferencias" />
+      </section>
 
       <section className="mt-8">
         <SectionHeader title={privacyT.deleteAccount.sectionTitle} />

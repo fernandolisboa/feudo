@@ -47,6 +47,7 @@ const session: HouseholdSession = {
   email: "owner@example.com",
   householdId: "household-1",
   theme: "caderno",
+  termsVersion: "test",
 };
 
 const members: MemberRow[] = [

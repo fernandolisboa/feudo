@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
-import { getCurrentSession } from "@/modules/auth";
+import { getCurrentSession, redirectIfTermsOutdated } from "@/modules/auth";
 
 import {
   acceptInvitation,
@@ -48,6 +48,9 @@ export async function createHouseholdAction(
 
   const requestHeaders = await headers();
   const session = await getCurrentSession();
+  if (session) {
+    redirectIfTermsOutdated(session);
+  }
   const outcome = await createHousehold(parsed.data, session, getDb(), requestHeaders);
 
   switch (outcome.status) {
@@ -191,6 +194,9 @@ export async function acceptInvitationAction(invitationId: string): Promise<Acti
 
   const requestHeaders = await headers();
   const session = await getCurrentSession();
+  if (session) {
+    redirectIfTermsOutdated(session);
+  }
   const outcome = await acceptInvitation(parsed.data.invitationId, session, requestHeaders);
 
   switch (outcome.status) {
@@ -340,6 +346,7 @@ export async function restoreHouseholdAction(householdId: string): Promise<Actio
   if (!session) {
     return { status: "error", message: t.errors.unauthenticated };
   }
+  redirectIfTermsOutdated(session);
   const outcome = await restoreHousehold(parsed.data.householdId, session, getDb());
 
   switch (outcome.status) {
