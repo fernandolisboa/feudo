@@ -1,5 +1,13 @@
+import { Suspense } from "react";
+
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
+import {
+  RecentAccessErrorBoundary,
+  RecentAccessTable,
+  getRecentAccessPageProps,
+  t as auditT,
+} from "@/modules/audit";
 import {
   DeleteHouseholdSection,
   InviteMemberDialog,
@@ -7,8 +15,14 @@ import {
   PendingInvitationsTable,
   getCasaPageProps,
   requireHouseholdSession,
+  type HouseholdSession,
   t,
 } from "@/modules/households";
+
+async function RecentAccessContent({ session }: { session: HouseholdSession }) {
+  const recentAccess = await getRecentAccessPageProps(session);
+  return <RecentAccessTable entries={recentAccess} />;
+}
 
 export default async function CasaPage() {
   const session = await requireHouseholdSession();
@@ -39,6 +53,14 @@ export default async function CasaPage() {
         </section>
       ) : null}
 
+      <section className="mt-8">
+        <SectionHeader title={auditT.recentAccess.sectionTitle} />
+        <RecentAccessErrorBoundary>
+          <Suspense fallback={null}>
+            <RecentAccessContent session={session} />
+          </Suspense>
+        </RecentAccessErrorBoundary>
+      </section>
       {deletion ? (
         <section className="mt-8">
           <SectionHeader title={t.casa.deleteHousehold.sectionTitle} />

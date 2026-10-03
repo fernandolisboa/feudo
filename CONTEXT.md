@@ -189,3 +189,9 @@ How much each bank-profile criterion counts for a household, an integer from 0 (
 **Analyst reading**:
 A short written interpretation of the household's own figures, produced by the AI layer (ADR-0004) and shown as "Leitura do analista" on Visão geral and Reserva. It reads the last closed month of the ledger and the reserve and bank comparison as they stand, quotes only figures the household can find on screen, names the trade-offs (liquidity × yield × risk) and always gives the counter-argument to whatever it leans towards. A **monthly reading** is written once per household per closed month by the daily cron with the deeper model; an **on-demand reading** is asked for with "Gerar nova leitura", three per household per household-local day, shared by every member, each press counting whether the reading succeeds or not. Every reading is stored with the exact facts it was given, the prompt version and the model, and the newest successful one is shown. It never changes a number and is not investment advice; with the analyst turned off, every screen works as before.
 _Avoid_: AI advice, insight, recommendation
+
+### Audit log
+
+**Financial-data access**:
+One row per server-side read of financial data — who, which household, what kind (overview, transactions, categories, reserve, export), when (ADR-0008). Written at the server boundary of each read, only after that read has already succeeded; a failed read records nothing, and a failed write still fails the call that read the data. Holds no amounts, descriptions, documents or filters; kept 12 calendar months, then purged by the daily job. `user_id` is cleared, not cascaded, when the user who read is deleted, so the household's record of the read outlives them. Each member sees only their own recent access, on the Casa page ("Seus acessos recentes"), never another member's.
+_Avoid_: access log content describing what was read, beyond its kind

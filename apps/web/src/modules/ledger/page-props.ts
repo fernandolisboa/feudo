@@ -18,6 +18,7 @@ import {
   type YearMonth,
 } from "@feudo/core";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
@@ -183,11 +184,24 @@ function toRowView(
 // the same clamp the overview applies; an account id not in the household
 // is ignored and a page past the last one lands on the last. Pairing and
 // categorization are both resolved by readHouseholdLedger, the one read
-// path shared with /categorias (design contract's #16 review, item 3).
+// path shared with /categorias (design contract's #16 review, item 3). The
+// audit write (ADR-0008, amended 2026-10-03 #27) happens only after the
+// read below succeeds, not concurrently with it: a failed read records
+// nothing, and a failed write still fails this call.
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
   now: Date = new Date(),
+): Promise<TransactionsPageProps> {
+  const props = await buildTransactionsPageProps(session, searchParams, now);
+  await recordFinancialDataAccess(session, "transactions");
+  return props;
+}
+
+async function buildTransactionsPageProps(
+  session: HouseholdSession,
+  searchParams: TransactionsSearchParams,
+  now: Date,
 ): Promise<TransactionsPageProps> {
   const db = getDb();
   const scope = householdScope(session);

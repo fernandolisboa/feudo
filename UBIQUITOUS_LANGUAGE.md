@@ -65,3 +65,4 @@
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"; 100 = mais fácil de sair                         |
 | Guided tour                                 | tour                                           | the per-screen walkthrough; "tutoriais" in settings, "Pular tour" to skip    |
 | Analyst reading                             | leitura do analista                            | "Gerar nova leitura"; "Leitura mensal de {mês}"; "Números usados"            |
+| Financial-data access (audit log)           | acesso a dados financeiros                     | Casa page: "Seus acessos recentes"                                           |

@@ -162,6 +162,13 @@
       "when": 1791055968146,
       "tag": "0022_account_and_household_deletion",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791058449347,
+      "tag": "0023_financial_data_access",
+      "breakpoints": true
     }
   ]
 }

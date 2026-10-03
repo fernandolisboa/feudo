@@ -7,3 +7,4 @@ export * from "../../modules/reserve/schema.ts";
 export * from "../../modules/shell/schema.ts";
 export * from "../../modules/banking-intel/schema.ts";
 export * from "../../modules/analysis/schema.ts";
+export * from "../../modules/audit/schema.ts";

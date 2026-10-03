@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
+import { runDailyPruneStep as runAuditPruneStep } from "@/modules/audit";
 import { runDailyPruneStep as runAuthPruneStep } from "@/modules/auth";
 import {
   runDailyPruneStep as runHouseholdsPruneStep,
@@ -39,6 +40,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneVerification = await runAuthPruneStep(db);
   const pruneInvitations = await runHouseholdsPruneStep(db);
   const pruneConsents = await runSyncPruneStep(db);
+  const pruneAuditLog = await runAuditPruneStep(db);
   const purgeAccounts = await runAccountPurgeStep(
     db,
     new Date(),
@@ -55,6 +57,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneVerificationOk = !("error" in pruneVerification);
   const pruneInvitationsOk = !("error" in pruneInvitations);
   const pruneConsentsOk = !("error" in pruneConsents);
+  const pruneAuditLogOk = !("error" in pruneAuditLog);
   const reserveMonthCloseOk = "error" in reserveMonthClose ? false : reserveMonthClose.ok;
   const purgeAccountsOk = "error" in purgeAccounts ? false : purgeAccounts.ok;
   const purgeHouseholdsOk = !("error" in purgeHouseholds);
@@ -63,6 +66,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     pruneVerificationOk &&
     pruneInvitationsOk &&
     pruneConsentsOk &&
+    pruneAuditLogOk &&
     purgeAccountsOk &&
     purgeHouseholdsOk &&
     reserveMonthCloseOk;
@@ -74,6 +78,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         pruneVerification,
         pruneInvitations,
         pruneConsents,
+        pruneAuditLog,
         purgeAccounts,
         purgeHouseholds,
         marketData,

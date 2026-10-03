@@ -25,6 +25,10 @@ vi.mock("@/modules/sync", () => ({
   runDailyPruneStep: vi.fn(),
 }));
 
+vi.mock("@/modules/audit", () => ({
+  runDailyPruneStep: vi.fn(),
+}));
+
 vi.mock("@/modules/reserve", () => ({
   runReserveMonthCloseStep: vi.fn(),
 }));
@@ -36,6 +40,7 @@ const { runDailyPruneStep: runHouseholdsPruneStep, runHouseholdPurgeStep } =
   await import("@/modules/households");
 const { runAccountPurgeStep } = await import("@/modules/privacy");
 const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
+const { runDailyPruneStep: runAuditPruneStep } = await import("@/modules/audit");
 const { runReserveMonthCloseStep } = await import("@/modules/reserve");
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
@@ -54,6 +59,7 @@ describe("GET /api/cron/daily", () => {
     vi.mocked(runAuthPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runAuditPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAccountPurgeStep).mockResolvedValue({
       ok: true,
       purged: 0,
@@ -172,6 +178,26 @@ describe("GET /api/cron/daily", () => {
     expect(body.ok).toBe(false);
     expect(body.steps.pruneConsents).toEqual({ error: "Error" });
     expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the audit-log prune step fails", async () => {
+    vi.mocked(runAuditPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneConsents: { deleted: number };
+        pruneAuditLog: { error: string };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneAuditLog).toEqual({ error: "Error" });
+    expect(body.steps.pruneConsents).toEqual({ deleted: 0 });
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 
