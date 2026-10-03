@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
 import { financialDataAccess } from "@/modules/audit/schema";
+import { session as sessionTable, user as authUser } from "@/modules/auth/schema";
 import type { HouseholdSession } from "@/modules/households";
 import {
   categorizationRule,
@@ -10,6 +11,7 @@ import {
   transactionCategorization,
 } from "@/modules/ledger/schema";
 import { reserveMark } from "@/modules/reserve/schema";
+import { userTour } from "@/modules/shell/schema";
 import { bankAccount, bankTransaction, providerCredential } from "@/modules/sync/schema";
 import {
   seedAccount,
@@ -257,6 +259,63 @@ describe("buildExportDocument (integration)", () => {
     });
   });
 
+  it("isolation: sign-in sessions and tutorial state belong only to the exporting user", async () => {
+    await withTestDb(async (db) => {
+      const { householdA, ana, bia } = await seedCasa(db);
+      const expiresAt = new Date(NOW.getTime() + 60 * 60 * 1000);
+
+      await db.insert(sessionTable).values([
+        {
+          id: "session-ana",
+          token: "token-ana",
+          userId: ana.id,
+          createdAt: NOW,
+          updatedAt: NOW,
+          expiresAt,
+          ipAddress: "203.0.113.1",
+          userAgent: "ana-agent",
+        },
+        {
+          id: "session-bia",
+          token: "token-bia",
+          userId: bia.id,
+          createdAt: NOW,
+          updatedAt: NOW,
+          expiresAt,
+          ipAddress: "203.0.113.2",
+          userAgent: "bia-agent",
+        },
+      ]);
+      await db.insert(userTour).values([
+        { userId: ana.id, tourId: "reserva", tourVersion: 1, outcome: "completed", updatedAt: NOW },
+        { userId: bia.id, tourId: "bancos", tourVersion: 2, outcome: "dismissed", updatedAt: NOW },
+      ]);
+      await db.update(authUser).set({ toursAutoStart: false }).where(eq(authUser.id, ana.id));
+
+      const document = await buildExportDocument(sessionInHousehold(ana, householdA), NOW);
+
+      expect(document.sessions).toEqual([
+        {
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          ipAddress: "203.0.113.1",
+          userAgent: "ana-agent",
+        },
+      ]);
+      expect(document.tours).toEqual({
+        autoStart: false,
+        items: [
+          { tourId: "reserva", tourVersion: 1, outcome: "completed", updatedAt: NOW.toISOString() },
+        ],
+      });
+      expect(JSON.stringify(document)).not.toContain("token-ana");
+      expect(JSON.stringify(document)).not.toContain("token-bia");
+      expect(JSON.stringify(document)).not.toContain("bia-agent");
+      expect(JSON.stringify(document)).not.toContain("bancos");
+    });
+  });
+
   it("includes an account assigned to no household, still scoped to its connection's owner", async () => {
     await withTestDb(async (db) => {
       const { householdA, ana, anaAccountId } = await seedCasa(db);
@@ -322,6 +381,35 @@ describe("handleExportRequest rate limit (integration)", () => {
         .from(financialDataAccess)
         .where(eq(financialDataAccess.userId, ana.id));
       expect(exportsAfterFourth).toHaveLength(EXPORT_RATE_LIMIT);
+    });
+  });
+
+  it("serializes a burst of concurrent requests: exactly one 200, the rest 303, exactly one new access row", async () => {
+    await withTestDb(async (db) => {
+      const { householdA, ana } = await seedCasa(db);
+      const session = sessionInHousehold(ana, householdA);
+      await db.insert(financialDataAccess).values([
+        { householdId: householdA, userId: ana.id, kind: "export", accessedAt: NOW },
+        { householdId: householdA, userId: ana.id, kind: "export", accessedAt: NOW },
+      ]);
+
+      const responses = await Promise.all(
+        Array.from({ length: 4 }, () =>
+          handleExportRequest(new Request("https://feudo.test/api/export", { method: "POST" }), {
+            getSession: () => Promise.resolve(session),
+            now: () => NOW,
+          }),
+        ),
+      );
+
+      expect(responses.filter((response) => response.status === 200)).toHaveLength(1);
+      expect(responses.filter((response) => response.status === 303)).toHaveLength(3);
+
+      const rows = await db
+        .select()
+        .from(financialDataAccess)
+        .where(eq(financialDataAccess.userId, ana.id));
+      expect(rows.filter((row) => row.kind === "export")).toHaveLength(EXPORT_RATE_LIMIT);
     });
   });
 });

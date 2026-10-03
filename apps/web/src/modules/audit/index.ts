@@ -4,10 +4,9 @@ export { getRecentAccessPageProps } from "./page-props";
 export type { RecentAccessRowView } from "./page-props";
 export { runDailyPruneStep } from "./prune";
 export {
-  countRecentExports,
   listFinancialDataAccessForExport,
+  recordAccessWithinQuota,
   recordFinancialDataAccess,
 } from "./service";
-export type { FinancialDataAccessExportRow } from "./service";
 export { t } from "./strings";
 export type { FinancialDataKind } from "./schema";

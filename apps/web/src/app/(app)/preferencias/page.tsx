@@ -43,7 +43,7 @@ export default async function PreferencesPage({
 
       <section className="mt-8">
         <SectionHeader title={privacyT.exportData.sectionTitle} />
-        <ExportDataSection limitReached={exportacao === "limite"} />
+        <ExportDataSection limitReached={exportacao === "limite"} from="/preferencias" />
       </section>
 
       <section className="mt-8">

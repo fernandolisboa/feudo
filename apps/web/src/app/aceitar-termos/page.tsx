@@ -7,6 +7,7 @@ import {
   hasAcceptedCurrentTerms,
   redirectIfAccountDeletionPending,
   t,
+  TERMS_ACCEPTANCE_ROUTE,
   TERMS_VERSION,
 } from "@/modules/auth";
 import {
@@ -16,7 +17,12 @@ import {
   t as privacyT,
 } from "@/modules/privacy";
 
-export default async function AcceptTermsPage() {
+export default async function AcceptTermsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ exportacao?: string }>;
+}) {
+  const { exportacao } = await searchParams;
   const session = await getCurrentSession();
   await redirectIfAccountDeletionPending(session);
   if (!session) {
@@ -40,13 +46,18 @@ export default async function AcceptTermsPage() {
         <div className="mt-6">
           <AcceptTermsForm />
         </div>
-        <p className="text-muted-foreground mt-6 text-sm">{t.acceptTerms.refuse}</p>
+        <p className="text-muted-foreground mt-6 text-sm">
+          {session.householdId ? t.acceptTerms.refuse : t.acceptTerms.refuseWithoutHousehold}
+        </p>
       </div>
       {session.householdId ? (
         <section className="border-border bg-card w-full max-w-sm rounded-lg border p-6">
           <h2 className="font-heading text-lg">{privacyT.exportData.sectionTitle}</h2>
           <div className="mt-3">
-            <ExportDataSection limitReached={false} />
+            <ExportDataSection
+              limitReached={exportacao === "limite"}
+              from={TERMS_ACCEPTANCE_ROUTE}
+            />
           </div>
         </section>
       ) : null}

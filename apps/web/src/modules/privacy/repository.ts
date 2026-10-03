@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 
 import type { CurrentSession, PendingAccountDeletion } from "@/modules/auth";
-import { user } from "@/modules/auth/schema";
+import { session as sessionTable, user } from "@/modules/auth/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
@@ -117,4 +117,32 @@ export async function getExportUser(
     .where(eq(user.id, userId))
     .limit(1);
   return rows[0];
+}
+
+export type ExportSessionRow = {
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
+// The export's own "sessions" section (#25): every sign-in session the
+// policy says Feudo keeps for this user, read directly off auth's schema —
+// never the token, which is the one column that would let the file itself
+// sign in as the user.
+export async function listExportSessions(
+  db: DatabaseOrTransaction,
+  userId: string,
+): Promise<ExportSessionRow[]> {
+  return db
+    .select({
+      createdAt: sessionTable.createdAt,
+      updatedAt: sessionTable.updatedAt,
+      expiresAt: sessionTable.expiresAt,
+      ipAddress: sessionTable.ipAddress,
+      userAgent: sessionTable.userAgent,
+    })
+    .from(sessionTable)
+    .where(eq(sessionTable.userId, userId));
 }

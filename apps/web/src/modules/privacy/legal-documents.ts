@@ -127,7 +127,7 @@ const en = {
             "Meu Pluggy credentials: client id and client secret, kept encrypted and never shown again. They are used only to read your banks.",
             "Consent: for each connection, the date, the version and the exact text you accepted.",
             "Connections, accounts and investments: bank, Item ID, type, account name, balance, rate, maturity, label (individual or household) and the date of the last sync.",
-            "Transactions: date, amount, description, the category the bank reports and whether it is money in or out. The CPF or CNPJ of the account holder and of the other party of a transaction is kept only as an irreversible code, computed with a secret key, to tell your accounts apart and to recognize transfers between people in the household. The other party's name is not kept.",
+            "Transactions: date, amount, description, the category the bank reports and whether it is money in or out. The CPF or CNPJ of the account holder and of the other party of a transaction is kept only as an irreversible code, computed with a secret key, to tell your accounts apart and to recognize transfers between people in the household. Feudo has no field for the other party's name, but the description the bank sends may contain it.",
             "Annotations: categorizations, rules, internal-transfer marks, reserve adjustments and bank-comparison weights, with who made them and when.",
             "Analyst readings: the figures sent to the model, the text of the answer, the version of the instructions, the model used and who asked.",
             "Access log: who opened Overview, Transactions, Categories or Reserve, or downloaded their data, in which household and when, without any amounts. You see your own entries in Household, under Your recent access.",
@@ -191,7 +191,7 @@ const en = {
         title: "Your rights",
         blocks: [
           [
-            "Confirmation and access: in Preferences, Download my data produces a file with everything Feudo keeps about you: sign-up, the households you belong to, connections, accounts, investments, transactions, your annotations and your access log. You can download it up to 3 times every 24 hours, and each download shows in the access log.",
+            "Confirmation and access: in Preferences, Download my data produces a file with your data: sign-up (with your sign-in sessions and the acceptance of these documents), preferences and tutorials, the households you belong to and your role in each, your Meu Pluggy credentials (dates only, never the secret), consents, connections, accounts, investments, transactions, the annotations you made and your access log. It does not include data that belongs to the whole household (settings, invites, analyst readings) or short-lived usage controls; ask for them at {contact}. You can download it up to 3 times every 24 hours, and each download shows in the access log. The download needs an active household; if you are in none, write to {contact} and we will send you the file.",
             "Portability: the same file, in an open format (JSON) that another service can read.",
             "Correction: what comes from the bank is corrected at the bank and arrives with the next sync; to correct your name or email, write to {contact}.",
             "Withdrawing consent: in Your connections, removing your credentials stops the sync and destroys them at once, and deleting a connection erases its accounts with their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what was already read stays here until you delete your connections.",
@@ -300,7 +300,7 @@ const ptBR = {
       {
         title: "Excluir seu cadastro ou uma casa",
         blocks: [
-          "Excluir meu cadastro, em Preferências, tira você de todos os aparelhos e destrói suas credenciais do Meu Pluggy na hora. Por 7 dias, você pode cancelar entrando de novo; depois disso, seu cadastro, suas conexões e as transações delas são apagados de todas as casas.",
+          "Excluir meu cadastro, em Preferências, encerra sua sessão em todos os aparelhos e destrói suas credenciais do Meu Pluggy na hora. Por 7 dias, você pode cancelar entrando de novo; depois disso, seu cadastro, suas conexões e as transações delas são apagados de todas as casas.",
           "O responsável por uma casa pode excluí-la em Casa. Ela some para todos na hora e pode ser restaurada pelo responsável por 7 dias; depois disso, é apagada, e as contas que estavam nela ficam sem casa, com quem as conectou.",
         ],
       },
@@ -343,7 +343,7 @@ const ptBR = {
             "Credenciais do Meu Pluggy: client id e client secret, guardados criptografados e nunca exibidos de novo. Servem só para ler os seus bancos.",
             "Consentimento: para cada conexão, a data, a versão e o texto exato que você aceitou.",
             "Conexões, contas e investimentos: banco, Item ID, tipo, nome da conta, saldo, taxa, vencimento, rótulo (individual ou da casa) e a data da última sincronização.",
-            "Transações: data, valor, descrição, a categoria informada pelo banco e se é entrada ou saída. O CPF ou CNPJ do titular da conta e da outra parte de uma transação é guardado só como um código irreversível, calculado com uma chave secreta, para distinguir suas contas e reconhecer transferências entre pessoas da casa. O nome da outra parte não é guardado.",
+            "Transações: data, valor, descrição, a categoria informada pelo banco e se é entrada ou saída. O CPF ou CNPJ do titular da conta e da outra parte de uma transação é guardado só como um código irreversível, calculado com uma chave secreta, para distinguir suas contas e reconhecer transferências entre pessoas da casa. O Feudo não tem um campo para o nome da outra parte, mas a descrição enviada pelo banco pode trazê-lo.",
             "Anotações: categorizações, regras, marcações de transferência interna, ajustes da reserva e pesos da comparação de bancos, com quem fez e quando.",
             "Leituras do analista: os números enviados ao modelo, o texto da resposta, a versão das instruções, o modelo usado e quem pediu.",
             "Registro de acesso: quem abriu Visão geral, Transações, Categorias ou Reserva, ou baixou seus dados, em qual casa e quando, sem nenhum valor. Você vê os seus em Casa, em Seus acessos recentes.",
@@ -407,7 +407,7 @@ const ptBR = {
         title: "Seus direitos",
         blocks: [
           [
-            "Confirmação e acesso: em Preferências, Baixar meus dados gera um arquivo com tudo o que o Feudo guarda sobre você: cadastro, as casas de que você participa, conexões, contas, investimentos, transações, suas anotações e seu registro de acesso. São até 3 downloads a cada 24 horas, e cada um aparece no registro de acesso.",
+            "Confirmação e acesso: em Preferências, Baixar meus dados gera um arquivo com os seus dados: cadastro (com suas sessões de acesso e o aceite destes documentos), preferências e tutoriais, as casas de que você participa e seu papel em cada uma, suas credenciais do Meu Pluggy (só as datas, nunca o segredo), consentimentos, conexões, contas, investimentos, transações, as anotações que você fez e seu registro de acesso. Não entram os dados que são da casa toda (configurações, convites, leituras do analista) nem os controles de uso de curta duração; se quiser, escreva para {contact}. São até 3 downloads a cada 24 horas, e cada um aparece no registro de acesso. Para baixar, você precisa estar numa casa; se não estiver em nenhuma, escreva para {contact} e enviamos o arquivo.",
             "Portabilidade: o mesmo arquivo, num formato aberto (JSON) que outro serviço consegue ler.",
             "Correção: o que vem do banco é corrigido no banco e chega na próxima sincronização; para corrigir seu nome ou e-mail, escreva para {contact}.",
             "Revogação do consentimento: em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão apaga as contas dela, com as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que já foi lido continua aqui até você excluir suas conexões.",

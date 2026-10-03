@@ -23,7 +23,6 @@ export {
   timeZoneForDepartingUser,
 } from "./departure";
 export { householdIsNotPendingDeletion, runHouseholdPurgeStep } from "./household-deletion";
-export type { HouseholdMembershipExportRow } from "./export";
 export { getHouseholdMembershipsForExport } from "./export";
 export type { HouseholdRole } from "./membership";
 export { canManageHouseholdSettings, getViewerRole } from "./membership";

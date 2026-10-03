@@ -2,7 +2,7 @@ const en = {
   exportData: {
     sectionTitle: "Your data",
     description:
-      "Download a JSON file with your sign-up details, the households you belong to, your bank connections, accounts, transactions and your own categorizations and marks.",
+      "Download a JSON file with your sign-up details, your sign-in sessions, the households you belong to, your bank connections, accounts, transactions, your own categorizations and marks, your access log and your tutorial preferences.",
     scope:
       "It never includes another member's data, your Meu Pluggy credentials or CPF codes, and it is limited to 3 downloads every 24 hours. Each download shows up in Your recent access, on the Household screen.",
     privacyLink: "Privacy policy",
@@ -79,9 +79,9 @@ const ptBR = {
   exportData: {
     sectionTitle: "Seus dados",
     description:
-      "Baixe um arquivo JSON com seu cadastro, as casas de que você participa, suas conexões bancárias, contas, transações e suas próprias categorizações e marcações.",
+      "Baixe um arquivo JSON com seu cadastro, suas sessões de acesso, as casas de que você participa, suas conexões bancárias, contas, transações, suas próprias categorizações e marcações, seu histórico de acessos e suas preferências de tutorial.",
     scope:
-      "Ele nunca inclui dados de outro membro, suas credenciais do Meu Pluggy ou códigos de CPF, e é limitado a 3 downloads a cada 24 horas. Cada download aparece em Seus acessos recentes, na tela Casa.",
+      "Ele nunca inclui dados de outro membro, suas credenciais do Meu Pluggy ou números de CPF, e é limitado a 3 downloads a cada 24 horas. Cada download aparece em Seus acessos recentes, na tela Casa.",
     privacyLink: "Política de privacidade",
     action: "Baixar meus dados",
     limitReached:

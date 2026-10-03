@@ -3,8 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { TERMS_VERSION } from "@/modules/auth";
 import type { HouseholdSession } from "@/modules/households";
 
-import { EXPORT_RATE_LIMIT, handleExportRequest, type ExportRequestDeps } from "./export-request";
 import type { ExportDocument } from "./export";
+import {
+  EXPORT_RATE_LIMIT,
+  EXPORT_RATE_LIMIT_WINDOW_MS,
+  handleExportRequest,
+  type ExportRequestDeps,
+} from "./export-request";
 
 const SESSION: HouseholdSession = {
   userId: "user-1",
@@ -30,6 +35,8 @@ const EMPTY_DOCUMENT: ExportDocument = {
     termsAcceptedAt: EXPORTED_AT.toISOString(),
     theme: "caderno",
   },
+  sessions: [],
+  tours: { autoStart: true, items: [] },
   households: [],
   providerCredentials: [],
   bankConnectionConsents: [],
@@ -46,18 +53,40 @@ const EMPTY_DOCUMENT: ExportDocument = {
 };
 
 function deps(overrides: Partial<ExportRequestDeps> = {}): Partial<ExportRequestDeps> {
+  const buildExportDocument =
+    overrides.buildExportDocument ?? vi.fn().mockResolvedValue(EMPTY_DOCUMENT);
   return {
     getSession: vi.fn().mockResolvedValue(SESSION),
     now: () => EXPORTED_AT,
-    countRecentExports: vi.fn().mockResolvedValue(0),
-    buildExportDocument: vi.fn().mockResolvedValue(EMPTY_DOCUMENT),
-    recordExportAccess: vi.fn().mockResolvedValue(undefined),
+    householdTimeZone: vi.fn().mockResolvedValue("America/Sao_Paulo"),
+    recordAccessWithinQuota: vi
+      .fn()
+      .mockImplementation(
+        async (
+          _session: unknown,
+          _kind: unknown,
+          _quota: unknown,
+          read: () => Promise<ExportDocument>,
+        ) => ({
+          status: "ok",
+          value: await read(),
+        }),
+      ),
+    buildExportDocument,
     ...overrides,
   };
 }
 
 function request(headers: Record<string, string> = {}): Request {
   return new Request("https://feudo.example/api/export", { method: "POST", headers });
+}
+
+function formRequest(from: string): Request {
+  return new Request("https://feudo.example/api/export", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `from=${encodeURIComponent(from)}`,
+  });
 }
 
 describe("handleExportRequest", () => {
@@ -84,14 +113,10 @@ describe("handleExportRequest", () => {
 
   it("redirects with 303 once the user has reached the rate limit, reading nothing", async () => {
     const buildExportDocument = vi.fn();
-    const recordExportAccess = vi.fn();
+    const recordAccessWithinQuota = vi.fn().mockResolvedValue({ status: "limited" });
     const response = await handleExportRequest(
       request(),
-      deps({
-        countRecentExports: vi.fn().mockResolvedValue(EXPORT_RATE_LIMIT),
-        buildExportDocument,
-        recordExportAccess,
-      }),
+      deps({ recordAccessWithinQuota, buildExportDocument }),
     );
 
     expect(response.status).toBe(303);
@@ -99,7 +124,30 @@ describe("handleExportRequest", () => {
       "https://feudo.example/preferencias?exportacao=limite",
     );
     expect(buildExportDocument).not.toHaveBeenCalled();
-    expect(recordExportAccess).not.toHaveBeenCalled();
+  });
+
+  it("redirects to the submitted return route when it is on the allowlist", async () => {
+    const recordAccessWithinQuota = vi.fn().mockResolvedValue({ status: "limited" });
+    const response = await handleExportRequest(
+      formRequest("/aceitar-termos"),
+      deps({ recordAccessWithinQuota }),
+    );
+
+    expect(response.headers.get("Location")).toBe(
+      "https://feudo.example/aceitar-termos?exportacao=limite",
+    );
+  });
+
+  it("falls back to /preferencias when the submitted return route is not on the allowlist", async () => {
+    const recordAccessWithinQuota = vi.fn().mockResolvedValue({ status: "limited" });
+    const response = await handleExportRequest(
+      formRequest("https://evil.example"),
+      deps({ recordAccessWithinQuota }),
+    );
+
+    expect(response.headers.get("Location")).toBe(
+      "https://feudo.example/preferencias?exportacao=limite",
+    );
   });
 
   it("returns the document as a downloadable, never-cached JSON file", async () => {
@@ -114,30 +162,53 @@ describe("handleExportRequest", () => {
     expect(JSON.parse(await response.text())).toEqual(EMPTY_DOCUMENT);
   });
 
-  it("records the export access after building the document and before responding", async () => {
-    const calls: string[] = [];
+  it("names the file using the household's own time zone, not UTC", async () => {
+    const lateUtc = new Date("2026-10-04T01:30:00Z");
+    const householdTimeZone = vi.fn().mockResolvedValue("America/Sao_Paulo");
     const response = await handleExportRequest(
       request(),
-      deps({
-        buildExportDocument: vi.fn().mockImplementation(() => {
-          calls.push("build");
-          return Promise.resolve(EMPTY_DOCUMENT);
-        }),
-        recordExportAccess: vi.fn().mockImplementation(() => {
-          calls.push("record");
-          return Promise.resolve();
-        }),
-      }),
+      deps({ now: () => lateUtc, householdTimeZone }),
+    );
+
+    expect(response.headers.get("Content-Disposition")).toBe(
+      'attachment; filename="feudo-meus-dados-2026-10-03.json"',
+    );
+  });
+
+  it("gives recordAccessWithinQuota the session, the export kind, the quota window and a read that builds the document", async () => {
+    const buildExportDocument = vi.fn().mockResolvedValue(EMPTY_DOCUMENT);
+    const recordAccessWithinQuota = vi
+      .fn()
+      .mockImplementation(
+        async (
+          session: unknown,
+          kind: unknown,
+          quota: { limit: number; since: Date },
+          read: () => Promise<ExportDocument>,
+        ) => {
+          expect(session).toEqual(SESSION);
+          expect(kind).toBe("export");
+          expect(quota).toEqual({
+            limit: EXPORT_RATE_LIMIT,
+            since: new Date(EXPORTED_AT.getTime() - EXPORT_RATE_LIMIT_WINDOW_MS),
+          });
+          return { status: "ok", value: await read() };
+        },
+      );
+
+    const response = await handleExportRequest(
+      request(),
+      deps({ buildExportDocument, recordAccessWithinQuota }),
     );
 
     expect(response.status).toBe(200);
-    expect(calls).toEqual(["build", "record"]);
+    expect(buildExportDocument).toHaveBeenCalledWith(SESSION, EXPORTED_AT);
   });
 
-  it("fails the request and serves no file when the audit write fails", async () => {
-    const recordExportAccess = vi.fn().mockRejectedValue(new Error("audit write failed"));
+  it("fails the request and serves no file when the quota/audit step fails", async () => {
+    const recordAccessWithinQuota = vi.fn().mockRejectedValue(new Error("audit write failed"));
 
-    await expect(handleExportRequest(request(), deps({ recordExportAccess }))).rejects.toThrow(
+    await expect(handleExportRequest(request(), deps({ recordAccessWithinQuota }))).rejects.toThrow(
       "audit write failed",
     );
   });

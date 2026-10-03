@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-import { AuthShell, getCurrentSession, redirectIfAccountDeletionPending } from "@/modules/auth";
+import {
+  AuthShell,
+  getCurrentSession,
+  redirectIfAccountDeletionPending,
+  redirectIfTermsOutdated,
+} from "@/modules/auth";
 import { AcceptInvitationButton, getInvitationPreview, t } from "@/modules/households";
 
 export default async function InviteAcceptPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +36,7 @@ export default async function InviteAcceptPage({ params }: { params: Promise<{ i
     );
   }
 
+  redirectIfTermsOutdated(session);
   const preview = await getInvitationPreview(id, session);
 
   if (preview.status !== "ok") {

@@ -21,6 +21,8 @@ const en = {
     failed: "We couldn't record your acceptance. Try again.",
     refuse:
       "If you don't agree, you can still download your data and delete your sign-up below, without accepting.",
+    refuseWithoutHousehold:
+      "If you don't agree, you can still delete your sign-up below, without accepting. To get a copy of your data first, write to the contact in the privacy policy.",
   },
   signIn: {
     title: "Sign in",
@@ -139,7 +141,9 @@ const ptBR = {
     submit: "Aceitar e continuar",
     failed: "Não foi possível registrar seu aceite. Tente novamente.",
     refuse:
-      "Se não concordar, você ainda pode baixar seus dados e excluir seu cadastro aqui embaixo, sem aceitar.",
+      "Se não concordar, você ainda pode baixar seus dados e excluir seu cadastro abaixo, sem aceitar.",
+    refuseWithoutHousehold:
+      "Se não concordar, você ainda pode excluir seu cadastro abaixo, sem aceitar. Para receber uma cópia dos seus dados antes, escreva para o contato da política de privacidade.",
   },
   signIn: {
     title: "Entrar",

@@ -7,7 +7,6 @@ export {
   destroyProviderCredentials,
 } from "./account-deletion";
 export { runDailyPruneStep } from "./consent-prune";
-export type { SyncExportData } from "./export";
 export { getSyncExportData } from "./export";
 export { getAccountsSectionProps } from "./page-props";
 export { MANUAL_SYNC_BUDGET_MS, runConnectionsSyncStep } from "./service";

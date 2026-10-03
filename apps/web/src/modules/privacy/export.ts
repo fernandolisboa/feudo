@@ -3,10 +3,11 @@ import { listFinancialDataAccessForExport } from "@/modules/audit";
 import { getHouseholdMembershipsForExport } from "@/modules/households";
 import { getLedgerExportAnnotations } from "@/modules/ledger";
 import { getReserveMarksForExport } from "@/modules/reserve";
+import { getTourExportData } from "@/modules/shell";
 import { getSyncExportData } from "@/modules/sync";
 
 import { getDb } from "@/platform/db/client";
-import { getExportUser } from "./repository";
+import { getExportUser, listExportSessions } from "./repository";
 
 function isoOrNull(date: Date | null): string | null {
   return date === null ? null : date.toISOString();
@@ -24,6 +25,17 @@ export type ExportDocument = {
     termsVersion: string;
     termsAcceptedAt: string;
     theme: string;
+  };
+  sessions: Array<{
+    createdAt: string;
+    updatedAt: string;
+    expiresAt: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+  }>;
+  tours: {
+    autoStart: boolean;
+    items: Array<{ tourId: string; tourVersion: number; outcome: string; updatedAt: string }>;
   };
   households: Array<{
     householdId: string;
@@ -121,23 +133,28 @@ export class ExportUserMissingError extends Error {
   }
 }
 
-// Composes every slice's single export reader (ADR-0011, 2026-10-03
-// amendment): one DB read path per slice, all run in parallel, since none
-// of them write and none depends on another's result. Every reader takes
-// the full session, so nothing here can be tricked into reading another
-// user's rows with a loose id.
+// Composes every slice's single export reader (ADR-0011, amendment #25):
+// one DB read path per slice, all run in parallel, since none of them write
+// and none depends on another's result. Every reader takes the full
+// session, so nothing here can be tricked into reading another user's rows
+// with a loose id. Sessions are read here directly off auth's schema, the
+// same carve-out as the "user" row below (ADR-0011's amendment already lets
+// this slice read that table itself).
 export async function buildExportDocument(
   session: HouseholdSession,
   exportedAt: Date,
 ): Promise<ExportDocument> {
-  const [userRow, households, sync, ledger, reserveMarks, financialDataAccess] = await Promise.all([
-    getExportUser(getDb(), session.userId),
-    getHouseholdMembershipsForExport(session),
-    getSyncExportData(session),
-    getLedgerExportAnnotations(session),
-    getReserveMarksForExport(session),
-    listFinancialDataAccessForExport(session),
-  ]);
+  const [userRow, sessions, tours, households, sync, ledger, reserveMarks, financialDataAccess] =
+    await Promise.all([
+      getExportUser(getDb(), session.userId),
+      listExportSessions(getDb(), session.userId),
+      getTourExportData(session),
+      getHouseholdMembershipsForExport(session),
+      getSyncExportData(session),
+      getLedgerExportAnnotations(session),
+      getReserveMarksForExport(session),
+      listFinancialDataAccessForExport(session),
+    ]);
 
   if (!userRow) {
     throw new ExportUserMissingError(session.userId);
@@ -155,6 +172,22 @@ export async function buildExportDocument(
       termsVersion: userRow.termsVersion,
       termsAcceptedAt: userRow.termsAcceptedAt.toISOString(),
       theme: userRow.theme,
+    },
+    sessions: sessions.map((entry) => ({
+      createdAt: entry.createdAt.toISOString(),
+      updatedAt: entry.updatedAt.toISOString(),
+      expiresAt: entry.expiresAt.toISOString(),
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent,
+    })),
+    tours: {
+      autoStart: tours.toursAutoStart,
+      items: tours.tours.map((tour) => ({
+        tourId: tour.tourId,
+        tourVersion: tour.tourVersion,
+        outcome: tour.outcome,
+        updatedAt: tour.updatedAt.toISOString(),
+      })),
     },
     households: households.map((household) => ({
       householdId: household.householdId,
