@@ -21,9 +21,6 @@ import { t } from "../strings";
 import { isOnScreen, prefersReducedMotion } from "../tour-dom";
 import type { TourStep } from "../tours";
 
-// DESIGN.md hit targets: at least 44px under 768px, 36px above.
-const HIT_TARGET = "h-11 md:h-9";
-
 export type TourEnd =
   | { outcome: "completed"; turnOffAutoStart: false }
   | { outcome: "dismissed"; turnOffAutoStart: boolean };
@@ -165,16 +162,16 @@ export function TourOverlay({
             })}
           </p>
           <div className="flex items-center justify-between gap-2">
-            <PopoverClose render={<Button type="button" variant="ghost" className={HIT_TARGET} />}>
+            <PopoverClose render={<Button type="button" variant="ghost" />}>
               {t.tour.skip}
             </PopoverClose>
             <div className="flex items-center gap-2">
               {isFirst ? null : (
-                <Button type="button" variant="outline" className={HIT_TARGET} onClick={goBack}>
+                <Button type="button" variant="outline" onClick={goBack}>
                   {t.tour.back}
                 </Button>
               )}
-              <Button ref={primaryRef} type="button" className={HIT_TARGET} onClick={goNext}>
+              <Button ref={primaryRef} type="button" onClick={goNext}>
                 {isLast ? t.tour.finish : t.tour.next}
               </Button>
             </div>
@@ -183,7 +180,7 @@ export function TourOverlay({
             <Button
               type="button"
               variant="link"
-              className={`${HIT_TARGET} self-start px-0`}
+              className="self-start px-0"
               onClick={() => {
                 onEnd({ outcome: "dismissed", turnOffAutoStart: true });
               }}
@@ -194,7 +191,7 @@ export function TourOverlay({
           {isLast ? (
             <Button
               variant="link"
-              className={`${HIT_TARGET} self-start px-0`}
+              className="self-start px-0"
               render={
                 <Link
                   href={GUIDE_PATH}

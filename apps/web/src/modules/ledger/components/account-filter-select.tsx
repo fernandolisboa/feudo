@@ -57,7 +57,7 @@ export function AccountFilterSelect({
       <SelectTrigger
         aria-label={t.accountFilter.label}
         data-tour="transactions.account"
-        className="h-11 w-full max-w-none md:h-9 md:w-auto md:max-w-64"
+        className="w-full max-w-none md:w-auto md:max-w-64"
       >
         <SelectValue />
       </SelectTrigger>

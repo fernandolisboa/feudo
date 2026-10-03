@@ -61,7 +61,7 @@ export function CategoryFilterSelect({
     <Select items={items} value={value} onValueChange={handleValueChange}>
       <SelectTrigger
         aria-label={t.categoryFilter.label}
-        className="h-11 w-full max-w-none md:h-9 md:w-auto md:max-w-48"
+        className="w-full max-w-none md:w-auto md:max-w-48"
       >
         <SelectValue />
       </SelectTrigger>
