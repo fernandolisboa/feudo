@@ -10,6 +10,7 @@ import {
   type YearMonth,
 } from "@feudo/core";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
@@ -41,10 +42,22 @@ export type CategoriesPageProps = {
 const RECURRING_MONTHS = 3;
 
 // Recurring detection looks only at complete months, so a bill that has not
-// come in yet this month cannot break a streak that is still running.
+// come in yet this month cannot break a streak that is still running. The
+// audit write (ADR-0008, #27) happens only after the read below succeeds,
+// not concurrently with it: a failed read records nothing, and a failed
+// write still fails this call.
 export async function getCategoriesPageProps(
   session: HouseholdSession,
   now: Date = new Date(),
+): Promise<CategoriesPageProps> {
+  const props = await buildCategoriesPageProps(session, now);
+  await recordFinancialDataAccess(session, "categories");
+  return props;
+}
+
+async function buildCategoriesPageProps(
+  session: HouseholdSession,
+  now: Date,
 ): Promise<CategoriesPageProps> {
   const db = getDb();
   const scope = householdScope(session);

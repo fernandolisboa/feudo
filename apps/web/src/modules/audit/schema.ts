@@ -2,7 +2,13 @@ import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../auth/schema.ts";
 
-export const FINANCIAL_DATA_KINDS = ["overview", "transactions", "reserve", "export"] as const;
+export const FINANCIAL_DATA_KINDS = [
+  "overview",
+  "transactions",
+  "categories",
+  "reserve",
+  "export",
+] as const;
 
 export type FinancialDataKind = (typeof FINANCIAL_DATA_KINDS)[number];
 
@@ -12,8 +18,14 @@ export const financialDataAccessKind = pgEnum("financial_data_access_kind", FINA
 // read of financial data — who, which household, what kind, when. These four
 // columns are the entire row by design: no amounts, descriptions, documents,
 // filters or IP, so the table can never leak the financial content it is
-// only meant to witness access to. Append-only; the daily job purges rows
-// older than 12 calendar months (audit/prune.ts).
+// only meant to witness access to. household_id cascades with the
+// household; user_id is set null when that user is deleted (amended
+// 2026-10-03, #27), the same pattern as manual_sync_trigger's
+// triggered_by_user_id, household_analysis's requested_by_user_id and
+// reserve_mark's updated_by_user_id — the access record outlives the member
+// who triggered it. Append-only except the purge and that one column
+// update; the daily job purges rows older than 12 calendar months
+// (audit/prune.ts).
 export const financialDataAccess = pgTable(
   "financial_data_access",
   {
@@ -23,9 +35,7 @@ export const financialDataAccess = pgTable(
     householdId: text("household_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     kind: financialDataAccessKind("kind").notNull(),
     accessedAt: timestamp("accessed_at", { withTimezone: true }).defaultNow().notNull(),
   },

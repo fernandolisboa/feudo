@@ -2,6 +2,7 @@ const en = {
   kinds: {
     overview: "Overview",
     transactions: "Transactions",
+    categories: "Categories",
     reserve: "Reserve",
     export: "Data export",
   },
@@ -19,6 +20,7 @@ const ptBR = {
   kinds: {
     overview: "Visão geral",
     transactions: "Transações",
+    categories: "Categorias",
     reserve: "Reserva",
     export: "Exportação de dados",
   },

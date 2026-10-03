@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { householdScope } from "@/modules/households";
-import { getOverviewPageProps, getTransactionsPageProps } from "@/modules/ledger";
+import {
+  getCategoriesPageProps,
+  getOverviewPageProps,
+  getTransactionsPageProps,
+} from "@/modules/ledger";
 import { getReservePageProps } from "@/modules/reserve";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
@@ -35,11 +39,17 @@ describe("financial-data access recording (integration, ADR-0008)", () => {
 
       await getOverviewPageProps(userA.session, {}, NOW);
       await getTransactionsPageProps(userA.session, {}, NOW);
+      await getCategoriesPageProps(userA.session, NOW);
       await getReservePageProps(userA.session, NOW);
 
       const rows = await listAccessRows(db);
 
-      expect(rows.map((row) => row.kind).sort()).toEqual(["overview", "reserve", "transactions"]);
+      expect(rows.map((row) => row.kind).sort()).toEqual([
+        "categories",
+        "overview",
+        "reserve",
+        "transactions",
+      ]);
 
       for (const row of rows) {
         expect(Object.keys(row).sort()).toEqual(

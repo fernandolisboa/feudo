@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { user } from "@/modules/auth/schema";
-import { householdScope } from "@/modules/households";
 import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import { getRecentAccessPageProps } from "./page-props";
 import { createFinancialDataAccessRepository } from "./repository";
 
+import type { FinancialDataAccessScope } from "./scope";
 import type { Database } from "@/platform/db/client";
 
 async function addMember(db: Database, householdId: string, name: string): Promise<string> {
@@ -26,10 +26,13 @@ async function addMember(db: Database, householdId: string, name: string): Promi
 describe("getRecentAccessPageProps (integration)", () => {
   it("shows the viewer's own entries, most recent first, each with a pt-BR kind label", async () => {
     await withTwoUsers(async ({ db, userA }) => {
-      const scope = householdScope(userA.session);
+      const scope: FinancialDataAccessScope = {
+        householdId: userA.session.householdId,
+        userId: userA.id,
+      };
       const repository = createFinancialDataAccessRepository(scope);
-      await repository.record(db, userA.id, "overview");
-      await repository.record(db, userA.id, "export");
+      await repository.record(db, "overview");
+      await repository.record(db, "export");
 
       const rows = await getRecentAccessPageProps(userA.session);
 
@@ -40,9 +43,9 @@ describe("getRecentAccessPageProps (integration)", () => {
 
   it("never shows another member's access, even within the same household", async () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
-      const scope = householdScope(userA.session);
       const partnerId = await addMember(db, householdA, "Partner");
-      await createFinancialDataAccessRepository(scope).record(db, partnerId, "reserve");
+      const partnerScope: FinancialDataAccessScope = { householdId: householdA, userId: partnerId };
+      await createFinancialDataAccessRepository(partnerScope).record(db, "reserve");
 
       const rows = await getRecentAccessPageProps(userA.session);
 

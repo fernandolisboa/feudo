@@ -2,7 +2,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 
 import { financialDataAccess, type FinancialDataKind } from "./schema";
 
-import type { HouseholdScope } from "@/modules/households";
+import type { FinancialDataAccessScope } from "./scope";
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
 export type FinancialDataAccessRow = {
@@ -13,24 +13,19 @@ export type FinancialDataAccessRow = {
 
 export const RECENT_ACCESS_LIMIT = 20;
 
-// Every repository is constructed with the household taken from the session
-// (ADR-0001): no method below accepts a household id, only the scope closed
-// over at construction time. userId still arrives as a parameter, the same
-// shape reserve's createReserveMarkRepository uses, since a write always
-// names which member of the household read the data.
-export function createFinancialDataAccessRepository(scope: HouseholdScope) {
+// Every repository is constructed with the household and user taken from
+// the session (ADR-0001, amended 2026-10-03 #27): no method below accepts a
+// household or user id, only the scope closed over at construction time.
+export function createFinancialDataAccessRepository(scope: FinancialDataAccessScope) {
   return {
-    async record(
-      db: DatabaseOrTransaction,
-      userId: string,
-      kind: FinancialDataKind,
-    ): Promise<void> {
-      await db.insert(financialDataAccess).values({ householdId: scope.householdId, userId, kind });
+    async record(db: DatabaseOrTransaction, kind: FinancialDataKind): Promise<void> {
+      await db
+        .insert(financialDataAccess)
+        .values({ householdId: scope.householdId, userId: scope.userId, kind });
     },
 
     async listRecentForUser(
       db: DatabaseOrTransaction,
-      userId: string,
       limit: number = RECENT_ACCESS_LIMIT,
     ): Promise<FinancialDataAccessRow[]> {
       return db
@@ -43,7 +38,7 @@ export function createFinancialDataAccessRepository(scope: HouseholdScope) {
         .where(
           and(
             eq(financialDataAccess.householdId, scope.householdId),
-            eq(financialDataAccess.userId, userId),
+            eq(financialDataAccess.userId, scope.userId),
           ),
         )
         .orderBy(desc(financialDataAccess.accessedAt))

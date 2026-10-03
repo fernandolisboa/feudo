@@ -189,18 +189,17 @@ function seriesPoints(series: readonly MonthlyPoint[]): MonthlyBarPointView[] {
 // three can never disagree over dashboardMonthRange's window (the current
 // month plus the six months behind it) — then hands the lines to
 // packages/core's buildLedgerDashboard: every number on this page is
-// computed there, never guessed at in this file. The audit write (ADR-0008)
-// runs concurrently with the read it witnesses, not after it: a failed
-// write fails this call too.
+// computed there, never guessed at in this file. The audit write (ADR-0008,
+// amended 2026-10-03 #27) happens only after the read succeeds, not
+// concurrently with it: a failed read records nothing, and a failed write
+// still fails this call.
 export async function getOverviewPageProps(
   session: HouseholdSession,
   searchParams: OverviewSearchParams,
   now: Date = new Date(),
 ): Promise<OverviewPageProps> {
-  const [props] = await Promise.all([
-    buildOverviewPageProps(householdScope(session), searchParams, now),
-    recordFinancialDataAccess(session, "overview"),
-  ]);
+  const props = await buildOverviewPageProps(householdScope(session), searchParams, now);
+  await recordFinancialDataAccess(session, "overview");
   return props;
 }
 

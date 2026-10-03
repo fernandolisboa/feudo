@@ -209,22 +209,21 @@ export async function getReserveNoticeBannerProps(
 // window and the same read path the month-close job and the Visão geral
 // tile use (readHouseholdDashboardLines, packages/core's averageFixedCost),
 // so the three can never disagree; the recorded table only backs the
-// notice, never the numbers shown here. The audit write (ADR-0008) runs
-// concurrently with the read it witnesses, not after it: a failed write
-// fails this call too.
+// notice, never the numbers shown here. The audit write (ADR-0008, amended
+// 2026-10-03 #27) happens only after the read succeeds, not concurrently
+// with it: a failed read records nothing, and a failed write still fails
+// this call.
 export async function getReservePageProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<ReservePageProps> {
   const db = getDb();
   const viewerRole = await getViewerRole(session, db);
-  const [props] = await Promise.all([
-    buildReservePageProps(householdScope(session), {
-      now,
-      canManage: canManageHouseholdSettings(viewerRole),
-    }),
-    recordFinancialDataAccess(session, "reserve"),
-  ]);
+  const props = await buildReservePageProps(householdScope(session), {
+    now,
+    canManage: canManageHouseholdSettings(viewerRole),
+  });
+  await recordFinancialDataAccess(session, "reserve");
   return props;
 }
 

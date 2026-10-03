@@ -1,3 +1,4 @@
+export { RecentAccessErrorBoundary } from "./components/recent-access-error-boundary";
 export { RecentAccessTable } from "./components/recent-access-table";
 export { getRecentAccessPageProps } from "./page-props";
 export type { RecentAccessRowView } from "./page-props";

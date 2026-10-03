@@ -10,6 +10,8 @@ export function financialDataKindLabel(kind: FinancialDataKind): string {
       return t.kinds.overview;
     case "transactions":
       return t.kinds.transactions;
+    case "categories":
+      return t.kinds.categories;
     case "reserve":
       return t.kinds.reserve;
     case "export":

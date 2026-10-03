@@ -184,11 +184,24 @@ function toRowView(
 // the same clamp the overview applies; an account id not in the household
 // is ignored and a page past the last one lands on the last. Pairing and
 // categorization are both resolved by readHouseholdLedger, the one read
-// path shared with /categorias (design contract's #16 review, item 3).
+// path shared with /categorias (design contract's #16 review, item 3). The
+// audit write (ADR-0008, amended 2026-10-03 #27) happens only after the
+// read below succeeds, not concurrently with it: a failed read records
+// nothing, and a failed write still fails this call.
 export async function getTransactionsPageProps(
   session: HouseholdSession,
   searchParams: TransactionsSearchParams,
   now: Date = new Date(),
+): Promise<TransactionsPageProps> {
+  const props = await buildTransactionsPageProps(session, searchParams, now);
+  await recordFinancialDataAccess(session, "transactions");
+  return props;
+}
+
+async function buildTransactionsPageProps(
+  session: HouseholdSession,
+  searchParams: TransactionsSearchParams,
+  now: Date,
 ): Promise<TransactionsPageProps> {
   const db = getDb();
   const scope = householdScope(session);
@@ -217,12 +230,11 @@ export async function getTransactionsPageProps(
   const searchQuery = normalizedSearch !== "" ? rawSearch : null;
 
   const monthRange = yearMonthDayRange(month);
-  // The audit write (ADR-0008) runs concurrently with this read, not after
-  // it: a failed write fails this call too.
-  const [{ kinds, rows: monthRows, padded }] = await Promise.all([
-    readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone),
-    recordFinancialDataAccess(session, "transactions"),
-  ]);
+  const {
+    kinds,
+    rows: monthRows,
+    padded,
+  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(padded.map((row) => [row.id, row]));
 

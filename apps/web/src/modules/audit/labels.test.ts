@@ -12,6 +12,7 @@ describe("financialDataKindLabel", () => {
     expect(FINANCIAL_DATA_KINDS.map(financialDataKindLabel)).toEqual([
       "Visão geral",
       "Transações",
+      "Categorias",
       "Reserva",
       "Exportação de dados",
     ]);

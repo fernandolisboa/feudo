@@ -1,19 +1,31 @@
+import { Suspense } from "react";
+
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
-import { RecentAccessTable, getRecentAccessPageProps, t as auditT } from "@/modules/audit";
+import {
+  RecentAccessErrorBoundary,
+  RecentAccessTable,
+  getRecentAccessPageProps,
+  t as auditT,
+} from "@/modules/audit";
 import {
   InviteMemberDialog,
   MembersTable,
   PendingInvitationsTable,
   getCasaPageProps,
   requireHouseholdSession,
+  type HouseholdSession,
   t,
 } from "@/modules/households";
 
+async function RecentAccessContent({ session }: { session: HouseholdSession }) {
+  const recentAccess = await getRecentAccessPageProps(session);
+  return <RecentAccessTable entries={recentAccess} />;
+}
+
 export default async function CasaPage() {
   const session = await requireHouseholdSession();
-  const [{ members, viewerRole, canManage, invitations, timeZone }, recentAccess] =
-    await Promise.all([getCasaPageProps(session), getRecentAccessPageProps(session)]);
+  const { members, viewerRole, canManage, invitations, timeZone } = await getCasaPageProps(session);
 
   return (
     <>
@@ -41,7 +53,11 @@ export default async function CasaPage() {
 
       <section className="mt-8">
         <SectionHeader title={auditT.recentAccess.sectionTitle} />
-        <RecentAccessTable entries={recentAccess} />
+        <RecentAccessErrorBoundary>
+          <Suspense fallback={null}>
+            <RecentAccessContent session={session} />
+          </Suspense>
+        </RecentAccessErrorBoundary>
       </section>
     </>
   );
