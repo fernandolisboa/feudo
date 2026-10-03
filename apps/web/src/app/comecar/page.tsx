@@ -1,11 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import {
-  ACCOUNT_DELETION_PENDING_ROUTE,
-  getCurrentSession,
-  getPendingAccountDeletion,
-} from "@/modules/auth";
+import { getCurrentSession, redirectIfAccountDeletionPending } from "@/modules/auth";
 import {
   OnboardingForm,
   OnboardingInvitesPanel,
@@ -19,9 +15,7 @@ import { DeleteAccountSection, getDeleteAccountSectionProps } from "@/modules/pr
 
 export default async function OnboardingPage() {
   const session = await getCurrentSession();
-  if (!session && (await getPendingAccountDeletion())) {
-    redirect(ACCOUNT_DELETION_PENDING_ROUTE);
-  }
+  await redirectIfAccountDeletionPending(session);
   const redirectTarget = resolveOnboardingRoute(session);
   if (redirectTarget || !session) {
     redirect(redirectTarget ?? "/entrar");

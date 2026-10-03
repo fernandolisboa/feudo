@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 
-import { AuthShell, SignUpForm, getCurrentSession, sanitizeNextPath, t } from "@/modules/auth";
+import {
+  AuthShell,
+  SignUpForm,
+  getCurrentSession,
+  redirectIfAccountDeletionPending,
+  sanitizeNextPath,
+  t,
+} from "@/modules/auth";
 
 export default async function SignUpPage({
   searchParams,
@@ -11,6 +18,7 @@ export default async function SignUpPage({
   const nextPath = sanitizeNextPath(next);
 
   const session = await getCurrentSession();
+  await redirectIfAccountDeletionPending(session);
   if (session) {
     redirect(nextPath ?? "/");
   }

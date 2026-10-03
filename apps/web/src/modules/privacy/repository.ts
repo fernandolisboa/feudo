@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 
 import type { CurrentSession, PendingAccountDeletion } from "@/modules/auth";
 import { user } from "@/modules/auth/schema";
@@ -18,6 +18,27 @@ export async function markAccountForDeletion(
     .where(and(eq(user.id, session.userId), isNull(user.deletionRequestedAt)))
     .returning({ id: user.id });
   return marked.length === 1;
+}
+
+// At most one round of emails to the other members per grace window: a user
+// who cancels and asks again within it does not email everyone again.
+export async function claimMemberNotices(
+  db: DatabaseOrTransaction,
+  session: CurrentSession,
+  now: Date,
+  previousCutoff: Date,
+): Promise<boolean> {
+  const claimed = await db
+    .update(user)
+    .set({ deletionNoticesSentAt: now })
+    .where(
+      and(
+        eq(user.id, session.userId),
+        or(isNull(user.deletionNoticesSentAt), lte(user.deletionNoticesSentAt, previousCutoff)),
+      ),
+    )
+    .returning({ id: user.id });
+  return claimed.length === 1;
 }
 
 export async function clearAccountDeletion(

@@ -472,7 +472,7 @@ const ptBR = {
         },
         {
           title: "Exportar seus dados",
-          body: "Baixar seus dados está a caminho; esta seção vai explicar como quando chegar.",
+          body: "Baixar seus dados está a caminho; esta seção vai explicar isso quando chegar.",
         },
       ],
     },

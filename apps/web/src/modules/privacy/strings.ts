@@ -20,6 +20,8 @@ const en = {
       losesNothing: "{household} has no account of yours, so it loses no data.",
       successor: "{name} becomes the owner.",
       deleted: "You are the only member, so the household is erased too.",
+      alreadyPending:
+        "{household} is already scheduled for deletion and is erased with your account, since nobody else can restore it.",
       membersTold: "The other members get an email saying which months lose data.",
     },
   },
@@ -33,7 +35,6 @@ const en = {
     cancel: "Cancel deletion",
     signOut: "Sign out",
     signIn: "Sign in",
-    cancelled: "Deletion cancelled.",
   },
   months: {
     range: "{from} to {to}",
@@ -85,6 +86,8 @@ const ptBR = {
       losesNothing: "{household} não tem contas suas, então não perde dados.",
       successor: "{name} passa a ser o responsável.",
       deleted: "Você é o único membro, então a casa também é apagada.",
+      alreadyPending:
+        "{household} já está com exclusão agendada e é apagada junto com seu cadastro, já que ninguém mais pode restaurá-la.",
       membersTold: "Os outros membros recebem um e-mail dizendo quais meses perdem dados.",
     },
   },
@@ -98,7 +101,6 @@ const ptBR = {
     cancel: "Cancelar exclusão",
     signOut: "Sair",
     signIn: "Entrar",
-    cancelled: "Exclusão cancelada.",
   },
   months: {
     range: "{from} a {to}",

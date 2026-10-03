@@ -54,7 +54,6 @@ describe("a pending account deletion and the session (integration)", () => {
       const outcome = await requestAccountDeletion(session, db, {
         emailSender: silentSender,
         now: new Date(),
-        timeZone: "America/Sao_Paulo",
         cancelUrl: "https://feudo.test/exclusao-agendada",
       });
       expect(outcome.status).toBe("ok");

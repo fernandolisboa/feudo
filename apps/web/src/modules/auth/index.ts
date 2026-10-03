@@ -25,6 +25,7 @@ export {
   ACCOUNT_DELETION_PENDING_ROUTE,
   getCurrentSession,
   getPendingAccountDeletion,
+  redirectIfAccountDeletionPending,
 } from "./session";
 export { revokeUserSessions } from "./revoke-sessions";
 export type { EmailCopy } from "./email/render";

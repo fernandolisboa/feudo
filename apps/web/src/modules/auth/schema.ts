@@ -27,6 +27,9 @@ export const user = pgTable("user", {
   // their account, cleared if they cancel within the grace, and the row is
   // hard-deleted once the grace ends.
   deletionRequestedAt: timestamp("deletion_requested_at", { withTimezone: true }),
+  // Owned by the privacy slice: when the other members were last emailed
+  // about this user's deletion, so a request-cancel loop cannot flood them.
+  deletionNoticesSentAt: timestamp("deletion_notices_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

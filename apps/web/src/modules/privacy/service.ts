@@ -9,6 +9,7 @@ import {
 import {
   planMembershipDepartures,
   releaseMembershipsForAccountPurge,
+  timeZoneForDepartingUser,
   type MembershipDeparture,
 } from "@/modules/households";
 import {
@@ -23,6 +24,7 @@ import type { Outcome, SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import { buildAccountDeletionRequestedEmail, buildMemberDepartureEmail } from "./email";
 import {
+  claimMemberNotices,
   clearAccountDeletion,
   deleteUser,
   listAccountsDueForDeletion,
@@ -54,7 +56,6 @@ export async function previewAccountDeletion(
 export type AccountDeletionDeps = {
   emailSender: EmailSender;
   now: Date;
-  timeZone: string;
   cancelUrl: string;
 };
 
@@ -74,16 +75,27 @@ export async function requestAccountDeletion(
   deps: AccountDeletionDeps,
 ): Promise<RequestAccountDeletionOutcome> {
   let households: AccountDeletionHousehold[];
-  let marked: boolean;
+  let timeZone: string;
+  let marked: { notifyMembers: boolean } | null;
   try {
-    households = await previewAccountDeletion(session, db);
+    [households, timeZone] = await Promise.all([
+      previewAccountDeletion(session, db),
+      timeZoneForDepartingUser(db, session.userId),
+    ]);
     marked = await db.transaction(async (tx) => {
       if (!(await markAccountForDeletion(tx, session, deps.now))) {
-        return false;
+        return null;
       }
       await destroyProviderCredentials(tx, session);
       await revokeUserSessions(tx, session.userId);
-      return true;
+      return {
+        notifyMembers: await claimMemberNotices(
+          tx,
+          session,
+          deps.now,
+          deletionPurgeCutoff(deps.now),
+        ),
+      };
     });
   } catch {
     return { status: "failed" };
@@ -93,22 +105,29 @@ export async function requestAccountDeletion(
   }
 
   const purgeAt = deletionPurgeAt(deps.now);
-  await sendDeletionNotices(session, households, deps, formatShortDate(purgeAt, deps.timeZone));
+  await sendDeletionNotices(session, marked.notifyMembers ? households : [], deps, {
+    purgeAt,
+    timeZone,
+  });
   return { status: "ok", purgeAt };
 }
 
 // Best-effort, after the commit: a provider failure must not undo or block a
 // deletion the user already confirmed, so each send is logged on its own.
+// Each member reads the date in their own household's time zone.
 async function sendDeletionNotices(
   session: CurrentSession,
   households: AccountDeletionHousehold[],
   deps: AccountDeletionDeps,
-  purgeDate: string,
+  purge: { purgeAt: Date; timeZone: string },
 ): Promise<void> {
   const sends = [
     {
       to: session.email,
-      ...buildAccountDeletionRequestedEmail({ purgeDate, cancelUrl: deps.cancelUrl }),
+      ...buildAccountDeletionRequestedEmail({
+        purgeDate: formatShortDate(purge.purgeAt, purge.timeZone),
+        cancelUrl: deps.cancelUrl,
+      }),
     },
     ...households.flatMap((household) =>
       household.otherMembers.map((other) => ({
@@ -116,7 +135,7 @@ async function sendDeletionNotices(
         ...buildMemberDepartureEmail({
           name: session.name,
           householdName: household.householdName,
-          purgeDate,
+          purgeDate: formatShortDate(purge.purgeAt, household.timeZone),
           accounts: household.accounts,
           months: household.months,
           successorName: household.successorName,

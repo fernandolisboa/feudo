@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { EmailSender } from "@/modules/auth";
 import { member, organization, session as sessionTable, user } from "@/modules/auth/schema";
+import { householdSettings } from "@/modules/households/schema";
 import {
   bankAccount,
   bankConnection,
@@ -50,7 +51,6 @@ function deps(sender: EmailSender, now = REQUESTED_AT) {
   return {
     emailSender: sender,
     now,
-    timeZone: "America/Sao_Paulo",
     cancelUrl: "https://feudo.test/exclusao-agendada",
   };
 }
@@ -334,6 +334,79 @@ describe("account deletion (integration)", () => {
 
       expect(step).toEqual({ ok: true, purged: 0, failed: 0, unreached: 1 });
       expect(await db.select().from(user).where(eq(user.id, ana.id))).toHaveLength(1);
+    });
+  });
+
+  it("emails the other members once per grace window, even when the user cancels and asks again", async () => {
+    await withTestDb(async (db) => {
+      const { ana, bia, caio } = await seedCasa(db);
+      const { sender, sent } = recordingSender();
+      const pending = {
+        userId: ana.id,
+        name: "Ana",
+        email: ana.session.email,
+        deletionRequestedAt: REQUESTED_AT,
+      };
+      await requestAccountDeletion(ana.session, db, deps(sender));
+      await cancelAccountDeletion(pending, db);
+      await requestAccountDeletion(ana.session, db, deps(sender, new Date("2026-10-04T00:00:00Z")));
+      await cancelAccountDeletion(pending, db);
+
+      const toMembers = (emails: SentEmail[]) =>
+        emails.filter((email) => email.to === bia.session.email || email.to === caio.session.email);
+      expect(toMembers(sent)).toHaveLength(2);
+      expect(sent.filter((email) => email.to === ana.session.email)).toHaveLength(2);
+
+      await requestAccountDeletion(ana.session, db, deps(sender, GRACE_END));
+      expect(toMembers(sent)).toHaveLength(4);
+    });
+  });
+
+  it("dates every email in the household's own time zone", async () => {
+    await withTestDb(async (db) => {
+      const { ana, bia, casa } = await seedCasa(db);
+      await db
+        .insert(householdSettings)
+        .values({ householdId: casa, timeZone: "Asia/Tokyo", reserveMultiple: 6 });
+      const { sender, sent } = recordingSender();
+
+      await requestAccountDeletion(ana.session, db, deps(sender, new Date("2026-10-03T20:00:00Z")));
+
+      const toAna = sent.find((email) => email.to === ana.session.email);
+      expect(toAna?.subject).toBe("Seu cadastro no Feudo será apagado em 11/10/2026");
+      const toBia = sent.find((email) => email.to === bia.session.email);
+      expect(toBia?.text).toContain("Em 11/10/2026");
+    });
+  });
+
+  it("erases a household the user owns that is already pending deletion, instead of handing it on, and says so first", async () => {
+    await withTestDb(async (db) => {
+      const { ana, bia, casa } = await seedCasa(db);
+      await db
+        .update(organization)
+        .set({ deletionRequestedAt: REQUESTED_AT })
+        .where(eq(organization.id, casa));
+      const { sender, sent } = recordingSender();
+
+      const preview = await previewAccountDeletion(ana.session, db);
+      expect(preview.find((entry) => entry.householdId === casa)).toEqual(
+        expect.objectContaining({
+          alreadyPendingDeletion: true,
+          deletesHousehold: true,
+          successorName: null,
+          otherMembers: [],
+        }),
+      );
+      expect(
+        (await previewAccountDeletion(bia.session, db)).some((entry) => entry.householdId === casa),
+      ).toBe(false);
+
+      await requestAccountDeletion(ana.session, db, deps(sender));
+      expect(sent.map((email) => email.to)).toEqual([ana.session.email]);
+
+      expect(await purgeAccount(db, ana.id, GRACE_END)).toBe("purged");
+      expect(await db.select().from(organization).where(eq(organization.id, casa))).toEqual([]);
+      expect(await db.select().from(user).where(eq(user.id, bia.id))).toHaveLength(1);
     });
   });
 

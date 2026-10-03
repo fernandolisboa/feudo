@@ -13,6 +13,11 @@ vi.mock("@/modules/auth", () => ({
   ACCOUNT_DELETION_PENDING_ROUTE: "/exclusao-agendada",
   getCurrentSession: getCurrentSessionMock,
   getPendingAccountDeletion: getPendingAccountDeletionMock,
+  redirectIfAccountDeletionPending: async (session: unknown) => {
+    if (!session && (await getPendingAccountDeletionMock())) {
+      redirectMock("/exclusao-agendada");
+    }
+  },
 }));
 
 import { requireHouseholdSession } from "./require-household-session";

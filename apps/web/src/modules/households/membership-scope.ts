@@ -1,8 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { member, organization } from "@/modules/auth/schema";
 
 import type { DatabaseOrTransaction } from "@/platform/db/client";
+import { householdIsNotPendingDeletion } from "./household-deletion";
 import type { HouseholdScope } from "./scope";
 
 type Database = DatabaseOrTransaction;
@@ -28,7 +29,7 @@ export async function lockMembershipScope(
       and(
         eq(member.userId, userId),
         eq(member.organizationId, householdId),
-        isNull(organization.deletionRequestedAt),
+        householdIsNotPendingDeletion(),
       ),
     )
     .limit(1)

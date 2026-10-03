@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-import { AuthShell, getCurrentSession } from "@/modules/auth";
+import { AuthShell, getCurrentSession, redirectIfAccountDeletionPending } from "@/modules/auth";
 import { AcceptInvitationButton, getInvitationPreview, t } from "@/modules/households";
 
 export default async function InviteAcceptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getCurrentSession();
+  await redirectIfAccountDeletionPending(session);
   const next = `/convite/${id}`;
 
   if (!session) {

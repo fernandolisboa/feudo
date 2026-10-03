@@ -234,6 +234,27 @@ describe("household deletion through Better Auth sessions (integration)", () => 
           body: { email: "nova@example.com", role: "member", organizationId: created.householdId },
         }),
       ).rejects.toThrow("household_deletion_pending");
+      await expect(
+        getAuth().api.listMembers({ headers, query: { organizationId: created.householdId } }),
+      ).rejects.toThrow("household_deletion_pending");
+      await expect(
+        getAuth().api.getFullOrganization({
+          headers,
+          query: { organizationId: created.householdId },
+        }),
+      ).rejects.toThrow("household_deletion_pending");
+      await expect(
+        getAuth().api.setActiveOrganization({
+          headers,
+          body: { organizationId: created.householdId },
+        }),
+      ).rejects.toThrow("household_deletion_pending");
+      await expect(
+        getAuth().api.updateOrganization({
+          headers,
+          body: { organizationId: created.householdId, data: { name: "Outra" } },
+        }),
+      ).rejects.toThrow("household_deletion_pending");
 
       const inviteeHeaders = await signUpVerifiedUser(db, {
         name: "Convidada",

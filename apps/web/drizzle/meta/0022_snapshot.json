@@ -1,5 +1,5 @@
 {
-  "id": "ac6d9ec8-8675-4904-8494-07d9f445a054",
+  "id": "3cdf98cd-885a-4da7-a8f3-fafc2fc97729",
   "prevId": "91e9bd31-d749-4ed8-8009-502bfb6dc4f8",
   "version": "7",
   "dialect": "postgresql",
@@ -767,6 +767,12 @@
         },
         "deletion_requested_at": {
           "name": "deletion_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletion_notices_sent_at": {
+          "name": "deletion_notices_sent_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

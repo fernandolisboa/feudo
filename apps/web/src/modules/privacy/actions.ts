@@ -13,7 +13,6 @@ import {
   signOutAction,
 } from "@/modules/auth";
 
-import { timeZoneFor } from "./page-props";
 import { cancelAccountDeletion, requestAccountDeletion } from "./service";
 import { t } from "./strings";
 
@@ -25,7 +24,6 @@ export async function requestAccountDeletionAction(): Promise<ActionState> {
   const outcome = await requestAccountDeletion(session, getDb(), {
     emailSender: getEmailSender(),
     now: new Date(),
-    timeZone: await timeZoneFor(session),
     cancelUrl: `${readAuthBaseUrl()}${ACCOUNT_DELETION_PENDING_ROUTE}`,
   });
 

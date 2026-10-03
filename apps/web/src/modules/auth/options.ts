@@ -3,7 +3,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
-import { and, count, eq, isNotNull, like } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, like, or } from "drizzle-orm";
 import { DEFAULT_RESERVE_MULTIPLE, evaluateRegistrationMode } from "@feudo/core";
 
 import { householdSettings } from "@/modules/households/schema";
@@ -199,6 +199,47 @@ export function buildAuthOptions(
     }
   }
 
+  // ADR-0001 (2026-10-03): a household pending deletion is hidden from every
+  // member, so no raw /organization/* endpoint may read or change it either,
+  // or a restore would not bring it back as it was. Each endpoint names its
+  // household by organizationId or organizationSlug, in the body or the
+  // query, or falls back to the session's active household.
+  async function assertTargetHouseholdNotPendingDeletion(
+    ctx: Parameters<typeof getSessionFromCtx>[0],
+  ): Promise<void> {
+    const rawSession = await getSessionFromCtx<Record<string, unknown>, SessionActiveOrganization>(
+      ctx,
+    );
+    const ids = [
+      readQueryStringField(ctx.body, "organizationId"),
+      readQueryOrganizationId(ctx.query),
+      rawSession?.session.activeOrganizationId ?? undefined,
+    ].filter((id) => id !== undefined);
+    const slugs = [
+      readQueryStringField(ctx.body, "organizationSlug"),
+      readQueryOrganizationSlug(ctx.query),
+    ].filter((slug) => slug !== undefined);
+    if (ids.length === 0 && slugs.length === 0) {
+      return;
+    }
+    const [pending] = await db
+      .select({ id: organizationTable.id })
+      .from(organizationTable)
+      .where(
+        and(
+          or(
+            ids.length > 0 ? inArray(organizationTable.id, ids) : undefined,
+            slugs.length > 0 ? inArray(organizationTable.slug, slugs) : undefined,
+          ),
+          isNotNull(organizationTable.deletionRequestedAt),
+        ),
+      )
+      .limit(1);
+    if (pending) {
+      throw new APIError("FORBIDDEN", { message: "household_deletion_pending" });
+    }
+  }
+
   async function assertHouseholdNotPendingDeletion(organizationId: string): Promise<void> {
     const [pending] = await db
       .select({ id: organizationTable.id })
@@ -335,6 +376,10 @@ export function buildAuthOptions(
           if (rawSession?.user.deletionRequestedAt) {
             throw new APIError("FORBIDDEN", { message: "account_deletion_pending" });
           }
+        }
+
+        if (ctx.path.startsWith("/organization/")) {
+          await assertTargetHouseholdNotPendingDeletion(ctx);
         }
 
         // Both raw endpoints below return invitation data (pending invitee

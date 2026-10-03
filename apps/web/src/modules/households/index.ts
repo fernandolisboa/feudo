@@ -17,8 +17,12 @@ export {
   getPendingHouseholdDeletions,
 } from "./page-props";
 export type { MembershipDeparture } from "./departure";
-export { planMembershipDepartures, releaseMembershipsForAccountPurge } from "./departure";
-export { runHouseholdPurgeStep } from "./household-deletion";
+export {
+  planMembershipDepartures,
+  releaseMembershipsForAccountPurge,
+  timeZoneForDepartingUser,
+} from "./departure";
+export { householdIsNotPendingDeletion, runHouseholdPurgeStep } from "./household-deletion";
 export type { HouseholdRole } from "./membership";
 export { canManageHouseholdSettings, getViewerRole } from "./membership";
 export type { HouseholdSettings } from "./repository";

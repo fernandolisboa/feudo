@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
@@ -114,3 +115,14 @@ export const getPendingAccountDeletion = cache(async (): Promise<PendingAccountD
     deletionRequestedAt: new Date(deletionRequestedAt),
   };
 });
+
+// Every page that reads the session passes it here: a user whose account
+// deletion is pending has no session anywhere else, and the cancel page is
+// the one place they may go (ADR-0001, 2026-10-03).
+export async function redirectIfAccountDeletionPending(
+  session: CurrentSession | null,
+): Promise<void> {
+  if (!session && (await getPendingAccountDeletion())) {
+    redirect(ACCOUNT_DELETION_PENDING_ROUTE);
+  }
+}

@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, inArray, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, exists, inArray, isNotNull, isNull, lte, type SQL } from "drizzle-orm";
 import { deletionPurgeAt, deletionPurgeCutoff } from "@feudo/core";
 
 import type { CurrentSession } from "@/modules/auth";
@@ -15,6 +15,13 @@ import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 import type { HouseholdSession } from "./require-household-session";
 import { householdSettings } from "./schema";
 import { DEFAULT_TIME_ZONE } from "./validation";
+
+// The one rule every households-wide read applies (ADR-0001, 2026-10-03): a
+// household pending deletion is hidden from its members and skipped by every
+// job. Only auth, which households builds on, spells it out on its own.
+export function householdIsNotPendingDeletion(): SQL {
+  return isNull(organization.deletionRequestedAt);
+}
 
 export type RequestHouseholdDeletionOutcome = SimpleOutcome<"ok" | "not_allowed" | "failed">;
 

@@ -1,9 +1,9 @@
-import { and, asc, count, desc, eq, gte, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNotNull, lt } from "drizzle-orm";
 
 import type { AnalysisInput, AnalysisOutput } from "@feudo/core";
 
 import { organization } from "@/modules/auth/schema";
-import type { HouseholdScope } from "@/modules/households";
+import { householdIsNotPendingDeletion, type HouseholdScope } from "@/modules/households";
 import { bankAccount } from "@/modules/sync/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
@@ -232,7 +232,7 @@ export async function listHouseholdsWithAccounts(db: Database): Promise<Househol
     .selectDistinct({ householdId: bankAccount.householdId })
     .from(bankAccount)
     .innerJoin(organization, eq(organization.id, bankAccount.householdId))
-    .where(isNull(organization.deletionRequestedAt))
+    .where(householdIsNotPendingDeletion())
     .orderBy(asc(bankAccount.householdId));
   return rows.flatMap((row) =>
     row.householdId === null ? [] : [{ householdId: row.householdId }],

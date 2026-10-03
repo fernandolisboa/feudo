@@ -114,7 +114,6 @@ const en = {
         "Only you, as the owner, see these. Restoring brings the household back as it was.",
       item: "{name}, erased on {date}",
       restore: "Restore",
-      restored: "Household restored.",
     },
   },
   errors: {
@@ -265,7 +264,6 @@ const ptBR = {
         "Só você, como responsável, vê estas casas. Restaurar traz a casa de volta como estava.",
       item: "{name}, apagada em {date}",
       restore: "Restaurar",
-      restored: "Casa restaurada.",
     },
   },
   errors: {
