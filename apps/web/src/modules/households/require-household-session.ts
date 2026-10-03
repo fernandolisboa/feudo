@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   getCurrentSession,
   redirectIfAccountDeletionPending,
+  redirectIfTermsOutdated,
   type CurrentSession,
 } from "@/modules/auth";
 
@@ -16,6 +17,14 @@ export type HouseholdSession = CurrentSession & { householdId: string };
 // call for itself, since nothing stops a page or action from running without
 // its layout in tests, or from a future route that has no such layout.
 export async function requireHouseholdSession(): Promise<HouseholdSession> {
+  const session = await requireHouseholdSessionForDataRights();
+  redirectIfTermsOutdated(session);
+  return session;
+}
+
+// Exporting one's data is an LGPD right that does not wait on accepting a
+// newer version of the terms (ADR-0008): only the data-export route uses this.
+export async function requireHouseholdSessionForDataRights(): Promise<HouseholdSession> {
   const session = await getCurrentSession();
   await redirectIfAccountDeletionPending(session);
   const redirectTarget = resolveAppRoute(session);

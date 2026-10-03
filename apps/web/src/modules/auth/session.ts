@@ -8,6 +8,7 @@ import { member, organization, session as sessionTable } from "./schema";
 
 import type { Database } from "@/platform/db/client";
 import { getAuth } from "./auth";
+import { hasAcceptedCurrentTerms, TERMS_ACCEPTANCE_ROUTE } from "./terms";
 
 export type CurrentSession = {
   userId: string;
@@ -15,6 +16,7 @@ export type CurrentSession = {
   email: string;
   householdId: string | null;
   theme: string;
+  termsVersion: string;
 };
 
 // The theme column's DB default guarantees a value once a user exists;
@@ -87,6 +89,7 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
     email: session.user.email,
     householdId,
     theme: session.user.theme ?? RAW_THEME_FALLBACK,
+    termsVersion: session.user.termsVersion,
   };
 });
 
@@ -124,5 +127,15 @@ export async function redirectIfAccountDeletionPending(
 ): Promise<void> {
   if (!session && (await getPendingAccountDeletion())) {
     redirect(ACCOUNT_DELETION_PENDING_ROUTE);
+  }
+}
+
+// Every signed-in page passes here after the pending-deletion check: a user
+// who accepted an older version of the terms and privacy policy accepts the
+// current one before using Feudo again (ADR-0008, #25). Deleting the account
+// and exporting data stay reachable from the acceptance page itself.
+export function redirectIfTermsOutdated(session: CurrentSession): void {
+  if (!hasAcceptedCurrentTerms(session)) {
+    redirect(TERMS_ACCEPTANCE_ROUTE);
   }
 }

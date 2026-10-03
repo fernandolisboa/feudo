@@ -1,7 +1,11 @@
 import type { HouseholdSession } from "@/modules/households";
 
 import { getDb } from "@/platform/db/client";
-import { createFinancialDataAccessRepository, RECENT_ACCESS_LIMIT } from "./repository";
+import {
+  createFinancialDataAccessRepository,
+  RECENT_ACCESS_LIMIT,
+  type FinancialDataAccessExportRow,
+} from "./repository";
 import { financialDataAccessScope } from "./scope";
 
 import type { FinancialDataKind } from "./schema";
@@ -40,4 +44,27 @@ export async function listRecentFinancialDataAccess(
     db,
     limit,
   );
+}
+
+// The data export's own rate limit (ADR-0008, amended 2026-10-03, #25): how
+// many exports the session's user has made in the window, across every
+// household — a limit a household switch cannot reset.
+export async function countRecentExports(session: HouseholdSession, since: Date): Promise<number> {
+  const db = getDb();
+  return createFinancialDataAccessRepository(financialDataAccessScope(session)).countSince(
+    db,
+    "export",
+    since,
+  );
+}
+
+export type { FinancialDataAccessExportRow };
+
+// The export's own financialDataAccess section: every access the session's
+// user triggered, across every household (#25) — never another member's.
+export async function listFinancialDataAccessForExport(
+  session: HouseholdSession,
+): Promise<FinancialDataAccessExportRow[]> {
+  const db = getDb();
+  return createFinancialDataAccessRepository(financialDataAccessScope(session)).listAllForUser(db);
 }

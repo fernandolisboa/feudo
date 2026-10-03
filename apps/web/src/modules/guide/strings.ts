@@ -221,7 +221,7 @@ const en = {
         },
         {
           title: "Exporting your data",
-          body: "Downloading your data is on the way; this section will explain it when it arrives.",
+          body: "In Preferences, Your data → Download my data gives you a JSON file: your sign-up details, the households you belong to, your connections, accounts, transactions and your own categorizations and marks. It never includes another member's data, your Meu Pluggy credentials or CPF codes. Up to 3 downloads every 24 hours; each one shows up in Your recent access, on the Household screen.",
         },
       ],
     },
@@ -472,7 +472,7 @@ const ptBR = {
         },
         {
           title: "Exportar seus dados",
-          body: "Baixar seus dados está a caminho; esta seção vai explicar isso quando chegar.",
+          body: "Em Preferências, Seus dados → Baixar meus dados gera um arquivo JSON: seu cadastro, as casas de que você participa, suas conexões, contas, transações e suas próprias categorizações e marcações. Ele nunca inclui dados de outro membro, suas credenciais do Meu Pluggy ou códigos de CPF. Até 3 downloads a cada 24 horas; cada um aparece em Seus acessos recentes, na tela Casa.",
         },
       ],
     },

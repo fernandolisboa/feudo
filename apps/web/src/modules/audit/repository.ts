@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt } from "drizzle-orm";
 
 import { financialDataAccess, type FinancialDataKind } from "./schema";
 
@@ -7,6 +7,12 @@ import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
 export type FinancialDataAccessRow = {
   id: string;
+  kind: FinancialDataKind;
+  accessedAt: Date;
+};
+
+export type FinancialDataAccessExportRow = {
+  householdId: string;
   kind: FinancialDataKind;
   accessedAt: Date;
 };
@@ -43,6 +49,42 @@ export function createFinancialDataAccessRepository(scope: FinancialDataAccessSc
         )
         .orderBy(desc(financialDataAccess.accessedAt))
         .limit(limit);
+    },
+
+    // Counts only by user and kind, across every household (amended
+    // 2026-10-03, #25): the export rate limit is per user, not per
+    // household, so it deliberately ignores the household half of the scope.
+    async countSince(
+      db: DatabaseOrTransaction,
+      kind: FinancialDataKind,
+      since: Date,
+    ): Promise<number> {
+      const [row] = await db
+        .select({ total: count() })
+        .from(financialDataAccess)
+        .where(
+          and(
+            eq(financialDataAccess.userId, scope.userId),
+            eq(financialDataAccess.kind, kind),
+            gte(financialDataAccess.accessedAt, since),
+          ),
+        );
+      return row?.total ?? 0;
+    },
+
+    // Every access the scoped user triggered, across every household
+    // (amended 2026-10-03, #25): the data export's own financialDataAccess
+    // section, unlike listRecentForUser which stays within one household.
+    async listAllForUser(db: DatabaseOrTransaction): Promise<FinancialDataAccessExportRow[]> {
+      return db
+        .select({
+          householdId: financialDataAccess.householdId,
+          kind: financialDataAccess.kind,
+          accessedAt: financialDataAccess.accessedAt,
+        })
+        .from(financialDataAccess)
+        .where(eq(financialDataAccess.userId, scope.userId))
+        .orderBy(desc(financialDataAccess.accessedAt));
     },
   };
 }

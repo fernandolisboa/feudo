@@ -17,6 +17,14 @@ _Avoid_: account (reserved for bank accounts), customer
 **Membership**:
 The link between a user and a household, carrying the user's role in it.
 
+**Terms acceptance**:
+A user's recorded acceptance of the terms of use and the privacy policy, which share one version and are accepted together: at sign-up, and again before using Feudo whenever a newer version is published. A user who has not accepted the current version can still export their data and delete their account without accepting it (ADR-0008).
+_Avoid_: consent (that is the bank-connection consent), agreement
+
+**Data export**:
+A user downloading everything Feudo holds about them as one JSON file: their login identity, memberships, connections, accounts (positions included), transactions of those accounts, the annotations they authored and their own access-log entries. It never carries another user's data, credentials or document hashes; it is limited to 3 per user per rolling 24 hours and each one is recorded as a financial-data access of kind export (ADR-0008).
+_Avoid_: backup, download (as a noun in code), report
+
 **Role**:
 What a membership allows. `Owner` administers people and settings and is the only one who can transfer ownership or delete the household. `Admin` administers people and settings. `Member` manages only their own bank connections. A household has exactly one owner.
 _Avoid_: permission level, tier

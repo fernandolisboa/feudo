@@ -18,9 +18,19 @@ vi.mock("@/modules/auth", () => ({
       redirectMock("/exclusao-agendada");
     }
   },
+  redirectIfTermsOutdated: (session: { termsVersion: string }) => {
+    if (session.termsVersion !== CURRENT_TERMS) {
+      redirectMock("/aceitar-termos");
+    }
+  },
 }));
 
-import { requireHouseholdSession } from "./require-household-session";
+import {
+  requireHouseholdSession,
+  requireHouseholdSessionForDataRights,
+} from "./require-household-session";
+
+const CURRENT_TERMS = "2026-10-03";
 
 beforeEach(() => {
   redirectMock.mockClear();
@@ -36,6 +46,7 @@ describe("requireHouseholdSession", () => {
       name: "Ada",
       email: "ada@example.com",
       householdId: "household-a",
+      termsVersion: CURRENT_TERMS,
     });
 
     const session = await requireHouseholdSession();
@@ -68,8 +79,44 @@ describe("requireHouseholdSession", () => {
       name: "Ada",
       email: "ada@example.com",
       householdId: null,
+      termsVersion: CURRENT_TERMS,
     });
 
     await expect(requireHouseholdSession()).rejects.toThrow("NEXT_REDIRECT:/comecar");
+  });
+
+  it("sends a user who accepted an older version of the terms to accept the current one", async () => {
+    getCurrentSessionMock.mockResolvedValue({
+      userId: "user-1",
+      name: "Ada",
+      email: "ada@example.com",
+      householdId: "household-a",
+      termsVersion: "2026-09-09",
+    });
+
+    await expect(requireHouseholdSession()).rejects.toThrow("NEXT_REDIRECT:/aceitar-termos");
+  });
+});
+
+describe("requireHouseholdSessionForDataRights", () => {
+  it("lets a user with outdated terms through, since exporting data is a right", async () => {
+    getCurrentSessionMock.mockResolvedValue({
+      userId: "user-1",
+      name: "Ada",
+      email: "ada@example.com",
+      householdId: "household-a",
+      termsVersion: "2026-09-09",
+    });
+
+    const session = await requireHouseholdSessionForDataRights();
+
+    expect(session.householdId).toBe("household-a");
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("still redirects a signed-out visitor to sign in", async () => {
+    getCurrentSessionMock.mockResolvedValue(null);
+
+    await expect(requireHouseholdSessionForDataRights()).rejects.toThrow("NEXT_REDIRECT:/entrar");
   });
 });

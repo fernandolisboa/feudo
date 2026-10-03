@@ -82,3 +82,39 @@ export async function lockAccountDueForDeletion(
 export async function deleteUser(tx: DatabaseOrTransaction, userId: string): Promise<void> {
   await tx.delete(user).where(eq(user.id, userId));
 }
+
+export type ExportUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: Date;
+  termsVersion: string;
+  termsAcceptedAt: Date;
+  theme: string;
+};
+
+// The export's own "user" section (#25): read directly off auth's schema,
+// like theme's own repository does for the same table — this slice composes
+// the export document, so it owns the one query nothing else here already
+// exposes.
+export async function getExportUser(
+  db: DatabaseOrTransaction,
+  userId: string,
+): Promise<ExportUserRow | undefined> {
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      termsVersion: user.termsVersion,
+      termsAcceptedAt: user.termsAcceptedAt,
+      theme: user.theme,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return rows[0];
+}

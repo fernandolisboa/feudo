@@ -9,3 +9,5 @@ export { runReserveMonthCloseStep } from "./service";
 export type { ReserveMonthCloseStep } from "./service";
 export { t } from "./strings";
 export { getReserveAnalysisFacts } from "./analysis-facts";
+export type { ReserveMarkExportRow } from "./export";
+export { getReserveMarksForExport } from "./export";

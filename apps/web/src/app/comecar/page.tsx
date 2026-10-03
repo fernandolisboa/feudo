@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import { getCurrentSession, redirectIfAccountDeletionPending } from "@/modules/auth";
+import {
+  getCurrentSession,
+  redirectIfAccountDeletionPending,
+  redirectIfTermsOutdated,
+} from "@/modules/auth";
 import {
   OnboardingForm,
   OnboardingInvitesPanel,
@@ -20,6 +24,7 @@ export default async function OnboardingPage() {
   if (redirectTarget || !session) {
     redirect(redirectTarget ?? "/entrar");
   }
+  redirectIfTermsOutdated(session);
 
   const [invitations, pendingHouseholds, deleteAccount] = await Promise.all([
     getOnboardingInvites(),

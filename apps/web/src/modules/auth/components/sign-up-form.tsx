@@ -5,12 +5,12 @@ import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
-import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
 import { signUpAction } from "../actions";
 import { t } from "../strings";
+import { TermsCheckbox } from "./terms-checkbox";
 
 export function SignUpForm({ next }: { next?: string | null } = {}) {
   const [state, formAction, isPending] = useActionState(signUpAction, initialActionState);
@@ -46,12 +46,7 @@ export function SignUpForm({ next }: { next?: string | null } = {}) {
         />
       </div>
 
-      <div className="flex items-start gap-2">
-        <Checkbox id="termsAccepted" name="termsAccepted" className="mt-0.5" />
-        <Label htmlFor="termsAccepted" className="text-sm leading-normal font-normal">
-          {t.signUp.termsLabel}
-        </Label>
-      </div>
+      <TermsCheckbox />
 
       <Button type="submit" disabled={isPending}>
         {t.signUp.submit}

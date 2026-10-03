@@ -23,6 +23,8 @@ export {
   timeZoneForDepartingUser,
 } from "./departure";
 export { householdIsNotPendingDeletion, runHouseholdPurgeStep } from "./household-deletion";
+export type { HouseholdMembershipExportRow } from "./export";
+export { getHouseholdMembershipsForExport } from "./export";
 export type { HouseholdRole } from "./membership";
 export { canManageHouseholdSettings, getViewerRole } from "./membership";
 export type { HouseholdSettings } from "./repository";
@@ -30,7 +32,10 @@ export { getHouseholdSettings, updateReserveMultiple } from "./repository";
 export type { HouseholdSession } from "./require-household-session";
 export type { HouseholdSummary } from "./service";
 export { listHouseholds } from "./service";
-export { requireHouseholdSession } from "./require-household-session";
+export {
+  requireHouseholdSession,
+  requireHouseholdSessionForDataRights,
+} from "./require-household-session";
 export type { RedirectTarget, SessionForRouting } from "./routing";
 export { resolveAppRoute, resolveOnboardingRoute } from "./routing";
 export type { HouseholdScope } from "./scope";

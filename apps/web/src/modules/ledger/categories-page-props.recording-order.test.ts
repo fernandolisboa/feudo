@@ -21,6 +21,7 @@ const SESSION = {
   name: "Ana",
   email: "ana@example.com",
   theme: "caderno" as const,
+  termsVersion: "test",
 };
 const NOW = new Date("2026-10-01T00:00:00.000Z");
 
