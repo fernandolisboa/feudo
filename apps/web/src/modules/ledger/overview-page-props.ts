@@ -16,6 +16,7 @@ import {
   type YearMonth,
 } from "@feudo/core";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import type { HouseholdScope, HouseholdSession } from "@/modules/households";
@@ -188,13 +189,19 @@ function seriesPoints(series: readonly MonthlyPoint[]): MonthlyBarPointView[] {
 // three can never disagree over dashboardMonthRange's window (the current
 // month plus the six months behind it) — then hands the lines to
 // packages/core's buildLedgerDashboard: every number on this page is
-// computed there, never guessed at in this file.
+// computed there, never guessed at in this file. The audit write (ADR-0008)
+// runs concurrently with the read it witnesses, not after it: a failed
+// write fails this call too.
 export async function getOverviewPageProps(
   session: HouseholdSession,
   searchParams: OverviewSearchParams,
   now: Date = new Date(),
 ): Promise<OverviewPageProps> {
-  return buildOverviewPageProps(householdScope(session), searchParams, now);
+  const [props] = await Promise.all([
+    buildOverviewPageProps(householdScope(session), searchParams, now),
+    recordFinancialDataAccess(session, "overview"),
+  ]);
+  return props;
 }
 
 export async function buildOverviewPageProps(

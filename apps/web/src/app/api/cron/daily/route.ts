@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
+import { runDailyPruneStep as runAuditPruneStep } from "@/modules/audit";
 import { runDailyPruneStep as runAuthPruneStep } from "@/modules/auth";
 import { runDailyPruneStep as runHouseholdsPruneStep } from "@/modules/households";
 import { runDailyRefreshStep } from "@/modules/market-data";
@@ -30,6 +31,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneVerification = await runAuthPruneStep(db);
   const pruneInvitations = await runHouseholdsPruneStep(db);
   const pruneConsents = await runSyncPruneStep(db);
+  const pruneAuditLog = await runAuditPruneStep(db);
   const marketData = await runDailyRefreshStep(db);
   const reserveMonthClose = await runReserveMonthCloseStep(
     db,
@@ -40,18 +42,27 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneVerificationOk = !("error" in pruneVerification);
   const pruneInvitationsOk = !("error" in pruneInvitations);
   const pruneConsentsOk = !("error" in pruneConsents);
+  const pruneAuditLogOk = !("error" in pruneAuditLog);
   const reserveMonthCloseOk = "error" in reserveMonthClose ? false : reserveMonthClose.ok;
   const ok =
     marketDataOk &&
     pruneVerificationOk &&
     pruneInvitationsOk &&
     pruneConsentsOk &&
+    pruneAuditLogOk &&
     reserveMonthCloseOk;
 
   return NextResponse.json(
     {
       ok,
-      steps: { pruneVerification, pruneInvitations, pruneConsents, marketData, reserveMonthClose },
+      steps: {
+        pruneVerification,
+        pruneInvitations,
+        pruneConsents,
+        pruneAuditLog,
+        marketData,
+        reserveMonthClose,
+      },
     },
     { status: ok ? 200 : 500 },
   );

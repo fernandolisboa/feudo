@@ -15,6 +15,7 @@ import {
   type YearMonth,
 } from "@feudo/core";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import {
   canManageHouseholdSettings,
   DEFAULT_TIME_ZONE,
@@ -208,17 +209,23 @@ export async function getReserveNoticeBannerProps(
 // window and the same read path the month-close job and the Visão geral
 // tile use (readHouseholdDashboardLines, packages/core's averageFixedCost),
 // so the three can never disagree; the recorded table only backs the
-// notice, never the numbers shown here.
+// notice, never the numbers shown here. The audit write (ADR-0008) runs
+// concurrently with the read it witnesses, not after it: a failed write
+// fails this call too.
 export async function getReservePageProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<ReservePageProps> {
   const db = getDb();
   const viewerRole = await getViewerRole(session, db);
-  return buildReservePageProps(householdScope(session), {
-    now,
-    canManage: canManageHouseholdSettings(viewerRole),
-  });
+  const [props] = await Promise.all([
+    buildReservePageProps(householdScope(session), {
+      now,
+      canManage: canManageHouseholdSettings(viewerRole),
+    }),
+    recordFinancialDataAccess(session, "reserve"),
+  ]);
+  return props;
 }
 
 export async function buildReservePageProps(

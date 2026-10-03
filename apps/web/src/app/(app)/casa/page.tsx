@@ -1,5 +1,6 @@
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
+import { RecentAccessTable, getRecentAccessPageProps, t as auditT } from "@/modules/audit";
 import {
   InviteMemberDialog,
   MembersTable,
@@ -11,7 +12,8 @@ import {
 
 export default async function CasaPage() {
   const session = await requireHouseholdSession();
-  const { members, viewerRole, canManage, invitations, timeZone } = await getCasaPageProps(session);
+  const [{ members, viewerRole, canManage, invitations, timeZone }, recentAccess] =
+    await Promise.all([getCasaPageProps(session), getRecentAccessPageProps(session)]);
 
   return (
     <>
@@ -36,6 +38,11 @@ export default async function CasaPage() {
           <PendingInvitationsTable invitations={invitations} timeZone={timeZone} />
         </section>
       ) : null}
+
+      <section className="mt-8">
+        <SectionHeader title={auditT.recentAccess.sectionTitle} />
+        <RecentAccessTable entries={recentAccess} />
+      </section>
     </>
   );
 }

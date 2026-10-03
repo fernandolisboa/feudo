@@ -18,6 +18,7 @@ import {
   type YearMonth,
 } from "@feudo/core";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
@@ -216,11 +217,12 @@ export async function getTransactionsPageProps(
   const searchQuery = normalizedSearch !== "" ? rawSearch : null;
 
   const monthRange = yearMonthDayRange(month);
-  const {
-    kinds,
-    rows: monthRows,
-    padded,
-  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone);
+  // The audit write (ADR-0008) runs concurrently with this read, not after
+  // it: a failed write fails this call too.
+  const [{ kinds, rows: monthRows, padded }] = await Promise.all([
+    readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone),
+    recordFinancialDataAccess(session, "transactions"),
+  ]);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(padded.map((row) => [row.id, row]));
 
