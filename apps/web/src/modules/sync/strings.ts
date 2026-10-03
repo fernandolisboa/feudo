@@ -5,8 +5,9 @@ const en = {
     paragraphs: [
       "Feudo reads, through Meu Pluggy, the accounts you connect there: checking and savings accounts, credit cards and investment positions, with their balances and transactions. It does not move money, does not see your bank password and does not read anything you have not connected in Meu Pluggy.",
       "Your Meu Pluggy credentials (client id and client secret) are stored encrypted on the server and are never shown again. The account holder's CPF is stored only as an irreversible hash, used to tell your accounts from your partner's.",
-      'Accounts you connect are assigned to your active household and labelled "individual account" until you mark them as a household account. Other members of the household see the accounts and balances of what you connect.',
-      "You can stop at any time: removing your credentials stops synchronization and destroys them immediately; deleting a connection removes its accounts. Revoking Feudo's access in Meu Pluggy has the same effect.",
+      'Accounts you connect are assigned to your active household and labelled "individual account" until you mark them as a household account. Every member of the household sees the accounts, balances and transactions of what you connect, whatever the label.',
+      "For the analyst reading, Feudo sends Anthropic only figures it has already calculated for the household and the names of the institutions, never transactions, descriptions, account names or documents.",
+      "You can stop at any time: removing your credentials stops synchronization and destroys them immediately; deleting a connection removes its accounts and their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what Feudo has already read stays here until you remove your credentials and delete your connections.",
     ],
     checkbox: "I have read and I authorize Feudo to read the data described above.",
     continue: "Continue",
@@ -209,8 +210,9 @@ const ptBR = {
     paragraphs: [
       "O Feudo lê, pelo Meu Pluggy, as contas que você conecta lá: contas correntes e poupanças, cartões de crédito e posições de investimento, com saldos e transações. Ele não movimenta dinheiro, não vê a senha do seu banco e não lê nada que você não tenha conectado no Meu Pluggy.",
       "Suas credenciais do Meu Pluggy (client id e client secret) ficam guardadas criptografadas no servidor e nunca são exibidas de novo. O CPF do titular é guardado só como um hash irreversível, usado para distinguir suas contas das do seu parceiro ou parceira.",
-      "As contas que você conecta entram na sua casa ativa com o rótulo “conta individual” até você marcá-las como conta da casa. Os outros membros da casa veem as contas e os saldos do que você conectar.",
-      "Você pode parar quando quiser: remover suas credenciais interrompe a sincronização e as destrói na hora; excluir uma conexão remove as contas dela. Revogar o acesso do Feudo no Meu Pluggy tem o mesmo efeito.",
+      "As contas que você conecta entram na sua casa ativa com o rótulo “conta individual” até você marcá-las como conta da casa. Todos os membros da casa veem as contas, os saldos e as transações do que você conectar, qualquer que seja o rótulo.",
+      "Para a leitura do analista, o Feudo envia à Anthropic só os números que ele mesmo calculou para a casa e os nomes das instituições, nunca transações, descrições, nomes de contas ou documentos.",
+      "Você pode parar quando quiser: remover suas credenciais interrompe a sincronização e as destrói na hora; excluir uma conexão remove as contas dela, com as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que o Feudo já leu continua aqui até você remover suas credenciais e excluir suas conexões.",
     ],
     checkbox: "Li e autorizo o Feudo a ler os dados descritos acima.",
     continue: "Continuar",

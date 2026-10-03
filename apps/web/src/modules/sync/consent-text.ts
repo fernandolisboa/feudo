@@ -1,6 +1,6 @@
 import { t } from "./strings";
 
-export const CONSENT_SCOPE_VERSION = "2026-09-19";
+export const CONSENT_SCOPE_VERSION = "2026-10-03";
 
 // Stored verbatim on the consent row so what the user saw can be reproduced
 // (ADR-0008), whatever the copy says by then.
