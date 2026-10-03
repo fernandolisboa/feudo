@@ -353,7 +353,7 @@ const ptBR = {
     invalidInput: "Confira os campos e tente de novo.",
     failed: "Não deu para salvar agora. Tente de novo.",
     noticeNotFound: "Esse aviso não está mais disponível nesta casa.",
-    notAllowed: "Só quem administra a casa (dono ou admin) pode alterar os meses de reserva.",
+    notAllowed: "Só o responsável pela casa ou um administrador pode alterar os meses de reserva.",
     accountNotFound: "Essa conta não está mais nesta casa.",
   },
 } satisfies typeof en;

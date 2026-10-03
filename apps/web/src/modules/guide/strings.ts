@@ -421,7 +421,7 @@ const ptBR = {
       topics: [
         {
           title: "Meta",
-          body: "A meta é o número de meses de reserva vezes o custo fixo médio, então categorizar bem é o que deixa esse número certo. Quem administra a casa (dono ou admin) muda os meses no alto da tela.",
+          body: "A meta é o número de meses de reserva vezes o custo fixo médio, então categorizar bem é o que deixa esse número certo. O responsável pela casa ou um administrador muda os meses no alto da tela.",
         },
         {
           title: "O que faz parte da reserva",
