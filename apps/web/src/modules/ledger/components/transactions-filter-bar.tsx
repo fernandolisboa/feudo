@@ -69,7 +69,7 @@ export function TransactionsFilterBar({
             type="search"
             defaultValue={searchQuery ?? ""}
             placeholder={t.search.placeholder}
-            className="h-11 w-full pl-8 md:h-9"
+            className="w-full pl-8"
           />
         </div>
       </form>
