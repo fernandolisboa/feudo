@@ -1,4 +1,6 @@
 export { AcceptInvitationButton } from "./components/accept-invitation-button";
+export { DeleteHouseholdSection } from "./components/delete-household-section";
+export { PendingHouseholdDeletions } from "./components/pending-household-deletions";
 export { HouseholdSwitcherSelect } from "./components/household-switcher-select";
 export { InviteMemberDialog } from "./components/invite-member-dialog";
 export { MembersTable } from "./components/members-table";
@@ -8,7 +10,19 @@ export { PendingInvitationsTable } from "./components/pending-invitations-table"
 export { getHouseholdSwitcherProps } from "./get-household-switcher-props";
 export { runDailyPruneStep } from "./invitation-prune";
 export { lockMembershipScope } from "./membership-scope";
-export { getCasaPageProps, getInvitationPreview, getOnboardingInvites } from "./page-props";
+export {
+  getCasaPageProps,
+  getInvitationPreview,
+  getOnboardingInvites,
+  getPendingHouseholdDeletions,
+} from "./page-props";
+export type { MembershipDeparture } from "./departure";
+export {
+  planMembershipDepartures,
+  releaseMembershipsForAccountPurge,
+  timeZoneForDepartingUser,
+} from "./departure";
+export { householdIsNotPendingDeletion, runHouseholdPurgeStep } from "./household-deletion";
 export type { HouseholdRole } from "./membership";
 export { canManageHouseholdSettings, getViewerRole } from "./membership";
 export type { HouseholdSettings } from "./repository";

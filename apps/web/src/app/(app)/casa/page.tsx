@@ -9,6 +9,7 @@ import {
   t as auditT,
 } from "@/modules/audit";
 import {
+  DeleteHouseholdSection,
   InviteMemberDialog,
   MembersTable,
   PendingInvitationsTable,
@@ -25,7 +26,8 @@ async function RecentAccessContent({ session }: { session: HouseholdSession }) {
 
 export default async function CasaPage() {
   const session = await requireHouseholdSession();
-  const { members, viewerRole, canManage, invitations, timeZone } = await getCasaPageProps(session);
+  const { members, viewerRole, canManage, invitations, timeZone, deletion } =
+    await getCasaPageProps(session);
 
   return (
     <>
@@ -59,6 +61,12 @@ export default async function CasaPage() {
           </Suspense>
         </RecentAccessErrorBoundary>
       </section>
+      {deletion ? (
+        <section className="mt-8">
+          <SectionHeader title={t.casa.deleteHousehold.sectionTitle} />
+          <DeleteHouseholdSection {...deletion} />
+        </section>
+      ) : null}
     </>
   );
 }

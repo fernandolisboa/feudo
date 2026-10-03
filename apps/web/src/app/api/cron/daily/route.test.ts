@@ -14,6 +14,11 @@ vi.mock("@/modules/auth", () => ({
 
 vi.mock("@/modules/households", () => ({
   runDailyPruneStep: vi.fn(),
+  runHouseholdPurgeStep: vi.fn(),
+}));
+
+vi.mock("@/modules/privacy", () => ({
+  runAccountPurgeStep: vi.fn(),
 }));
 
 vi.mock("@/modules/sync", () => ({
@@ -31,7 +36,9 @@ vi.mock("@/modules/reserve", () => ({
 const { GET } = await import("./route");
 const { runDailyRefreshStep } = await import("@/modules/market-data");
 const { runDailyPruneStep: runAuthPruneStep } = await import("@/modules/auth");
-const { runDailyPruneStep: runHouseholdsPruneStep } = await import("@/modules/households");
+const { runDailyPruneStep: runHouseholdsPruneStep, runHouseholdPurgeStep } =
+  await import("@/modules/households");
+const { runAccountPurgeStep } = await import("@/modules/privacy");
 const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
 const { runDailyPruneStep: runAuditPruneStep } = await import("@/modules/audit");
 const { runReserveMonthCloseStep } = await import("@/modules/reserve");
@@ -53,6 +60,13 @@ describe("GET /api/cron/daily", () => {
     vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAuditPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runAccountPurgeStep).mockResolvedValue({
+      ok: true,
+      purged: 0,
+      failed: 0,
+      unreached: 0,
+    });
+    vi.mocked(runHouseholdPurgeStep).mockResolvedValue({ purged: 0 });
     vi.mocked(runDailyRefreshStep).mockResolvedValue({ ok: true, results: [] });
     vi.mocked(runReserveMonthCloseStep).mockResolvedValue({
       ok: true,
@@ -251,5 +265,61 @@ describe("GET /api/cron/daily", () => {
       failed: 1,
       unreached: 0,
     });
+  });
+
+  it("returns 500 and still reports the other steps when an account purge fails", async () => {
+    vi.mocked(runAccountPurgeStep).mockResolvedValue({
+      ok: false,
+      purged: 1,
+      failed: 1,
+      unreached: 0,
+    });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        purgeAccounts: { ok: boolean; failed: number };
+        purgeHouseholds: { purged: number };
+        marketData: { ok: boolean; results: unknown[] };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.purgeAccounts).toEqual({ ok: false, purged: 1, failed: 1, unreached: 0 });
+    expect(body.steps.purgeHouseholds).toEqual({ purged: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 and still reports the other steps when the household purge fails", async () => {
+    vi.mocked(runHouseholdPurgeStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: { purgeHouseholds: { error: string }; reserveMonthClose: { ok: boolean } };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.purgeHouseholds).toEqual({ error: "Error" });
+    expect(body.steps.reserveMonthClose.ok).toBe(true);
+  });
+
+  it("bounds the account purge to its own share of the route's budget, stamped at request start", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T03:00:00.000Z"));
+    try {
+      await callCronRoute();
+
+      expect(runAccountPurgeStep).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(Date),
+        new Date("2026-10-01T03:00:20.000Z"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -28,6 +28,8 @@ export const switchHouseholdFormSchema = z.object({
   householdId: z.string().trim().min(1),
 });
 
+export const householdIdFormSchema = switchHouseholdFormSchema;
+
 // Owner is excluded on purpose (ADR-0001): nobody is ever invited or
 // role-updated into it, only households.transferOwnership moves it.
 export const INVITABLE_ROLES = ["admin", "member"] as const;

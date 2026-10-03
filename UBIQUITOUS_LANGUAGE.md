@@ -21,6 +21,8 @@
 | Role                                        | papel                                          |                                                                              |
 | Transfer ownership                          | transferir a responsabilidade                  | "Transferir responsabilidade" — never "posse"                                |
 | Invite                                      | convite                                        |                                                                              |
+| User deletion (code: account deletion)      | excluir cadastro                               | 7-day grace; "Exclusão do cadastro agendada" while it runs                   |
+| Household deletion                          | excluir a casa                                 | 7-day grace; only the owner sees and restores it                             |
 | Bank connection                             | conexão bancária                               | "conectar banco"                                                             |
 | Data provider                               | provedor de dados                              | "Meu Pluggy" when naming it                                                  |
 | Provider credentials                        | credenciais do provedor                        |                                                                              |

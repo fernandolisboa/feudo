@@ -4,8 +4,12 @@ import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
 import { runDailyPruneStep as runAuditPruneStep } from "@/modules/audit";
 import { runDailyPruneStep as runAuthPruneStep } from "@/modules/auth";
-import { runDailyPruneStep as runHouseholdsPruneStep } from "@/modules/households";
+import {
+  runDailyPruneStep as runHouseholdsPruneStep,
+  runHouseholdPurgeStep,
+} from "@/modules/households";
 import { runDailyRefreshStep } from "@/modules/market-data";
+import { runAccountPurgeStep } from "@/modules/privacy";
 import { runReserveMonthCloseStep } from "@/modules/reserve";
 import { runDailyPruneStep as runSyncPruneStep } from "@/modules/sync";
 
@@ -16,6 +20,11 @@ export const maxDuration = 60;
 // it must be short) and this route's own JSON response need back once the
 // last household's close returns.
 const RESERVE_RUN_HEADROOM_MS = 15_000;
+
+// Accounts past their deletion grace are normally none or a handful; this
+// caps how much of the route's budget a backlog can take from the steps
+// after it, and what is left over waits for tomorrow's run.
+const ACCOUNT_PURGE_BUDGET_MS = 20_000;
 
 export async function GET(request: Request): Promise<NextResponse> {
   if (!isCronRequestAuthorized(request.headers.get("authorization"))) {
@@ -32,6 +41,12 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneInvitations = await runHouseholdsPruneStep(db);
   const pruneConsents = await runSyncPruneStep(db);
   const pruneAuditLog = await runAuditPruneStep(db);
+  const purgeAccounts = await runAccountPurgeStep(
+    db,
+    new Date(),
+    new Date(requestStartedAt + ACCOUNT_PURGE_BUDGET_MS),
+  );
+  const purgeHouseholds = await runHouseholdPurgeStep(db, new Date());
   const marketData = await runDailyRefreshStep(db);
   const reserveMonthClose = await runReserveMonthCloseStep(
     db,
@@ -44,12 +59,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneConsentsOk = !("error" in pruneConsents);
   const pruneAuditLogOk = !("error" in pruneAuditLog);
   const reserveMonthCloseOk = "error" in reserveMonthClose ? false : reserveMonthClose.ok;
+  const purgeAccountsOk = "error" in purgeAccounts ? false : purgeAccounts.ok;
+  const purgeHouseholdsOk = !("error" in purgeHouseholds);
   const ok =
     marketDataOk &&
     pruneVerificationOk &&
     pruneInvitationsOk &&
     pruneConsentsOk &&
     pruneAuditLogOk &&
+    purgeAccountsOk &&
+    purgeHouseholdsOk &&
     reserveMonthCloseOk;
 
   return NextResponse.json(
@@ -60,6 +79,8 @@ export async function GET(request: Request): Promise<NextResponse> {
         pruneInvitations,
         pruneConsents,
         pruneAuditLog,
+        purgeAccounts,
+        purgeHouseholds,
         marketData,
         reserveMonthClose,
       },

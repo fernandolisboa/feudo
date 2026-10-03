@@ -1,9 +1,16 @@
 import { redirect } from "next/navigation";
 
-import { AuthShell, ForgotPasswordForm, getCurrentSession, t } from "@/modules/auth";
+import {
+  AuthShell,
+  ForgotPasswordForm,
+  getCurrentSession,
+  redirectIfAccountDeletionPending,
+  t,
+} from "@/modules/auth";
 
 export default async function ForgotPasswordPage() {
   const session = await getCurrentSession();
+  await redirectIfAccountDeletionPending(session);
   if (session) {
     redirect("/");
   }

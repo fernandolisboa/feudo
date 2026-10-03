@@ -1,23 +1,31 @@
 import { redirect } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import { getCurrentSession } from "@/modules/auth";
+import { getCurrentSession, redirectIfAccountDeletionPending } from "@/modules/auth";
 import {
   OnboardingForm,
   OnboardingInvitesPanel,
+  PendingHouseholdDeletions,
   getOnboardingInvites,
+  getPendingHouseholdDeletions,
   resolveOnboardingRoute,
   t,
 } from "@/modules/households";
+import { DeleteAccountSection, getDeleteAccountSectionProps } from "@/modules/privacy";
 
 export default async function OnboardingPage() {
   const session = await getCurrentSession();
+  await redirectIfAccountDeletionPending(session);
   const redirectTarget = resolveOnboardingRoute(session);
-  if (redirectTarget) {
-    redirect(redirectTarget);
+  if (redirectTarget || !session) {
+    redirect(redirectTarget ?? "/entrar");
   }
 
-  const invitations = await getOnboardingInvites();
+  const [invitations, pendingHouseholds, deleteAccount] = await Promise.all([
+    getOnboardingInvites(),
+    getPendingHouseholdDeletions(session),
+    getDeleteAccountSectionProps(session),
+  ]);
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
@@ -42,6 +50,15 @@ export default async function OnboardingPage() {
           </Tabs>
         </div>
       </div>
+      {pendingHouseholds.length > 0 ? (
+        <section className="border-border bg-card w-full max-w-sm rounded-lg border p-6">
+          <h2 className="font-heading text-lg">{t.casa.pendingDeletion.title}</h2>
+          <div className="mt-3">
+            <PendingHouseholdDeletions households={pendingHouseholds} />
+          </div>
+        </section>
+      ) : null}
+      <DeleteAccountSection {...deleteAccount} compact />
     </main>
   );
 }
