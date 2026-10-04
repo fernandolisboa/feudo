@@ -7,6 +7,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { resetPasswordAction } from "../actions";
 import { t } from "../strings";
 
@@ -27,7 +28,10 @@ function useStripTokenFromUrl(): void {
 }
 
 export function ResetPasswordForm({ token }: { token: string }) {
-  const [state, formAction, isPending] = useActionState(resetPasswordAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(resetPasswordAction, t.errors.offline),
+    initialActionState,
+  );
   useStripTokenFromUrl();
 
   return (

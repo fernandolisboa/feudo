@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import { financialDataAccess, type FinancialDataKind } from "./schema";
 
@@ -28,6 +28,35 @@ export function createFinancialDataAccessRepository(scope: FinancialDataAccessSc
       await db
         .insert(financialDataAccess)
         .values({ householdId: scope.householdId, userId: scope.userId, kind });
+    },
+
+    // Two reads of one screen often run at the same time (the RSC render
+    // and the service worker's copy fetch), and under READ COMMITTED both
+    // would see no recent row: the transaction lock on this person, household
+    // and kind makes the second wait for the first. The window is measured on
+    // the database clock, the same one that stamps accessed_at.
+    async recordUnlessRecent(
+      db: DatabaseOrTransaction,
+      kind: FinancialDataKind,
+      windowSeconds: number,
+    ): Promise<void> {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${`financial_data_access:${scope.householdId}:${scope.userId}:${kind}`}, 0))`,
+        );
+        await tx.execute(sql`
+        insert into ${financialDataAccess} (id, household_id, user_id, kind)
+        select ${crypto.randomUUID()}, ${scope.householdId}, ${scope.userId}, ${kind}::financial_data_access_kind
+        where not exists (
+          select 1 from ${financialDataAccess}
+          where ${financialDataAccess.householdId} = ${scope.householdId}
+            and ${financialDataAccess.userId} = ${scope.userId}
+            and ${financialDataAccess.kind} = ${kind}::financial_data_access_kind
+            and ${financialDataAccess.accessedAt} > now() - make_interval(secs => ${windowSeconds})
+        )
+      `);
+      });
     },
 
     async listRecentForUser(

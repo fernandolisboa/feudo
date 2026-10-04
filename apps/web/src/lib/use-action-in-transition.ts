@@ -2,6 +2,7 @@ import { useState, useTransition } from "react";
 
 import type { ActionState } from "./action-state";
 import { isRedirectSignal } from "./is-redirect-signal";
+import { blockWriteWhenOffline } from "./offline-writes";
 
 // Shared by every component that calls a server action directly from a
 // client event handler (bypassing useActionState/<form>): run it inside a
@@ -18,6 +19,12 @@ export function useActionInTransition(fallbackErrorMessage: string): {
 
   function run(action: () => Promise<ActionState>): void {
     setErrorMessage(null);
+    // Shown where the write was attempted, also on screens without the
+    // app shell, which adds the offline explanation when it is mounted.
+    if (blockWriteWhenOffline()) {
+      setErrorMessage(fallbackErrorMessage);
+      return;
+    }
     startTransition(async () => {
       try {
         const result = await action();

@@ -71,6 +71,7 @@ const en = {
     unauthenticated: "Sign in again to continue.",
     requestFailed: "We couldn't schedule the deletion. Try again.",
     cancelFailed: "We couldn't cancel the deletion. Try again.",
+    signOutFailed: "We couldn't sign you out. Try again.",
     notPending: "This account is no longer scheduled for deletion.",
   },
 };
@@ -148,6 +149,7 @@ const ptBR = {
     unauthenticated: "Entre novamente para continuar.",
     requestFailed: "Não foi possível agendar a exclusão. Tente novamente.",
     cancelFailed: "Não foi possível cancelar a exclusão. Tente novamente.",
+    signOutFailed: "Não foi possível sair. Tente novamente.",
     notPending: "Este cadastro não está mais agendado para exclusão.",
   },
 } satisfies typeof en;

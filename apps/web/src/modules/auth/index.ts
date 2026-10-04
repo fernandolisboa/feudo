@@ -11,6 +11,7 @@ export { getAuth } from "./auth";
 export { clearActiveHouseholdOnSessions } from "./clear-active-household";
 export { AcceptTermsForm } from "./components/accept-terms-form";
 export { AuthShell } from "./components/auth-shell";
+export { ClearOfflineCopies } from "./components/clear-offline-copies";
 export { ForgotPasswordForm } from "./components/forgot-password-form";
 export { MagicLinkForm } from "./components/magic-link-form";
 export { sanitizeNextPath } from "./next-redirect";

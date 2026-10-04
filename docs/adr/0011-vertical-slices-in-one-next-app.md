@@ -30,7 +30,8 @@ apps/web/src/
       *.test.ts            unit, *.integration.test.ts against feudo-preview
       test/                fixtures and helpers other slices may import for tests
   platform/                infrastructure with no domain meaning: db client and
-                           migration tooling, cron auth, health probe
+                           migration tooling, cron auth, health probe, service
+                           worker caching (platform/pwa, amended 2026-10-04, #28)
   ui/                      shadcn primitives and layout atoms (page header, section header)
   lib/                     tiny pure helpers with no domain (interpolate, format-date, cn)
 ```

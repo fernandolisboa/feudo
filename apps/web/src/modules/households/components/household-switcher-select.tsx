@@ -3,6 +3,7 @@
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
+import { clearOfflineCopies } from "@/platform/pwa/offline-copies";
 
 import { switchHouseholdAction } from "../actions";
 import { t } from "../strings";
@@ -21,7 +22,10 @@ export function HouseholdSwitcherSelect({
     if (!householdId || householdId === activeHouseholdId) {
       return;
     }
-    run(() => switchHouseholdAction(householdId));
+    run(async () => {
+      await clearOfflineCopies();
+      return switchHouseholdAction(householdId);
+    });
   }
 
   const items = households.map((household) => ({ value: household.id, label: household.name }));

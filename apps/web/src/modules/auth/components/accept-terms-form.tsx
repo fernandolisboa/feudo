@@ -5,12 +5,16 @@ import { useActionState } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { acceptTermsAction } from "../actions";
 import { t } from "../strings";
 import { TermsCheckbox } from "./terms-checkbox";
 
 export function AcceptTermsForm() {
-  const [state, formAction, isPending] = useActionState(acceptTermsAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(acceptTermsAction, t.errors.offline),
+    initialActionState,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

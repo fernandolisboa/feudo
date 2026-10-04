@@ -6,14 +6,25 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dro
 import { t } from "../strings";
 
 const signOutActionMock = vi.hoisted(() => vi.fn());
+const callOrder = vi.hoisted(() => [] as string[]);
+const clearOfflineCopiesMock = vi.hoisted(() =>
+  vi.fn(() => {
+    callOrder.push("clear");
+    return Promise.resolve();
+  }),
+);
 
 vi.mock("../actions", () => ({ signOutAction: signOutActionMock }));
+vi.mock("@/platform/pwa/offline-copies", () => ({ clearOfflineCopies: clearOfflineCopiesMock }));
 
 import { SignOutMenuItem } from "./sign-out-menu-item";
 
 afterEach(() => {
   cleanup();
   signOutActionMock.mockReset();
+  clearOfflineCopiesMock.mockClear();
+  callOrder.length = 0;
+  Reflect.deleteProperty(window.navigator, "onLine");
 });
 
 async function renderOpenMenu() {
@@ -31,6 +42,30 @@ async function renderOpenMenu() {
 }
 
 describe("SignOutMenuItem", () => {
+  it("clears this browser's offline copies before signing out (ADR-0007)", async () => {
+    signOutActionMock.mockImplementation(() => {
+      callOrder.push("signOut");
+      return Promise.resolve({ status: "error", message: t.errors.signOutFailed });
+    });
+    await renderOpenMenu();
+
+    fireEvent.click(screen.getByText(t.userMenu.signOut));
+
+    await waitFor(() => {
+      expect(callOrder).toEqual(["clear", "signOut"]);
+    });
+  });
+
+  it("offline, still clears the copies but never calls the server", async () => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, get: () => false });
+    await renderOpenMenu();
+
+    fireEvent.click(screen.getByText(t.userMenu.signOut));
+
+    expect(clearOfflineCopiesMock).toHaveBeenCalledOnce();
+    expect(signOutActionMock).not.toHaveBeenCalled();
+  });
+
   it("shows the failure alert and keeps the menu open when signOutAction resolves an error", async () => {
     signOutActionMock.mockResolvedValue({ status: "error", message: t.errors.signOutFailed });
     await renderOpenMenu();

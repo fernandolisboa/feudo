@@ -8,11 +8,15 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { signInAction } from "../actions";
 import { t } from "../strings";
 
 export function SignInForm({ next }: { next?: string | null } = {}) {
-  const [state, formAction, isPending] = useActionState(signInAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(signInAction, t.errors.offline),
+    initialActionState,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

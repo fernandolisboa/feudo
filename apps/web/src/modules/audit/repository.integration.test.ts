@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { user } from "@/modules/auth/schema";
@@ -106,6 +106,91 @@ describe("financial data access survives the user who made it (integration, #27)
       expect(householdRows.every((row) => row.userId === null)).toBe(true);
 
       expect(await repository.listRecentForUser(db)).toEqual([]);
+    });
+  });
+});
+
+describe("collapsing a repeated read into one access (integration, #28)", () => {
+  const WINDOW_SECONDS = 60;
+
+  it("records the same person's same kind of read once within the window", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createFinancialDataAccessRepository({
+        householdId: userA.session.householdId,
+        userId: userA.id,
+      });
+
+      await repository.recordUnlessRecent(db, "transactions", WINDOW_SECONDS);
+      await repository.recordUnlessRecent(db, "transactions", WINDOW_SECONDS);
+
+      expect(await repository.listRecentForUser(db)).toHaveLength(1);
+    });
+  });
+
+  it("records one access when the same reads arrive at the same time (RSC render and copy fetch)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createFinancialDataAccessRepository({
+        householdId: userA.session.householdId,
+        userId: userA.id,
+      });
+
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          repository.recordUnlessRecent(db, "transactions", WINDOW_SECONDS),
+        ),
+      );
+
+      expect(await repository.listRecentForUser(db)).toHaveLength(1);
+    });
+  });
+
+  it("records again once the previous read is older than the window", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createFinancialDataAccessRepository({
+        householdId: userA.session.householdId,
+        userId: userA.id,
+      });
+
+      await repository.recordUnlessRecent(db, "overview", WINDOW_SECONDS);
+      await db
+        .update(financialDataAccess)
+        .set({ accessedAt: sql`now() - interval '61 seconds'` })
+        .where(eq(financialDataAccess.userId, userA.id));
+      await repository.recordUnlessRecent(db, "overview", WINDOW_SECONDS);
+
+      expect(await repository.listRecentForUser(db)).toHaveLength(2);
+    });
+  });
+
+  it("never collapses another kind, another member or another household's read", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
+      const partnerId = await addMember(db, householdA, "Partner");
+      const ownerA = createFinancialDataAccessRepository({
+        householdId: householdA,
+        userId: userA.id,
+      });
+      const partner = createFinancialDataAccessRepository({
+        householdId: householdA,
+        userId: partnerId,
+      });
+      const ownerB = createFinancialDataAccessRepository({
+        householdId: userB.session.householdId,
+        userId: userB.id,
+      });
+
+      await ownerA.recordUnlessRecent(db, "overview", WINDOW_SECONDS);
+      await ownerA.recordUnlessRecent(db, "reserve", WINDOW_SECONDS);
+      await partner.recordUnlessRecent(db, "overview", WINDOW_SECONDS);
+      await ownerB.recordUnlessRecent(db, "overview", WINDOW_SECONDS);
+
+      expect((await ownerA.listRecentForUser(db)).map((entry) => entry.kind).sort()).toEqual([
+        "overview",
+        "reserve",
+      ]);
+      expect((await partner.listRecentForUser(db)).map((entry) => entry.kind)).toEqual([
+        "overview",
+      ]);
+      expect((await ownerB.listRecentForUser(db)).map((entry) => entry.kind)).toEqual(["overview"]);
     });
   });
 });

@@ -8,12 +8,13 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { requestPasswordResetAction } from "../actions";
 import { t } from "../strings";
 
 export function ForgotPasswordForm() {
   const [state, formAction, isPending] = useActionState(
-    requestPasswordResetAction,
+    refuseWhenOffline(requestPasswordResetAction, t.errors.offline),
     initialActionState,
   );
 

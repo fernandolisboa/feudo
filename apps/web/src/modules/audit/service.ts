@@ -21,12 +21,25 @@ import type { FinancialDataKind } from "./schema";
 // caller cannot record an access into a household it does not hold a
 // session for. A failed read records nothing; a failed audit write still
 // fails the call that read the data, so a read is never served unwitnessed.
+//
+// A read of the same kind by the same person in the same household within
+// SAME_ACCESS_WINDOW_SECONDS of a recorded one is the same access (amended
+// 2026-10-04, #28): right after an in-app navigation the service worker
+// fetches the screen's page again to keep its offline copy (ADR-0007), and
+// that second read would otherwise show up twice in "Seus acessos recentes".
+// Every read is still witnessed by a row at most that far from it.
+export const SAME_ACCESS_WINDOW_SECONDS = 60;
+
 export async function recordFinancialDataAccess(
   session: HouseholdSession,
   kind: FinancialDataKind,
 ): Promise<void> {
   const db = getDb();
-  await createFinancialDataAccessRepository(financialDataAccessScope(session)).record(db, kind);
+  await createFinancialDataAccessRepository(financialDataAccessScope(session)).recordUnlessRecent(
+    db,
+    kind,
+    SAME_ACCESS_WINDOW_SECONDS,
+  );
 }
 
 export type RecentAccessEntry = {

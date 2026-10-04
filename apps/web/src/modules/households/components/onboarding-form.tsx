@@ -8,6 +8,7 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { DEFAULT_RESERVE_MULTIPLE, MAX_RESERVE_MULTIPLE, MIN_RESERVE_MULTIPLE } from "@feudo/core";
 
 import { createHouseholdAction } from "../actions";
@@ -25,7 +26,10 @@ const RESERVE_MULTIPLE_ITEMS = Array.from(
 );
 
 export function OnboardingForm() {
-  const [state, formAction, isPending] = useActionState(createHouseholdAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(createHouseholdAction, t.errors.offline),
+    initialActionState,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

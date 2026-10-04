@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import {
   AuthShell,
+  ClearOfflineCopies,
   SignInForm,
   getCurrentSession,
   redirectIfAccountDeletionPending,
@@ -25,6 +26,7 @@ export default async function SignInPage({
 
   return (
     <AuthShell title={t.signIn.title} subtitle={t.signIn.subtitle}>
+      <ClearOfflineCopies />
       <SignInForm next={nextPath} />
     </AuthShell>
   );
