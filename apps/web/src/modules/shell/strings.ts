@@ -101,6 +101,17 @@ const en = {
     failed: "Could not save. Try again.",
     unauthenticated: "Sign in to change this.",
   },
+  routeError: {
+    overline: "Something went wrong",
+    title: "Couldn't open this page",
+    message: "Something failed on our side. Your data is safe. Try again in a moment.",
+    retry: "Try again",
+  },
+  notFound: {
+    title: "Page not found",
+    body: "This address doesn't exist in Feudo. It may have been typed wrong or moved.",
+    action: "Go to the overview",
+  },
 };
 
 const ptBR = {
@@ -207,6 +218,17 @@ const ptBR = {
     resetDone: "Pronto. Cada tela vai mostrar o passo a passo de novo.",
     failed: "Não deu para salvar. Tente de novo.",
     unauthenticated: "Entre para alterar isso.",
+  },
+  routeError: {
+    overline: "Algo deu errado",
+    title: "Não deu para abrir esta página",
+    message: "Algo falhou do nosso lado. Seus dados estão seguros. Tente de novo daqui a pouco.",
+    retry: "Tentar de novo",
+  },
+  notFound: {
+    title: "Página não encontrada",
+    body: "Este endereço não existe no Feudo. Ele pode ter sido digitado errado ou mudado de lugar.",
+    action: "Ir para a visão geral",
   },
 } satisfies typeof en;
 

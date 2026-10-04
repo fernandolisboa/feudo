@@ -237,6 +237,10 @@ const en = {
     transfersMany: "{count} transfer transactions left out of the totals",
   },
   categoriesLink: "Categories and rules",
+  error: {
+    message: "Couldn't load the transactions right now. Check your connection and try again.",
+    retry: "Try again",
+  },
   category: {
     uncategorized: "No category",
     sources: {
@@ -281,6 +285,11 @@ const en = {
   },
   categoriesPage: {
     overline: "Categories",
+    error: {
+      message:
+        "Couldn't load the categories and rules right now. Check your connection and try again.",
+      retry: "Try again",
+    },
     title: "Categories and rules",
     rulesTitle: "Household rules",
     rulesEmpty: "No rules yet. Create one when you categorize a transaction.",
@@ -469,6 +478,10 @@ const ptBR = {
     transfersMany: "{count} transações de transferência ficaram fora dos totais",
   },
   categoriesLink: "Categorias e regras",
+  error: {
+    message: "Não deu para carregar as transações agora. Confira sua conexão e tente de novo.",
+    retry: "Tentar de novo",
+  },
   category: {
     uncategorized: "Sem categoria",
     sources: {
@@ -513,6 +526,11 @@ const ptBR = {
   },
   categoriesPage: {
     overline: "Categorias",
+    error: {
+      message:
+        "Não deu para carregar as categorias e regras agora. Confira sua conexão e tente de novo.",
+      retry: "Tentar de novo",
+    },
     title: "Categorias e regras",
     rulesTitle: "Regras da casa",
     rulesEmpty: "Nenhuma regra ainda. Crie uma ao categorizar uma transação.",

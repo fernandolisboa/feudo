@@ -4,9 +4,9 @@ import { SectionErrorBoundary } from "@/ui/section-error-boundary";
 
 import { t } from "../strings";
 
-export function OverviewErrorBoundary({ children }: { children: ReactNode }) {
+export function TransactionsErrorBoundary({ children }: { children: ReactNode }) {
   return (
-    <SectionErrorBoundary message={t.overview.error.message} retryLabel={t.overview.error.retry}>
+    <SectionErrorBoundary message={t.error.message} retryLabel={t.error.retry}>
       {children}
     </SectionErrorBoundary>
   );

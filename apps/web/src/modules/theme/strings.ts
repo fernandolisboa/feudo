@@ -2,6 +2,10 @@ const en = {
   preferences: {
     title: "Preferences",
     overline: "Settings",
+    sectionError: {
+      message: "Couldn't load this part right now. Check your connection and try again.",
+      retry: "Try again",
+    },
     themeLabel: "Theme",
     themeDescription: "Choose how Feudo looks for you. Only you see this change.",
     themeNames: {
@@ -19,6 +23,10 @@ const ptBR = {
   preferences: {
     title: "Preferências",
     overline: "Configurações",
+    sectionError: {
+      message: "Não deu para carregar esta parte agora. Confira sua conexão e tente de novo.",
+      retry: "Tentar de novo",
+    },
     themeLabel: "Tema",
     themeDescription: "Escolha a aparência do Feudo para você. Só você vê essa mudança.",
     themeNames: {

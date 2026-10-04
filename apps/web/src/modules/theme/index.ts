@@ -1,4 +1,5 @@
 export { ThemeSelectForm } from "./components/theme-select-form";
+export { PreferencesSectionErrorBoundary } from "./components/preferences-section-error-boundary";
 export { t } from "./strings";
 export {
   DEFAULT_THEME,
