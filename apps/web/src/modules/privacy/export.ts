@@ -2,6 +2,7 @@ import type { HouseholdSession } from "@/modules/households";
 import { listFinancialDataAccessForExport } from "@/modules/audit";
 import { getHouseholdMembershipsForExport } from "@/modules/households";
 import { getLedgerExportAnnotations } from "@/modules/ledger";
+import { getPushSubscriptionsForExport } from "@/modules/notifications";
 import { getReserveMarksForExport } from "@/modules/reserve";
 import { getTourExportData } from "@/modules/shell";
 import { getSyncExportData } from "@/modules/sync";
@@ -124,6 +125,7 @@ export type ExportDocument = {
     }>;
   };
   financialDataAccess: Array<{ householdId: string; kind: string; accessedAt: string }>;
+  pushSubscriptions: Array<{ pushService: string; createdAt: string }>;
 };
 
 export class ExportUserMissingError extends Error {
@@ -144,17 +146,27 @@ export async function buildExportDocument(
   session: HouseholdSession,
   exportedAt: Date,
 ): Promise<ExportDocument> {
-  const [userRow, sessions, tours, households, sync, ledger, reserveMarks, financialDataAccess] =
-    await Promise.all([
-      getExportUser(getDb(), session.userId),
-      listExportSessions(getDb(), session.userId),
-      getTourExportData(session),
-      getHouseholdMembershipsForExport(session),
-      getSyncExportData(session),
-      getLedgerExportAnnotations(session),
-      getReserveMarksForExport(session),
-      listFinancialDataAccessForExport(session),
-    ]);
+  const [
+    userRow,
+    sessions,
+    tours,
+    households,
+    sync,
+    ledger,
+    reserveMarks,
+    financialDataAccess,
+    pushSubscriptions,
+  ] = await Promise.all([
+    getExportUser(getDb(), session.userId),
+    listExportSessions(getDb(), session.userId),
+    getTourExportData(session),
+    getHouseholdMembershipsForExport(session),
+    getSyncExportData(session),
+    getLedgerExportAnnotations(session),
+    getReserveMarksForExport(session),
+    listFinancialDataAccessForExport(session),
+    getPushSubscriptionsForExport(session),
+  ]);
 
   if (!userRow) {
     throw new ExportUserMissingError(session.userId);
@@ -283,6 +295,10 @@ export async function buildExportDocument(
       householdId: access.householdId,
       kind: access.kind,
       accessedAt: access.accessedAt.toISOString(),
+    })),
+    pushSubscriptions: pushSubscriptions.map((subscription) => ({
+      pushService: subscription.pushService,
+      createdAt: subscription.createdAt.toISOString(),
     })),
   };
 }

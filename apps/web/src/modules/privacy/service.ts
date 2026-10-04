@@ -12,6 +12,7 @@ import {
   timeZoneForDepartingUser,
   type MembershipDeparture,
 } from "@/modules/households";
+import { removePushSubscriptionsForAccountDeletion } from "@/modules/notifications";
 import {
   deleteConnectionsForAccountPurge,
   describeHouseholdDataLoss,
@@ -65,8 +66,9 @@ export type RequestAccountDeletionOutcome = Outcome<
 >;
 
 // The soft delete (ADR-0008): in one transaction the account is marked, the
-// provider credentials are destroyed and every session is revoked, so from
-// this commit on nothing reads the user's bank and nothing signs in as them
+// provider credentials are destroyed, every notification subscription goes
+// (ADR-0012) and every session is revoked, so from this commit on nothing
+// reads the user's bank, nothing notifies them and nothing signs in as them
 // except to cancel. The hard delete waits for the grace to end
 // (runAccountPurgeStep).
 export async function requestAccountDeletion(
@@ -87,6 +89,7 @@ export async function requestAccountDeletion(
         return null;
       }
       await destroyProviderCredentials(tx, session);
+      await removePushSubscriptionsForAccountDeletion(tx, session);
       await revokeUserSessions(tx, session.userId);
       return {
         notifyMembers: await claimMemberNotices(

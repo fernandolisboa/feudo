@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { householdScope, updateReserveMultiple } from "@/modules/households";
 import { householdSettings } from "@/modules/households/schema";
+import {
+  createFakeNotifier,
+  seedPushDevice,
+  silentNotifier,
+} from "@/modules/notifications/test/fake-push-sender";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { seedHousehold, seedUser, withTwoUsers } from "@/modules/sync/test/with-two-users";
 import { withTestDb } from "@/platform/db/test/harness";
@@ -62,7 +67,7 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
 
       const outcome = await closeReserveTargetMonthForHousehold(db, scope, NOW);
 
-      expect(outcome).toEqual({ status: "recorded", notified: false });
+      expect(outcome).toEqual({ status: "recorded", notified: false, closedMonth: "2026-08" });
       const record = await createReserveTargetRecordRepository(scope).getByMonth(db, "2026-08");
       expect(record).toMatchObject({
         closedMonth: "2026-08",
@@ -119,7 +124,7 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
 
       const outcome = await closeReserveTargetMonthForHousehold(db, scope, NOW);
 
-      expect(outcome).toEqual({ status: "recorded", notified: true });
+      expect(outcome).toEqual({ status: "recorded", notified: true, closedMonth: "2026-08" });
       const notice = await createReserveTargetNoticeRepository(scope).getUndismissed(db);
       expect(notice).toMatchObject({
         closedMonth: "2026-08",
@@ -146,7 +151,7 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
 
       const outcome = await closeReserveTargetMonthForHousehold(db, scope, NOW);
 
-      expect(outcome).toEqual({ status: "recorded", notified: false });
+      expect(outcome).toEqual({ status: "recorded", notified: false, closedMonth: "2026-08" });
       const notice = await createReserveTargetNoticeRepository(scope).getUndismissed(db);
       expect(notice).toBeUndefined();
     });
@@ -165,14 +170,14 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
 
       const firstClose = new Date("2026-10-01T01:30:00.000Z");
       const first = await closeReserveTargetMonthForHousehold(db, scope, firstClose);
-      expect(first).toEqual({ status: "recorded", notified: false });
+      expect(first).toEqual({ status: "recorded", notified: false, closedMonth: "2026-08" });
 
       await updateReserveMultiple(scope, 9, db);
 
       const secondClose = new Date("2026-11-01T01:30:00.000Z");
       const second = await closeReserveTargetMonthForHousehold(db, scope, secondClose);
 
-      expect(second).toEqual({ status: "recorded", notified: false });
+      expect(second).toEqual({ status: "recorded", notified: false, closedMonth: "2026-09" });
       const secondRecord = await createReserveTargetRecordRepository(scope).getByMonth(
         db,
         "2026-09",
@@ -198,8 +203,8 @@ describe("closeReserveTargetMonthForHousehold (integration)", () => {
       const outcomeA = await closeReserveTargetMonthForHousehold(db, scopeA, NOW);
       const outcomeB = await closeReserveTargetMonthForHousehold(db, scopeB, NOW);
 
-      expect(outcomeA).toEqual({ status: "recorded", notified: false });
-      expect(outcomeB).toEqual({ status: "recorded", notified: false });
+      expect(outcomeA).toEqual({ status: "recorded", notified: false, closedMonth: "2026-08" });
+      expect(outcomeB).toEqual({ status: "recorded", notified: false, closedMonth: "2026-09" });
       const recordA = await createReserveTargetRecordRepository(scopeA).getByMonth(db, "2026-08");
       const recordB = await createReserveTargetRecordRepository(scopeB).getByMonth(db, "2026-09");
       expect(recordA).toBeTruthy();
@@ -243,7 +248,7 @@ describe("runReserveMonthCloseStep (integration)", () => {
         reserveMultiple: 20,
       });
 
-      const result = await runReserveMonthCloseStep(db, NOW);
+      const result = await runReserveMonthCloseStep(db, silentNotifier, NOW);
 
       expect(result).toEqual({
         ok: false,
@@ -271,7 +276,7 @@ describe("runReserveMonthCloseStep (integration)", () => {
       await seedFixedHistory(db, userB, scopeB, ["2026-06", "2026-07", "2026-08"], 60000);
 
       const alreadyPastDeadline = new Date(0);
-      const result = await runReserveMonthCloseStep(db, NOW, alreadyPastDeadline);
+      const result = await runReserveMonthCloseStep(db, silentNotifier, NOW, alreadyPastDeadline);
 
       expect(result).toEqual({
         ok: false,
@@ -295,11 +300,47 @@ describe("runReserveMonthCloseStep (integration)", () => {
       const householdB = await seedHousehold(db, "Household B");
       await seedUser(db, "Bia", householdB);
 
-      const first = await runReserveMonthCloseStep(db, NOW, new Date(0));
-      const second = await runReserveMonthCloseStep(db, NOW, new Date(0));
+      const first = await runReserveMonthCloseStep(db, silentNotifier, NOW, new Date(0));
+      const second = await runReserveMonthCloseStep(db, silentNotifier, NOW, new Date(0));
 
       expect(first).toMatchObject({ unreached: 2 });
       expect(second).toMatchObject({ unreached: 2 });
+    });
+  });
+});
+
+describe("reserve target push notification (integration)", () => {
+  it("notifies the household's devices once when the month close creates a notice, and not otherwise", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const scopeA = householdScope(userA.session);
+      const scopeB = householdScope(userB.session);
+      const months = ["2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"];
+      await seedFixedHistory(db, userA, scopeA, months, 120000);
+      await seedFixedHistory(db, userB, scopeB, months, 120000);
+      await createReserveTargetRecordRepository(scopeA).insert(db, {
+        closedMonth: "2026-07",
+        averageFixedCostCentavos: 100000,
+        monthsUsed: 6,
+        isEstimate: false,
+        reserveMultiple: 6,
+        targetCentavos: 600000,
+        currency: "BRL",
+      });
+      const deviceA = await seedPushDevice(db, userA.id);
+      await seedPushDevice(db, userB.id);
+      const { notifier, sender } = createFakeNotifier();
+      const deadline = new Date(Date.now() + 20_000);
+
+      const result = await runReserveMonthCloseStep(db, notifier, NOW, deadline);
+      await runReserveMonthCloseStep(db, notifier, NOW, deadline);
+
+      expect(result).toMatchObject({ recorded: 2, notified: 1 });
+      expect(sender.sent.map((send) => send.endpoint)).toEqual([deviceA.endpoint]);
+      expect(sender.sent[0]?.payload).toMatchObject({
+        url: "/reserva",
+        tag: `reserve-target:${scopeA.householdId}:2026-08`,
+      });
+      expect(sender.sent[0]?.payload.body).not.toMatch(/R\$|7\.200|6\.000/);
     });
   });
 });

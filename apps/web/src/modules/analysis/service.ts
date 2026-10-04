@@ -22,6 +22,7 @@ import {
   type HouseholdSession,
 } from "@/modules/households";
 import { getLedgerAnalysisFacts } from "@/modules/ledger";
+import { createNotifierFromEnv, type Notifier } from "@/modules/notifications";
 import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
@@ -58,19 +59,21 @@ const TIMEOUT_MS: Record<AiTier, number> = { standard: 45_000, deep: 150_000 };
 // Below this a call is unlikely to finish; it is better skipped than cut off.
 const MIN_ATTEMPT_MS: Record<AiTier, number> = { standard: 15_000, deep: 45_000 };
 
-export type AnalysisDeps = { client: AiClient | null; prompt: AnalystPrompt };
+export type AnalysisDeps = { client: AiClient | null; prompt: AnalystPrompt; notifier: Notifier };
 
 export function createAnalysisDeps(env: AnalysisEnv = process.env): AnalysisDeps {
   const provider = readAiProviderName(env);
+  const notifier = createNotifierFromEnv(env);
   switch (provider) {
     case "off":
-      return { client: null, prompt: CURRENT_ANALYST_PROMPT };
+      return { client: null, prompt: CURRENT_ANALYST_PROMPT, notifier };
     case "fake":
-      return { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT };
+      return { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT, notifier };
     case "anthropic":
       return {
         client: createAnthropicAiClient(env.ANTHROPIC_API_KEY ?? ""),
         prompt: CURRENT_ANALYST_PROMPT,
+        notifier,
       };
   }
 }
@@ -296,11 +299,13 @@ export async function runOnDemandAnalysis(
 
 export type MonthlyAnalysisOutcome = { status: "skipped" | "succeeded" | "failed" };
 
+type MonthlyRunOptions = { now: Date; deadline: Date };
+
 export async function runMonthlyAnalysisForHousehold(
   db: Database,
   scope: HouseholdScope,
   deps: AnalysisDeps & { client: AiClient },
-  options: { now: Date; deadline: Date },
+  options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisOutcome> {
   const clock = await householdClock(db, scope, options.now);
   const input = await buildAnalysisInput(scope, "monthly", clock, options.now);
@@ -324,6 +329,13 @@ export async function runMonthlyAnalysisForHousehold(
   }
   const result = await generateReading(deps.client, deps.prompt, input, "deep", options.deadline);
   await recordGeneration(db, scope, id, result);
+  if (result.status === "succeeded") {
+    // Best effort, after the reading is stored (ADR-0012).
+    await deps.notifier.notifyHousehold(db, scope, {
+      kind: "monthly_analysis_ready",
+      month: input.month,
+    });
+  }
   return { status: result.status };
 }
 
@@ -347,7 +359,7 @@ export type MonthlyAnalysisStep = MonthlyAnalysisResult | { error: string };
 export async function runMonthlyAnalysis(
   db: Database,
   deps: AnalysisDeps,
-  options: { now: Date; deadline: Date },
+  options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisStep> {
   const { client } = deps;
   if (client === null) {

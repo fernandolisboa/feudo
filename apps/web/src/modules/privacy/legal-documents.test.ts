@@ -76,8 +76,8 @@ describe("versioning", () => {
     const digest = createHash("sha256").update(shipped).digest("hex");
 
     expect({ version: TERMS_VERSION, digest }).toEqual({
-      version: "2026-10-04",
-      digest: "084735f3d90350635fa5d45bf79422166b8bb9424c0613716a1e35d16e406df6",
+      version: "2026-10-05",
+      digest: "b394f0d9fa6e22e79c022ab364094d5d2fd6340d071bcaff77ad08d906571c47",
     });
   });
 });

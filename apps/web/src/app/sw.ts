@@ -3,6 +3,11 @@ import { Serwist } from "serwist";
 
 import { deleteForeignCaches, isClearOfflineCopiesMessage } from "@/platform/pwa/offline-copies";
 import {
+  openNotificationTarget,
+  payloadFromPush,
+  showPushNotification,
+} from "@/platform/pwa/push-handlers";
+import {
   clearCopiesInServiceWorker,
   expireOldCopies,
   offlineFallbacks,
@@ -47,6 +52,18 @@ self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
     event.waitUntil(expireOldCopies());
   }
+});
+
+self.addEventListener("push", (event) => {
+  const payload = payloadFromPush(event.data);
+  if (payload) {
+    event.waitUntil(showPushNotification(self.registration, payload));
+  }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(openNotificationTarget(self.clients, self.location.origin, event.notification));
 });
 
 serwist.addEventListeners();

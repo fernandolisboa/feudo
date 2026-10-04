@@ -7,6 +7,7 @@ import {
   shouldNotifyReserveTargetChange,
   yearMonthOf,
   type ReserveTarget,
+  type YearMonth,
 } from "@feudo/core";
 
 import {
@@ -16,6 +17,7 @@ import {
   type HouseholdScope,
 } from "@/modules/households";
 import { readHouseholdDashboardLines } from "@/modules/ledger";
+import type { Notifier } from "@/modules/notifications";
 
 import { errorName } from "@/lib/error-name";
 import type { SimpleOutcome } from "@/lib/outcome";
@@ -28,7 +30,8 @@ import {
   type ReserveMarkInput,
 } from "./repository";
 
-export type MonthCloseOutcome = { status: "skipped" } | { status: "recorded"; notified: boolean };
+export type MonthCloseOutcome =
+  { status: "skipped" } | { status: "recorded"; notified: boolean; closedMonth: YearMonth };
 
 // One household, one month close: idempotent (a record already closed for
 // `closedMonth` is left untouched), and records nothing when the household
@@ -96,7 +99,7 @@ export async function closeReserveTargetMonthForHousehold(
       });
     }
 
-    return { status: "recorded", notified: notify };
+    return { status: "recorded", notified: notify, closedMonth };
   });
 }
 
@@ -186,6 +189,7 @@ const DEFAULT_RUN_BUDGET_MS = 20_000;
 // budget shows up in the logs before it becomes a pattern.
 export async function runReserveMonthCloseStep(
   db: Database,
+  notifier: Notifier,
   now: Date = new Date(),
   // Anchored to the real wall clock, not to `now`: `now` is the business
   // date the job resolves "the closed month" against (a test can hold it on
@@ -222,6 +226,12 @@ export async function runReserveMonthCloseStep(
           recorded += 1;
           if (outcome.notified) {
             notified += 1;
+            // After the commit, and best effort: the notice is already on
+            // the Reserva page whatever the push does (ADR-0012).
+            await notifier.notifyHousehold(db, scope, {
+              kind: "reserve_target_moved",
+              closedMonth: outcome.closedMonth,
+            });
           }
         }
       } catch (error) {

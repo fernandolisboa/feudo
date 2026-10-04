@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+
+import { silentNotifier } from "@/modules/notifications/test/fake-push-sender";
 import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
@@ -45,6 +47,7 @@ const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
   provider: createFakeProvider(createDocumentHasher("integration-test-document-hash-key-32ch!")),
   encryptionKey: ENCRYPTION_KEY,
+  notifier: silentNotifier,
 };
 const credentials = { clientId: "client-id", clientSecret: "client-secret" };
 
@@ -587,6 +590,7 @@ describe("addConnection, removeCredentials, deleteConnection, relabelAccount (in
       const rotatedKeyDeps: SyncDeps = {
         provider: countingProvider,
         encryptionKey: "another-integration-test-encryption-key-32c",
+        notifier: silentNotifier,
       };
 
       const outcome = await addConnection(

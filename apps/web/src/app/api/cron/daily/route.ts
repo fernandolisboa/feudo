@@ -9,6 +9,7 @@ import {
   runHouseholdPurgeStep,
 } from "@/modules/households";
 import { runDailyRefreshStep } from "@/modules/market-data";
+import { createNotifierFromEnv } from "@/modules/notifications";
 import { runAccountPurgeStep } from "@/modules/privacy";
 import { runReserveMonthCloseStep } from "@/modules/reserve";
 import { runDailyPruneStep as runSyncPruneStep } from "@/modules/sync";
@@ -50,6 +51,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const marketData = await runDailyRefreshStep(db);
   const reserveMonthClose = await runReserveMonthCloseStep(
     db,
+    createNotifierFromEnv(),
     new Date(),
     new Date(requestStartedAt + maxDuration * 1000 - RESERVE_RUN_HEADROOM_MS),
   );

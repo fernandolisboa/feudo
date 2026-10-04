@@ -16,6 +16,10 @@ import {
   getDeleteAccountSectionProps,
   t as privacyT,
 } from "@/modules/privacy";
+import {
+  getPushNotificationsSectionProps,
+  PushNotificationsSection,
+} from "@/modules/notifications";
 import { getTourState, TourPreferencesForm } from "@/modules/shell";
 import { PreferencesSectionErrorBoundary, resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
 
@@ -44,12 +48,14 @@ export default async function PreferencesPage({
 }) {
   const session = await requireHouseholdSession();
   const [tourState, { exportacao }] = await Promise.all([getTourState(session), searchParams]);
+  const pushNotifications = getPushNotificationsSectionProps(session);
 
   return (
     <>
       <PageHeader overline={t.preferences.overline} title={t.preferences.title} />
       <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
       <TourPreferencesForm autoStart={tourState.autoStart} />
+      {pushNotifications ? <PushNotificationsSection {...pushNotifications} /> : null}
 
       <PreferencesSectionErrorBoundary className="mt-8">
         <Suspense fallback={null}>

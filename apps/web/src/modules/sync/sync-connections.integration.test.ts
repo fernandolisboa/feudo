@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+
+import {
+  createFakeNotifier,
+  seedPushDevice,
+  silentNotifier,
+} from "@/modules/notifications/test/fake-push-sender";
 import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
@@ -30,6 +36,7 @@ const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
   provider: createFakeProvider(createDocumentHasher("integration-test-document-hash-key-32ch!")),
   encryptionKey: ENCRYPTION_KEY,
+  notifier: silentNotifier,
 };
 const NOW = new Date("2026-09-22T06:00:00.000Z");
 // Real time, not NOW: syncAllConnections defaults its clock to the real one
@@ -1102,6 +1109,70 @@ describe("listConnectionsToSync ordering (integration)", () => {
       const ordered = await listConnectionsToSync(db);
 
       expect(ordered.map((connection) => connection.id)).toEqual([first, second]);
+    });
+  });
+});
+
+describe("repeated sync failure push notification (integration)", () => {
+  async function failuresOf(db: Database, connectionId: string): Promise<number | undefined> {
+    const [row] = await db
+      .select({ failures: bankConnection.consecutiveSyncFailures })
+      .from(bankConnection)
+      .where(eq(bankConnection.id, connectionId));
+    return row?.failures;
+  }
+
+  it("notifies only the connection's owner, once, on the third failure in a row, and again only after a success", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await saveCredentials(db, userA, FAKE_INVALID_CLIENT_SECRET);
+      const failing = await seedBancoNeverSynced(db, userA);
+      await saveCredentials(db, userB);
+      await seedBancoNeverSynced(db, userB);
+      const deviceA = await seedPushDevice(db, userA.id);
+      await seedPushDevice(db, userB.id);
+      const { notifier, sender } = createFakeNotifier();
+      const notifyingDeps: SyncDeps = { ...deps, notifier };
+      const run = () =>
+        syncAllConnections(db, notifyingDeps, { now: NOW, deadline: ampleDeadline() });
+
+      await run();
+      await run();
+      expect(sender.sent).toEqual([]);
+      await run();
+      await run();
+
+      expect(await failuresOf(db, failing)).toBe(4);
+      expect(sender.sent.map((send) => send.endpoint)).toEqual([deviceA.endpoint]);
+      expect(sender.sent[0]?.payload).toMatchObject({
+        title: "A sincronização está falhando",
+        tag: `sync-failing:${failing}`,
+      });
+
+      await saveCredentials(db, userA);
+      await run();
+      expect(await failuresOf(db, failing)).toBe(0);
+
+      await saveCredentials(db, userA, FAKE_INVALID_CLIENT_SECRET);
+      await run();
+      await run();
+      await run();
+      expect(sender.sent).toHaveLength(2);
+    });
+  });
+
+  it("never notifies about a connection whose credentials the person removed", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const withoutCredentials = await seedBancoNeverSynced(db, userA);
+      await seedPushDevice(db, userA.id);
+      const { notifier, sender } = createFakeNotifier();
+      const notifyingDeps: SyncDeps = { ...deps, notifier };
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await syncAllConnections(db, notifyingDeps, { now: NOW, deadline: ampleDeadline() });
+      }
+
+      expect(await failuresOf(db, withoutCredentials)).toBe(3);
+      expect(sender.sent).toEqual([]);
     });
   });
 });

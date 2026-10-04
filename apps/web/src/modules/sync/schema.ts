@@ -116,6 +116,9 @@ export const bankConnection = pgTable(
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastSyncError: text("last_sync_error"),
     lastSyncAttemptedAt: timestamp("last_sync_attempted_at", { withTimezone: true }),
+    // Failed attempts since the last success, daily or manual: the third in
+    // a row notifies the connection's owner once (ADR-0012).
+    consecutiveSyncFailures: integer("consecutive_sync_failures").notNull().default(0),
     firstSyncSince: date("first_sync_since", { mode: "string" }),
     defaultHouseholdId: text("default_household_id").references(() => organization.id, {
       onDelete: "set null",

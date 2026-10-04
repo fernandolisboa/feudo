@@ -17,6 +17,7 @@ import {
   OFFLINE_COPIES_SCOPE_KEY,
   requestOfflineCopy,
 } from "@/platform/pwa/offline-copies";
+import { isPushOwnedBySomeoneElse, unsubscribeThisDevice } from "@/platform/pwa/push-device";
 
 import { lastUpdatedLabel } from "../offline-freshness";
 import { t } from "../strings";
@@ -105,10 +106,12 @@ export function OfflineNotice({
   renderedAt,
   timeZone,
   scope,
+  userId,
 }: {
   renderedAt: string;
   timeZone: string;
   scope: string;
+  userId: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -161,6 +164,15 @@ export function OfflineNotice({
       }
     });
   }, [scope]);
+
+  // Notifications follow the person who turned them on, not the household
+  // (ADR-0012): someone else signing in on this browser stops them, however
+  // the earlier session ended.
+  useEffect(() => {
+    if (isPushOwnedBySomeoneElse(userId)) {
+      void unsubscribeThisDevice().catch(() => null);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (isFirstLocation.current) {

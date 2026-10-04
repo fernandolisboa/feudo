@@ -5,7 +5,7 @@ date: 2026-09-02
 
 # Offline means read-only: cached shell and last-known data, writes require network
 
-Feudo is an installable PWA (web manifest plus a Serwist service worker) used mostly on desktop with occasional phone use, and every write it accepts (categorization, reserve marks, settings, sync triggers) must be authorized against the session's household on the server. Offline support is therefore read-only: the app shell and the last data each screen loaded are cached and shown with a clear "last updated" indicator, while any write is refused with a message until the network is back. No offline queue, no conflict resolution, no background sync; web push is a later ticket.
+Feudo is an installable PWA (web manifest plus a Serwist service worker) used mostly on desktop with occasional phone use, and every write it accepts (categorization, reserve marks, settings, sync triggers) must be authorized against the session's household on the server. Offline support is therefore read-only: the app shell and the last data each screen loaded are cached and shown with a clear "last updated" indicator, while any write is refused with a message until the network is back. No offline queue, no conflict resolution, no background sync; web push is a later ticket (shipped in #29, ADR-0012).
 
 ## Consequences
 

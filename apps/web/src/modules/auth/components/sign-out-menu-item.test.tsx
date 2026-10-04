@@ -15,7 +15,15 @@ const clearOfflineCopiesMock = vi.hoisted(() =>
 );
 
 vi.mock("../actions", () => ({ signOutAction: signOutActionMock }));
+const forgetThisDeviceMock = vi.hoisted(() =>
+  vi.fn(() => {
+    callOrder.push("forget");
+    return Promise.resolve();
+  }),
+);
+
 vi.mock("@/platform/pwa/offline-copies", () => ({ clearOfflineCopies: clearOfflineCopiesMock }));
+vi.mock("@/platform/pwa/push-device", () => ({ forgetThisDevice: forgetThisDeviceMock }));
 
 import { SignOutMenuItem } from "./sign-out-menu-item";
 
@@ -23,6 +31,7 @@ afterEach(() => {
   cleanup();
   signOutActionMock.mockReset();
   clearOfflineCopiesMock.mockClear();
+  forgetThisDeviceMock.mockClear();
   callOrder.length = 0;
   Reflect.deleteProperty(window.navigator, "onLine");
 });
@@ -42,7 +51,7 @@ async function renderOpenMenu() {
 }
 
 describe("SignOutMenuItem", () => {
-  it("clears this browser's offline copies before signing out (ADR-0007)", async () => {
+  it("clears this browser's offline copies and forgets its notifications before signing out (ADR-0007, ADR-0012)", async () => {
     signOutActionMock.mockImplementation(() => {
       callOrder.push("signOut");
       return Promise.resolve({ status: "error", message: t.errors.signOutFailed });
@@ -52,8 +61,21 @@ describe("SignOutMenuItem", () => {
     fireEvent.click(screen.getByText(t.userMenu.signOut));
 
     await waitFor(() => {
-      expect(callOrder).toEqual(["clear", "signOut"]);
+      expect(callOrder).toEqual(["clear", "forget", "signOut"]);
     });
+  });
+
+  it("still signs out when forgetting the device fails (ADR-0012)", async () => {
+    forgetThisDeviceMock.mockImplementationOnce(() => Promise.reject(new Error("no worker")));
+    signOutActionMock.mockResolvedValue({ status: "error", message: t.errors.signOutFailed });
+    await renderOpenMenu();
+
+    fireEvent.click(screen.getByText(t.userMenu.signOut));
+
+    await waitFor(() => {
+      expect(signOutActionMock).toHaveBeenCalledOnce();
+    });
+    expect(forgetThisDeviceMock).toHaveBeenCalledOnce();
   });
 
   it("offline, still clears the copies but never calls the server", async () => {

@@ -102,6 +102,7 @@ const BASE_DOCUMENT: ExportDocument = {
   financialDataAccess: [
     { householdId: "household-1", kind: "overview", accessedAt: "2026-01-02T00:00:00.000Z" },
   ],
+  pushSubscriptions: [{ pushService: "fcm.googleapis.com", createdAt: "2026-01-02T00:00:00.000Z" }],
 };
 
 function transaction(id: string): ExportDocument["transactions"][number] {

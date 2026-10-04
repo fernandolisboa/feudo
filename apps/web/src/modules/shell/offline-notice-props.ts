@@ -10,6 +10,7 @@ export type OfflineNoticeProps = {
   renderedAt: string;
   timeZone: string;
   scope: string;
+  userId: string;
 };
 
 // The render time travels inside the page, so a copy served offline still
@@ -24,5 +25,6 @@ export async function getOfflineNoticeProps(
     renderedAt: now.toISOString(),
     timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
     scope: `${session.userId}:${session.householdId}`,
+    userId: session.userId,
   };
 }
