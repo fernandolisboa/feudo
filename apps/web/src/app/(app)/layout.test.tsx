@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireHouseholdSessionMock = vi.hoisted(() => vi.fn());
@@ -13,13 +13,21 @@ vi.mock("@/modules/households", () => ({
   getHouseholdSwitcherProps: getHouseholdSwitcherPropsMock,
   HouseholdSwitcherSelect: () => <div data-testid="household-switcher" />,
 }));
-vi.mock("@/modules/shell", () => ({
+vi.mock("@/modules/shell", async (importOriginal) => ({
+  AppErrorBoundary: (await importOriginal<typeof import("@/modules/shell")>()).AppErrorBoundary,
   readSidebarCollapsed: readSidebarCollapsedMock,
   getTourState: getTourStateMock,
-  AppShell: ({ householdSwitcher }: { householdSwitcher: ReactNode }) => (
+  AppShell: ({
+    householdSwitcher,
+    children,
+  }: {
+    householdSwitcher: ReactNode;
+    children: ReactNode;
+  }) => (
     <>
       <div data-testid="nav-slot">{householdSwitcher}</div>
       <div data-testid="mobile-header-slot">{householdSwitcher}</div>
+      <main data-testid="shell-content">{children}</main>
     </>
   ),
 }));
@@ -68,5 +76,27 @@ describe("AppLayout", () => {
 
     expect(getHouseholdSwitcherPropsMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("household-switcher")).toBeNull();
+  });
+
+  it("renders a page that throws as the pt-BR error state inside the shell, keeping the navigation", async () => {
+    getHouseholdSwitcherPropsMock.mockResolvedValue(null);
+    function FailingPage(): never {
+      throw new Error("boom");
+    }
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    try {
+      const element = await AppLayout({ children: <FailingPage /> });
+      render(element);
+
+      const content = screen.getByTestId("shell-content");
+      expect(
+        within(content).getByRole("heading", { name: "Não deu para abrir esta página" }),
+      ).not.toBeNull();
+      expect(within(content).getByRole("button", { name: "Tentar de novo" })).not.toBeNull();
+      expect(screen.getByTestId("nav-slot")).not.toBeNull();
+    } finally {
+      console.error = originalConsoleError;
+    }
   });
 });

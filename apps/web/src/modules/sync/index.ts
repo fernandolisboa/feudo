@@ -1,5 +1,6 @@
 export { AccountsSection } from "./components/accounts-section";
 export { ConnectBankWizard } from "./components/connect-bank-wizard";
+export { ConnectBankErrorBoundary } from "./components/connect-bank-error-boundary";
 export type { HouseholdDataLoss } from "./account-deletion";
 export {
   deleteConnectionsForAccountPurge,

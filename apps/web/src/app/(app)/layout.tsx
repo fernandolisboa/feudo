@@ -5,7 +5,7 @@ import {
   HouseholdSwitcherSelect,
   requireHouseholdSession,
 } from "@/modules/households";
-import { AppShell, getTourState, readSidebarCollapsed } from "@/modules/shell";
+import { AppErrorBoundary, AppShell, getTourState, readSidebarCollapsed } from "@/modules/shell";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       householdSwitcher={householdSwitcher}
       tourState={tourState}
     >
-      {children}
+      <AppErrorBoundary>{children}</AppErrorBoundary>
     </AppShell>
   );
 }
