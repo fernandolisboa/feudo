@@ -7,6 +7,7 @@ const requireHouseholdSessionMock = vi.hoisted(() => vi.fn());
 const getHouseholdSwitcherPropsMock = vi.hoisted(() => vi.fn());
 const readSidebarCollapsedMock = vi.hoisted(() => vi.fn());
 const getTourStateMock = vi.hoisted(() => vi.fn());
+const getOfflineNoticePropsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/households", () => ({
   requireHouseholdSession: requireHouseholdSessionMock,
@@ -17,6 +18,7 @@ vi.mock("@/modules/shell", async (importOriginal) => ({
   AppErrorBoundary: (await importOriginal<typeof import("@/modules/shell")>()).AppErrorBoundary,
   readSidebarCollapsed: readSidebarCollapsedMock,
   getTourState: getTourStateMock,
+  getOfflineNoticeProps: getOfflineNoticePropsMock,
   AppShell: ({
     householdSwitcher,
     children,
@@ -48,6 +50,12 @@ beforeEach(() => {
   readSidebarCollapsedMock.mockResolvedValue(false);
   getTourStateMock.mockReset();
   getTourStateMock.mockResolvedValue({ autoStart: true, seenVersions: {} });
+  getOfflineNoticePropsMock.mockReset();
+  getOfflineNoticePropsMock.mockResolvedValue({
+    renderedAt: "2026-10-04T13:00:00.000Z",
+    timeZone: "America/Sao_Paulo",
+    scope: "user-1:household-a",
+  });
 });
 
 afterEach(() => {

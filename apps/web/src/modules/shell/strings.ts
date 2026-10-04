@@ -105,12 +105,27 @@ const en = {
     overline: "Something went wrong",
     title: "Couldn't open this page",
     message: "Something failed on our side. Your data is safe. Try again in a moment.",
+    offlineMessage:
+      "You're offline, so nothing was changed. Try again when the connection is back.",
     retry: "Try again",
   },
   notFound: {
     title: "Page not found",
     body: "This address doesn't exist in Feudo. It may have been typed wrong or moved.",
     action: "Go to the overview",
+  },
+  offline: {
+    offline: "You're offline. Nothing can be changed until the connection is back.",
+    copy: "This screen is a copy kept on this device.",
+    lastUpdated: "Last updated: {when}.",
+    today: "today, {time}",
+    yesterday: "yesterday, {time}",
+    refresh: "Update",
+    writeBlocked: "Nothing was saved: you're offline.",
+    fallbackTitle: "No connection",
+    fallbackBody:
+      "Without internet, Feudo only shows the screens you opened on this device in the last 24 hours, and only until you sign out. This one isn't among them.",
+    fallbackRetry: "Try again",
   },
 };
 
@@ -223,12 +238,27 @@ const ptBR = {
     overline: "Algo deu errado",
     title: "Não deu para abrir esta página",
     message: "Algo falhou do nosso lado. Seus dados estão seguros. Tente de novo daqui a pouco.",
+    offlineMessage:
+      "Você está sem conexão, então nada foi alterado. Tente de novo quando a internet voltar.",
     retry: "Tentar de novo",
   },
   notFound: {
     title: "Página não encontrada",
     body: "Este endereço não existe no Feudo. Ele pode ter sido digitado errado ou mudado de lugar.",
     action: "Ir para a visão geral",
+  },
+  offline: {
+    offline: "Você está sem conexão. Nada pode ser alterado até a internet voltar.",
+    copy: "Esta tela é uma cópia guardada neste aparelho.",
+    lastUpdated: "Última atualização: {when}.",
+    today: "hoje, {time}",
+    yesterday: "ontem, {time}",
+    refresh: "Atualizar",
+    writeBlocked: "Nada foi salvo: você está sem conexão.",
+    fallbackTitle: "Sem conexão",
+    fallbackBody:
+      "Sem internet, o Feudo só mostra as telas que você abriu neste aparelho nas últimas 24 horas, e só até você sair. Esta não está entre elas.",
+    fallbackRetry: "Tentar de novo",
   },
 } satisfies typeof en;
 

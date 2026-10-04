@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { initialActionState } from "@/lib/action-state";
+import { blockWriteWhenOffline } from "@/lib/offline-writes";
 
 import { relabelAccountAction } from "../actions";
 import type { AccountLabel } from "../repository";
@@ -29,6 +30,9 @@ export function AccountRowActions({
   const nextLabel: AccountLabel = label === "shared" ? "individual" : "shared";
 
   function relabel() {
+    if (blockWriteWhenOffline()) {
+      return;
+    }
     const formData = new FormData();
     formData.set("accountId", accountId);
     formData.set("label", nextLabel);

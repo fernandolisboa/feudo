@@ -7,7 +7,7 @@ import type { CurrentSession } from "./session";
 
 // One version covers both documents: they are accepted together, at sign-up
 // and again whenever either changes (ADR-0008).
-export const TERMS_VERSION = "2026-10-03";
+export const TERMS_VERSION = "2026-10-04";
 
 export const TERMS_ROUTE = "/termos";
 export const PRIVACY_POLICY_ROUTE = "/privacidade";

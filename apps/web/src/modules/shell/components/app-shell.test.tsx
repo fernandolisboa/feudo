@@ -16,11 +16,18 @@ vi.mock("./mobile-header", () => ({
 }));
 vi.mock("./mobile-tab-bar", () => ({ MobileTabBar: () => null }));
 vi.mock("./user-menu", () => ({ UserMenu: () => null }));
+vi.mock("./offline-notice", () => ({ OfflineNotice: () => null }));
 vi.mock("./tour-provider", () => ({
   TourProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 import { AppShell } from "./app-shell";
+
+const OFFLINE = {
+  renderedAt: "2026-10-04T13:00:00.000Z",
+  timeZone: "America/Sao_Paulo",
+  scope: "user-1:household-a",
+};
 
 afterEach(() => {
   cleanup();
@@ -38,6 +45,7 @@ describe("AppShell", () => {
         userEmail="ada@example.com"
         householdSwitcher={householdSwitcher}
         tourState={{ autoStart: true, seenVersions: {} }}
+        offline={OFFLINE}
       >
         {null}
       </AppShell>,
@@ -55,6 +63,7 @@ describe("AppShell", () => {
         userEmail="ada@example.com"
         householdSwitcher={null}
         tourState={{ autoStart: true, seenVersions: {} }}
+        offline={OFFLINE}
       >
         {null}
       </AppShell>,

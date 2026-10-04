@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { initialActionState } from "@/lib/action-state";
+import { blockWriteWhenOffline } from "@/lib/offline-writes";
 
 import { updateMemberRoleAction } from "../actions";
 import type { HouseholdMember } from "../membership";
@@ -55,6 +56,9 @@ export function MemberRowActions({
   const hasAnyAction = canToggleRole || canRemove || canLeave || canTransferTo;
 
   function handleRoleToggle(nextRole: "admin" | "member") {
+    if (blockWriteWhenOffline()) {
+      return;
+    }
     const formData = new FormData();
     formData.set("memberId", member.id);
     formData.set("role", nextRole);

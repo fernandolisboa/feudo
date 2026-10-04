@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { interpolate } from "@/lib/interpolate";
-import { AuthShell } from "@/modules/auth";
+import { AuthShell, ClearOfflineCopies } from "@/modules/auth";
 import { AccountDeletionPending, getAccountDeletionPendingPage, t } from "@/modules/privacy";
 
 export default async function AccountDeletionPendingPage() {
@@ -19,6 +19,7 @@ export default async function AccountDeletionPendingPage() {
           : t.pending.signedOutSubtitle
       }
     >
+      <ClearOfflineCopies />
       <AccountDeletionPending signedIn={page.status === "pending"} />
     </AuthShell>
   );

@@ -7,6 +7,7 @@ import { Label } from "@/ui/label";
 import { SectionHeader } from "@/ui/section-header";
 import { Switch } from "@/ui/switch";
 import { initialActionState } from "@/lib/action-state";
+import { blockWriteWhenOffline } from "@/lib/offline-writes";
 
 import { resetToursAction, updateTourAutoStartAction } from "../actions";
 import { t } from "../strings";
@@ -31,6 +32,9 @@ export function TourPreferencesForm({ autoStart }: { autoStart: boolean }) {
   }
 
   function handleCheckedChange(next: boolean): void {
+    if (blockWriteWhenOffline()) {
+      return;
+    }
     setChecked(next);
     const formData = new FormData();
     formData.set("autoStart", next ? "on" : "off");

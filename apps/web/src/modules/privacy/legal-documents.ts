@@ -213,7 +213,7 @@ const en = {
         title: "Cookies and data on your device",
         blocks: [
           "Feudo uses only necessary cookies: the session cookies that keep you signed in, and one that remembers whether the sidebar is collapsed. There are no advertising or analytics cookies.",
-          "Because Feudo can be installed as an app, your browser keeps on the device a copy of the screens you opened in the last 24 hours, to show them without internet. That copy stays on the device only; to erase it, clear the site's data in your browser settings.",
+          "Because Feudo can be installed as an app, your browser keeps on the device a copy of the screens you opened in the last 24 hours, to show them without internet. That copy stays on the device only and is erased when you sign out, switch household or ask to delete your sign-up; to erase it sooner, clear the site's data in your browser settings.",
         ],
       },
       {
@@ -429,7 +429,7 @@ const ptBR = {
         title: "Cookies e dados no seu aparelho",
         blocks: [
           "O Feudo usa só cookies necessários: os de sessão, que mantêm você conectado, e um que lembra se a barra lateral está recolhida. Não há cookies de publicidade nem de análise de uso.",
-          "Como o Feudo pode ser instalado como aplicativo, o navegador guarda no aparelho uma cópia das telas que você abriu nas últimas 24 horas, para mostrá-las sem internet. Essa cópia fica só no aparelho; para apagá-la, limpe os dados do site nas configurações do navegador.",
+          "Como o Feudo pode ser instalado como aplicativo, o navegador guarda no aparelho uma cópia das telas que você abriu nas últimas 24 horas, para mostrá-las sem internet. Essa cópia fica só no aparelho e é apagada quando você sai, troca de casa ou pede a exclusão do cadastro; para apagá-la antes, limpe os dados do site nas configurações do navegador.",
         ],
       },
       {

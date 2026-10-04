@@ -201,5 +201,11 @@ _Avoid_: AI advice, insight, recommendation
 ### Audit log
 
 **Financial-data access**:
-One row per server-side read of financial data — who, which household, what kind (overview, transactions, categories, reserve, export), when (ADR-0008). Written at the server boundary of each read, only after that read has already succeeded; a failed read records nothing, and a failed write still fails the call that read the data. Holds no amounts, descriptions, documents or filters; kept 12 calendar months, then purged by the daily job. `user_id` is cleared, not cascaded, when the user who read is deleted, so the household's record of the read outlives them. Each member sees only their own recent access, on the Casa page ("Seus acessos recentes"), never another member's.
+One row per server-side read of financial data — who, which household, what kind (overview, transactions, categories, reserve, export), when (ADR-0008). Written at the server boundary of each read, only after that read has already succeeded; a failed read records nothing, and a failed write still fails the call that read the data. Holds no amounts, descriptions, documents or filters; kept 12 calendar months, then purged by the daily job. `user_id` is cleared, not cascaded, when the user who read is deleted, so the household's record of the read outlives them. Each member sees only their own recent access, on the Casa page ("Seus acessos recentes"), never another member's. A read of the same kind by the same person in the same household within a minute of a recorded one is the same access and adds no row, so the offline copy fetched right after a navigation does not show twice; an export is always its own row.
 _Avoid_: access log content describing what was read, beyond its kind
+
+### Offline
+
+**Offline copy**:
+The last page of a signed-in screen (Visão geral, Transações, Reserva, Bancos, Casa, Categorias, Como usar) that the browser keeps on the device, so the installed app can show it without network, with "Última atualização" saying when the server read it (ADR-0007). At most 24 hours old, scoped to one person in one household, and erased on sign-out, household switch, account-deletion request, on reaching a signed-out screen and whenever the signed-in person or household changes. Offline, every write is refused with "Nada foi salvo: você está sem conexão."; nothing is queued. A screen with no copy shows "Sem conexão".
+_Avoid_: offline mode with editing, sync queue, cache (in copy)

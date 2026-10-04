@@ -5,9 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 vi.mock("@/modules/auth", () => ({ SignOutMenuItem: () => null }));
 vi.mock("../actions", () => ({ recordTourOutcomeAction: vi.fn() }));
+vi.mock("./offline-notice", () => ({ OfflineNotice: () => null }));
 
 import { TOURS } from "../tours";
 import { AppShell } from "./app-shell";
+
+const OFFLINE = {
+  renderedAt: "2026-10-04T13:00:00.000Z",
+  timeZone: "America/Sao_Paulo",
+  scope: "user-1:household-a",
+};
 
 afterEach(() => {
   cleanup();
@@ -30,6 +37,7 @@ describe("guided tour targets", () => {
           userEmail="ada@example.com"
           householdSwitcher={null}
           tourState={{ autoStart: false, seenVersions: {} }}
+          offline={OFFLINE}
         >
           {null}
         </AppShell>,
@@ -50,6 +58,7 @@ describe("guided tour targets", () => {
         userEmail="ada@example.com"
         householdSwitcher={null}
         tourState={{ autoStart: false, seenVersions: {} }}
+        offline={OFFLINE}
       >
         {null}
       </AppShell>,

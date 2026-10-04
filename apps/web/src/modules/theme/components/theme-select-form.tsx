@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/ui/alert";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { initialActionState } from "@/lib/action-state";
+import { blockWriteWhenOffline } from "@/lib/offline-writes";
 
 import { updateThemeAction } from "../actions";
 import { t } from "../strings";
@@ -32,7 +33,7 @@ export function ThemeSelectForm({ currentTheme }: { currentTheme: ThemeName }) {
   }
 
   function handleValueChange(value: string | null): void {
-    if (!value || !isThemeName(value)) {
+    if (!value || !isThemeName(value) || blockWriteWhenOffline()) {
       return;
     }
     setSelectedTheme(value);

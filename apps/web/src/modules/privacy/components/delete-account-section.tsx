@@ -15,6 +15,7 @@ import {
 } from "@/ui/dialog";
 import { interpolate } from "@/lib/interpolate";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
+import { clearOfflineCopies } from "@/platform/pwa/offline-copies";
 
 import { requestAccountDeletionAction } from "../actions";
 import type { DeleteAccountSectionProps } from "../page-props";
@@ -88,7 +89,10 @@ export function DeleteAccountSection({
               variant="destructive"
               disabled={isPending}
               onClick={() => {
-                run(() => requestAccountDeletionAction());
+                run(async () => {
+                  await clearOfflineCopies();
+                  return requestAccountDeletionAction();
+                });
               }}
             >
               {copy.dialog.confirm}

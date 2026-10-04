@@ -5,7 +5,13 @@ import {
   HouseholdSwitcherSelect,
   requireHouseholdSession,
 } from "@/modules/households";
-import { AppErrorBoundary, AppShell, getTourState, readSidebarCollapsed } from "@/modules/shell";
+import {
+  AppErrorBoundary,
+  AppShell,
+  getOfflineNoticeProps,
+  getTourState,
+  readSidebarCollapsed,
+} from "@/modules/shell";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -14,9 +20,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const shell = shellLayoutFor(resolveTheme(theme));
   const sidebarCollapsed = shell === "sidebar" ? await readSidebarCollapsed() : false;
-  const [switcherProps, tourState] = await Promise.all([
+  const [switcherProps, tourState, offline] = await Promise.all([
     getHouseholdSwitcherProps(householdId),
     getTourState(session),
+    getOfflineNoticeProps(session, new Date()),
   ]);
   const householdSwitcher = switcherProps ? <HouseholdSwitcherSelect {...switcherProps} /> : null;
 
@@ -28,6 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       userEmail={email}
       householdSwitcher={householdSwitcher}
       tourState={tourState}
+      offline={offline}
     >
       {/* Switching household keeps the URL, so the key is what clears a failed page. */}
       <AppErrorBoundary key={householdId}>{children}</AppErrorBoundary>
