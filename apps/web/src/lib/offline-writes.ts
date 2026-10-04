@@ -1,3 +1,5 @@
+import type { ActionState } from "./action-state";
+
 export const WRITE_BLOCKED_EVENT = "feudo:write-blocked";
 
 export function isBrowserOffline(): boolean {
@@ -12,4 +14,17 @@ export function blockWriteWhenOffline(): boolean {
   }
   window.dispatchEvent(new Event(WRITE_BLOCKED_EVENT));
   return true;
+}
+
+// For forms on screens without the app shell (sign-in, terms, onboarding),
+// whose submissions the shell's guard never sees: offline, the form shows
+// the message in its own alert instead of the request failing.
+export function refuseWhenOffline<Args extends unknown[]>(
+  action: (...args: Args) => Promise<ActionState>,
+  offlineMessage: string,
+): (...args: Args) => Promise<ActionState> {
+  return (...args) =>
+    blockWriteWhenOffline()
+      ? Promise.resolve({ status: "error", message: offlineMessage })
+      : action(...args);
 }

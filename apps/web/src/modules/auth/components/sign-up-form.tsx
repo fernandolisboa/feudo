@@ -8,12 +8,16 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { signUpAction } from "../actions";
 import { t } from "../strings";
 import { TermsCheckbox } from "./terms-checkbox";
 
 export function SignUpForm({ next }: { next?: string | null } = {}) {
-  const [state, formAction, isPending] = useActionState(signUpAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(signUpAction, t.errors.offline),
+    initialActionState,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

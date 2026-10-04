@@ -8,11 +8,15 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { requestMagicLinkAction } from "../actions";
 import { t } from "../strings";
 
 export function MagicLinkForm() {
-  const [state, formAction, isPending] = useActionState(requestMagicLinkAction, initialActionState);
+  const [state, formAction, isPending] = useActionState(
+    refuseWhenOffline(requestMagicLinkAction, t.errors.offline),
+    initialActionState,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

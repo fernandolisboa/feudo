@@ -28,4 +28,14 @@ describe("AccountDeletionPending", () => {
     expect(screen.getByText("Não foi possível cancelar a exclusão. Tente novamente.")).toBeTruthy();
     expect(actions.cancelAccountDeletionAction).not.toHaveBeenCalled();
   });
+
+  it("offline, says signing out did not happen, not that the cancellation failed", () => {
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, get: () => false });
+    render(<AccountDeletionPending signedIn />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    expect(screen.getByText("Não foi possível sair. Tente novamente.")).toBeTruthy();
+    expect(actions.signOutFromPendingDeletionAction).not.toHaveBeenCalled();
+  });
 });

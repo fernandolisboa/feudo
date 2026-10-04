@@ -51,6 +51,7 @@ test("offline: last copy of each screen, writes refused, nothing left after sign
     password: "correct-horse-battery-staple",
   };
   const firstHousehold = `Casa de ${first.name}`;
+  let inviteLink = "";
   await signUpVerifyAndSignIn(page, request, baseURL, first);
   await waitForServiceWorker(page);
   const sidebar = page.locator('nav.app-shell-nav[data-shell="sidebar"]');
@@ -65,6 +66,7 @@ test("offline: last copy of each screen, writes refused, nothing left after sign
     await page.getByLabel("E-mail").fill(second.email);
     await page.getByRole("button", { name: "Enviar convite" }).click();
     await expect(page.getByText(second.email)).toBeVisible();
+    inviteLink = await lastEmailLink(request, baseURL, second.email, /\/convite\//);
   });
 
   await test.step("offline, the installed app reopens the screen with its last data and when it was read", async () => {
@@ -123,7 +125,7 @@ test("offline: last copy of each screen, writes refused, nothing left after sign
   });
 
   await test.step("switching household erases the copies of the household left behind", async () => {
-    await page.goto(await lastEmailLink(request, baseURL, second.email));
+    await page.goto(inviteLink);
     await page.getByRole("button", { name: "Aceitar e entrar" }).click();
     await expect(page).toHaveURL(/\/$/);
 

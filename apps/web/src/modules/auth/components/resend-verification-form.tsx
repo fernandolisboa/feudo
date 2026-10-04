@@ -5,12 +5,13 @@ import { useActionState } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { initialActionState } from "@/lib/action-state";
+import { refuseWhenOffline } from "@/lib/offline-writes";
 import { resendVerificationAction } from "../actions";
 import { t } from "../strings";
 
 export function ResendVerificationForm({ email, next }: { email: string; next?: string | null }) {
   const [state, formAction, isPending] = useActionState(
-    resendVerificationAction,
+    refuseWhenOffline(resendVerificationAction, t.errors.offline),
     initialActionState,
   );
 

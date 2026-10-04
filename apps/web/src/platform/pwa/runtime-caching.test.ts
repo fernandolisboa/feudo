@@ -7,7 +7,12 @@ import {
   OFFLINE_FALLBACK_ROUTE,
   STATIC_ASSETS_CACHE,
 } from "./offline-copies";
-import { discardCopiesInFlight, offlineFallbacks, runtimeCaching } from "./runtime-caching";
+import {
+  discardCopiesInFlight,
+  offlineFallbacks,
+  precacheOptions,
+  runtimeCaching,
+} from "./runtime-caching";
 
 const ORIGIN = "https://feudo.test";
 
@@ -113,6 +118,12 @@ describe("service worker runtime caching", () => {
         .map((handler) => (handler as Strategy).cacheName),
     );
     expect([...cacheNames].sort()).toEqual([OFFLINE_COPIES_CACHE, STATIC_ASSETS_CACHE].sort());
+  });
+
+  it("finds a precached build asset under the address Vercel gives it (?dpl=)", () => {
+    const ignored = precacheOptions.ignoreURLParametersMatching ?? [];
+    expect(ignored.some((pattern) => pattern.test("dpl"))).toBe(true);
+    expect(ignored.some((pattern) => pattern.test("mes"))).toBe(false);
   });
 
   it("falls back to the offline page for navigations only", () => {

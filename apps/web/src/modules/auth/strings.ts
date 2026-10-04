@@ -104,6 +104,7 @@ const en = {
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
+    offline: "You're offline: nothing was sent. Try again when the connection is back.",
     termsRequired: "You must accept the terms of use and the privacy policy.",
     registrationClosed: "Registration is closed at the moment.",
     inviteRequired: "Registration is invite-only at the moment.",
@@ -221,6 +222,7 @@ const ptBR = {
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
+    offline: "Você está sem conexão: nada foi enviado. Tente de novo quando a internet voltar.",
     termsRequired: "Você precisa aceitar os termos de uso e a política de privacidade.",
     registrationClosed: "O cadastro está fechado no momento.",
     inviteRequired: "O cadastro é somente por convite no momento.",

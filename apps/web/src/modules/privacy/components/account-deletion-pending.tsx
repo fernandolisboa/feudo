@@ -10,7 +10,10 @@ import { cancelAccountDeletionAction, signOutFromPendingDeletionAction } from ".
 import { t } from "../strings";
 
 export function AccountDeletionPending({ signedIn }: { signedIn: boolean }) {
-  const { errorMessage, isPending, run } = useActionInTransition(t.errors.cancelFailed);
+  const cancel = useActionInTransition(t.errors.cancelFailed);
+  const signOut = useActionInTransition(t.errors.signOutFailed);
+  const errorMessage = cancel.errorMessage ?? signOut.errorMessage;
+  const isPending = cancel.isPending || signOut.isPending;
   const copy = t.pending;
 
   if (!signedIn) {
@@ -35,7 +38,7 @@ export function AccountDeletionPending({ signedIn }: { signedIn: boolean }) {
           type="button"
           disabled={isPending}
           onClick={() => {
-            run(() => cancelAccountDeletionAction());
+            cancel.run(() => cancelAccountDeletionAction());
           }}
         >
           {copy.cancel}
@@ -45,7 +48,7 @@ export function AccountDeletionPending({ signedIn }: { signedIn: boolean }) {
           variant="outline"
           disabled={isPending}
           onClick={() => {
-            run(() => signOutFromPendingDeletionAction());
+            signOut.run(() => signOutFromPendingDeletionAction());
           }}
         >
           {copy.signOut}

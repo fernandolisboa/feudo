@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { blockWriteWhenOffline, WRITE_BLOCKED_EVENT } from "./offline-writes";
+import type { ActionState } from "./action-state";
+import { blockWriteWhenOffline, refuseWhenOffline, WRITE_BLOCKED_EVENT } from "./offline-writes";
+
+type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
 function setOnline(online: boolean): void {
   Object.defineProperty(window.navigator, "onLine", { configurable: true, get: () => online });
@@ -30,5 +33,31 @@ describe("blockWriteWhenOffline", () => {
     expect(blockWriteWhenOffline()).toBe(true);
     expect(listener).toHaveBeenCalledOnce();
     window.removeEventListener(WRITE_BLOCKED_EVENT, listener);
+  });
+});
+
+describe("refuseWhenOffline", () => {
+  it("offline, answers with the message and never calls the action", async () => {
+    setOnline(false);
+    const action = vi.fn<FormAction>(() => Promise.resolve({ status: "idle" }));
+
+    const result = await refuseWhenOffline(action, "sem conexão")(
+      { status: "idle" },
+      new FormData(),
+    );
+
+    expect(result).toEqual({ status: "error", message: "sem conexão" });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("online, passes the arguments to the action and returns its state", async () => {
+    setOnline(true);
+    const formData = new FormData();
+    const action = vi.fn<FormAction>(() => Promise.resolve({ status: "success", message: "ok" }));
+
+    const result = await refuseWhenOffline(action, "sem conexão")({ status: "idle" }, formData);
+
+    expect(result).toEqual({ status: "success", message: "ok" });
+    expect(action).toHaveBeenCalledWith({ status: "idle" }, formData);
   });
 });

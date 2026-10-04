@@ -41,6 +41,7 @@ export function createFinancialDataAccessRepository(scope: FinancialDataAccessSc
       windowSeconds: number,
     ): Promise<void> {
       await db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
         await tx.execute(
           sql`select pg_advisory_xact_lock(hashtextextended(${`financial_data_access:${scope.householdId}:${scope.userId}:${kind}`}, 0))`,
         );

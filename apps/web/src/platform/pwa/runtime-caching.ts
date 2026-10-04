@@ -1,4 +1,4 @@
-import type { RuntimeCaching, SerwistOptions, SerwistPlugin } from "serwist";
+import type { PrecacheOptions, RuntimeCaching, SerwistOptions, SerwistPlugin } from "serwist";
 import { CacheExpiration, CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly } from "serwist";
 
 import {
@@ -43,11 +43,21 @@ const refuseCopiesStartedBeforeAClear: SerwistPlugin = {
   },
   cacheWillUpdate: ({ response, state }) =>
     Promise.resolve(state?.generation === copiesGeneration ? response : null),
+  // A clear can also land between the check above and the write itself.
+  cacheDidUpdate: async ({ cacheName, request, state }) => {
+    if (state?.generation !== copiesGeneration) {
+      const cache = await caches.open(cacheName);
+      await cache.delete(request, { ignoreVary: true });
+    }
+  },
 };
 
 const copiesExpirationConfig = {
   maxEntries: OFFLINE_COPY_MAX_ENTRIES,
   maxAgeSeconds: OFFLINE_COPY_MAX_AGE_SECONDS,
+  // The same key the strategy reads with; otherwise expiry can drop an
+  // entry's timestamp and miss the entry itself, which then never expires.
+  matchOptions: { ignoreVary: true },
 };
 
 export function discardCopiesInFlight(): void {
@@ -94,7 +104,7 @@ export const runtimeCaching: RuntimeCaching[] = [
       cacheName: OFFLINE_COPIES_CACHE,
       // Next varies its pages on router headers a navigation never sends;
       // the key is the screen's URL alone.
-      matchOptions: { ignoreVary: true },
+      matchOptions: copiesExpirationConfig.matchOptions,
       plugins: [
         refuseCopiesStartedBeforeAClear,
         onlyRenderedScreens,
@@ -107,6 +117,13 @@ export const runtimeCaching: RuntimeCaching[] = [
     handler: new NetworkOnly(),
   },
 ];
+
+// Vercel adds ?dpl=<deployment> to every build asset a page references; the
+// precache stores them without it. Unless it is ignored, a copy opened
+// offline finds none of its scripts and never hydrates.
+export const precacheOptions: PrecacheOptions = {
+  ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^dpl$/],
+};
 
 export const offlineFallbacks: NonNullable<SerwistOptions["fallbacks"]> = {
   entries: [

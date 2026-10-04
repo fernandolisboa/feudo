@@ -56,7 +56,9 @@ describe("clearOfflineCopies", () => {
         }, 10);
       },
     };
-    vi.stubGlobal("navigator", { serviceWorker: { controller } });
+    vi.stubGlobal("navigator", {
+      serviceWorker: { controller, getRegistration: () => Promise.resolve(undefined) },
+    });
 
     await clearOfflineCopies();
     order.push("resolved");
@@ -64,9 +66,30 @@ describe("clearOfflineCopies", () => {
     expect(order).toEqual(["worker cleared", "resolved"]);
   });
 
+  it("asks the registration's worker when the page is not controlled (hard reload)", async () => {
+    const postMessage = vi.fn((_message: unknown, [port]: MessagePort[]) => {
+      port?.postMessage("cleared");
+    });
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: null,
+        getRegistration: () => Promise.resolve({ active: { postMessage } }),
+      },
+    });
+
+    await clearOfflineCopies();
+
+    expect(postMessage).toHaveBeenCalledOnce();
+  });
+
   it("does not hang when the service worker never answers", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("navigator", { serviceWorker: { controller: { postMessage: vi.fn() } } });
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: { postMessage: vi.fn() },
+        getRegistration: () => Promise.resolve(undefined),
+      },
+    });
     const cleared = clearOfflineCopies();
     await vi.advanceTimersByTimeAsync(2_000);
     await expect(cleared).resolves.toBeUndefined();

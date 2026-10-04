@@ -118,6 +118,7 @@ const en = {
   },
   errors: {
     invalidInput: "Check the information you entered and try again.",
+    offline: "You're offline: nothing was sent. Try again when the connection is back.",
     unauthenticated: "Sign in again to continue.",
     createFailed: "We couldn't create your household. Try again.",
     alreadyHasHousehold: "You already have an active household.",
@@ -268,6 +269,7 @@ const ptBR = {
   },
   errors: {
     invalidInput: "Confira os dados informados e tente novamente.",
+    offline: "Você está sem conexão: nada foi enviado. Tente de novo quando a internet voltar.",
     unauthenticated: "Entre novamente para continuar.",
     createFailed: "Não foi possível criar sua casa. Tente novamente.",
     alreadyHasHousehold: "Você já tem uma casa ativa.",

@@ -72,15 +72,22 @@ function forgetScope(): void {
   }
 }
 
-function askServiceWorkerToClear(): Promise<void> {
-  const worker =
-    typeof navigator !== "undefined" && "serviceWorker" in navigator
-      ? navigator.serviceWorker.controller
-      : null;
-  if (!worker) {
-    return Promise.resolve();
+// The same worker requestOfflineCopy talks to, also when this page is not
+// controlled (a hard reload) but the worker is keeping copies for it.
+async function activeServiceWorker(): Promise<ServiceWorker | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
   }
-  return new Promise((resolve) => {
+  const registration = await navigator.serviceWorker.getRegistration();
+  return navigator.serviceWorker.controller ?? registration?.active ?? null;
+}
+
+async function askServiceWorkerToClear(): Promise<void> {
+  const worker = await activeServiceWorker();
+  if (!worker) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
     const channel = new MessageChannel();
     const timeout = setTimeout(resolve, SERVICE_WORKER_ACK_TIMEOUT_MS);
     channel.port1.onmessage = () => {

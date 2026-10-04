@@ -6,6 +6,7 @@ import {
   clearCopiesInServiceWorker,
   expireOldCopies,
   offlineFallbacks,
+  precacheOptions,
   runtimeCaching,
 } from "@/platform/pwa/runtime-caching";
 
@@ -19,6 +20,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
+  precacheOptions,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
@@ -35,7 +37,7 @@ self.addEventListener("message", (event) => {
     return;
   }
   event.waitUntil(
-    clearCopiesInServiceWorker().then(() => {
+    clearCopiesInServiceWorker().finally(() => {
       event.ports[0]?.postMessage("cleared");
     }),
   );
