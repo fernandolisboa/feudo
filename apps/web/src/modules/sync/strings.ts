@@ -49,6 +49,11 @@ const en = {
   },
   wizard: {
     title: "Connect a bank",
+    error: {
+      message:
+        "Couldn't open the bank connection steps right now. Check your connection and try again.",
+      retry: "Try again",
+    },
   },
   accounts: {
     sectionTitle: "Accounts",
@@ -253,6 +258,11 @@ const ptBR = {
   },
   wizard: {
     title: "Conectar banco",
+    error: {
+      message:
+        "Não deu para abrir os passos de conexão agora. Confira sua conexão e tente de novo.",
+      retry: "Tentar de novo",
+    },
   },
   accounts: {
     sectionTitle: "Contas",

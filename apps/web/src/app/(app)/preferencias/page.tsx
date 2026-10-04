@@ -1,10 +1,14 @@
+import { Suspense } from "react";
+
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
+import { Skeleton } from "@/ui/skeleton";
 import {
   getPendingHouseholdDeletions,
   PendingHouseholdDeletions,
   requireHouseholdSession,
   t as householdsT,
+  type HouseholdSession,
 } from "@/modules/households";
 import {
   DeleteAccountSection,
@@ -13,7 +17,25 @@ import {
   t as privacyT,
 } from "@/modules/privacy";
 import { getTourState, TourPreferencesForm } from "@/modules/shell";
-import { resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
+import { PreferencesSectionErrorBoundary, resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
+
+async function PendingHouseholdDeletionsContent({ session }: { session: HouseholdSession }) {
+  const households = await getPendingHouseholdDeletions(session);
+  if (households.length === 0) {
+    return null;
+  }
+  return (
+    <section className="mt-8">
+      <SectionHeader title={householdsT.casa.pendingDeletion.title} />
+      <PendingHouseholdDeletions households={households} />
+    </section>
+  );
+}
+
+async function DeleteAccountContent({ session }: { session: HouseholdSession }) {
+  const props = await getDeleteAccountSectionProps(session);
+  return <DeleteAccountSection {...props} />;
+}
 
 export default async function PreferencesPage({
   searchParams,
@@ -21,12 +43,7 @@ export default async function PreferencesPage({
   searchParams: Promise<{ exportacao?: string }>;
 }) {
   const session = await requireHouseholdSession();
-  const [tourState, pendingHouseholds, deleteAccount, { exportacao }] = await Promise.all([
-    getTourState(session),
-    getPendingHouseholdDeletions(session),
-    getDeleteAccountSectionProps(session),
-    searchParams,
-  ]);
+  const [tourState, { exportacao }] = await Promise.all([getTourState(session), searchParams]);
 
   return (
     <>
@@ -34,12 +51,11 @@ export default async function PreferencesPage({
       <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
       <TourPreferencesForm autoStart={tourState.autoStart} />
 
-      {pendingHouseholds.length > 0 ? (
-        <section className="mt-8">
-          <SectionHeader title={householdsT.casa.pendingDeletion.title} />
-          <PendingHouseholdDeletions households={pendingHouseholds} />
-        </section>
-      ) : null}
+      <PreferencesSectionErrorBoundary className="mt-8">
+        <Suspense fallback={null}>
+          <PendingHouseholdDeletionsContent session={session} />
+        </Suspense>
+      </PreferencesSectionErrorBoundary>
 
       <section className="mt-8">
         <SectionHeader title={privacyT.exportData.sectionTitle} />
@@ -48,7 +64,11 @@ export default async function PreferencesPage({
 
       <section className="mt-8">
         <SectionHeader title={privacyT.deleteAccount.sectionTitle} />
-        <DeleteAccountSection {...deleteAccount} />
+        <PreferencesSectionErrorBoundary>
+          <Suspense fallback={<Skeleton className="h-24 w-full max-w-prose" />}>
+            <DeleteAccountContent session={session} />
+          </Suspense>
+        </PreferencesSectionErrorBoundary>
       </section>
     </>
   );

@@ -1,5 +1,4 @@
 import { Badge } from "@/ui/badge";
-import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { interpolate } from "@/lib/interpolate";
@@ -16,8 +15,6 @@ const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 export function CategoriesView({ categories, rules, suggestions }: CategoriesPageProps) {
   return (
     <>
-      <PageHeader overline={t.categoriesPage.overline} title={t.categoriesPage.title} />
-
       {suggestions.length > 0 ? (
         <section className="mb-8">
           <SectionHeader title={t.categoriesPage.suggestions.title} />
