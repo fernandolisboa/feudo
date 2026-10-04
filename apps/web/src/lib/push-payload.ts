@@ -6,10 +6,16 @@ function isShortText(value: unknown, max: number): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= max;
 }
 
-// Only a path inside Feudo: "/x" but never "//host", which a browser reads
-// as another origin.
-function isInAppPath(value: unknown): value is string {
-  return isShortText(value, 200) && value.startsWith("/") && !value.startsWith("//");
+const PROBE_ORIGIN = "https://feudo.invalid";
+
+// Only a path inside Feudo. Resolved the way the browser will, since "//host",
+// "/\\host" and "/<tab>/host" all leave the origin while starting with "/".
+export function isInAppPath(value: unknown): value is string {
+  return (
+    isShortText(value, 200) &&
+    value.startsWith("/") &&
+    new URL(value, PROBE_ORIGIN).origin === PROBE_ORIGIN
+  );
 }
 
 export function parsePushPayload(value: unknown): PushPayload | null {

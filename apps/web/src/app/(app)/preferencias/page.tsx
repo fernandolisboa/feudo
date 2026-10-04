@@ -48,7 +48,7 @@ export default async function PreferencesPage({
 }) {
   const session = await requireHouseholdSession();
   const [tourState, { exportacao }] = await Promise.all([getTourState(session), searchParams]);
-  const pushNotifications = getPushNotificationsSectionProps();
+  const pushNotifications = getPushNotificationsSectionProps(session);
 
   return (
     <>

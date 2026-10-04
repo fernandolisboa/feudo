@@ -5,7 +5,7 @@ import { LogOut } from "lucide-react";
 import { DropdownMenuItem } from "@/ui/dropdown-menu";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
 import { clearOfflineCopies } from "@/platform/pwa/offline-copies";
-import { unsubscribeThisDevice } from "@/platform/pwa/push-device";
+import { forgetThisDevice } from "@/platform/pwa/push-device";
 // Direct file import, not the auth module's index: this file is bundled for
 // the client, and the auth index also re-exports getCurrentSession, which
 // reaches "next/headers". signOutAction is itself a "use server" export,
@@ -18,9 +18,10 @@ export function SignOutMenuItem() {
 
   // The copies and the notifications go even when the sign-out itself cannot
   // reach the server: whoever pressed Sair is leaving this browser (ADR-0007,
-  // ADR-0012).
+  // ADR-0012). Feudo forgets the device before the session ends, since only
+  // the session says whose it is.
   function handleSignOut() {
-    const clearing = Promise.all([clearOfflineCopies(), unsubscribeThisDevice().catch(() => null)]);
+    const clearing = Promise.all([clearOfflineCopies(), forgetThisDevice().catch(() => undefined)]);
     run(async () => {
       await clearing;
       return signOutAction();

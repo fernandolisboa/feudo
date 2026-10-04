@@ -54,13 +54,28 @@ describe("push_subscription isolation (ADR-0001)", () => {
     });
   });
 
-  it("saving the same device again keeps one row", async () => {
-    await withTwoUsers(async ({ db, userA }) => {
+  it("saving the same device again keeps one row and its date; a move to someone else restarts it", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
       const repository = createPushSubscriptionRepository(scopeForUser(userA.id));
       const device = fakeSubscriptionInput();
+      const turnedOnAt = new Date("2026-01-02T03:04:05.000Z");
       await repository.save(db, device);
+      await db
+        .update(pushSubscription)
+        .set({ createdAt: turnedOnAt })
+        .where(eq(pushSubscription.endpoint, device.endpoint));
+
       await repository.save(db, device);
-      expect(await repository.list(db)).toHaveLength(1);
+      const rows = await repository.list(db);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.createdAt).toEqual(turnedOnAt);
+
+      await createPushSubscriptionRepository(scopeForUser(userB.id)).save(db, device);
+      const [moved] = await db
+        .select()
+        .from(pushSubscription)
+        .where(eq(pushSubscription.endpoint, device.endpoint));
+      expect(moved?.createdAt).not.toEqual(turnedOnAt);
     });
   });
 

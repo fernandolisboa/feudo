@@ -1,9 +1,12 @@
 export type PushSupport = "supported" | "needs_home_screen" | "unsupported";
 
 export class PushPermissionDeniedError extends Error {
-  constructor() {
+  readonly permission: NotificationPermission;
+
+  constructor(permission: NotificationPermission) {
     super("Notification permission was not granted.");
     this.name = "PushPermissionDeniedError";
+    this.permission = permission;
   }
 }
 
@@ -39,11 +42,65 @@ export function notificationPermission(): NotificationPermission {
   return "Notification" in window ? Notification.permission : "default";
 }
 
+const PUSH_OWNER_KEY = "feudo.push.owner";
+const SERVICE_WORKER_READY_MS = 10_000;
+const FORGET_DEVICE_PATH = "/api/push-subscription";
+const FORGET_DEVICE_TIMEOUT_MS = 5_000;
+
+// Who turned notifications on in this browser (ADR-0012). Kept apart from the
+// offline-copy scope, which the sign-in pages clear, so the next person to
+// sign in here can still be told apart from the one who subscribed.
+function readPushOwner(): string | null {
+  try {
+    return window.localStorage.getItem(PUSH_OWNER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writePushOwner(userId: string | null): void {
+  try {
+    if (userId === null) {
+      window.localStorage.removeItem(PUSH_OWNER_KEY);
+    } else {
+      window.localStorage.setItem(PUSH_OWNER_KEY, userId);
+    }
+  } catch {
+    // Storage refused: the subscription simply reads as nobody's.
+  }
+}
+
+export function isPushOwner(userId: string): boolean {
+  return readPushOwner() === userId;
+}
+
+export function isPushOwnedBySomeoneElse(userId: string): boolean {
+  const owner = readPushOwner();
+  return owner !== null && owner !== userId;
+}
+
 async function pushManager(): Promise<PushManager | null> {
   if (!("serviceWorker" in navigator)) {
     return null;
   }
   const registration = await navigator.serviceWorker.getRegistration();
+  return registration?.pushManager ?? null;
+}
+
+// Subscribing needs an active worker, which a first visit may still be
+// installing; `ready` never settles where no worker registers at all.
+async function activePushManager(): Promise<PushManager | null> {
+  if (!("serviceWorker" in navigator)) {
+    return null;
+  }
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => {
+      setTimeout(() => {
+        resolve(null);
+      }, SERVICE_WORKER_READY_MS);
+    }),
+  ]);
   return registration?.pushManager ?? null;
 }
 
@@ -63,25 +120,44 @@ export async function currentPushSubscription(): Promise<PushSubscriptionJSON | 
   return subscription ? subscription.toJSON() : null;
 }
 
-export async function subscribeThisDevice(publicKey: string): Promise<PushSubscriptionJSON> {
-  if ((await Notification.requestPermission()) !== "granted") {
-    throw new PushPermissionDeniedError();
+function madeWithKey(subscription: PushSubscription, key: Uint8Array): boolean {
+  const current = subscription.options.applicationServerKey;
+  if (current === null) {
+    return false;
   }
-  const manager = await pushManager();
+  const bytes = new Uint8Array(current);
+  return bytes.length === key.length && bytes.every((byte, index) => byte === key[index]);
+}
+
+export async function subscribeThisDevice(
+  publicKey: string,
+  userId: string,
+): Promise<PushSubscriptionJSON> {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    throw new PushPermissionDeniedError(permission);
+  }
+  const manager = await activePushManager();
   if (manager === null) {
     throw new NoServiceWorkerError();
   }
+  const key = applicationServerKey(publicKey);
+  const existing = await manager.getSubscription();
+  // One made with an earlier key is refused by the push service for good.
+  if (existing !== null && !madeWithKey(existing, key)) {
+    await existing.unsubscribe();
+  }
   const subscription =
-    (await manager.getSubscription()) ??
-    (await manager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey(publicKey),
-    }));
+    existing !== null && madeWithKey(existing, key)
+      ? existing
+      : await manager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  writePushOwner(userId);
   return subscription.toJSON();
 }
 
 // The endpoint the device just gave up, so the server can forget it too.
 export async function unsubscribeThisDevice(): Promise<string | null> {
+  writePushOwner(null);
   const manager = await pushManager();
   const subscription = await manager?.getSubscription();
   if (!subscription) {
@@ -89,4 +165,19 @@ export async function unsubscribeThisDevice(): Promise<string | null> {
   }
   await subscription.unsubscribe();
   return subscription.endpoint;
+}
+
+// Sign-out (ADR-0012): the browser stops first, then Feudo forgets the
+// address while the session still exists to say whose it is.
+export async function forgetThisDevice(): Promise<void> {
+  const endpoint = await unsubscribeThisDevice();
+  if (endpoint === null) {
+    return;
+  }
+  await fetch(FORGET_DEVICE_PATH, {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+    signal: AbortSignal.timeout(FORGET_DEVICE_TIMEOUT_MS),
+  });
 }

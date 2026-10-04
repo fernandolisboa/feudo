@@ -8,7 +8,11 @@ import {
   seedTransaction,
 } from "@/modules/sync/test/seed-synced-connection";
 import { joinHousehold, withTwoUsers, type SeededUser } from "@/modules/sync/test/with-two-users";
-import { createFakeNotifier, seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
+import {
+  createFakeNotifier,
+  seedPushDevice,
+  silentNotifier,
+} from "@/modules/notifications/test/fake-push-sender";
 
 import type { Database } from "@/platform/db/client";
 import { AI_MODELS, type AiClient, type AiFailure } from "./ai-client";
@@ -24,13 +28,17 @@ import {
 } from "./service";
 import { FIXTURE_INPUT } from "./test/fixtures";
 
-const fakeDeps: AnalysisDeps = { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT };
+const fakeDeps: AnalysisDeps = {
+  client: createFakeAiClient(),
+  prompt: CURRENT_ANALYST_PROMPT,
+  notifier: silentNotifier,
+};
 
 function failingDeps(status: AiFailure): AnalysisDeps {
   const client: AiClient = {
     complete: () => Promise.resolve({ status, model: null, usage: null }),
   };
-  return { client, prompt: CURRENT_ANALYST_PROMPT };
+  return { client, prompt: CURRENT_ANALYST_PROMPT, notifier: silentNotifier };
 }
 
 function options(now: Date = new Date()) {
@@ -224,7 +232,11 @@ describe("requestOnDemandAnalysis (integration)", () => {
   it("is off when no AI provider is configured", async () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
-      const off: AnalysisDeps = { client: null, prompt: CURRENT_ANALYST_PROMPT };
+      const off: AnalysisDeps = {
+        client: null,
+        prompt: CURRENT_ANALYST_PROMPT,
+        notifier: silentNotifier,
+      };
       expect(await requestOnDemandAnalysis(userA.session, db, off, options())).toEqual({
         status: "disabled",
       });
@@ -293,11 +305,11 @@ describe("runMonthlyAnalysis (integration)", () => {
       await seedPushDevice(db, userB.id);
       const { notifier, sender } = createFakeNotifier();
 
-      await runMonthlyAnalysis(db, failingDeps("unavailable"), { ...options(), notifier });
+      await runMonthlyAnalysis(db, { ...failingDeps("unavailable"), notifier }, options());
       expect(sender.sent).toEqual([]);
 
-      await runMonthlyAnalysis(db, fakeDeps, { ...options(), notifier });
-      await runMonthlyAnalysis(db, fakeDeps, { ...options(), notifier });
+      await runMonthlyAnalysis(db, { ...fakeDeps, notifier }, options());
+      await runMonthlyAnalysis(db, { ...fakeDeps, notifier }, options());
 
       expect(sender.sent).toHaveLength(2);
       const sentToA = sender.sent.find((send) => send.endpoint === deviceA.endpoint);
@@ -311,7 +323,11 @@ describe("runMonthlyAnalysis (integration)", () => {
   it("does nothing when the analyst is off", async () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
-      const off: AnalysisDeps = { client: null, prompt: CURRENT_ANALYST_PROMPT };
+      const off: AnalysisDeps = {
+        client: null,
+        prompt: CURRENT_ANALYST_PROMPT,
+        notifier: silentNotifier,
+      };
       expect(await runMonthlyAnalysis(db, off, options())).toMatchObject({ disabled: true });
       expect(await rowsOf(db, householdA)).toEqual([]);
     });

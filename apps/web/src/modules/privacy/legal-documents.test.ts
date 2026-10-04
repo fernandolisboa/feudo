@@ -77,7 +77,7 @@ describe("versioning", () => {
 
     expect({ version: TERMS_VERSION, digest }).toEqual({
       version: "2026-10-05",
-      digest: "12053bb1e83e25150df0928f2909c67c368c5cf49c92c2895f1d9d5fdd6f0bbb",
+      digest: "b394f0d9fa6e22e79c022ab364094d5d2fd6340d071bcaff77ad08d906571c47",
     });
   });
 });

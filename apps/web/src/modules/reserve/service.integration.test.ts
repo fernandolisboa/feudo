@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { householdScope, updateReserveMultiple } from "@/modules/households";
 import { householdSettings } from "@/modules/households/schema";
-import { createFakeNotifier, seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
+import {
+  createFakeNotifier,
+  seedPushDevice,
+  silentNotifier,
+} from "@/modules/notifications/test/fake-push-sender";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { seedHousehold, seedUser, withTwoUsers } from "@/modules/sync/test/with-two-users";
 import { withTestDb } from "@/platform/db/test/harness";
@@ -244,7 +248,7 @@ describe("runReserveMonthCloseStep (integration)", () => {
         reserveMultiple: 20,
       });
 
-      const result = await runReserveMonthCloseStep(db, NOW);
+      const result = await runReserveMonthCloseStep(db, silentNotifier, NOW);
 
       expect(result).toEqual({
         ok: false,
@@ -272,7 +276,7 @@ describe("runReserveMonthCloseStep (integration)", () => {
       await seedFixedHistory(db, userB, scopeB, ["2026-06", "2026-07", "2026-08"], 60000);
 
       const alreadyPastDeadline = new Date(0);
-      const result = await runReserveMonthCloseStep(db, NOW, alreadyPastDeadline);
+      const result = await runReserveMonthCloseStep(db, silentNotifier, NOW, alreadyPastDeadline);
 
       expect(result).toEqual({
         ok: false,
@@ -296,8 +300,8 @@ describe("runReserveMonthCloseStep (integration)", () => {
       const householdB = await seedHousehold(db, "Household B");
       await seedUser(db, "Bia", householdB);
 
-      const first = await runReserveMonthCloseStep(db, NOW, new Date(0));
-      const second = await runReserveMonthCloseStep(db, NOW, new Date(0));
+      const first = await runReserveMonthCloseStep(db, silentNotifier, NOW, new Date(0));
+      const second = await runReserveMonthCloseStep(db, silentNotifier, NOW, new Date(0));
 
       expect(first).toMatchObject({ unreached: 2 });
       expect(second).toMatchObject({ unreached: 2 });
@@ -327,8 +331,8 @@ describe("reserve target push notification (integration)", () => {
       const { notifier, sender } = createFakeNotifier();
       const deadline = new Date(Date.now() + 20_000);
 
-      const result = await runReserveMonthCloseStep(db, NOW, deadline, notifier);
-      await runReserveMonthCloseStep(db, NOW, deadline, notifier);
+      const result = await runReserveMonthCloseStep(db, notifier, NOW, deadline);
+      await runReserveMonthCloseStep(db, notifier, NOW, deadline);
 
       expect(result).toMatchObject({ recorded: 2, notified: 1 });
       expect(sender.sent.map((send) => send.endpoint)).toEqual([deviceA.endpoint]);

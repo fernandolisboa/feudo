@@ -68,9 +68,13 @@ export function shouldNarrowFirstSync(
 
 // Three failed attempts in a row, daily or manual, notify the connection's
 // owner once: the count only equals this on the attempt that reaches it
-// (ADR-0012).
+// (ADR-0012). Missing credentials never notify: removing them is the
+// person's own choice, already explained on the connection.
 export const REPEATED_FAILURE_THRESHOLD = 3;
 
-export function reachedRepeatedFailure(consecutiveFailures: number): boolean {
-  return consecutiveFailures === REPEATED_FAILURE_THRESHOLD;
+export function reachedRepeatedFailure(
+  consecutiveFailures: number,
+  failure: ConnectionSyncFailure,
+): boolean {
+  return failure !== "no_credentials" && consecutiveFailures === REPEATED_FAILURE_THRESHOLD;
 }

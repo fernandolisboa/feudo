@@ -49,7 +49,9 @@ export function createPushSubscriptionRepository(scope: PushUserScope) {
               userId: scope.userId,
               p256dh: input.keys.p256dh,
               auth: input.keys.auth,
-              createdAt: sql`now()`,
+              // "Since when" for the export and the device cap: a re-save by
+              // the same person keeps it, a move to someone else restarts it.
+              createdAt: sql`case when ${pushSubscription.userId} = ${scope.userId} then ${pushSubscription.createdAt} else now() end`,
             },
           });
         const kept = tx

@@ -27,6 +27,7 @@ const OFFLINE = {
   renderedAt: "2026-10-04T13:00:00.000Z",
   timeZone: "America/Sao_Paulo",
   scope: "user-1:household-a",
+  userId: "user-1",
 };
 
 afterEach(() => {

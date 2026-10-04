@@ -61,7 +61,7 @@ describe("payloadFromPush", () => {
 });
 
 describe("showPushNotification", () => {
-  it("shows the title and body, replaces an earlier one with the same tag and remembers where to go", async () => {
+  it("shows the title and body, replaces an earlier one with the same tag but alerts again, and remembers where to go", async () => {
     const showNotification = vi.fn(() => Promise.resolve());
     await showPushNotification(
       { showNotification } as unknown as ServiceWorkerRegistration,
@@ -70,6 +70,7 @@ describe("showPushNotification", () => {
     expect(showNotification).toHaveBeenCalledWith("A meta da reserva mudou", {
       body: "Casa: mudou.",
       tag: "t1",
+      renotify: true,
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       data: { url: "/reserva" },
@@ -105,12 +106,15 @@ describe("openNotificationTarget", () => {
     expect(openWindow).toHaveBeenCalledWith(`${ORIGIN}/reserva`);
   });
 
-  it.each([{ url: "https://elsewhere.test/" }, { url: "//elsewhere.test" }, null])(
-    "goes to the overview instead of a stored address out of Feudo (%o)",
-    async (data) => {
-      const { clients, openWindow } = fakeClients([]);
-      await openNotificationTarget(clients, ORIGIN, notificationWith(data));
-      expect(openWindow).toHaveBeenCalledWith(`${ORIGIN}/`);
-    },
-  );
+  it.each([
+    { url: "https://elsewhere.test/" },
+    { url: "//elsewhere.test" },
+    { url: "/\\elsewhere.test" },
+    { url: "/\t/elsewhere.test" },
+    null,
+  ])("goes to the overview instead of a stored address out of Feudo (%o)", async (data) => {
+    const { clients, openWindow } = fakeClients([]);
+    await openNotificationTarget(clients, ORIGIN, notificationWith(data));
+    expect(openWindow).toHaveBeenCalledWith(`${ORIGIN}/`);
+  });
 });

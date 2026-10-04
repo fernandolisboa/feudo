@@ -59,19 +59,21 @@ const TIMEOUT_MS: Record<AiTier, number> = { standard: 45_000, deep: 150_000 };
 // Below this a call is unlikely to finish; it is better skipped than cut off.
 const MIN_ATTEMPT_MS: Record<AiTier, number> = { standard: 15_000, deep: 45_000 };
 
-export type AnalysisDeps = { client: AiClient | null; prompt: AnalystPrompt };
+export type AnalysisDeps = { client: AiClient | null; prompt: AnalystPrompt; notifier: Notifier };
 
 export function createAnalysisDeps(env: AnalysisEnv = process.env): AnalysisDeps {
   const provider = readAiProviderName(env);
+  const notifier = createNotifierFromEnv(env);
   switch (provider) {
     case "off":
-      return { client: null, prompt: CURRENT_ANALYST_PROMPT };
+      return { client: null, prompt: CURRENT_ANALYST_PROMPT, notifier };
     case "fake":
-      return { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT };
+      return { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT, notifier };
     case "anthropic":
       return {
         client: createAnthropicAiClient(env.ANTHROPIC_API_KEY ?? ""),
         prompt: CURRENT_ANALYST_PROMPT,
+        notifier,
       };
   }
 }
@@ -297,7 +299,7 @@ export async function runOnDemandAnalysis(
 
 export type MonthlyAnalysisOutcome = { status: "skipped" | "succeeded" | "failed" };
 
-type MonthlyRunOptions = { now: Date; deadline: Date; notifier?: Notifier };
+type MonthlyRunOptions = { now: Date; deadline: Date };
 
 export async function runMonthlyAnalysisForHousehold(
   db: Database,
@@ -329,7 +331,7 @@ export async function runMonthlyAnalysisForHousehold(
   await recordGeneration(db, scope, id, result);
   if (result.status === "succeeded") {
     // Best effort, after the reading is stored (ADR-0012).
-    await (options.notifier ?? createNotifierFromEnv()).notifyHousehold(db, scope, {
+    await deps.notifier.notifyHousehold(db, scope, {
       kind: "monthly_analysis_ready",
       month: input.month,
     });
@@ -363,7 +365,6 @@ export async function runMonthlyAnalysis(
   if (client === null) {
     return { ok: true, disabled: true, succeeded: 0, failed: 0, skipped: 0, unreached: 0 };
   }
-  const notifier = options.notifier ?? createNotifierFromEnv();
   try {
     const scopes = await listHouseholdsWithAccounts(db);
     const counts = { succeeded: 0, failed: 0, skipped: 0, unreached: 0 };
@@ -381,7 +382,7 @@ export async function runMonthlyAnalysis(
           db,
           scope,
           { ...deps, client },
-          { ...options, notifier },
+          options,
         );
         counts[outcome.status] += 1;
       } catch (error) {

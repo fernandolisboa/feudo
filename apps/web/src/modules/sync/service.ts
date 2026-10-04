@@ -693,8 +693,9 @@ async function notifyIfRepeatedFailure(
   deps: SyncDeps,
   connection: ConnectionToSync,
   consecutiveFailures: number,
+  failure: ConnectionSyncFailure,
 ): Promise<void> {
-  if (!reachedRepeatedFailure(consecutiveFailures)) {
+  if (!reachedRepeatedFailure(consecutiveFailures, failure)) {
     return;
   }
   await deps.notifier.notifyUser(
@@ -833,7 +834,7 @@ async function syncConnections(
           outcome.status,
         );
         failed += 1;
-        await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures);
+        await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures, outcome.status);
       }
     } catch (error) {
       if (error instanceof ConnectionNotOwnedError) {
@@ -856,7 +857,7 @@ async function syncConnections(
             connection.id,
             "failed",
           );
-          await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures);
+          await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures, "failed");
         } catch {
           // Swallowed: already logged above, and failed is counted either way.
         }

@@ -17,7 +17,7 @@ import {
   type HouseholdScope,
 } from "@/modules/households";
 import { readHouseholdDashboardLines } from "@/modules/ledger";
-import { createNotifierFromEnv, type Notifier } from "@/modules/notifications";
+import type { Notifier } from "@/modules/notifications";
 
 import { errorName } from "@/lib/error-name";
 import type { SimpleOutcome } from "@/lib/outcome";
@@ -189,6 +189,7 @@ const DEFAULT_RUN_BUDGET_MS = 20_000;
 // budget shows up in the logs before it becomes a pattern.
 export async function runReserveMonthCloseStep(
   db: Database,
+  notifier: Notifier,
   now: Date = new Date(),
   // Anchored to the real wall clock, not to `now`: `now` is the business
   // date the job resolves "the closed month" against (a test can hold it on
@@ -196,7 +197,6 @@ export async function runReserveMonthCloseStep(
   // regardless of what `now` says, the same separation sync's
   // syncAllConnections keeps between its own `now` and `deadline` options.
   deadline: Date = new Date(Date.now() + DEFAULT_RUN_BUDGET_MS),
-  notifier: Notifier = createNotifierFromEnv(),
 ): Promise<ReserveMonthCloseStep> {
   try {
     const scopes = await listHouseholdIdsForMonthClose(db);

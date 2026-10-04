@@ -12,6 +12,8 @@ describe("parsePushPayload", () => {
   it.each([
     ["another origin", { ...valid, url: "https://elsewhere.test/" }],
     ["a protocol-relative address", { ...valid, url: "//elsewhere.test/" }],
+    ["a backslash the browser reads as a slash", { ...valid, url: "/\\elsewhere.test/" }],
+    ["a tab the browser strips", { ...valid, url: "/\t/elsewhere.test/" }],
     ["a script address", { ...valid, url: "javascript:alert(1)" }],
     ["an empty title", { ...valid, title: "" }],
     ["a missing tag", { title: valid.title, body: valid.body, url: valid.url }],

@@ -231,6 +231,7 @@ describe("GET /api/cron/daily", () => {
 
       expect(runReserveMonthCloseStep).toHaveBeenCalledWith(
         expect.anything(),
+        expect.anything(),
         expect.any(Date),
         new Date("2026-10-01T03:00:45.000Z"),
       );

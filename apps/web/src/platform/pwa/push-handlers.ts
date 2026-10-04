@@ -1,4 +1,4 @@
-import { parsePushPayload, type PushPayload } from "@/lib/push-payload";
+import { isInAppPath, parsePushPayload, type PushPayload } from "@/lib/push-payload";
 
 const NOTIFICATION_ICON = "/icons/icon-192.png";
 
@@ -18,18 +18,22 @@ export function showPushNotification(
   registration: ServiceWorkerRegistration,
   payload: PushPayload,
 ): Promise<void> {
-  return registration.showNotification(payload.title, {
+  // renotify: a new failure streak reuses its tag and would otherwise replace
+  // the earlier notification silently. TypeScript's DOM types lack the field.
+  const options: NotificationOptions & { renotify: boolean } = {
     body: payload.body,
     tag: payload.tag,
+    renotify: true,
     icon: NOTIFICATION_ICON,
     badge: NOTIFICATION_ICON,
     data: { url: payload.url },
-  });
+  };
+  return registration.showNotification(payload.title, options);
 }
 
 function notificationUrl(notification: Notification): string {
   const url: unknown = (notification.data as { url?: unknown } | null)?.url;
-  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+  return isInAppPath(url) ? url : "/";
 }
 
 // An open Feudo window is reused and moved to the screen the notification is

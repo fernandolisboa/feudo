@@ -10,6 +10,10 @@ const copies = vi.hoisted(() => ({
 
 const pushDevice = vi.hoisted(() => ({
   unsubscribeThisDevice: vi.fn(() => Promise.resolve(null)),
+  isPushOwnedBySomeoneElse: (userId: string) => {
+    const owner = window.localStorage.getItem("feudo.push.owner");
+    return owner !== null && owner !== userId;
+  },
 }));
 
 vi.mock("@/platform/pwa/push-device", () => pushDevice);
@@ -29,6 +33,7 @@ import { blockWriteWhenOffline } from "@/lib/offline-writes";
 import { OfflineNotice } from "./offline-notice";
 
 const SCOPE_KEY = "feudo.offline-copies.scope";
+const OWNER_KEY = "feudo.push.owner";
 const TIME_ZONE = "America/Sao_Paulo";
 const FRESH = () => new Date(performance.timeOrigin + 1_000).toISOString();
 
@@ -42,12 +47,14 @@ function setOnline(next: boolean): void {
 }
 
 function renderNotice(props: { renderedAt?: string; scope?: string } = {}) {
+  const scope = props.scope ?? "user-1:household-a";
   return render(
     <>
       <OfflineNotice
         renderedAt={props.renderedAt ?? FRESH()}
         timeZone={TIME_ZONE}
-        scope={props.scope ?? "user-1:household-a"}
+        scope={scope}
+        userId={scope.split(":")[0] ?? ""}
       />
       <form
         aria-label="categorizar"
@@ -75,6 +82,7 @@ beforeEach(() => {
   pushDevice.unsubscribeThisDevice.mockClear();
   submitted.mockReset();
   window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
+  window.localStorage.removeItem(OWNER_KEY);
 });
 
 afterEach(() => {
@@ -183,14 +191,24 @@ describe("OfflineNotice", () => {
     navigation.pathname = "/transacoes";
     navigation.search = "mes=2026-09";
     rerender(
-      <OfflineNotice renderedAt={FRESH()} timeZone={TIME_ZONE} scope="user-1:household-a" />,
+      <OfflineNotice
+        renderedAt={FRESH()}
+        timeZone={TIME_ZONE}
+        scope="user-1:household-a"
+        userId="user-1"
+      />,
     );
     expect(copies.requestOfflineCopy).toHaveBeenCalledOnce();
 
     navigation.pathname = "/preferencias";
     navigation.search = "";
     rerender(
-      <OfflineNotice renderedAt={FRESH()} timeZone={TIME_ZONE} scope="user-1:household-a" />,
+      <OfflineNotice
+        renderedAt={FRESH()}
+        timeZone={TIME_ZONE}
+        scope="user-1:household-a"
+        userId="user-1"
+      />,
     );
     expect(copies.requestOfflineCopy).toHaveBeenCalledOnce();
   });
@@ -207,13 +225,21 @@ describe("OfflineNotice", () => {
   });
 
   it("stops this device's notifications when someone else signs in on it, not on a household switch", () => {
-    window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
+    window.localStorage.setItem(OWNER_KEY, "user-1");
     renderNotice({ scope: "user-1:household-b" });
     expect(pushDevice.unsubscribeThisDevice).not.toHaveBeenCalled();
     cleanup();
 
-    window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
     renderNotice({ scope: "user-2:household-a" });
+    expect(pushDevice.unsubscribeThisDevice).toHaveBeenCalledOnce();
+  });
+
+  it("still stops them when the sign-in page already cleared the copies' scope", () => {
+    window.localStorage.setItem(OWNER_KEY, "user-1");
+    window.localStorage.removeItem(SCOPE_KEY);
+
+    renderNotice({ scope: "user-2:household-a" });
+
     expect(pushDevice.unsubscribeThisDevice).toHaveBeenCalledOnce();
   });
 

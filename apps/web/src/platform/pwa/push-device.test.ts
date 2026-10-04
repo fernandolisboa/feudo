@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   currentPushSubscription,
+  forgetThisDevice,
+  isPushOwnedBySomeoneElse,
+  isPushOwner,
   NoServiceWorkerError,
   PushPermissionDeniedError,
   pushSupport,
@@ -15,13 +18,18 @@ const IPHONE_UA =
 
 type FakeSubscription = {
   endpoint: string;
+  options: { applicationServerKey: ArrayBuffer | null };
   toJSON: () => PushSubscriptionJSON;
   unsubscribe: ReturnType<typeof vi.fn>;
 };
 
-function fakeSubscription(endpoint: string): FakeSubscription {
+// "AQID" decodes to these bytes.
+const KEY_AQID = [1, 2, 3];
+
+function fakeSubscription(endpoint: string, key: number[] = KEY_AQID): FakeSubscription {
   return {
     endpoint,
+    options: { applicationServerKey: new Uint8Array(key).buffer },
     toJSON: () => ({ endpoint, keys: { p256dh: "p", auth: "a" } }),
     unsubscribe: vi.fn(() => Promise.resolve(true)),
   };
@@ -32,15 +40,12 @@ const subscribe = vi.fn();
 let requestPermission: ReturnType<typeof vi.fn>;
 
 function installPush({ registration = true }: { registration?: boolean } = {}): void {
+  const found = { pushManager: { getSubscription: () => Promise.resolve(existing), subscribe } };
   Object.defineProperty(window.navigator, "serviceWorker", {
     configurable: true,
     value: {
-      getRegistration: () =>
-        Promise.resolve(
-          registration
-            ? { pushManager: { getSubscription: () => Promise.resolve(existing), subscribe } }
-            : undefined,
-        ),
+      getRegistration: () => Promise.resolve(registration ? found : undefined),
+      ready: registration ? Promise.resolve(found) : new Promise(() => undefined),
     },
   });
   Object.defineProperty(window, "PushManager", { configurable: true, value: {} });
@@ -58,10 +63,13 @@ function setUserAgent(userAgent: string): void {
 beforeEach(() => {
   existing = null;
   subscribe.mockReset();
+  window.localStorage.clear();
   window.matchMedia = vi.fn(() => ({ matches: false }) as MediaQueryList);
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(window.navigator, "serviceWorker");
   Reflect.deleteProperty(window.navigator, "userAgent");
   Reflect.deleteProperty(window, "PushManager");
@@ -96,7 +104,7 @@ describe("subscribeThisDevice", () => {
     installPush();
     subscribe.mockResolvedValue(fakeSubscription("https://fcm.googleapis.com/x"));
 
-    const json = await subscribeThisDevice("AQID-_8");
+    const json = await subscribeThisDevice("AQID-_8", "user-a");
 
     expect(requestPermission).toHaveBeenCalledOnce();
     const options = subscribe.mock.calls[0]?.[0] as PushSubscriptionOptionsInit;
@@ -105,36 +113,74 @@ describe("subscribeThisDevice", () => {
     expect(json.endpoint).toBe("https://fcm.googleapis.com/x");
   });
 
-  it("reuses the subscription the device already has", async () => {
+  it("remembers who turned notifications on in this browser", async () => {
+    installPush();
+    subscribe.mockResolvedValue(fakeSubscription("https://fcm.googleapis.com/x"));
+
+    await subscribeThisDevice("AQID", "user-a");
+
+    expect(isPushOwner("user-a")).toBe(true);
+    expect(isPushOwnedBySomeoneElse("user-a")).toBe(false);
+    expect(isPushOwnedBySomeoneElse("user-b")).toBe(true);
+  });
+
+  it("reuses the subscription the device already has with the same key", async () => {
     installPush();
     existing = fakeSubscription("https://fcm.googleapis.com/existing");
-    expect((await subscribeThisDevice("AQID")).endpoint).toBe(
+    expect((await subscribeThisDevice("AQID", "user-a")).endpoint).toBe(
       "https://fcm.googleapis.com/existing",
     );
     expect(subscribe).not.toHaveBeenCalled();
   });
 
-  it("stops when the person does not allow notifications", async () => {
+  it("replaces a subscription made with an earlier key", async () => {
     installPush();
-    requestPermission.mockResolvedValue("denied");
-    await expect(subscribeThisDevice("AQID")).rejects.toBeInstanceOf(PushPermissionDeniedError);
-    expect(subscribe).not.toHaveBeenCalled();
+    const stale = fakeSubscription("https://fcm.googleapis.com/stale", [9, 9, 9]);
+    existing = stale;
+    subscribe.mockResolvedValue(fakeSubscription("https://fcm.googleapis.com/fresh"));
+
+    expect((await subscribeThisDevice("AQID", "user-a")).endpoint).toBe(
+      "https://fcm.googleapis.com/fresh",
+    );
+    expect(stale.unsubscribe).toHaveBeenCalledOnce();
   });
 
-  it("stops when no service worker is registered", async () => {
+  it.each(["denied", "default"] as const)(
+    "stops, saying how, when the permission comes back %s",
+    async (permission) => {
+      installPush();
+      requestPermission.mockResolvedValue(permission);
+      const error: unknown = await subscribeThisDevice("AQID", "user-a").catch(
+        (thrown: unknown) => thrown,
+      );
+      expect(error).toBeInstanceOf(PushPermissionDeniedError);
+      expect((error as PushPermissionDeniedError).permission).toBe(permission);
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(isPushOwner("user-a")).toBe(false);
+    },
+  );
+
+  it("stops when no service worker becomes active", async () => {
+    vi.useFakeTimers();
     installPush({ registration: false });
-    await expect(subscribeThisDevice("AQID")).rejects.toBeInstanceOf(NoServiceWorkerError);
+    const subscribing = expect(subscribeThisDevice("AQID", "user-a")).rejects.toBeInstanceOf(
+      NoServiceWorkerError,
+    );
+    await vi.advanceTimersByTimeAsync(10_000);
+    await subscribing;
   });
 });
 
 describe("unsubscribeThisDevice", () => {
-  it("drops the device's subscription and says which endpoint went", async () => {
+  it("drops the device's subscription and its owner, and says which endpoint went", async () => {
     installPush();
+    window.localStorage.setItem("feudo.push.owner", "user-a");
     existing = fakeSubscription("https://fcm.googleapis.com/gone");
     const subscription = existing;
 
     expect(await unsubscribeThisDevice()).toBe("https://fcm.googleapis.com/gone");
     expect(subscription.unsubscribe).toHaveBeenCalledOnce();
+    expect(isPushOwnedBySomeoneElse("user-b")).toBe(false);
   });
 
   it("does nothing without a subscription or a service worker", async () => {
@@ -143,5 +189,34 @@ describe("unsubscribeThisDevice", () => {
     expect(await currentPushSubscription()).toBeNull();
     Reflect.deleteProperty(window.navigator, "serviceWorker");
     expect(await unsubscribeThisDevice()).toBeNull();
+  });
+});
+
+describe("forgetThisDevice", () => {
+  it("stops the browser, then asks Feudo to forget that endpoint", async () => {
+    installPush();
+    existing = fakeSubscription("https://fcm.googleapis.com/mine");
+    const subscription = existing;
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await forgetThisDevice();
+
+    expect(subscription.unsubscribe).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [path, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe("/api/push-subscription");
+    expect(init.method).toBe("DELETE");
+    expect(init.body).toBe(JSON.stringify({ endpoint: "https://fcm.googleapis.com/mine" }));
+  });
+
+  it("asks nothing of Feudo when this browser had no subscription", async () => {
+    installPush();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await forgetThisDevice();
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

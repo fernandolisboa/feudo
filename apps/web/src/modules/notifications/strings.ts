@@ -22,6 +22,7 @@ const en = {
     disabled: "Notifications are off for this device.",
     denied:
       "This browser is blocking notifications from Feudo. Allow them in the site settings and try again.",
+    dismissed: "Notifications only turn on once you allow them when the browser asks. Try again.",
     unsupported: "This browser can't receive notifications.",
     needsHomeScreen:
       "On iPhone, add Feudo to the Home Screen (Share › Add to Home Screen) and open it from there to turn notifications on.",
@@ -55,6 +56,8 @@ const ptBR = {
     disabled: "Notificações desativadas neste aparelho.",
     denied:
       "Este navegador está bloqueando as notificações do Feudo. Libere nas configurações do site e tente de novo.",
+    dismissed:
+      "As notificações só são ativadas depois que você permite quando o navegador pergunta. Tente de novo.",
     unsupported: "Este navegador não recebe notificações.",
     needsHomeScreen:
       "No iPhone, adicione o Feudo à Tela de Início (Compartilhar › Adicionar à Tela de Início) e abra por lá para ativar as notificações.",

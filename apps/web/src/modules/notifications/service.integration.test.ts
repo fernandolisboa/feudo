@@ -16,6 +16,7 @@ import {
   withTwoUsers,
 } from "@/modules/sync/test/with-two-users";
 
+import { handleForgetDeviceRequest } from "./forget-device-request";
 import { createPushSubscriptionRepository } from "./repository";
 import { pushSubscription } from "./schema";
 import { scopeForUser } from "./scope";
@@ -222,6 +223,67 @@ describe("turning notifications on and off (integration)", () => {
       expect(exported.map((row) => row.pushService)).toEqual(["fcm.googleapis.com"]);
       expect(exported[0]?.createdAt).toBeInstanceOf(Date);
       expect(JSON.stringify(exported)).not.toContain(device.endpoint);
+    });
+  });
+});
+
+function forgetRequest(body: unknown, site = "same-origin"): Request {
+  return new Request("https://feudo.test/api/push-subscription", {
+    method: "DELETE",
+    headers: { "content-type": "application/json", "sec-fetch-site": site },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("forgetting a device at sign-out (integration)", () => {
+  it("removes only the signed-in person's row for that endpoint, so no later send reaches it", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
+      const deviceA = fakeSubscriptionInput();
+      const deviceB = fakeSubscriptionInput();
+      await createPushSubscriptionRepository(userA.scope).save(db, deviceA);
+      await createPushSubscriptionRepository(userB.scope).save(db, deviceB);
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+
+      expect(
+        (await handleForgetDeviceRequest(forgetRequest({ endpoint: deviceB.endpoint }))).status,
+      ).toBe(204);
+      expect(
+        (await handleForgetDeviceRequest(forgetRequest({ endpoint: deviceA.endpoint }))).status,
+      ).toBe(204);
+
+      const rows = await db.select().from(pushSubscription);
+      expect(rows.map((row) => row.endpoint)).toEqual([deviceB.endpoint]);
+      const { notifier, sender } = createFakeNotifier();
+      await notifier.notifyHousehold(db, { householdId: householdA }, RESERVE_EVENT);
+      expect(sender.sent).toEqual([]);
+    });
+  });
+
+  it("refuses another site, a malformed body and a missing session, changing nothing", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const device = fakeSubscriptionInput();
+      await createPushSubscriptionRepository(userA.scope).save(db, device);
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+
+      expect(
+        (
+          await handleForgetDeviceRequest(
+            forgetRequest({ endpoint: device.endpoint }, "cross-site"),
+          )
+        ).status,
+      ).toBe(403);
+      expect(
+        (await handleForgetDeviceRequest(forgetRequest({ endpoint: "https://evil.test/x" })))
+          .status,
+      ).toBe(400);
+      expect((await handleForgetDeviceRequest(forgetRequest("texto"))).status).toBe(400);
+
+      getCurrentSessionMock.mockResolvedValue(null);
+      expect(
+        (await handleForgetDeviceRequest(forgetRequest({ endpoint: device.endpoint }))).status,
+      ).toBe(401);
+
+      expect(await db.select().from(pushSubscription)).toHaveLength(1);
     });
   });
 });

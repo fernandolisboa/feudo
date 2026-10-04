@@ -1159,4 +1159,20 @@ describe("repeated sync failure push notification (integration)", () => {
       expect(sender.sent).toHaveLength(2);
     });
   });
+
+  it("never notifies about a connection whose credentials the person removed", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const withoutCredentials = await seedBancoNeverSynced(db, userA);
+      await seedPushDevice(db, userA.id);
+      const { notifier, sender } = createFakeNotifier();
+      const notifyingDeps: SyncDeps = { ...deps, notifier };
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await syncAllConnections(db, notifyingDeps, { now: NOW, deadline: ampleDeadline() });
+      }
+
+      expect(await failuresOf(db, withoutCredentials)).toBe(3);
+      expect(sender.sent).toEqual([]);
+    });
+  });
 });

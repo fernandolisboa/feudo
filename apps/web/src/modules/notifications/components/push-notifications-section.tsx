@@ -8,6 +8,7 @@ import { Switch } from "@/ui/switch";
 import { blockWriteWhenOffline, isBrowserOffline } from "@/lib/offline-writes";
 import {
   currentPushSubscription,
+  isPushOwner,
   notificationPermission,
   PushPermissionDeniedError,
   pushSupport,
@@ -23,7 +24,13 @@ type Message = { tone: "info" | "error"; text: string };
 
 type DeviceState = { support: PushSupport; subscribed: boolean; denied: boolean };
 
-export function PushNotificationsSection({ publicKey }: { publicKey: string }) {
+export function PushNotificationsSection({
+  publicKey,
+  userId,
+}: {
+  publicKey: string;
+  userId: string;
+}) {
   const [device, setDevice] = useState<DeviceState | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -40,14 +47,17 @@ export function PushNotificationsSection({ publicKey }: { publicKey: string }) {
       if (cancelled) {
         return;
       }
+      // Only the person who turned them on here sees them on (ADR-0012):
+      // someone else's subscription on this browser reads as off.
+      const owned = subscription !== null && isPushOwner(userId);
       setDevice({
         support,
-        subscribed: subscription !== null,
+        subscribed: owned,
         denied: notificationPermission() === "denied",
       });
-      // Re-saving what the browser holds now keeps Feudo's copy current when
-      // the browser rotated it, or when another person used this device.
-      if (subscription !== null && !isBrowserOffline()) {
+      // Keeps Feudo's copy current when the browser rotated the keys; never
+      // re-saved for anyone but its owner, since a save moves the device.
+      if (owned && !isBrowserOffline()) {
         void savePushSubscriptionAction(subscription).catch(() => undefined);
       }
     }
@@ -55,18 +65,20 @@ export function PushNotificationsSection({ publicKey }: { publicKey: string }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   async function turnOn(): Promise<void> {
     let subscription: PushSubscriptionJSON;
     try {
-      subscription = await subscribeThisDevice(publicKey);
+      subscription = await subscribeThisDevice(publicKey, userId);
     } catch (error) {
       if (error instanceof PushPermissionDeniedError) {
-        setDevice(
-          (current) => current && { ...current, denied: notificationPermission() === "denied" },
-        );
-        setMessage({ tone: "error", text: t.preferences.denied });
+        const denied = error.permission === "denied";
+        setDevice((current) => current && { ...current, denied });
+        setMessage({
+          tone: "error",
+          text: denied ? t.preferences.denied : t.preferences.dismissed,
+        });
         return;
       }
       setMessage({ tone: "error", text: t.preferences.failed });
@@ -91,18 +103,21 @@ export function PushNotificationsSection({ publicKey }: { publicKey: string }) {
 
   async function turnOff(): Promise<void> {
     const subscription = await currentPushSubscription().catch(() => null);
-    const outcome = subscription
-      ? await removePushSubscriptionAction(subscription.endpoint).catch(() => null)
-      : { status: "ok" as const };
-    // The device stops either way: a subscription Feudo still holds for a
-    // dead endpoint is deleted the first time a send meets it.
-    await unsubscribeThisDevice().catch(() => null);
-    setDevice((current) => current && { ...current, subscribed: false });
-    setMessage(
-      outcome?.status === "ok"
-        ? { tone: "info", text: t.preferences.disabled }
-        : { tone: "error", text: t.preferences.disableFailed },
+    if (subscription !== null) {
+      // Feudo's copy goes best effort: once the device stops, a copy left
+      // behind is deleted the first time a send meets the dead endpoint.
+      await removePushSubscriptionAction(subscription.endpoint).catch(() => null);
+    }
+    const stopped = await unsubscribeThisDevice().then(
+      () => true,
+      () => false,
     );
+    if (!stopped) {
+      setMessage({ tone: "error", text: t.preferences.disableFailed });
+      return;
+    }
+    setDevice((current) => current && { ...current, subscribed: false });
+    setMessage({ tone: "info", text: t.preferences.disabled });
   }
 
   function handleCheckedChange(next: boolean): void {
