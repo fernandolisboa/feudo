@@ -29,7 +29,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       householdSwitcher={householdSwitcher}
       tourState={tourState}
     >
-      <AppErrorBoundary>{children}</AppErrorBoundary>
+      {/* Switching household keeps the URL, so the key is what clears a failed page. */}
+      <AppErrorBoundary key={householdId}>{children}</AppErrorBoundary>
     </AppShell>
   );
 }

@@ -18,7 +18,7 @@ export function TransactionsSkeleton() {
       <Skeleton className="h-4 w-64" />
       <div className="flex flex-col gap-px">
         {ROW_KEYS.map((key) => (
-          <Skeleton key={key} className="h-10 w-full" />
+          <Skeleton key={key} className="h-[var(--density-row)] w-full" />
         ))}
       </div>
     </div>

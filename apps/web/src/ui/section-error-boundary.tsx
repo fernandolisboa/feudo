@@ -2,8 +2,7 @@
 
 import { catchError, type ErrorInfo } from "next/error";
 
-import { Button } from "@/ui/button";
-import { Notice } from "@/ui/notice";
+import { RetryNotice } from "@/ui/retry-notice";
 
 type SectionErrorProps = { message: string; retryLabel: string; className?: string };
 
@@ -14,24 +13,7 @@ function SectionErrorFallback(
   { message, retryLabel, className }: SectionErrorProps,
   { retry }: ErrorInfo,
 ) {
-  const notice = (
-    <Notice
-      tone="danger"
-      action={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            retry();
-          }}
-        >
-          {retryLabel}
-        </Button>
-      }
-    >
-      {message}
-    </Notice>
-  );
+  const notice = <RetryNotice message={message} retryLabel={retryLabel} onRetry={retry} />;
   return className ? <div className={className}>{notice}</div> : notice;
 }
 

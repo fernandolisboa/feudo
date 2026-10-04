@@ -12,8 +12,9 @@ vi.mock("@/modules/ledger", async (importOriginal) => {
   return {
     CategoriesErrorBoundary: actual.CategoriesErrorBoundary,
     CategoriesSkeleton: actual.CategoriesSkeleton,
+    t: actual.t,
     getCategoriesPageProps: getCategoriesPagePropsMock,
-    CategoriesView: () => <h1>Categorias e regras</h1>,
+    CategoriesView: () => <p>Regras da casa</p>,
   };
 });
 
@@ -40,15 +41,17 @@ describe("CategoriesPage", () => {
     render(await resolveServerTree(await CategoriesPage()));
 
     expect(screen.getByRole("heading", { name: "Categorias e regras" })).not.toBeNull();
+    expect(screen.getByText("Regras da casa")).not.toBeNull();
   });
 
-  it("turns a failed read into the categories' error notice with a retry, not a blank page", async () => {
+  it("keeps the page header and shows the error notice with a retry when the read fails", async () => {
     getCategoriesPagePropsMock.mockRejectedValue(new Error("household-b"));
 
     const { container } = render(await resolveServerTree(await CategoriesPage()));
 
     expect(screen.getByText(/Não deu para carregar as categorias e regras agora/)).not.toBeNull();
     expect(screen.getByRole("button", { name: "Tentar de novo" })).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Categorias e regras" })).not.toBeNull();
     expect(container.textContent).not.toContain("household-b");
   });
 });

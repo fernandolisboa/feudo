@@ -2,9 +2,8 @@
 
 import { catchError, type ErrorInfo } from "next/error";
 
-import { Button } from "@/ui/button";
-import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
+import { RetryNotice } from "@/ui/retry-notice";
 
 import { t } from "../strings";
 
@@ -17,22 +16,7 @@ function AppErrorFallback(_props: object, { retry }: ErrorInfo) {
   return (
     <>
       <PageHeader overline={t.routeError.overline} title={t.routeError.title} />
-      <Notice
-        tone="danger"
-        action={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              retry();
-            }}
-          >
-            {t.routeError.retry}
-          </Button>
-        }
-      >
-        {t.routeError.message}
-      </Notice>
+      <RetryNotice message={t.routeError.message} retryLabel={t.routeError.retry} onRetry={retry} />
     </>
   );
 }

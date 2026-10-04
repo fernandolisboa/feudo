@@ -11,7 +11,7 @@ export function PageSkeleton() {
       </div>
       <div className="flex flex-col gap-px">
         {ROW_KEYS.map((key) => (
-          <Skeleton key={key} className="h-10 w-full" />
+          <Skeleton key={key} className="h-[var(--density-row)] w-full" />
         ))}
       </div>
     </div>

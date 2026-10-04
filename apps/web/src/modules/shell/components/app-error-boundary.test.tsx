@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  AppRouterContext,
+  type AppRouterInstance,
+} from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppErrorBoundary } from "./app-error-boundary";
 
@@ -49,11 +53,14 @@ describe("AppErrorBoundary", () => {
     expect(container.textContent).not.toContain("household-b");
   });
 
-  it("recovers on Tentar de novo once the cause is gone", async () => {
+  it("refetches the page and recovers on Tentar de novo once the cause is gone", async () => {
+    const refresh = vi.fn();
     render(
-      <AppErrorBoundary>
-        <Page />
-      </AppErrorBoundary>,
+      <AppRouterContext.Provider value={{ refresh } as unknown as AppRouterInstance}>
+        <AppErrorBoundary>
+          <Page />
+        </AppErrorBoundary>
+      </AppRouterContext.Provider>,
     );
 
     failing = false;
@@ -62,6 +69,7 @@ describe("AppErrorBoundary", () => {
       await Promise.resolve();
     });
 
+    expect(refresh).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("heading", { name: "Transações" })).not.toBeNull();
   });
 });

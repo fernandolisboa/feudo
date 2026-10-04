@@ -99,4 +99,37 @@ describe("AppLayout", () => {
       console.error = originalConsoleError;
     }
   });
+
+  it("clears a failed page when the active household changes, even though the URL stays the same", async () => {
+    getHouseholdSwitcherPropsMock.mockResolvedValue(null);
+    let failing = true;
+    function Page() {
+      if (failing) {
+        throw new Error("boom");
+      }
+      return <h1>Visão geral</h1>;
+    }
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    try {
+      const { rerender } = render(await AppLayout({ children: <Page /> }));
+      expect(
+        screen.getByRole("heading", { name: "Não deu para abrir esta página" }),
+      ).not.toBeNull();
+
+      failing = false;
+      requireHouseholdSessionMock.mockResolvedValue({
+        userId: "user-1",
+        name: "Ada",
+        email: "ada@example.com",
+        householdId: "household-b",
+        theme: "caderno",
+      });
+      rerender(await AppLayout({ children: <Page /> }));
+
+      expect(screen.getByRole("heading", { name: "Visão geral" })).not.toBeNull();
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
 });
