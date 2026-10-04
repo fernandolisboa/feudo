@@ -5,6 +5,10 @@ import { lastEmailLink, signUpVerifyAndSignIn, uniqueEmail } from "./support/aut
 
 const OFFLINE_COPIES_CACHE = "feudo-offline-copies";
 
+// The headless shell keeps navigator.onLine true under setOffline; the full
+// Chromium build reports it the way an installed app sees it.
+test.use({ channel: "chromium" });
+
 async function waitForServiceWorker(page: Page): Promise<void> {
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
@@ -38,16 +42,6 @@ test("offline: last copy of each screen, writes refused, nothing left after sign
   // Two accounts, an invitation and its acceptance, each sign-up able to wait
   // out Better Auth's shared rate-limit window (support/auth.ts).
   test.setTimeout(300_000);
-  page.on("pageerror", (e) => {
-    console.log("PAGEERROR", e.message);
-  });
-  page.on("console", (m) => {
-    if (m.type() === "error") console.log("CONSOLE", m.text().slice(0, 300));
-  });
-  page.on("requestfailed", (r) => {
-    if (!r.url().includes("_rsc="))
-      console.log("REQFAILED", r.url().slice(0, 150), r.failure()?.errorText);
-  });
   await page.setViewportSize({ width: 1280, height: 900 });
 
   const first = {
@@ -84,26 +78,6 @@ test("offline: last copy of each screen, writes refused, nothing left after sign
     await page.goto("/casa");
 
     await expect(page.getByText(firstHousehold).first()).toBeVisible();
-    await page.waitForTimeout(3000);
-    console.log(
-      "DEBUG",
-      JSON.stringify(
-        await page.evaluate(() => ({
-          onLine: navigator.onLine,
-          controlled: navigator.serviceWorker.controller !== null,
-          notice: document.querySelector("[data-offline-notice]")?.outerHTML ?? null,
-          hydrated: Object.keys(document.querySelector("button") ?? {}).some((k) =>
-            k.startsWith("__react"),
-          ),
-          origin: performance.timeOrigin,
-          now: Date.now(),
-          scripts: [...document.scripts]
-            .filter((x) => x.src)
-            .slice(0, 2)
-            .map((x) => x.src),
-        })),
-      ),
-    );
     await expect(
       page.getByText("Você está sem conexão. Nada pode ser alterado até a internet voltar."),
     ).toBeVisible();
