@@ -33,3 +33,11 @@ export function parsePushPayload(value: unknown): PushPayload | null {
   }
   return { title, body, url, tag };
 }
+
+// The sign-out call the browser makes and the notifications slice answers
+// (ADR-0012); both sides take the path and the body from here.
+export const FORGET_PUSH_DEVICE_PATH = "/api/push-subscription";
+
+export function forgetPushDeviceBody(endpoint: string): { endpoint: string } {
+  return { endpoint };
+}

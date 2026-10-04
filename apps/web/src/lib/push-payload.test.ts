@@ -1,6 +1,9 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
-import { parsePushPayload } from "./push-payload";
+import { FORGET_PUSH_DEVICE_PATH, parsePushPayload } from "./push-payload";
 
 const valid = { title: "Meta da reserva", body: "Mudou.", url: "/reserva", tag: "reserve:h1" };
 
@@ -21,5 +24,12 @@ describe("parsePushPayload", () => {
     ["null", null],
   ])("refuses %s", (_label, payload) => {
     expect(parsePushPayload(payload)).toBeNull();
+  });
+});
+
+describe("FORGET_PUSH_DEVICE_PATH", () => {
+  it("names the route that answers it", () => {
+    const route = new URL(`../app${FORGET_PUSH_DEVICE_PATH}/route.ts`, import.meta.url);
+    expect(existsSync(fileURLToPath(route))).toBe(true);
   });
 });

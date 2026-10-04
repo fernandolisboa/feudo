@@ -183,6 +183,16 @@ describe("unsubscribeThisDevice", () => {
     expect(isPushOwnedBySomeoneElse("user-b")).toBe(false);
   });
 
+  it("keeps the owner when the browser could not stop, so the next person still unsubscribes it", async () => {
+    installPush();
+    window.localStorage.setItem("feudo.push.owner", "user-a");
+    existing = fakeSubscription("https://fcm.googleapis.com/stuck");
+    existing.unsubscribe.mockRejectedValue(new Error("no worker"));
+
+    await expect(unsubscribeThisDevice()).rejects.toThrow("no worker");
+    expect(isPushOwnedBySomeoneElse("user-b")).toBe(true);
+  });
+
   it("does nothing without a subscription or a service worker", async () => {
     installPush();
     expect(await unsubscribeThisDevice()).toBeNull();

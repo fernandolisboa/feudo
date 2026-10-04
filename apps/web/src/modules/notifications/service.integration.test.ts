@@ -8,6 +8,7 @@ vi.mock("@/modules/auth", async (importOriginal) => ({
   getCurrentSession: getCurrentSessionMock,
 }));
 
+import { FORGET_PUSH_DEVICE_PATH, forgetPushDeviceBody } from "@/lib/push-payload";
 import { organization, user } from "@/modules/auth/schema";
 import {
   joinHousehold,
@@ -228,7 +229,7 @@ describe("turning notifications on and off (integration)", () => {
 });
 
 function forgetRequest(body: unknown, site = "same-origin"): Request {
-  return new Request("https://feudo.test/api/push-subscription", {
+  return new Request(`https://feudo.test${FORGET_PUSH_DEVICE_PATH}`, {
     method: "DELETE",
     headers: { "content-type": "application/json", "sec-fetch-site": site },
     body: JSON.stringify(body),
@@ -245,10 +246,12 @@ describe("forgetting a device at sign-out (integration)", () => {
       getCurrentSessionMock.mockResolvedValue(userA.session);
 
       expect(
-        (await handleForgetDeviceRequest(forgetRequest({ endpoint: deviceB.endpoint }))).status,
+        (await handleForgetDeviceRequest(forgetRequest(forgetPushDeviceBody(deviceB.endpoint))))
+          .status,
       ).toBe(204);
       expect(
-        (await handleForgetDeviceRequest(forgetRequest({ endpoint: deviceA.endpoint }))).status,
+        (await handleForgetDeviceRequest(forgetRequest(forgetPushDeviceBody(deviceA.endpoint))))
+          .status,
       ).toBe(204);
 
       const rows = await db.select().from(pushSubscription);
@@ -268,7 +271,7 @@ describe("forgetting a device at sign-out (integration)", () => {
       expect(
         (
           await handleForgetDeviceRequest(
-            forgetRequest({ endpoint: device.endpoint }, "cross-site"),
+            forgetRequest(forgetPushDeviceBody(device.endpoint), "cross-site"),
           )
         ).status,
       ).toBe(403);
@@ -280,7 +283,8 @@ describe("forgetting a device at sign-out (integration)", () => {
 
       getCurrentSessionMock.mockResolvedValue(null);
       expect(
-        (await handleForgetDeviceRequest(forgetRequest({ endpoint: device.endpoint }))).status,
+        (await handleForgetDeviceRequest(forgetRequest(forgetPushDeviceBody(device.endpoint))))
+          .status,
       ).toBe(401);
 
       expect(await db.select().from(pushSubscription)).toHaveLength(1);

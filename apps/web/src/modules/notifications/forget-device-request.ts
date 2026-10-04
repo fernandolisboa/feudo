@@ -39,5 +39,7 @@ export async function handleForgetDeviceRequest(request: Request): Promise<Respo
       return new Response(null, { status: 401 });
     case "invalid":
       return new Response(null, { status: 400 });
+    case "failed":
+      return new Response(null, { status: 500 });
   }
 }

@@ -1,3 +1,5 @@
+import { FORGET_PUSH_DEVICE_PATH, forgetPushDeviceBody } from "@/lib/push-payload";
+
 export type PushSupport = "supported" | "needs_home_screen" | "unsupported";
 
 export class PushPermissionDeniedError extends Error {
@@ -44,7 +46,6 @@ export function notificationPermission(): NotificationPermission {
 
 const PUSH_OWNER_KEY = "feudo.push.owner";
 const SERVICE_WORKER_READY_MS = 10_000;
-const FORGET_DEVICE_PATH = "/api/push-subscription";
 const FORGET_DEVICE_TIMEOUT_MS = 5_000;
 
 // Who turned notifications on in this browser (ADR-0012). Kept apart from the
@@ -156,15 +157,14 @@ export async function subscribeThisDevice(
 }
 
 // The endpoint the device just gave up, so the server can forget it too.
+// The owner goes only once the browser has stopped: kept on a failure, the
+// next person to sign in here still unsubscribes it (ADR-0012).
 export async function unsubscribeThisDevice(): Promise<string | null> {
-  writePushOwner(null);
   const manager = await pushManager();
   const subscription = await manager?.getSubscription();
-  if (!subscription) {
-    return null;
-  }
-  await subscription.unsubscribe();
-  return subscription.endpoint;
+  await subscription?.unsubscribe();
+  writePushOwner(null);
+  return subscription?.endpoint ?? null;
 }
 
 // Sign-out (ADR-0012): the browser stops first, then Feudo forgets the
@@ -174,10 +174,10 @@ export async function forgetThisDevice(): Promise<void> {
   if (endpoint === null) {
     return;
   }
-  await fetch(FORGET_DEVICE_PATH, {
+  await fetch(FORGET_PUSH_DEVICE_PATH, {
     method: "DELETE",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ endpoint }),
+    body: JSON.stringify(forgetPushDeviceBody(endpoint)),
     signal: AbortSignal.timeout(FORGET_DEVICE_TIMEOUT_MS),
   });
 }

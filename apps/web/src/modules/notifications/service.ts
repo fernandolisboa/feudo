@@ -121,8 +121,14 @@ export function readPushPublicKey(env: PushEnv = process.env): string | null {
 }
 
 export type SubscriptionWriteOutcome = SimpleOutcome<
-  "ok" | "unauthenticated" | "invalid" | "disabled"
+  "ok" | "unauthenticated" | "invalid" | "disabled" | "failed"
 >;
+
+// A failed query's message carries its parameters, the endpoint among them,
+// and the endpoint never goes to the logs (ADR-0008): only the error's name.
+function logWriteFailure(action: "saving" | "removing", error: unknown): void {
+  console.warn(`notifications: ${action} a device failed (${errorName(error)})`);
+}
 
 export async function savePushSubscription(input: unknown): Promise<SubscriptionWriteOutcome> {
   const session = await getCurrentSession();
@@ -136,7 +142,12 @@ export async function savePushSubscription(input: unknown): Promise<Subscription
   if (!parsed.success) {
     return { status: "invalid" };
   }
-  await createPushSubscriptionRepository(pushUserScope(session)).save(getDb(), parsed.data);
+  try {
+    await createPushSubscriptionRepository(pushUserScope(session)).save(getDb(), parsed.data);
+  } catch (error) {
+    logWriteFailure("saving", error);
+    return { status: "failed" };
+  }
   return { status: "ok" };
 }
 
@@ -149,7 +160,12 @@ export async function removePushSubscription(endpoint: unknown): Promise<Subscri
   if (!parsed.success) {
     return { status: "invalid" };
   }
-  await createPushSubscriptionRepository(pushUserScope(session)).remove(getDb(), parsed.data);
+  try {
+    await createPushSubscriptionRepository(pushUserScope(session)).remove(getDb(), parsed.data);
+  } catch (error) {
+    logWriteFailure("removing", error);
+    return { status: "failed" };
+  }
   return { status: "ok" };
 }
 
