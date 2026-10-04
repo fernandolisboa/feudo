@@ -9,13 +9,12 @@ import { isBrowserOffline, WRITE_BLOCKED_EVENT } from "@/lib/offline-writes";
 import {
   clearOfflineCopies,
   isOfflineCopyScreen,
+  OFFLINE_COPIES_SCOPE_KEY,
   requestOfflineCopy,
 } from "@/platform/pwa/offline-copies";
 
 import { lastUpdatedLabel } from "../offline-freshness";
 import { t } from "../strings";
-
-const SCOPE_STORAGE_KEY = "feudo.offline-copies.scope";
 
 // A page the server rendered this long before the document started loading
 // can only have come from the offline copies. The margin absorbs a client
@@ -55,7 +54,7 @@ function subscribeToNavigationData(onChange: () => void): () => void {
 // than clearing the copies on every load.
 function readStoredScope(): string | null | undefined {
   try {
-    return window.localStorage.getItem(SCOPE_STORAGE_KEY);
+    return window.localStorage.getItem(OFFLINE_COPIES_SCOPE_KEY);
   } catch {
     return undefined;
   }
@@ -63,7 +62,7 @@ function readStoredScope(): string | null | undefined {
 
 function storeScope(scope: string): void {
   try {
-    window.localStorage.setItem(SCOPE_STORAGE_KEY, scope);
+    window.localStorage.setItem(OFFLINE_COPIES_SCOPE_KEY, scope);
   } catch {
     // Sign-out and the household switch still clear the copies themselves.
   }
@@ -140,7 +139,9 @@ export function OfflineNotice({
 
   useEffect(() => {
     function blockSubmitWhenOffline(event: SubmitEvent): void {
-      if (!isBrowserOffline()) {
+      const isReadForm =
+        event.target instanceof HTMLFormElement && event.target.hasAttribute("data-offline-read");
+      if (!isBrowserOffline() || isReadForm) {
         return;
       }
       event.preventDefault();
@@ -188,7 +189,7 @@ export function OfflineNotice({
           ) : null
         }
       >
-        {online ? t.offline.copy : t.offline.offline} {lastUpdated}
+        {online ? t.offline.copy : t.offline.unavailable} {lastUpdated}
         {writeBlocked && !online ? (
           <strong role="alert" className="mt-1 block font-semibold">
             {t.offline.writeBlocked}

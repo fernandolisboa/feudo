@@ -1,8 +1,13 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
 
-import { deleteForeignCaches } from "@/platform/pwa/offline-copies";
-import { offlineFallbacks, runtimeCaching } from "@/platform/pwa/runtime-caching";
+import { deleteForeignCaches, isClearOfflineCopiesMessage } from "@/platform/pwa/offline-copies";
+import {
+  clearCopiesInServiceWorker,
+  expireOldCopies,
+  offlineFallbacks,
+  runtimeCaching,
+} from "@/platform/pwa/runtime-caching";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -23,6 +28,23 @@ const serwist = new Serwist({
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(deleteForeignCaches());
+});
+
+self.addEventListener("message", (event) => {
+  if (!isClearOfflineCopiesMessage(event.data)) {
+    return;
+  }
+  event.waitUntil(
+    clearCopiesInServiceWorker().then(() => {
+      event.ports[0]?.postMessage("cleared");
+    }),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode === "navigate") {
+    event.waitUntil(expireOldCopies());
+  }
 });
 
 serwist.addEventListeners();

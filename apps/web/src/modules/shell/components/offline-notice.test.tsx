@@ -116,6 +116,24 @@ describe("OfflineNotice", () => {
     expect(screen.getByRole("alert").textContent).toBe("Nada foi salvo: você está sem conexão.");
   });
 
+  it("offline, lets a search form through: it reads, it saves nothing", () => {
+    const searched = vi.fn((event: SubmitEvent) => {
+      event.preventDefault();
+    });
+    renderNotice();
+    const search = document.createElement("form");
+    search.setAttribute("data-offline-read", "");
+    search.addEventListener("submit", searched);
+    document.body.append(search);
+    setOnline(false);
+
+    fireEvent.submit(search);
+
+    expect(searched).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("alert")).toBeNull();
+    search.remove();
+  });
+
   it("online, lets the form through", () => {
     renderNotice();
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));

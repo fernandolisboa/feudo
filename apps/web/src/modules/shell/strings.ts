@@ -115,7 +115,7 @@ const en = {
     action: "Go to the overview",
   },
   offline: {
-    offline: "You're offline. Nothing can be changed until the connection is back.",
+    unavailable: "You're offline. Nothing can be changed until the connection is back.",
     copy: "This screen is a copy kept on this device.",
     lastUpdated: "Last updated: {when}.",
     today: "today, {time}",
@@ -239,7 +239,7 @@ const ptBR = {
     title: "Não deu para abrir esta página",
     message: "Algo falhou do nosso lado. Seus dados estão seguros. Tente de novo daqui a pouco.",
     offlineMessage:
-      "Você está sem conexão, então nada foi alterado. Tente de novo quando a internet voltar.",
+      "Você está sem conexão: nada foi alterado. Tente de novo quando a internet voltar.",
     retry: "Tentar de novo",
   },
   notFound: {
@@ -248,7 +248,7 @@ const ptBR = {
     action: "Ir para a visão geral",
   },
   offline: {
-    offline: "Você está sem conexão. Nada pode ser alterado até a internet voltar.",
+    unavailable: "Você está sem conexão. Nada pode ser alterado até a internet voltar.",
     copy: "Esta tela é uma cópia guardada neste aparelho.",
     lastUpdated: "Última atualização: {when}.",
     today: "hoje, {time}",

@@ -30,15 +30,21 @@ export function createFinancialDataAccessRepository(scope: FinancialDataAccessSc
         .values({ householdId: scope.householdId, userId: scope.userId, kind });
     },
 
-    // One statement, so the check and the insert see the same rows; the
-    // window is measured on the database clock, the same one that stamps
-    // accessed_at.
+    // Two reads of one screen often run at the same time (the RSC render
+    // and the service worker's copy fetch), and under READ COMMITTED both
+    // would see no recent row: the transaction lock on this person, household
+    // and kind makes the second wait for the first. The window is measured on
+    // the database clock, the same one that stamps accessed_at.
     async recordUnlessRecent(
       db: DatabaseOrTransaction,
       kind: FinancialDataKind,
       windowSeconds: number,
     ): Promise<void> {
-      await db.execute(sql`
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${`financial_data_access:${scope.householdId}:${scope.userId}:${kind}`}, 0))`,
+        );
+        await tx.execute(sql`
         insert into ${financialDataAccess} (id, household_id, user_id, kind)
         select ${crypto.randomUUID()}, ${scope.householdId}, ${scope.userId}, ${kind}::financial_data_access_kind
         where not exists (
@@ -49,6 +55,7 @@ export function createFinancialDataAccessRepository(scope: FinancialDataAccessSc
             and ${financialDataAccess.accessedAt} > now() - make_interval(secs => ${windowSeconds})
         )
       `);
+      });
     },
 
     async listRecentForUser(

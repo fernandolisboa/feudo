@@ -127,6 +127,23 @@ describe("collapsing a repeated read into one access (integration, #28)", () => 
     });
   });
 
+  it("records one access when the same reads arrive at the same time (RSC render and copy fetch)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createFinancialDataAccessRepository({
+        householdId: userA.session.householdId,
+        userId: userA.id,
+      });
+
+      await Promise.all(
+        Array.from({ length: 5 }, () =>
+          repository.recordUnlessRecent(db, "transactions", WINDOW_SECONDS),
+        ),
+      );
+
+      expect(await repository.listRecentForUser(db)).toHaveLength(1);
+    });
+  });
+
   it("records again once the previous read is older than the window", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       const repository = createFinancialDataAccessRepository({

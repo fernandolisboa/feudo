@@ -1,7 +1,8 @@
 import type { RuntimeCaching, SerwistOptions, SerwistPlugin } from "serwist";
-import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly } from "serwist";
+import { CacheExpiration, CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly } from "serwist";
 
 import {
+  deleteCachesHoldingCopies,
   isOfflineCopyScreen,
   OFFLINE_COPIES_CACHE,
   OFFLINE_COPY_MAX_AGE_SECONDS,
@@ -27,6 +28,44 @@ const onlyRenderedScreens: SerwistPlugin = {
     );
   },
 };
+
+// Each clear starts a new generation. A page fetch that began before the
+// latest clear was made with the cookies of whoever just left, so it is not
+// stored even if it completes after the clear.
+let copiesGeneration = 0;
+
+const refuseCopiesStartedBeforeAClear: SerwistPlugin = {
+  handlerWillStart: ({ state }) => {
+    if (state) {
+      state.generation = copiesGeneration;
+    }
+    return Promise.resolve();
+  },
+  cacheWillUpdate: ({ response, state }) =>
+    Promise.resolve(state?.generation === copiesGeneration ? response : null),
+};
+
+const copiesExpirationConfig = {
+  maxEntries: OFFLINE_COPY_MAX_ENTRIES,
+  maxAgeSeconds: OFFLINE_COPY_MAX_AGE_SECONDS,
+};
+
+export function discardCopiesInFlight(): void {
+  copiesGeneration += 1;
+}
+
+export async function clearCopiesInServiceWorker(): Promise<void> {
+  discardCopiesInFlight();
+  await deleteCachesHoldingCopies();
+  // The expiration metadata keeps each copy's full URL, search terms included.
+  await new CacheExpiration(OFFLINE_COPIES_CACHE, copiesExpirationConfig).delete();
+}
+
+// Expiry otherwise runs only when the copies cache is read or written, so a
+// copy past 24 hours would stay stored until then.
+export function expireOldCopies(): Promise<void> {
+  return new CacheExpiration(OFFLINE_COPIES_CACHE, copiesExpirationConfig).expireEntries();
+}
 
 // Order matters: the first matching rule answers. Anything no rule matches
 // (cross-origin requests, server actions, other methods) goes to the network
@@ -57,11 +96,9 @@ export const runtimeCaching: RuntimeCaching[] = [
       // the key is the screen's URL alone.
       matchOptions: { ignoreVary: true },
       plugins: [
+        refuseCopiesStartedBeforeAClear,
         onlyRenderedScreens,
-        new ExpirationPlugin({
-          maxEntries: OFFLINE_COPY_MAX_ENTRIES,
-          maxAgeSeconds: OFFLINE_COPY_MAX_AGE_SECONDS,
-        }),
+        new ExpirationPlugin(copiesExpirationConfig),
       ],
     }),
   },

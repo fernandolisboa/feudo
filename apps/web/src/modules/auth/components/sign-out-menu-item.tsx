@@ -18,9 +18,9 @@ export function SignOutMenuItem() {
   // The copies go even when the sign-out itself cannot reach the server:
   // whoever pressed Sair is leaving this browser (ADR-0007).
   function handleSignOut() {
-    const cleared = clearOfflineCopies();
+    const clearing = clearOfflineCopies();
     run(async () => {
-      await cleared;
+      await clearing;
       return signOutAction();
     });
   }

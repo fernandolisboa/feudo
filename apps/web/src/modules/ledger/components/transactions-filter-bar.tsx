@@ -51,7 +51,12 @@ export function TransactionsFilterBar({
 
   return (
     <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
-      <form action="/transacoes" method="get" className="w-full md:w-72 md:flex-none">
+      <form
+        action="/transacoes"
+        method="get"
+        data-offline-read
+        className="w-full md:w-72 md:flex-none"
+      >
         {hiddenParams.map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}

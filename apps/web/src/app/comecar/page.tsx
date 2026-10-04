@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
+  ClearOfflineCopies,
   getCurrentSession,
   redirectIfAccountDeletionPending,
   redirectIfTermsOutdated,
@@ -34,6 +35,7 @@ export default async function OnboardingPage() {
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
+      <ClearOfflineCopies />
       <div className="border-border bg-card w-full max-w-sm rounded-lg border p-6">
         <p className="text-muted-foreground text-xs tracking-wide uppercase">
           {t.onboarding.overline}

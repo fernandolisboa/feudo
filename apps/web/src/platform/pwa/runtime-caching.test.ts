@@ -7,7 +7,7 @@ import {
   OFFLINE_FALLBACK_ROUTE,
   STATIC_ASSETS_CACHE,
 } from "./offline-copies";
-import { offlineFallbacks, runtimeCaching } from "./runtime-caching";
+import { discardCopiesInFlight, offlineFallbacks, runtimeCaching } from "./runtime-caching";
 
 const ORIGIN = "https://feudo.test";
 
@@ -135,21 +135,41 @@ describe("what the offline-copies cache accepts", () => {
     )?.handler as NetworkFirst
   ).plugins;
 
-  async function accepted(response: Response): Promise<boolean> {
+  const request = new Request(`${ORIGIN}/transacoes`);
+  const event = {} as ExtendableEvent;
+
+  // Mirrors Serwist's StrategyHandler: one state object per plugin for the
+  // whole handling of a request, handlerWillStart first.
+  async function startHandling(): Promise<Map<(typeof plugins)[number], Record<string, unknown>>> {
+    const states = new Map(plugins.map((plugin) => [plugin, {}]));
+    for (const plugin of plugins) {
+      await plugin.handlerWillStart?.({ request, event, state: states.get(plugin) });
+    }
+    return states;
+  }
+
+  async function finishHandling(
+    states: Map<(typeof plugins)[number], Record<string, unknown>>,
+    response: Response,
+  ): Promise<boolean> {
     let current: Response | null = response;
     for (const plugin of plugins) {
       if (!current || !plugin.cacheWillUpdate) {
         continue;
       }
       const next = (await plugin.cacheWillUpdate({
-        request: new Request(`${ORIGIN}/transacoes`),
+        request,
         response: current,
-        event: {} as ExtendableEvent,
-        state: {},
+        event,
+        state: states.get(plugin),
       })) as Response | null | undefined;
       current = next ?? null;
     }
     return current !== null;
+  }
+
+  async function accepted(response: Response): Promise<boolean> {
+    return finishHandling(await startHandling(), response);
   }
 
   function html(status = 200): Response {
@@ -167,6 +187,13 @@ describe("what the offline-copies cache accepts", () => {
     const redirected = html();
     Object.defineProperty(redirected, "redirected", { value: true });
     expect(await accepted(redirected)).toBe(false);
+  });
+
+  it("refuses a page whose fetch started before the copies were cleared (the person who left)", async () => {
+    const startedBeforeClear = await startHandling();
+    discardCopiesInFlight();
+    expect(await finishHandling(startedBeforeClear, html())).toBe(false);
+    expect(await accepted(html())).toBe(true);
   });
 
   it("refuses errors and non-HTML responses", async () => {

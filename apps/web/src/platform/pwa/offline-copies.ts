@@ -8,6 +8,12 @@ const PRECACHE_PREFIX = "serwist-precache";
 
 export const OFFLINE_FALLBACK_ROUTE = "/sem-conexao";
 
+// The person and household the copies on this browser belong to.
+export const OFFLINE_COPIES_SCOPE_KEY = "feudo.offline-copies.scope";
+
+const CLEAR_OFFLINE_COPIES = "FEUDO_CLEAR_OFFLINE_COPIES";
+const SERVICE_WORKER_ACK_TIMEOUT_MS = 2_000;
+
 // The privacy policy promises at most 24 hours on the device.
 export const OFFLINE_COPY_MAX_AGE_SECONDS = 24 * 60 * 60;
 export const OFFLINE_COPY_MAX_ENTRIES = 32;
@@ -33,7 +39,7 @@ function holdsOnlyBuildAssets(cacheName: string): boolean {
 // Deletes every cache that could hold a signed-in response: the offline
 // copies and any cache an earlier service worker left behind (the Serwist
 // default cache kept authenticated pages and RSC payloads, #116).
-export async function clearOfflineCopies(): Promise<void> {
+export async function deleteCachesHoldingCopies(): Promise<void> {
   if (typeof caches === "undefined") {
     return;
   }
@@ -41,6 +47,48 @@ export async function clearOfflineCopies(): Promise<void> {
   await Promise.all(
     names.filter((name) => !holdsOnlyBuildAssets(name)).map((name) => caches.delete(name)),
   );
+}
+
+// The service worker also clears, so a page it is still fetching for the
+// person leaving is never stored after this resolves (see runtime-caching).
+export async function clearOfflineCopies(): Promise<void> {
+  forgetScope();
+  await Promise.all([askServiceWorkerToClear(), deleteCachesHoldingCopies()]);
+}
+
+export function isClearOfflineCopiesMessage(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as { type?: unknown }).type === CLEAR_OFFLINE_COPIES
+  );
+}
+
+function forgetScope(): void {
+  try {
+    window.localStorage.removeItem(OFFLINE_COPIES_SCOPE_KEY);
+  } catch {
+    // No storage, nothing to forget.
+  }
+}
+
+function askServiceWorkerToClear(): Promise<void> {
+  const worker =
+    typeof navigator !== "undefined" && "serviceWorker" in navigator
+      ? navigator.serviceWorker.controller
+      : null;
+  if (!worker) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timeout = setTimeout(resolve, SERVICE_WORKER_ACK_TIMEOUT_MS);
+    channel.port1.onmessage = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    worker.postMessage({ type: CLEAR_OFFLINE_COPIES }, [channel.port2]);
+  });
 }
 
 // Run by the service worker on activation: the offline copies survive an
