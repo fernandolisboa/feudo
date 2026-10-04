@@ -5,6 +5,9 @@ import {
   FAKE_INVALID_CLIENT_SECRET,
   FAKE_ITEM_BANCO_FIXTURE,
   FAKE_ITEM_CORRETORA_FIXTURE,
+  FAKE_ITEM_RESERVA_FIXTURE,
+  FAKE_RESERVA_CHECKING_ACCOUNT,
+  fakeTransactionsFor,
 } from "./fake-fixtures";
 import { createFakeProvider } from "./fake-provider";
 import { ProviderReadAbortedError } from "./provider";
@@ -67,6 +70,29 @@ describe("createFakeProvider", () => {
     );
     expect(all).toHaveLength(3);
     expect(later).toHaveLength(1);
+  });
+
+  it("dates the reserve fixture's fixed costs two to four months before now", () => {
+    const transactions = fakeTransactionsFor(
+      FAKE_RESERVA_CHECKING_ACCOUNT,
+      new Date("2027-01-01T01:00:00.000Z"),
+    );
+    expect(transactions.map((transaction) => transaction.date)).toEqual([
+      "2026-11-10T15:00:00.000Z",
+      "2026-10-10T15:00:00.000Z",
+      "2026-09-10T15:00:00.000Z",
+    ]);
+    expect(transactions.every((transaction) => transaction.amount === -1500)).toBe(true);
+  });
+
+  it("describes the reserve fixture item with its accounts and investment", async () => {
+    const fake = await client();
+    await expect(fake.describeConnection(FAKE_ITEM_RESERVA_FIXTURE)).resolves.toMatchObject({
+      status: "ok",
+      connection: { institutionName: "Banco Reserva Fixture" },
+    });
+    await expect(fake.listAccounts(FAKE_ITEM_RESERVA_FIXTURE)).resolves.toHaveLength(2);
+    await expect(fake.listInvestmentPositions(FAKE_ITEM_RESERVA_FIXTURE)).resolves.toHaveLength(1);
   });
 
   it("rejects authenticate itself when the run's own signal is already aborted", async () => {

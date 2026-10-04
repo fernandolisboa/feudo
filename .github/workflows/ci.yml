@@ -192,6 +192,13 @@ jobs:
           DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
         run: pnpm --filter @feudo/web db:migrate
 
+      - name: Seed market indicators for e2e
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+          DATABASE_RESET_ALLOWED_HOST: ${{ vars.DATABASE_RESET_ALLOWED_HOST }}
+          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
+        run: pnpm --filter @feudo/web db:seed-e2e
+
       - name: Install Playwright Chromium
         run: |
           set -e

@@ -4,7 +4,7 @@ import {
   FAKE_INVALID_CLIENT_SECRET,
   FAKE_INVESTMENTS,
   FAKE_ITEMS,
-  FAKE_TRANSACTIONS,
+  fakeTransactionsFor,
 } from "./fake-fixtures";
 import {
   normalizeAccount,
@@ -70,9 +70,8 @@ class FakeClient implements ProviderClient {
     sinceISODate: string,
   ): Promise<NormalizedTransaction[]> {
     this.ensureNotAborted("transactions");
-    const transactions = FAKE_TRANSACTIONS[providerAccountId] ?? [];
     return Promise.resolve(
-      transactions
+      fakeTransactionsFor(providerAccountId, new Date())
         .map((transaction) => normalizeTransaction(transaction, this.hasher))
         .filter((transaction) => transaction.date >= sinceISODate),
     );

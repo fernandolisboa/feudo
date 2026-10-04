@@ -19,6 +19,7 @@
     "db:check": "drizzle-kit check",
     "db:reset": "node scripts/reset-db.mjs",
     "db:reset-schema": "node scripts/reset-schema.mjs",
+    "db:seed-e2e": "node scripts/seed-e2e-market-data.mjs",
     "db:auth-schema": "better-auth generate --config src/modules/auth/cli.ts --output .generated/auth-schema.ts -y && (git --no-pager diff --no-index --stat src/modules/auth/schema.ts .generated/auth-schema.ts || true)"
   },
   "dependencies": {
