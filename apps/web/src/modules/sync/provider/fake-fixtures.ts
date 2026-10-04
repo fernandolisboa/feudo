@@ -11,8 +11,10 @@ import type {
 
 export const FAKE_ITEM_BANCO_FIXTURE = "0f1e2d3c-4b5a-4a6b-8c7d-8e9f0a1b2c3d";
 export const FAKE_ITEM_CORRETORA_FIXTURE = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+export const FAKE_ITEM_RESERVA_FIXTURE = "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f";
 export const FAKE_INVALID_CLIENT_SECRET = "invalid";
 export const FAKE_HOLDER_DOCUMENT = "123.456.789-09";
+export const FAKE_RESERVA_CHECKING_ACCOUNT = "a3000000-0000-4000-8000-000000000001";
 
 export const FAKE_ITEMS: Record<string, PluggyItem> = {
   [FAKE_ITEM_BANCO_FIXTURE]: {
@@ -26,6 +28,12 @@ export const FAKE_ITEMS: Record<string, PluggyItem> = {
     connector: { id: 602, name: "Corretora Fixture" },
     status: "UPDATED",
     lastUpdatedAt: "2026-09-18T09:12:00.000Z",
+  },
+  [FAKE_ITEM_RESERVA_FIXTURE]: {
+    id: FAKE_ITEM_RESERVA_FIXTURE,
+    connector: { id: 603, name: "Banco Reserva Fixture" },
+    status: "UPDATED",
+    lastUpdatedAt: "2026-09-18T09:14:00.000Z",
   },
 };
 
@@ -77,6 +85,30 @@ export const FAKE_ACCOUNTS: Record<string, PluggyAccount[]> = {
     },
   ],
   [FAKE_ITEM_CORRETORA_FIXTURE]: [],
+  [FAKE_ITEM_RESERVA_FIXTURE]: [
+    {
+      id: FAKE_RESERVA_CHECKING_ACCOUNT,
+      itemId: FAKE_ITEM_RESERVA_FIXTURE,
+      type: "BANK",
+      subtype: "CHECKING_ACCOUNT",
+      name: "Conta corrente",
+      marketingName: null,
+      balance: 2000,
+      currencyCode: "BRL",
+      taxNumber: FAKE_HOLDER_DOCUMENT,
+    },
+    {
+      id: "a3000000-0000-4000-8000-000000000002",
+      itemId: FAKE_ITEM_RESERVA_FIXTURE,
+      type: "BANK",
+      subtype: "SAVINGS_ACCOUNT",
+      name: "Poupança",
+      marketingName: null,
+      balance: 3000,
+      currencyCode: "BRL",
+      taxNumber: FAKE_HOLDER_DOCUMENT,
+    },
+  ],
 };
 
 export const FAKE_INVESTMENTS: Record<string, PluggyInvestment[]> = {
@@ -138,6 +170,26 @@ export const FAKE_INVESTMENTS: Record<string, PluggyInvestment[]> = {
       taxNumber: FAKE_HOLDER_DOCUMENT,
     },
   ],
+  [FAKE_ITEM_RESERVA_FIXTURE]: [
+    {
+      id: "b3000000-0000-4000-8000-000000000001",
+      itemId: FAKE_ITEM_RESERVA_FIXTURE,
+      type: "FIXED_INCOME",
+      subtype: "CDB",
+      name: "CDB Liquidez Diária 100% CDI",
+      balance: 4000,
+      currencyCode: "BRL",
+      rate: 100,
+      rateType: "CDI",
+      fixedAnnualRate: null,
+      dueDate: "2030-01-10T03:00:00.000Z",
+      purchaseDate: "2024-01-10T03:00:00.000Z",
+      issueDate: "2024-01-10T03:00:00.000Z",
+      status: "ACTIVE",
+      owner: "Titular Fixture",
+      taxNumber: FAKE_HOLDER_DOCUMENT,
+    },
+  ],
 };
 
 export const FAKE_TRANSACTIONS: Record<string, PluggyTransaction[]> = {
@@ -183,3 +235,30 @@ export const FAKE_TRANSACTIONS: Record<string, PluggyTransaction[]> = {
     },
   ],
 };
+
+// The Reserva averages fixed costs over the six months before the household's
+// current month, so these are dated relative to `now` instead of pinned: two
+// to four months back stays inside that window whatever day the suite runs,
+// even when UTC and the household's time zone sit in different months.
+function reservaFixedCosts(now: Date): PluggyTransaction[] {
+  return [2, 3, 4].map((monthsBack) => ({
+    id: `c3000000-0000-4000-8000-00000000000${String(monthsBack)}`,
+    accountId: FAKE_RESERVA_CHECKING_ACCOUNT,
+    date: new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, 10, 15),
+    ).toISOString(),
+    description: "PIX ENVIADO CONDOMINIO",
+    type: "DEBIT",
+    amount: -1500,
+    currencyCode: "BRL",
+    category: "Housing",
+    paymentData: null,
+  }));
+}
+
+export function fakeTransactionsFor(accountId: string, now: Date): PluggyTransaction[] {
+  if (accountId === FAKE_RESERVA_CHECKING_ACCOUNT) {
+    return reservaFixedCosts(now);
+  }
+  return FAKE_TRANSACTIONS[accountId] ?? [];
+}

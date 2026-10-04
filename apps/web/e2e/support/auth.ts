@@ -6,28 +6,35 @@ export function uniqueEmail(prefix: string): string {
   return `${prefix}-${suffix}@example.com`;
 }
 
+// An email sent in the background can land after the call that triggered it
+// returns, so a caller expecting a specific email (not just the latest one,
+// which may still be the verification email) passes the link it expects.
 export async function lastEmailLink(
   request: APIRequestContext,
   baseURL: string,
   to: string,
+  linkPattern: RegExp = /./,
 ): Promise<string> {
   const url = `${baseURL}/api/test-only/last-email?to=${encodeURIComponent(to)}`;
+  let link: string | undefined;
   await expect
     .poll(
       async () => {
         const response = await request.get(url);
-        return response.status();
+        if (response.status() !== 200) {
+          return false;
+        }
+        const body = (await response.json()) as { text: string };
+        link = /https?:\/\/\S+/.exec(body.text)?.[0];
+        return link !== undefined && linkPattern.test(link);
       },
       { message: "email was not persisted in time", timeout: 30_000, intervals: [500] },
     )
-    .toBe(200);
-  const response = await request.get(url);
-  const body = (await response.json()) as { text: string };
-  const linkMatch = /https?:\/\/\S+/.exec(body.text);
-  if (!linkMatch) {
+    .toBe(true);
+  if (!link) {
     throw new Error("email did not contain a link");
   }
-  return linkMatch[0];
+  return link;
 }
 
 // Better Auth's own default rate limit on /sign-in and /sign-up is a strict,
@@ -143,6 +150,53 @@ export async function signInWithPassword(
     "Entrar",
     landsOn,
   );
+}
+
+// Expects to start at /esqueci-a-senha. The request shares Better Auth's
+// IP-keyed rate limit the same way sign-in and sign-up do, so a 429 backs off
+// and retries on a freshly loaded form rather than failing the run.
+export async function requestPasswordReset(page: Page, email: string): Promise<void> {
+  const sent = page.getByText(
+    "Se este e-mail tiver cadastro, enviamos um link para redefinir a senha.",
+  );
+  const rateLimited = page.getByText("Muitas tentativas. Tente novamente em instantes.");
+  for (let attempt = 0; attempt < SIGN_UP_OR_IN_RETRY_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) {
+      await page.waitForTimeout(randomBackoffMs());
+      await page.goto("/esqueci-a-senha");
+    }
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByRole("button", { name: "Enviar link" }).click();
+    await expect(sent.or(rateLimited)).toBeVisible();
+    if (await sent.isVisible()) {
+      return;
+    }
+  }
+  throw new Error("password reset request stayed rate limited");
+}
+
+// Expects to start at /entrar; the same rate-limit back-off as above.
+export async function expectSignInRefused(
+  page: Page,
+  options: { email: string; password: string },
+): Promise<void> {
+  const refused = page.getByText("E-mail ou senha incorretos.");
+  const rateLimited = page.getByText("Muitas tentativas. Tente novamente em instantes.");
+  for (let attempt = 0; attempt < SIGN_UP_OR_IN_RETRY_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) {
+      await page.waitForTimeout(randomBackoffMs());
+      await page.goto("/entrar");
+    }
+    await page.getByLabel("E-mail").fill(options.email);
+    await page.getByLabel("Senha").fill(options.password);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(refused.or(rateLimited)).toBeVisible();
+    if (await refused.isVisible()) {
+      await expect(page).toHaveURL(/\/entrar/);
+      return;
+    }
+  }
+  throw new Error("sign-in stayed rate limited");
 }
 
 export async function createHouseholdOnboarding(

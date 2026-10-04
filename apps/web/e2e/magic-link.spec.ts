@@ -30,7 +30,7 @@ test("sign in with a magic link after signing up with a password", async ({
   await page.getByRole("button", { name: "Enviar link" }).click();
   await expect(page.getByText("Se este e-mail tiver cadastro")).toBeVisible();
 
-  const magicLink = await lastEmailLink(request, baseURL, email);
+  const magicLink = await lastEmailLink(request, baseURL, email, /\/magic-link\/verify/);
   await page.goto(magicLink);
 
   // A freshly signed-up user has no household yet, so the session lands on
