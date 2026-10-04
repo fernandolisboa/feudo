@@ -65,3 +65,12 @@ export function shouldNarrowFirstSync(
   }
   return status === "timed_out" && isDeadlineAbort(previousError);
 }
+
+// Three failed attempts in a row, daily or manual, notify the connection's
+// owner once: the count only equals this on the attempt that reaches it
+// (ADR-0012).
+export const REPEATED_FAILURE_THRESHOLD = 3;
+
+export function reachedRepeatedFailure(consecutiveFailures: number): boolean {
+  return consecutiveFailures === REPEATED_FAILURE_THRESHOLD;
+}

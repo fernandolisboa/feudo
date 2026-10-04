@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+
+import { silentNotifier } from "@/modules/notifications/test/fake-push-sender";
 import { eq } from "drizzle-orm";
 
 import type { HouseholdSession } from "@/modules/households";
@@ -22,6 +24,7 @@ const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
   provider: createFakeProvider(createDocumentHasher("integration-test-document-hash-key-32ch!")),
   encryptionKey: ENCRYPTION_KEY,
+  notifier: silentNotifier,
 };
 const SAO_PAULO = "America/Sao_Paulo";
 // 12:00 in São Paulo.

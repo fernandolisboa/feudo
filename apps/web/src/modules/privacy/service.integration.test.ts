@@ -4,6 +4,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { EmailSender } from "@/modules/auth";
 import { member, organization, session as sessionTable, user } from "@/modules/auth/schema";
 import { householdSettings } from "@/modules/households/schema";
+import { pushSubscription } from "@/modules/notifications/schema";
+import { seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
 import {
   bankAccount,
   bankConnection,
@@ -190,6 +192,20 @@ describe("account deletion (integration)", () => {
       expect(toBia?.text).toContain("Bia passa a ser o responsável pela casa.");
       const toAna = sent.find((email) => email.to === ana.session.email);
       expect(toAna?.subject).toBe("Seu cadastro no Feudo será apagado em 10/10/2026");
+    });
+  });
+
+  it("stops every notification of that person at once, and only theirs", async () => {
+    await withTestDb(async (db) => {
+      const { ana, bia } = await seedCasa(db);
+      await seedPushDevice(db, ana.id);
+      await seedPushDevice(db, ana.id);
+      await seedPushDevice(db, bia.id);
+
+      await requestAccountDeletion(ana.session, db, deps(recordingSender().sender));
+
+      const devices = await db.select().from(pushSubscription);
+      expect(devices.map((row) => row.userId)).toEqual([bia.id]);
     });
   });
 

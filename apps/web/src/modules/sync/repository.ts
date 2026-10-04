@@ -335,7 +335,11 @@ export function createSyncUserRepository(scope: UserScope) {
       await requireOwnedConnection(db, connectionId);
       await db
         .update(bankConnection)
-        .set({ lastSyncedAt: result.syncedAt, lastSyncError: result.error })
+        .set({
+          lastSyncedAt: result.syncedAt,
+          lastSyncError: result.error,
+          ...(result.error === null ? { consecutiveSyncFailures: 0 } : {}),
+        })
         .where(eq(bankConnection.id, connectionId));
     },
 
@@ -541,16 +545,22 @@ export function createSyncUserRepository(scope: UserScope) {
       return "ok";
     },
 
+    // Returns how many attempts in a row have now failed (ADR-0012).
     async recordSyncFailure(
       db: Database,
       connectionId: string,
       error: ConnectionSyncFailure,
-    ): Promise<void> {
+    ): Promise<number> {
       await requireOwnedConnection(db, connectionId);
-      await db
+      const [row] = await db
         .update(bankConnection)
-        .set({ lastSyncError: error })
-        .where(eq(bankConnection.id, connectionId));
+        .set({
+          lastSyncError: error,
+          consecutiveSyncFailures: sql`${bankConnection.consecutiveSyncFailures} + 1`,
+        })
+        .where(eq(bankConnection.id, connectionId))
+        .returning({ consecutiveSyncFailures: bankConnection.consecutiveSyncFailures });
+      return row?.consecutiveSyncFailures ?? 0;
     },
 
     // Stamped at the start of every attempt, before any provider call, so
@@ -595,6 +605,7 @@ export type SyncUserRepository = ReturnType<typeof createSyncUserRepository>;
 export type ConnectionToSync = {
   id: string;
   userId: string;
+  institutionName: string;
   providerItemId: string;
   lastSyncedAt: Date | null;
   firstSyncSince: string | null;
@@ -619,6 +630,7 @@ export async function listConnectionsToSync(db: Database): Promise<ConnectionToS
     .select({
       id: bankConnection.id,
       userId: bankConnection.userId,
+      institutionName: bankConnection.institutionName,
       providerItemId: bankConnection.providerItemId,
       lastSyncedAt: bankConnection.lastSyncedAt,
       firstSyncSince: bankConnection.firstSyncSince,
@@ -645,6 +657,7 @@ export async function listHouseholdConnectionsToSync(
     .select({
       id: bankConnection.id,
       userId: bankConnection.userId,
+      institutionName: bankConnection.institutionName,
       providerItemId: bankConnection.providerItemId,
       lastSyncedAt: bankConnection.lastSyncedAt,
       firstSyncSince: bankConnection.firstSyncSince,

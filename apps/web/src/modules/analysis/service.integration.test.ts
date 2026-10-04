@@ -8,6 +8,7 @@ import {
   seedTransaction,
 } from "@/modules/sync/test/seed-synced-connection";
 import { joinHousehold, withTwoUsers, type SeededUser } from "@/modules/sync/test/with-two-users";
+import { createFakeNotifier, seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
 
 import type { Database } from "@/platform/db/client";
 import { AI_MODELS, type AiClient, type AiFailure } from "./ai-client";
@@ -281,6 +282,29 @@ describe("runMonthlyAnalysis (integration)", () => {
         skipped: 1,
       });
       expect(await rowsOf(db, householdA)).toHaveLength(3);
+    });
+  });
+
+  it("notifies each household's devices once its reading is stored, never for a failed one", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      await seedLedger(db, userA, householdA);
+      await seedLedger(db, userB, householdB);
+      const deviceA = await seedPushDevice(db, userA.id);
+      await seedPushDevice(db, userB.id);
+      const { notifier, sender } = createFakeNotifier();
+
+      await runMonthlyAnalysis(db, failingDeps("unavailable"), { ...options(), notifier });
+      expect(sender.sent).toEqual([]);
+
+      await runMonthlyAnalysis(db, fakeDeps, { ...options(), notifier });
+      await runMonthlyAnalysis(db, fakeDeps, { ...options(), notifier });
+
+      expect(sender.sent).toHaveLength(2);
+      const sentToA = sender.sent.find((send) => send.endpoint === deviceA.endpoint);
+      expect(sentToA?.payload).toMatchObject({ title: "A leitura do mês está pronta", url: "/" });
+      expect(sentToA?.payload.tag).toMatch(
+        new RegExp(`^monthly-analysis:${householdA}:\\d{4}-\\d{2}$`),
+      );
     });
   });
 

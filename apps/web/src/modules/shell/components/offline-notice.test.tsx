@@ -8,6 +8,11 @@ const copies = vi.hoisted(() => ({
   requestOfflineCopy: vi.fn(),
 }));
 
+const pushDevice = vi.hoisted(() => ({
+  unsubscribeThisDevice: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock("@/platform/pwa/push-device", () => pushDevice);
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
   useSearchParams: () => new URLSearchParams(navigation.search),
@@ -67,6 +72,7 @@ beforeEach(() => {
   navigation.refresh.mockReset();
   copies.clearOfflineCopies.mockClear();
   copies.requestOfflineCopy.mockClear();
+  pushDevice.unsubscribeThisDevice.mockClear();
   submitted.mockReset();
   window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
 });
@@ -198,6 +204,17 @@ describe("OfflineNotice", () => {
       await Promise.resolve();
     });
     expect(window.localStorage.getItem(SCOPE_KEY)).toBe("user-1:household-b");
+  });
+
+  it("stops this device's notifications when someone else signs in on it, not on a household switch", () => {
+    window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
+    renderNotice({ scope: "user-1:household-b" });
+    expect(pushDevice.unsubscribeThisDevice).not.toHaveBeenCalled();
+    cleanup();
+
+    window.localStorage.setItem(SCOPE_KEY, "user-1:household-a");
+    renderNotice({ scope: "user-2:household-a" });
+    expect(pushDevice.unsubscribeThisDevice).toHaveBeenCalledOnce();
   });
 
   it("keeps the copies while the scope is unchanged", () => {

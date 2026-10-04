@@ -15,7 +15,15 @@ const clearOfflineCopiesMock = vi.hoisted(() =>
 );
 
 vi.mock("../actions", () => ({ signOutAction: signOutActionMock }));
+const unsubscribeThisDeviceMock = vi.hoisted(() =>
+  vi.fn(() => {
+    callOrder.push("unsubscribe");
+    return Promise.resolve(null);
+  }),
+);
+
 vi.mock("@/platform/pwa/offline-copies", () => ({ clearOfflineCopies: clearOfflineCopiesMock }));
+vi.mock("@/platform/pwa/push-device", () => ({ unsubscribeThisDevice: unsubscribeThisDeviceMock }));
 
 import { SignOutMenuItem } from "./sign-out-menu-item";
 
@@ -23,6 +31,7 @@ afterEach(() => {
   cleanup();
   signOutActionMock.mockReset();
   clearOfflineCopiesMock.mockClear();
+  unsubscribeThisDeviceMock.mockClear();
   callOrder.length = 0;
   Reflect.deleteProperty(window.navigator, "onLine");
 });
@@ -52,8 +61,21 @@ describe("SignOutMenuItem", () => {
     fireEvent.click(screen.getByText(t.userMenu.signOut));
 
     await waitFor(() => {
-      expect(callOrder).toEqual(["clear", "signOut"]);
+      expect(callOrder).toEqual(["clear", "unsubscribe", "signOut"]);
     });
+  });
+
+  it("stops this device's notifications even when unsubscribing fails (ADR-0012)", async () => {
+    unsubscribeThisDeviceMock.mockImplementationOnce(() => Promise.reject(new Error("no worker")));
+    signOutActionMock.mockResolvedValue({ status: "error", message: t.errors.signOutFailed });
+    await renderOpenMenu();
+
+    fireEvent.click(screen.getByText(t.userMenu.signOut));
+
+    await waitFor(() => {
+      expect(signOutActionMock).toHaveBeenCalledOnce();
+    });
+    expect(unsubscribeThisDeviceMock).toHaveBeenCalledOnce();
   });
 
   it("offline, still clears the copies but never calls the server", async () => {

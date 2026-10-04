@@ -22,6 +22,7 @@ import {
   type HouseholdSession,
 } from "@/modules/households";
 import { getLedgerAnalysisFacts } from "@/modules/ledger";
+import { createNotifierFromEnv, type Notifier } from "@/modules/notifications";
 import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
@@ -296,11 +297,13 @@ export async function runOnDemandAnalysis(
 
 export type MonthlyAnalysisOutcome = { status: "skipped" | "succeeded" | "failed" };
 
+type MonthlyRunOptions = { now: Date; deadline: Date; notifier?: Notifier };
+
 export async function runMonthlyAnalysisForHousehold(
   db: Database,
   scope: HouseholdScope,
   deps: AnalysisDeps & { client: AiClient },
-  options: { now: Date; deadline: Date },
+  options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisOutcome> {
   const clock = await householdClock(db, scope, options.now);
   const input = await buildAnalysisInput(scope, "monthly", clock, options.now);
@@ -324,6 +327,13 @@ export async function runMonthlyAnalysisForHousehold(
   }
   const result = await generateReading(deps.client, deps.prompt, input, "deep", options.deadline);
   await recordGeneration(db, scope, id, result);
+  if (result.status === "succeeded") {
+    // Best effort, after the reading is stored (ADR-0012).
+    await (options.notifier ?? createNotifierFromEnv()).notifyHousehold(db, scope, {
+      kind: "monthly_analysis_ready",
+      month: input.month,
+    });
+  }
   return { status: result.status };
 }
 
@@ -347,12 +357,13 @@ export type MonthlyAnalysisStep = MonthlyAnalysisResult | { error: string };
 export async function runMonthlyAnalysis(
   db: Database,
   deps: AnalysisDeps,
-  options: { now: Date; deadline: Date },
+  options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisStep> {
   const { client } = deps;
   if (client === null) {
     return { ok: true, disabled: true, succeeded: 0, failed: 0, skipped: 0, unreached: 0 };
   }
+  const notifier = options.notifier ?? createNotifierFromEnv();
   try {
     const scopes = await listHouseholdsWithAccounts(db);
     const counts = { succeeded: 0, failed: 0, skipped: 0, unreached: 0 };
@@ -370,7 +381,7 @@ export async function runMonthlyAnalysis(
           db,
           scope,
           { ...deps, client },
-          options,
+          { ...options, notifier },
         );
         counts[outcome.status] += 1;
       } catch (error) {

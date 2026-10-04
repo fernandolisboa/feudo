@@ -141,7 +141,7 @@ const en = {
         title: "Legal bases",
         blocks: [
           [
-            "Performance of the contract (art. 7, V): sign-up, households, preferences and the service's emails.",
+            "Performance of the contract (art. 7, V): sign-up, households, preferences, and the service's emails and notifications.",
             "Consent (art. 7, I): reading your banks and everything that comes from it: credentials, accounts, transactions, annotations, calculations and the analyst reading. You can withdraw it whenever you want, as Your rights explains.",
             "Legitimate interest (art. 7, IX): access log, usage controls and technical logs, to protect your data, prevent abuse and investigate incidents.",
           ],
@@ -157,6 +157,7 @@ const en = {
             "Vercel (United States): hosts the app and keeps the technical logs.",
             "Neon (United States): hosts the database where all of this is kept.",
             "Resend (United States): sends Feudo's emails (confirmation, sign-in link, password reset, invites and deletion notices) and receives each message's address and content.",
+            "Your browser's notification service (Google, Apple, Microsoft or Mozilla, depending on the device; United States): if you turn notifications on, delivers each one to the device. It receives the device's address and the message encrypted end to end, which it cannot read; the message says only what happened and where, never amounts.",
             "Household members: see your name and email, the accounts in the household with their balances and transactions, and what is calculated from them. Nobody but you sees your credentials or manages your connections.",
           ],
           "The CDI, Selic and IPCA indices come from the Central Bank (SGS); no data of yours is sent in that request.",
@@ -166,7 +167,7 @@ const en = {
       {
         title: "International transfer",
         blocks: [
-          "Anthropic, Vercel, Neon and Resend are in the United States, so your data is transferred outside Brazil (LGPD art. 33). These companies process the data on Feudo's behalf, under the contracts and data-protection safeguards they offer their customers.",
+          "Anthropic, Vercel, Neon, Resend and the browsers' notification services are in the United States, so your data is transferred outside Brazil (LGPD art. 33). These companies process the data on Feudo's behalf, under the contracts and data-protection safeguards they offer their customers.",
         ],
       },
       {
@@ -181,6 +182,7 @@ const en = {
             "Access log: 12 months. If you delete your sign-up, the entries stay until they complete 12 months, without identifying you; if the household is deleted, its entries are erased.",
             "Invites: valid for 24 hours; expired or cancelled ones are erased every day.",
             "Sign-in, confirmation and password-reset links: until they expire; expired ones are erased every day.",
+            "Notifications: the address of each device where you turned them on, until you turn them off there, sign out of that browser or ask to delete your sign-up.",
             "Usage controls: Meu Pluggy authentication attempts, 15 minutes; manual syncs, 48 hours.",
             "Technical logs: Vercel's default period.",
           ],
@@ -191,7 +193,7 @@ const en = {
         title: "Your rights",
         blocks: [
           [
-            "Confirmation and access: in Preferences, Download my data produces a file with your data: sign-up (with your sign-in sessions and the acceptance of these documents), preferences and tutorials, the households you belong to and your role in each, your Meu Pluggy credentials (dates only, never the secret), consents, connections, accounts, investments, transactions, the annotations you made and your access log. It does not include data that belongs to the whole household (settings, invites, analyst readings) or short-lived usage controls; ask for them at {contact}. You can download it up to 3 times every 24 hours, and each download shows in the access log. The download needs an active household; if you are in none, write to {contact} and we will send you the file.",
+            "Confirmation and access: in Preferences, Download my data produces a file with your data: sign-up (with your sign-in sessions and the acceptance of these documents), preferences and tutorials, the households you belong to and your role in each, your Meu Pluggy credentials (dates only, never the secret), consents, connections, accounts, investments, transactions, the annotations you made, your access log and the devices where you turned notifications on (only the service and the date). It does not include data that belongs to the whole household (settings, invites, analyst readings) or short-lived usage controls; ask for them at {contact}. You can download it up to 3 times every 24 hours, and each download shows in the access log. The download needs an active household; if you are in none, write to {contact} and we will send you the file.",
             "Portability: the same file, in an open format (JSON) that another service can read.",
             "Correction: what comes from the bank is corrected at the bank and arrives with the next sync; to correct your name or email, write to {contact}.",
             "Withdrawing consent: in Your connections, removing your credentials stops the sync and destroys them at once, and deleting a connection erases its accounts with their transactions. Revoking Feudo's access in Meu Pluggy only stops future syncs: what was already read stays here until you delete your connections.",
@@ -357,7 +359,7 @@ const ptBR = {
         title: "Bases legais",
         blocks: [
           [
-            "Execução do contrato (art. 7º, V): cadastro, casas, preferências e e-mails do serviço.",
+            "Execução do contrato (art. 7º, V): cadastro, casas, preferências, e-mails e notificações do serviço.",
             "Consentimento (art. 7º, I): a leitura dos seus bancos e tudo o que vem dela: credenciais, contas, transações, anotações, cálculos e a leitura do analista. Você pode revogá-lo quando quiser, como explica Seus direitos.",
             "Legítimo interesse (art. 7º, IX): registro de acesso, controles de uso e registros técnicos, para proteger seus dados, evitar abuso e investigar incidentes.",
           ],
@@ -373,6 +375,7 @@ const ptBR = {
             "Vercel (Estados Unidos): hospeda o aplicativo e guarda os registros técnicos.",
             "Neon (Estados Unidos): hospeda o banco de dados onde tudo isso fica guardado.",
             "Resend (Estados Unidos): envia os e-mails do Feudo (confirmação, link de entrada, redefinição de senha, convites e avisos de exclusão) e recebe o endereço e o conteúdo de cada mensagem.",
+            "Serviço de notificações do seu navegador (Google, Apple, Microsoft ou Mozilla, conforme o aparelho; Estados Unidos): se você ativar as notificações, entrega cada uma ao aparelho. Recebe o endereço do aparelho e a mensagem criptografada de ponta a ponta, que ele não consegue ler; a mensagem diz só o que aconteceu e onde, nunca valores.",
             "Membros da casa: veem seu nome e e-mail, as contas que estão na casa, com saldos e transações, e o que é calculado a partir delas. Ninguém além de você vê suas credenciais ou administra suas conexões.",
           ],
           "Os índices CDI, Selic e IPCA vêm do Banco Central (SGS); nessa consulta, nenhum dado seu é enviado.",
@@ -382,7 +385,7 @@ const ptBR = {
       {
         title: "Transferência internacional",
         blocks: [
-          "Anthropic, Vercel, Neon e Resend ficam nos Estados Unidos, então seus dados são transferidos para fora do Brasil (art. 33 da LGPD). Essas empresas tratam os dados em nome do Feudo, conforme os contratos e as garantias de proteção de dados que oferecem a seus clientes.",
+          "Anthropic, Vercel, Neon, Resend e os serviços de notificação dos navegadores ficam nos Estados Unidos, então seus dados são transferidos para fora do Brasil (art. 33 da LGPD). Essas empresas tratam os dados em nome do Feudo, conforme os contratos e as garantias de proteção de dados que oferecem a seus clientes.",
         ],
       },
       {
@@ -397,6 +400,7 @@ const ptBR = {
             "Registro de acesso: 12 meses. Se você excluir seu cadastro, os registros continuam até completar os 12 meses, sem identificar você; se a casa for excluída, os registros dela são apagados.",
             "Convites: valem 24 horas; os vencidos ou cancelados são apagados todo dia.",
             "Links de entrada, de confirmação e de redefinição de senha: até vencerem; os vencidos são apagados todo dia.",
+            "Notificações: o endereço de cada aparelho em que você as ativou, até você desativá-las nele, sair desse navegador ou pedir a exclusão do cadastro.",
             "Controles de uso: tentativas de autenticação no Meu Pluggy, 15 minutos; sincronizações manuais, 48 horas.",
             "Registros técnicos: o prazo padrão da Vercel.",
           ],
@@ -407,7 +411,7 @@ const ptBR = {
         title: "Seus direitos",
         blocks: [
           [
-            "Confirmação e acesso: em Preferências, Baixar meus dados gera um arquivo com os seus dados: cadastro (com suas sessões de acesso e o aceite destes documentos), preferências e tutoriais, as casas de que você participa e seu papel em cada uma, suas credenciais do Meu Pluggy (só as datas, nunca o segredo), consentimentos, conexões, contas, investimentos, transações, as anotações que você fez e seu registro de acesso. Não entram os dados que são da casa toda (configurações, convites, leituras do analista) nem os controles de uso de curta duração; se quiser, escreva para {contact}. São até 3 downloads a cada 24 horas, e cada um aparece no registro de acesso. Para baixar, você precisa estar numa casa; se não estiver em nenhuma, escreva para {contact} e enviamos o arquivo.",
+            "Confirmação e acesso: em Preferências, Baixar meus dados gera um arquivo com os seus dados: cadastro (com suas sessões de acesso e o aceite destes documentos), preferências e tutoriais, as casas de que você participa e seu papel em cada uma, suas credenciais do Meu Pluggy (só as datas, nunca o segredo), consentimentos, conexões, contas, investimentos, transações, as anotações que você fez, seu registro de acesso e os aparelhos em que você ativou as notificações (só o serviço e a data). Não entram os dados que são da casa toda (configurações, convites, leituras do analista) nem os controles de uso de curta duração; se quiser, escreva para {contact}. São até 3 downloads a cada 24 horas, e cada um aparece no registro de acesso. Para baixar, você precisa estar numa casa; se não estiver em nenhuma, escreva para {contact} e enviamos o arquivo.",
             "Portabilidade: o mesmo arquivo, num formato aberto (JSON) que outro serviço consegue ler.",
             "Correção: o que vem do banco é corrigido no banco e chega na próxima sincronização; para corrigir seu nome ou e-mail, escreva para {contact}.",
             "Revogação do consentimento: em Suas conexões, remover suas credenciais interrompe a sincronização e as destrói na hora, e excluir uma conexão apaga as contas dela, com as transações. Revogar o acesso do Feudo no Meu Pluggy só interrompe as próximas sincronizações: o que já foi lido continua aqui até você excluir suas conexões.",

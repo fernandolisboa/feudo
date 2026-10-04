@@ -169,6 +169,13 @@
       "when": 1791058449347,
       "tag": "0023_financial_data_access",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791132700286,
+      "tag": "0024_push_notifications",
+      "breakpoints": true
     }
   ]
 }

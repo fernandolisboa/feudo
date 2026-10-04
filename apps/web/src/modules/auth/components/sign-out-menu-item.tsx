@@ -5,6 +5,7 @@ import { LogOut } from "lucide-react";
 import { DropdownMenuItem } from "@/ui/dropdown-menu";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
 import { clearOfflineCopies } from "@/platform/pwa/offline-copies";
+import { unsubscribeThisDevice } from "@/platform/pwa/push-device";
 // Direct file import, not the auth module's index: this file is bundled for
 // the client, and the auth index also re-exports getCurrentSession, which
 // reaches "next/headers". signOutAction is itself a "use server" export,
@@ -15,10 +16,11 @@ import { t } from "../strings";
 export function SignOutMenuItem() {
   const { errorMessage, isPending, run } = useActionInTransition(t.errors.signOutFailed);
 
-  // The copies go even when the sign-out itself cannot reach the server:
-  // whoever pressed Sair is leaving this browser (ADR-0007).
+  // The copies and the notifications go even when the sign-out itself cannot
+  // reach the server: whoever pressed Sair is leaving this browser (ADR-0007,
+  // ADR-0012).
   function handleSignOut() {
-    const clearing = clearOfflineCopies();
+    const clearing = Promise.all([clearOfflineCopies(), unsubscribeThisDevice().catch(() => null)]);
     run(async () => {
       await clearing;
       return signOutAction();

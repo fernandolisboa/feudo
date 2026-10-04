@@ -143,7 +143,7 @@ _Avoid_: emergency fund goal, safety net
 How many months of fixed cost the target covers. Default 6, adjustable per household between 3 and 12. Changing it recomputes the live target at once; it never records a month-close entry or triggers a notice by itself. Only the household's owner or admin can change it (Role); a member sees it read-only.
 
 **Reserve target notice**:
-A household-wide notice, created only when a month close moves the recorded target by strictly more than 10% from the latest earlier recorded one. The previous record's average fixed cost is rescaled to the household's _current_ reserve multiple before the comparison, so a household that only changed its multiple is never notified for that reason alone. Any member can dismiss it, for the whole household. Shown as a dismissible panel on the Reserva page and, compactly, as a banner on Visão geral; in-app only until web push ships (#29).
+A household-wide notice, created only when a month close moves the recorded target by strictly more than 10% from the latest earlier recorded one. The previous record's average fixed cost is rescaled to the household's _current_ reserve multiple before the comparison, so a household that only changed its multiple is never notified for that reason alone. Any member can dismiss it, for the whole household. Shown as a dismissible panel on the Reserva page and, compactly, as a banner on Visão geral; each member who turned notifications on also gets a push notification when it is created (ADR-0012).
 _Avoid_: reserve alert, target warning
 
 **Reserve position**:
@@ -209,3 +209,9 @@ _Avoid_: access log content describing what was read, beyond its kind
 **Offline copy**:
 The last page of a signed-in screen (Visão geral, Transações, Reserva, Bancos, Casa, Categorias, Como usar) that the browser keeps on the device, so the installed app can show it without network, with "Última atualização" saying when the server read it (ADR-0007). Shown for at most 24 hours (an older one is deleted the next time Feudo opens), scoped to one person in one household, and erased on sign-out, household switch, account-deletion request, on reaching a signed-out or household-less screen and whenever the signed-in person or household changes. Offline, every write is refused with "Nada foi salvo: você está sem conexão."; nothing is queued. A screen with no copy shows "Sem conexão".
 _Avoid_: offline mode with editing, sync queue, cache (in copy)
+
+### Notifications
+
+**Push notification**:
+A message the browser shows outside Feudo, on a device where the person turned notifications on in Preferências ("Receber notificações neste aparelho"; ADR-0012). Opt-in per person and per device, and off again on sign-out. Three events send one: the reserve target notice (to every member of the household), the monthly analyst reading being ready (every member), and one of the person's own bank connections failing three attempts in a row (only its owner, once per streak). It names the household or the bank and says what happened, never an amount, and opens the screen it is about. Nobody whose account deletion is pending, and no household pending deletion, gets one. On iPhone it needs Feudo added to the Home Screen.
+_Avoid_: alert, push (alone, in copy), any amount in the message

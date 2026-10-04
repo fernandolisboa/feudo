@@ -8,6 +8,7 @@ import {
   householdScope,
   lockMembershipScope,
 } from "@/modules/households";
+import { createNotifierFromEnv, type Notifier } from "@/modules/notifications";
 import { localDateOf } from "@feudo/core";
 
 import { errorName } from "@/lib/error-name";
@@ -50,7 +51,7 @@ import {
 } from "./repository";
 import { scopeForUser, userScope } from "./scope";
 import type { ConnectionSyncFailure } from "./sync-status";
-import { shouldNarrowFirstSync } from "./sync-status";
+import { reachedRepeatedFailure, shouldNarrowFirstSync } from "./sync-status";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 import type {
   AddConnectionFormInput,
@@ -63,12 +64,17 @@ import type {
 export type SyncDeps = {
   provider: DataProvider;
   encryptionKey: string;
+  notifier: Notifier;
 };
 
 // Throws MissingSecretError / InvalidDataProviderError when the environment
 // is incomplete: the actions map those to one "misconfigured" message.
 export function createSyncDeps(env: SyncEnv = process.env): SyncDeps {
-  return { provider: getDataProvider(env), encryptionKey: readEncryptionKey(env) };
+  return {
+    provider: getDataProvider(env),
+    encryptionKey: readEncryptionKey(env),
+    notifier: createNotifierFromEnv(env),
+  };
 }
 
 const PROVIDER_KIND: DataProviderKind = "pluggy";
@@ -681,6 +687,27 @@ async function syncConnection(
   }
 }
 
+// Best effort by the notifier's own contract: it never throws (ADR-0012).
+async function notifyIfRepeatedFailure(
+  db: Database,
+  deps: SyncDeps,
+  connection: ConnectionToSync,
+  consecutiveFailures: number,
+): Promise<void> {
+  if (!reachedRepeatedFailure(consecutiveFailures)) {
+    return;
+  }
+  await deps.notifier.notifyUser(
+    db,
+    { userId: connection.userId },
+    {
+      kind: "sync_failing",
+      connectionId: connection.id,
+      institutionName: connection.institutionName,
+    },
+  );
+}
+
 export type ConnectionsSyncResult = {
   ok: boolean;
   synced: number;
@@ -800,8 +827,13 @@ async function syncConnections(
         // Recorded before counting it as failed: a delete racing this
         // write (#79) throws ConnectionNotOwnedError, and the connection
         // belongs in `gone`, not double-counted here too.
-        await repository.recordSyncFailure(db, connection.id, outcome.status);
+        const consecutiveFailures = await repository.recordSyncFailure(
+          db,
+          connection.id,
+          outcome.status,
+        );
         failed += 1;
+        await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures);
       }
     } catch (error) {
       if (error instanceof ConnectionNotOwnedError) {
@@ -819,7 +851,12 @@ async function syncConnections(
           // if this write itself fails too — including a delete racing it —
           // the connection is still counted failed, once, below; it is
           // never also counted gone for a race on this recovery write.
-          await repository.recordSyncFailure(db, connection.id, "failed");
+          const consecutiveFailures = await repository.recordSyncFailure(
+            db,
+            connection.id,
+            "failed",
+          );
+          await notifyIfRepeatedFailure(db, deps, connection, consecutiveFailures);
         } catch {
           // Swallowed: already logged above, and failed is counted either way.
         }

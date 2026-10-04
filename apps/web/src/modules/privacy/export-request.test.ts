@@ -50,6 +50,7 @@ const EMPTY_DOCUMENT: ExportDocument = {
     reserveMarks: [],
   },
   financialDataAccess: [],
+  pushSubscriptions: [],
 };
 
 function deps(overrides: Partial<ExportRequestDeps> = {}): Partial<ExportRequestDeps> {

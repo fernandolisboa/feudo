@@ -17,6 +17,7 @@ import {
   OFFLINE_COPIES_SCOPE_KEY,
   requestOfflineCopy,
 } from "@/platform/pwa/offline-copies";
+import { unsubscribeThisDevice } from "@/platform/pwa/push-device";
 
 import { lastUpdatedLabel } from "../offline-freshness";
 import { t } from "../strings";
@@ -93,6 +94,10 @@ function readStoredScope(): string | null | undefined {
   }
 }
 
+function personOf(scope: string): string {
+  return scope.split(":", 1)[0] ?? scope;
+}
+
 function storeScope(scope: string): void {
   try {
     window.localStorage.setItem(OFFLINE_COPIES_SCOPE_KEY, scope);
@@ -153,6 +158,11 @@ export function OfflineNotice({
     const storedScope = readStoredScope();
     if (storedScope === undefined || storedScope === scope) {
       return;
+    }
+    // Notifications follow the person, not the household (ADR-0012): only
+    // someone else on this browser stops them.
+    if (storedScope !== null && personOf(storedScope) !== personOf(scope)) {
+      void unsubscribeThisDevice().catch(() => null);
     }
     void clearOfflineCopies().then(() => {
       storeScope(scope);
