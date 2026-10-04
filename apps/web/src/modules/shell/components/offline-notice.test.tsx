@@ -134,6 +134,25 @@ describe("OfflineNotice", () => {
     search.remove();
   });
 
+  it("on a copy the service worker served offline, says so even when the browser claims to be online", () => {
+    const marker = document.createElement("meta");
+    marker.name = "feudo-offline-copy";
+    document.head.append(marker);
+    renderNotice({ renderedAt: "2026-10-04T13:32:00.000Z" });
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "Você está sem conexão. Nada pode ser alterado até a internet voltar.",
+    );
+    expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(submitted).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toBe("Nada foi salvo: você está sem conexão.");
+
+    setOnline(true);
+    expect(screen.queryByText(/Você está sem conexão/)).toBeNull();
+    expect(document.querySelector('meta[name="feudo-offline-copy"]')).toBeNull();
+  });
+
   it("online, lets the form through", () => {
     renderNotice();
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));

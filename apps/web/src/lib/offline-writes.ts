@@ -2,8 +2,29 @@ import type { ActionState } from "./action-state";
 
 export const WRITE_BLOCKED_EVENT = "feudo:write-blocked";
 
+// The service worker stamps a page it served from the offline copies because
+// the network failed. navigator.onLine alone misses that: a computer on a
+// network with no internet still reports itself online.
+export const OFFLINE_COPY_MARKER = "feudo-offline-copy";
+
+function offlineCopyMarker(): Element | null {
+  return typeof document === "undefined"
+    ? null
+    : document.querySelector(`meta[name="${OFFLINE_COPY_MARKER}"]`);
+}
+
+export function isServedOfflineCopy(): boolean {
+  return offlineCopyMarker() !== null;
+}
+
+// Called when the network is known to be back (the browser's online event, a
+// request that reached the server) while the stamped page is still on screen.
+export function noteReconnected(): void {
+  offlineCopyMarker()?.remove();
+}
+
 export function isBrowserOffline(): boolean {
-  return typeof navigator !== "undefined" && !navigator.onLine;
+  return (typeof navigator !== "undefined" && !navigator.onLine) || isServedOfflineCopy();
 }
 
 // Offline, a write does nothing and says so (ADR-0007): there is no queue to

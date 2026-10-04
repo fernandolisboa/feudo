@@ -1,5 +1,5 @@
 import type { RouteMatchCallback, RouteMatchCallbackOptions } from "serwist";
-import { CacheFirst, NetworkFirst, NetworkOnly, Strategy } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Strategy } from "serwist";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -205,6 +205,27 @@ describe("what the offline-copies cache accepts", () => {
     discardCopiesInFlight();
     expect(await finishHandling(startedBeforeClear, html())).toBe(false);
     expect(await accepted(html())).toBe(true);
+  });
+
+  it("stamps a copy it serves offline, so the page knows it is one", async () => {
+    const stamp = plugins.find(
+      (plugin) => plugin.cachedResponseWillBeUsed && !(plugin instanceof ExpirationPlugin),
+    );
+    const served = (await stamp?.cachedResponseWillBeUsed?.({
+      cacheName: OFFLINE_COPIES_CACHE,
+      request,
+      cachedResponse: new Response("<!DOCTYPE html><html><head><title>Casa</title></head></html>", {
+        headers: { "content-type": "text/html", "content-length": "60" },
+      }),
+      event,
+      state: {},
+    })) as Response | null | undefined;
+
+    expect(await served?.text()).toBe(
+      '<!DOCTYPE html><html><head><meta name="feudo-offline-copy" content="1"><title>Casa</title></head></html>',
+    );
+    expect(served?.headers.get("content-length")).toBeNull();
+    expect(served?.headers.get("content-type")).toBe("text/html");
   });
 
   it("refuses errors and non-HTML responses", async () => {

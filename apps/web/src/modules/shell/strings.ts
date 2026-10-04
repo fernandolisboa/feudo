@@ -121,6 +121,7 @@ const en = {
     today: "today, {time}",
     yesterday: "yesterday, {time}",
     refresh: "Update",
+    retry: "Try again",
     writeBlocked: "Nothing was saved: you're offline.",
     fallbackTitle: "No connection",
     fallbackBody:
@@ -254,6 +255,7 @@ const ptBR = {
     today: "hoje, {time}",
     yesterday: "ontem, {time}",
     refresh: "Atualizar",
+    retry: "Tentar de novo",
     writeBlocked: "Nada foi salvo: você está sem conexão.",
     fallbackTitle: "Sem conexão",
     fallbackBody:

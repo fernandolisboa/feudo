@@ -5,7 +5,12 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
-import { isBrowserOffline, WRITE_BLOCKED_EVENT } from "@/lib/offline-writes";
+import {
+  isBrowserOffline,
+  isServedOfflineCopy,
+  noteReconnected,
+  WRITE_BLOCKED_EVENT,
+} from "@/lib/offline-writes";
 import {
   clearOfflineCopies,
   isOfflineCopyScreen,
@@ -50,6 +55,34 @@ function subscribeToNavigationData(onChange: () => void): () => void {
   };
 }
 
+const reconnectListeners = new Set<() => void>();
+
+function markReconnected(): void {
+  noteReconnected();
+  for (const listener of reconnectListeners) {
+    listener();
+  }
+}
+
+function subscribeToReconnect(onChange: () => void): () => void {
+  reconnectListeners.add(onChange);
+  return () => {
+    reconnectListeners.delete(onChange);
+  };
+}
+
+// A copy served offline stays on screen when the network comes back without
+// the browser noticing (it believed it was online all along); a request that
+// reaches the server is the proof.
+async function confirmReconnected(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 // undefined when the browser refuses storage, so the check is skipped rather
 // than clearing the copies on every load.
 function readStoredScope(): string | null | undefined {
@@ -85,6 +118,12 @@ export function OfflineNotice({
     () => navigator.onLine,
     () => true,
   );
+  const servedOfflineCopy = useSyncExternalStore(
+    subscribeToReconnect,
+    isServedOfflineCopy,
+    () => false,
+  );
+  const offline = !online || servedOfflineCopy;
   const documentStartedAt = useSyncExternalStore(
     noopSubscribe,
     () => performance.timeOrigin,
@@ -128,13 +167,25 @@ export function OfflineNotice({
       isFirstLocation.current = false;
       return;
     }
-    if (isBrowserOffline()) {
+    function keepCopy(): void {
+      recordNavigationData(Date.now());
+      if (isOfflineCopyScreen(pathname)) {
+        requestOfflineCopy(window.location.href);
+      }
+    }
+    if (!navigator.onLine) {
       return;
     }
-    recordNavigationData(Date.now());
-    if (isOfflineCopyScreen(pathname)) {
-      requestOfflineCopy(window.location.href);
+    if (!isServedOfflineCopy()) {
+      keepCopy();
+      return;
     }
+    void confirmReconnected().then((reachable) => {
+      if (reachable) {
+        markReconnected();
+        keepCopy();
+      }
+    });
   }, [pathname, search]);
 
   useEffect(() => {
@@ -153,6 +204,7 @@ export function OfflineNotice({
     }
     function clearWriteBlocked(): void {
       setWriteBlocked(false);
+      markReconnected();
     }
     // Capture on window runs before React's own listeners, so an
     // action-backed form never starts its server action offline.
@@ -166,17 +218,27 @@ export function OfflineNotice({
     };
   }, []);
 
-  if (online && !showingCopy) {
+  if (!offline && !showingCopy) {
     return null;
   }
 
   const lastUpdated = lastUpdatedLabel(new Date(lastUpdatedAt), new Date(), timeZone);
 
   return (
-    <div data-offline-notice={online ? "copy" : "offline"}>
+    <div data-offline-notice={offline ? "offline" : "copy"}>
       <Notice
         action={
-          online ? (
+          offline ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              {t.offline.retry}
+            </Button>
+          ) : (
             <Button
               variant="outline"
               size="sm"
@@ -186,11 +248,11 @@ export function OfflineNotice({
             >
               {t.offline.refresh}
             </Button>
-          ) : null
+          )
         }
       >
-        {online ? t.offline.copy : t.offline.unavailable} {lastUpdated}
-        {writeBlocked && !online ? (
+        {offline ? t.offline.unavailable : t.offline.copy} {lastUpdated}
+        {writeBlocked && offline ? (
           <strong role="alert" className="mt-1 block font-semibold">
             {t.offline.writeBlocked}
           </strong>

@@ -5,10 +5,6 @@ import { lastEmailLink, signUpVerifyAndSignIn, uniqueEmail } from "./support/aut
 
 const OFFLINE_COPIES_CACHE = "feudo-offline-copies";
 
-// The headless shell keeps navigator.onLine true under setOffline; the full
-// Chromium build reports it the way an installed app sees it.
-test.use({ channel: "chromium" });
-
 async function waitForServiceWorker(page: Page): Promise<void> {
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;

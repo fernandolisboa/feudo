@@ -1,6 +1,8 @@
 import type { PrecacheOptions, RuntimeCaching, SerwistOptions, SerwistPlugin } from "serwist";
 import { CacheExpiration, CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly } from "serwist";
 
+import { OFFLINE_COPY_MARKER } from "@/lib/offline-writes";
+
 import {
   deleteCachesHoldingCopies,
   isOfflineCopyScreen,
@@ -77,6 +79,25 @@ export function expireOldCopies(): Promise<void> {
   return new CacheExpiration(OFFLINE_COPIES_CACHE, copiesExpirationConfig).expireEntries();
 }
 
+// Only ever called when the network failed (NetworkFirst reads the cache
+// only then), so the page can tell it is a copy shown offline.
+async function stampServedOffline(cached: Response): Promise<Response> {
+  const html = await cached.text();
+  const stamped = html.replace(
+    /<head[^>]*>/,
+    (head) => `${head}<meta name="${OFFLINE_COPY_MARKER}" content="1">`,
+  );
+  const headers = new Headers(cached.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  return new Response(stamped, { status: cached.status, statusText: cached.statusText, headers });
+}
+
+const stampCopiesServedOffline: SerwistPlugin = {
+  cachedResponseWillBeUsed: async ({ cachedResponse }) =>
+    cachedResponse ? stampServedOffline(cachedResponse) : null,
+};
+
 // Order matters: the first matching rule answers. Anything no rule matches
 // (cross-origin requests, server actions, other methods) goes to the network
 // untouched.
@@ -109,6 +130,7 @@ export const runtimeCaching: RuntimeCaching[] = [
         refuseCopiesStartedBeforeAClear,
         onlyRenderedScreens,
         new ExpirationPlugin(copiesExpirationConfig),
+        stampCopiesServedOffline,
       ],
     }),
   },

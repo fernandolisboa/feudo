@@ -2,7 +2,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionState } from "./action-state";
-import { blockWriteWhenOffline, refuseWhenOffline, WRITE_BLOCKED_EVENT } from "./offline-writes";
+import {
+  blockWriteWhenOffline,
+  isBrowserOffline,
+  noteReconnected,
+  OFFLINE_COPY_MARKER,
+  refuseWhenOffline,
+  WRITE_BLOCKED_EVENT,
+} from "./offline-writes";
 
 type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -59,5 +66,18 @@ describe("refuseWhenOffline", () => {
 
     expect(result).toEqual({ status: "success", message: "ok" });
     expect(action).toHaveBeenCalledWith({ status: "idle" }, formData);
+  });
+});
+
+describe("a copy the service worker served offline", () => {
+  it("counts as offline even when the browser says it is online, until the network is back", () => {
+    setOnline(true);
+    const marker = document.createElement("meta");
+    marker.name = OFFLINE_COPY_MARKER;
+    document.head.append(marker);
+
+    expect(isBrowserOffline()).toBe(true);
+    noteReconnected();
+    expect(isBrowserOffline()).toBe(false);
   });
 });
