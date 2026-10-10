@@ -3,6 +3,7 @@ import {
   compareBanks,
   localDateOf,
   type BankCandidate,
+  type BankComparison,
   type BankProfileCriterion,
   type BankScore,
   type CriteriaWeights,
@@ -44,6 +45,15 @@ export type CurrentBankRow = {
   review: ReviewView;
 };
 
+export type ReviewedBankRow = {
+  institutionId: string;
+  positionLabel: string;
+  name: string;
+  tag: string | null;
+  scoreLabel: string;
+  review: ReviewView;
+};
+
 export type CandidateView = {
   institutionId: string;
   rankLabel: string;
@@ -67,6 +77,7 @@ export type BanksPageProps = {
   baselineNotice: string | null;
   unrecognizedNotice: string | null;
   candidates: CandidateView[];
+  reviewed: ReviewedBankRow[];
 };
 
 function institutionName(institutionId: string): string {
@@ -117,6 +128,26 @@ function currentRow(score: BankScore, today: string): CurrentBankRow {
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
   };
+}
+
+function reviewedRows(comparison: BankComparison, today: string): ReviewedBankRow[] {
+  const currentIds = new Set(comparison.current.map((score) => score.institutionId));
+  const candidateIds = new Set(comparison.candidates.map((score) => score.institutionId));
+  return comparison.reviewed.map((score, index) => ({
+    institutionId: score.institutionId,
+    positionLabel:
+      score.score === null
+        ? t.reviewed.noPosition
+        : interpolate(t.candidates.rank, "{rank}", String(index + 1)),
+    name: institutionName(score.institutionId),
+    tag: currentIds.has(score.institutionId)
+      ? t.reviewed.current
+      : candidateIds.has(score.institutionId)
+        ? t.reviewed.candidate
+        : null,
+    scoreLabel: scoreLabel(score.score),
+    review: reviewView(score.reviewedAt, today),
+  }));
 }
 
 function candidateView(
@@ -207,5 +238,6 @@ export async function buildBanksPageProps(
     candidates: comparison.candidates.map((candidate, index) =>
       candidateView(candidate, index, comparison.baseline, today),
     ),
+    reviewed: reviewedRows(comparison, today),
   };
 }

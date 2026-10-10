@@ -18,6 +18,7 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 import { initialActionState } from "@/lib/action-state";
 import type { Database } from "@/platform/db/client";
 import { resetCriteriaWeightsAction, updateCriteriaWeightsAction } from "./actions";
+import { BANK_PROFILES } from "./bank-profiles";
 import { getBanksPageProps } from "./page-props";
 import { t } from "./strings";
 
@@ -70,6 +71,10 @@ describe("Bancos server boundary (integration)", () => {
       expect(props.currentRows).toEqual([]);
       expect(props.candidates).toHaveLength(3);
       expect(props.candidates.every((candidate) => candidate.review.label.length > 0)).toBe(true);
+      expect(props.reviewed.map((row) => row.institutionId)).toEqual(
+        expect.arrayContaining(["bradesco", "itau"]),
+      );
+      expect(props.reviewed).toHaveLength(BANK_PROFILES.length);
     });
   });
 
@@ -87,6 +92,9 @@ describe("Bancos server boundary (integration)", () => {
       const props = await getBanksPageProps(userA.session, NOW);
 
       expect(props.currentRows.map((row) => row.name)).toEqual(["Nubank"]);
+      expect(props.reviewed.find((row) => row.institutionId === "nubank")?.tag).toBe(
+        t.reviewed.current,
+      );
       expect(props.candidates.map((candidate) => candidate.institutionId)).not.toContain("nubank");
       expect(props.baselineNotice).toBeNull();
       expect(props.unrecognizedNotice).toContain("MeuPluggy");

@@ -35,6 +35,7 @@ export type BankCandidate = BankScore & {
 
 export type BankComparison = {
   baseline: "current" | "median";
+  reviewed: BankScore[];
   current: BankScore[];
   candidates: BankCandidate[];
 };
@@ -182,10 +183,11 @@ function prosAndCons(
   };
 }
 
-// The bank comparison of ADR-0006: the top candidates the household does not
-// use yet, each set against the best score the household's own institutions
-// already reach on every weighted criterion. A household whose institutions
-// are all unrecognised is compared against the median bank instead.
+// The bank comparison of ADR-0006: every profiled institution in score order,
+// and the top candidates the household does not use yet, each set against the
+// best score the household's own institutions already reach on every weighted
+// criterion. A household whose institutions are all unrecognised is compared
+// against the median bank instead.
 export function compareBanks(input: {
   profiles: readonly ScorableBankProfile[];
   weights: CriteriaWeights;
@@ -217,6 +219,7 @@ export function compareBanks(input: {
 
   return {
     baseline,
+    reviewed: ranked.map(withoutInternals),
     current: current.map(withoutInternals),
     candidates,
   };

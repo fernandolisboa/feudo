@@ -92,6 +92,40 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         missingEvidence: "Evidência insuficiente em: Qualidade do app, Segurança.",
       },
     ],
+    reviewed: [
+      {
+        institutionId: "nubank",
+        positionLabel: "1º",
+        name: "Nubank",
+        tag: t.reviewed.candidate,
+        scoreLabel: "77",
+        review: { label: "Revisado em 09/09/2026", stale: false },
+      },
+      {
+        institutionId: "btg",
+        positionLabel: "2º",
+        name: "BTG Pactual",
+        tag: t.reviewed.candidate,
+        scoreLabel: "76",
+        review: { label: "Revisado em 01/03/2026", stale: true },
+      },
+      {
+        institutionId: "itau",
+        positionLabel: "3º",
+        name: "Itaú",
+        tag: t.reviewed.current,
+        scoreLabel: "60",
+        review: { label: "Revisado em 09/09/2026", stale: false },
+      },
+      {
+        institutionId: "bradesco",
+        positionLabel: "4º",
+        name: "Bradesco",
+        tag: null,
+        scoreLabel: "53",
+        review: { label: "Revisado em 09/09/2026", stale: false },
+      },
+    ],
     ...overrides,
   };
 }
@@ -136,12 +170,25 @@ describe("BanksView", () => {
     expect(btg.getByText("Evidência insuficiente em: Qualidade do app, Segurança.")).not.toBeNull();
   });
 
-  it("lists the banks the household already uses with their review date", () => {
+  it("lists every reviewed bank in score order, marking the household's and the candidates", () => {
     render(<BanksView {...buildProps()} />);
 
-    const row = screen.getByRole("row", { name: /Itaú/ });
-    expect(within(row).getByText("60")).not.toBeNull();
-    expect(within(row).getByText("Revisado em 09/09/2026")).not.toBeNull();
+    const table = within(screen.getByRole("table"));
+    const rows = table.getAllByRole("row").slice(1);
+    expect(rows.map((row) => within(row).getAllByRole("cell")[1]?.textContent)).toEqual([
+      `Nubank${t.reviewed.candidate}`,
+      `BTG Pactual${t.reviewed.candidate}`,
+      `Itaú${t.reviewed.current}`,
+      "Bradesco",
+    ]);
+
+    const itau = table.getByRole("row", { name: /Itaú/ });
+    expect(within(itau).getByText("3º")).not.toBeNull();
+    expect(within(itau).getByText("60")).not.toBeNull();
+    expect(within(itau).getByText("Revisado em 09/09/2026")).not.toBeNull();
+
+    const bradesco = table.getByRole("row", { name: /Bradesco/ });
+    expect(within(bradesco).getByText("53")).not.toBeNull();
   });
 
   it("offers to connect a bank when the household has no accounts", () => {
@@ -159,7 +206,6 @@ describe("BanksView", () => {
     expect(screen.getByRole("link", { name: t.current.connectAction }).getAttribute("href")).toBe(
       "/conectar-banco",
     );
-    expect(screen.queryByText(t.current.title)).toBeNull();
   });
 
   it("names the connections it could not recognise", () => {
