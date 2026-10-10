@@ -45,7 +45,7 @@ export type CurrentBankRow = {
   review: ReviewView;
 };
 
-export type RankingRow = {
+export type ReviewedBankRow = {
   institutionId: string;
   positionLabel: string;
   name: string;
@@ -77,7 +77,7 @@ export type BanksPageProps = {
   baselineNotice: string | null;
   unrecognizedNotice: string | null;
   candidates: CandidateView[];
-  ranking: RankingRow[];
+  reviewed: ReviewedBankRow[];
 };
 
 function institutionName(institutionId: string): string {
@@ -130,17 +130,20 @@ function currentRow(score: BankScore, today: string): CurrentBankRow {
   };
 }
 
-function rankingRows(comparison: BankComparison, today: string): RankingRow[] {
+function reviewedRows(comparison: BankComparison, today: string): ReviewedBankRow[] {
   const currentIds = new Set(comparison.current.map((score) => score.institutionId));
   const candidateIds = new Set(comparison.candidates.map((score) => score.institutionId));
-  return comparison.ranking.map((score, index) => ({
+  return comparison.reviewed.map((score, index) => ({
     institutionId: score.institutionId,
-    positionLabel: interpolate(t.candidates.rank, "{rank}", String(index + 1)),
+    positionLabel:
+      score.score === null
+        ? t.reviewed.noPosition
+        : interpolate(t.candidates.rank, "{rank}", String(index + 1)),
     name: institutionName(score.institutionId),
     tag: currentIds.has(score.institutionId)
-      ? t.ranking.current
+      ? t.reviewed.current
       : candidateIds.has(score.institutionId)
-        ? t.ranking.candidate
+        ? t.reviewed.candidate
         : null,
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
@@ -235,6 +238,6 @@ export async function buildBanksPageProps(
     candidates: comparison.candidates.map((candidate, index) =>
       candidateView(candidate, index, comparison.baseline, today),
     ),
-    ranking: rankingRows(comparison, today),
+    reviewed: reviewedRows(comparison, today),
   };
 }

@@ -46,7 +46,7 @@ const en = {
     missingEvidence: "Insufficient evidence for: {criteria}.",
     noScore: "insufficient evidence",
   },
-  ranking: {
+  reviewed: {
     title: "All reviewed banks",
     meta: "score from 0 to 100 with the household's weights",
     position: "Position",
@@ -55,6 +55,7 @@ const en = {
     reviewedAt: "Reviewed",
     current: "you use it",
     candidate: "candidate",
+    noPosition: "—",
   },
   weights: {
     title: "Criteria weights",
@@ -145,7 +146,7 @@ const ptBR = {
     missingEvidence: "Evidência insuficiente em: {criteria}.",
     noScore: "evidência insuficiente",
   },
-  ranking: {
+  reviewed: {
     title: "Todos os bancos avaliados",
     meta: "nota de 0 a 100 com os pesos da casa",
     position: "Posição",
@@ -154,6 +155,7 @@ const ptBR = {
     reviewedAt: "Revisão",
     current: "vocês usam",
     candidate: "candidato",
+    noPosition: "—",
   },
   weights: {
     title: "Pesos dos critérios",

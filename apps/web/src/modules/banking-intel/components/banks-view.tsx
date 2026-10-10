@@ -94,7 +94,7 @@ export function BanksView(props: BanksPageProps) {
     baselineNotice,
     unrecognizedNotice,
     candidates,
-    ranking,
+    reviewed,
   } = props;
 
   return (
@@ -134,22 +134,22 @@ export function BanksView(props: BanksPageProps) {
 
       <section className="mb-8">
         <SectionHeader
-          title={t.ranking.title}
-          actions={<span className="text-muted-foreground text-[12px]">{t.ranking.meta}</span>}
+          title={t.reviewed.title}
+          actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
         />
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className={`${HEAD_CLASS} w-[1%] text-right`}>
-                {t.ranking.position}
+                {t.reviewed.position}
               </TableHead>
-              <TableHead className={HEAD_CLASS}>{t.ranking.bank}</TableHead>
-              <TableHead className={`${HEAD_CLASS} text-right`}>{t.ranking.score}</TableHead>
-              <TableHead className={HEAD_CLASS}>{t.ranking.reviewedAt}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t.reviewed.bank}</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>{t.reviewed.score}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t.reviewed.reviewedAt}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ranking.map((row) => (
+            {reviewed.map((row) => (
               <TableRow key={row.institutionId} className="h-[var(--density-row)]">
                 <TableCell className="text-muted-foreground text-right tabular-nums">
                   {row.positionLabel}

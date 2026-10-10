@@ -64,7 +64,7 @@
 | Average fixed cost                          | custo fixo médio                               |                                                                              |
 | Bank profile                                | perfil do banco                                | scores "nota de 0 a 100"                                                     |
 | Insufficient evidence                       | evidência insuficiente                         | a criterion with no citable source; shown without a score                    |
-| Bank comparison                             | comparação de bancos                           |                                                                              |
+| Bank comparison                             | comparação de bancos                           | full list "Todos os bancos avaliados"; tags "vocês usam", "candidato"        |
 | Criteria weights                            | pesos dos critérios                            |                                                                              |
 | Net real yield                              | rendimento real líquido                        | "depois do imposto e da inflação"                                            |
 | FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                                       |

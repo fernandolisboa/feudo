@@ -92,12 +92,12 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         missingEvidence: "Evidência insuficiente em: Qualidade do app, Segurança.",
       },
     ],
-    ranking: [
+    reviewed: [
       {
         institutionId: "nubank",
         positionLabel: "1º",
         name: "Nubank",
-        tag: t.ranking.candidate,
+        tag: t.reviewed.candidate,
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -105,7 +105,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         institutionId: "btg",
         positionLabel: "2º",
         name: "BTG Pactual",
-        tag: t.ranking.candidate,
+        tag: t.reviewed.candidate,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
       },
@@ -113,7 +113,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         institutionId: "itau",
         positionLabel: "3º",
         name: "Itaú",
-        tag: t.ranking.current,
+        tag: t.reviewed.current,
         scoreLabel: "60",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -176,9 +176,9 @@ describe("BanksView", () => {
     const table = within(screen.getByRole("table"));
     const rows = table.getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell")[1]?.textContent)).toEqual([
-      `Nubank${t.ranking.candidate}`,
-      `BTG Pactual${t.ranking.candidate}`,
-      `Itaú${t.ranking.current}`,
+      `Nubank${t.reviewed.candidate}`,
+      `BTG Pactual${t.reviewed.candidate}`,
+      `Itaú${t.reviewed.current}`,
       "Bradesco",
     ]);
 

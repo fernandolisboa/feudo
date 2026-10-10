@@ -50,7 +50,7 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         missingEvidence: null,
       },
     ],
-    ranking: [],
+    reviewed: [],
     ...overrides,
   };
 }

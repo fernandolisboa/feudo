@@ -71,10 +71,10 @@ describe("Bancos server boundary (integration)", () => {
       expect(props.currentRows).toEqual([]);
       expect(props.candidates).toHaveLength(3);
       expect(props.candidates.every((candidate) => candidate.review.label.length > 0)).toBe(true);
-      expect(props.ranking.map((row) => row.institutionId)).toEqual(
+      expect(props.reviewed.map((row) => row.institutionId)).toEqual(
         expect.arrayContaining(["bradesco", "itau"]),
       );
-      expect(props.ranking).toHaveLength(BANK_PROFILES.length);
+      expect(props.reviewed).toHaveLength(BANK_PROFILES.length);
     });
   });
 
@@ -92,8 +92,8 @@ describe("Bancos server boundary (integration)", () => {
       const props = await getBanksPageProps(userA.session, NOW);
 
       expect(props.currentRows.map((row) => row.name)).toEqual(["Nubank"]);
-      expect(props.ranking.find((row) => row.institutionId === "nubank")?.tag).toBe(
-        t.ranking.current,
+      expect(props.reviewed.find((row) => row.institutionId === "nubank")?.tag).toBe(
+        t.reviewed.current,
       );
       expect(props.candidates.map((candidate) => candidate.institutionId)).not.toContain("nubank");
       expect(props.baselineNotice).toBeNull();
