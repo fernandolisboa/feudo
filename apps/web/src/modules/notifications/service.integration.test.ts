@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
@@ -315,7 +315,7 @@ describe("the test notification (integration)", () => {
 
       await db
         .update(pushSubscription)
-        .set({ testSentAt: new Date(Date.now() - 61_000) })
+        .set({ testSentAt: sql`now() - interval '61 seconds'` })
         .where(eq(pushSubscription.endpoint, thisDevice.endpoint));
       expect(await sendTestPush(thisDevice.endpoint, sender)).toEqual({ status: "sent" });
     });

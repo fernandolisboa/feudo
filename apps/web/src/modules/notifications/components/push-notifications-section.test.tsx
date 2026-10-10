@@ -265,7 +265,9 @@ describe("PushNotificationsSection", () => {
       fireEvent.click(button);
 
       expect(
-        await screen.findByText("Não foi possível enviar a notificação de teste. Tente de novo."),
+        await screen.findByText(
+          "Não foi possível enviar a notificação de teste. Tente de novo daqui a um minuto.",
+        ),
       ).toBeTruthy();
     });
 

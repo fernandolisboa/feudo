@@ -37,7 +37,7 @@ const en = {
     testSent: "Test notification sent. It should show up in a few seconds.",
     testTooSoon: "Wait a minute before sending another one.",
     testLost: "This device no longer receives notifications. Turn them on again.",
-    testFailed: "Couldn't send the test notification. Try again.",
+    testFailed: "Couldn't send the test notification. Try again in a minute.",
   },
 };
 
@@ -81,7 +81,7 @@ const ptBR = {
     testSent: "Notificação de teste enviada. Ela deve aparecer em alguns segundos.",
     testTooSoon: "Espere um minuto para enviar outra.",
     testLost: "Este aparelho não recebe mais notificações. Ative-as de novo.",
-    testFailed: "Não foi possível enviar a notificação de teste. Tente de novo.",
+    testFailed: "Não foi possível enviar a notificação de teste. Tente de novo daqui a um minuto.",
   },
 } satisfies typeof en;
 
