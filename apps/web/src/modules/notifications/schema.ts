@@ -20,6 +20,8 @@ export const pushSubscription = pgTable(
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    // The last test notification sent here, for its one-a-minute cooldown.
+    testSentAt: timestamp("test_sent_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("push_subscription_endpoint_uidx").on(table.endpoint),
