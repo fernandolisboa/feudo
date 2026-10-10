@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Button } from "@/ui/button";
 import { Label } from "@/ui/label";
 import { SectionHeader } from "@/ui/section-header";
 import { Switch } from "@/ui/switch";
@@ -17,7 +18,11 @@ import {
   type PushSupport,
 } from "@/platform/pwa/push-device";
 
-import { removePushSubscriptionAction, savePushSubscriptionAction } from "../actions";
+import {
+  removePushSubscriptionAction,
+  savePushSubscriptionAction,
+  sendTestPushAction,
+} from "../actions";
 import { t } from "../strings";
 
 type Message = { tone: "info" | "error"; text: string };
@@ -120,6 +125,45 @@ export function PushNotificationsSection({
     setMessage({ tone: "info", text: t.preferences.disabled });
   }
 
+  async function sendTest(): Promise<void> {
+    const subscription = await currentPushSubscription().catch(() => null);
+    const outcome = subscription
+      ? await sendTestPushAction(subscription.endpoint).catch(() => null)
+      : { status: "not_found" as const };
+    switch (outcome?.status) {
+      case "sent":
+        setMessage({ tone: "info", text: t.preferences.testSent });
+        return;
+      case "too_soon":
+        setMessage({ tone: "info", text: t.preferences.testTooSoon });
+        return;
+      case "not_found":
+      case "gone":
+        // Feudo no longer holds this device: the switch says so, and turning
+        // it on again subscribes afresh.
+        await unsubscribeThisDevice().catch(() => null);
+        setDevice((current) => current && { ...current, subscribed: false });
+        setMessage({ tone: "error", text: t.preferences.testLost });
+        return;
+      case "unauthenticated":
+        setMessage({ tone: "error", text: t.preferences.unauthenticated });
+        return;
+      default:
+        setMessage({ tone: "error", text: t.preferences.testFailed });
+    }
+  }
+
+  function handleSendTest(): void {
+    if (pending || blockWriteWhenOffline()) {
+      return;
+    }
+    setPending(true);
+    setMessage(null);
+    void sendTest().finally(() => {
+      setPending(false);
+    });
+  }
+
   function handleCheckedChange(next: boolean): void {
     if (pending || blockWriteWhenOffline()) {
       return;
@@ -154,6 +198,13 @@ export function PushNotificationsSection({
           </div>
         )}
         <p className="text-muted-foreground text-sm">{t.preferences.description}</p>
+        {device?.subscribed ? (
+          <div className="mt-1.5">
+            <Button variant="outline" disabled={pending} onClick={handleSendTest}>
+              {t.preferences.sendTest}
+            </Button>
+          </div>
+        ) : null}
         {unavailable === null ? null : <p className="text-sm">{unavailable}</p>}
         {device?.denied && !device.subscribed && message === null ? (
           <p className="text-sm">{t.preferences.denied}</p>

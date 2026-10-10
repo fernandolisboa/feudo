@@ -10,6 +10,7 @@ import { getDb, type Database, type DatabaseOrTransaction } from "@/platform/db/
 import { readVapidKeys, type PushEnv } from "./env";
 import {
   householdEventPayload,
+  testPayload,
   userEventPayload,
   type HouseholdEvent,
   type UserEvent,
@@ -109,9 +110,13 @@ function readVapidKeysOrNull(env: PushEnv): ReturnType<typeof readVapidKeys> {
   }
 }
 
-export function createNotifierFromEnv(env: PushEnv = process.env): Notifier {
+function senderFromEnv(env: PushEnv = process.env): PushSender | null {
   const keys = readVapidKeysOrNull(env);
-  return createNotifier(keys === null ? null : createWebPushSender(keys));
+  return keys === null ? null : createWebPushSender(keys);
+}
+
+export function createNotifierFromEnv(env: PushEnv = process.env): Notifier {
+  return createNotifier(senderFromEnv(env));
 }
 
 // The key the browser subscribes with, or null when push is off and the
@@ -167,6 +172,52 @@ export async function removePushSubscription(endpoint: unknown): Promise<Subscri
     return { status: "failed" };
   }
   return { status: "ok" };
+}
+
+export type TestSendOutcome = SimpleOutcome<
+  "sent" | "too_soon" | "not_found" | "gone" | "failed" | "unauthenticated" | "invalid" | "disabled"
+>;
+
+// Preferências' test button (ADR-0012): only to the device that asks, only
+// the signed-in person's own, at most once a minute per device.
+export async function sendTestPush(
+  endpoint: unknown,
+  sender: PushSender | null = senderFromEnv(),
+): Promise<TestSendOutcome> {
+  const session = await getCurrentSession();
+  if (!session) {
+    return { status: "unauthenticated" };
+  }
+  if (sender === null) {
+    return { status: "disabled" };
+  }
+  const parsed = pushEndpointSchema.safeParse(endpoint);
+  if (!parsed.success) {
+    return { status: "invalid" };
+  }
+  const db = getDb();
+  try {
+    const claim = await createPushSubscriptionRepository(pushUserScope(session)).claimTestSend(
+      db,
+      parsed.data,
+    );
+    if (claim.status !== "claimed") {
+      return { status: claim.status };
+    }
+    const delivery = await sender.send(claim.subscription, testPayload());
+    switch (delivery) {
+      case "delivered":
+        return { status: "sent" };
+      case "gone":
+        await deleteGoneSubscription(db, claim.subscription);
+        return { status: "gone" };
+      case "failed":
+        return { status: "failed" };
+    }
+  } catch (error) {
+    console.warn(`notifications: a test send failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
 }
 
 // ADR-0012: asking to delete the account stops every notification at once,

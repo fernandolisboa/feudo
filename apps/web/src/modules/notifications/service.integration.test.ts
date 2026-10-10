@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
@@ -27,8 +27,13 @@ import {
   removePushSubscription,
   removePushSubscriptionsForAccountDeletion,
   savePushSubscription,
+  sendTestPush,
 } from "./service";
-import { createFakeNotifier, fakeSubscriptionInput } from "./test/fake-push-sender";
+import {
+  createFakeNotifier,
+  createFakePushSender,
+  fakeSubscriptionInput,
+} from "./test/fake-push-sender";
 
 const RESERVE_EVENT = { kind: "reserve_target_moved", closedMonth: "2026-09" } as const;
 
@@ -288,6 +293,78 @@ describe("forgetting a device at sign-out (integration)", () => {
       ).toBe(401);
 
       expect(await db.select().from(pushSubscription)).toHaveLength(1);
+    });
+  });
+});
+
+describe("the test notification (integration)", () => {
+  it("reaches only the device that asked, and only once a minute", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const thisDevice = fakeSubscriptionInput();
+      const otherDevice = fakeSubscriptionInput();
+      await createPushSubscriptionRepository(userA.scope).save(db, thisDevice);
+      await createPushSubscriptionRepository(userA.scope).save(db, otherDevice);
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+      const sender = createFakePushSender();
+
+      expect(await sendTestPush(thisDevice.endpoint, sender)).toEqual({ status: "sent" });
+      expect(await sendTestPush(thisDevice.endpoint, sender)).toEqual({ status: "too_soon" });
+
+      expect(sender.sent.map((send) => send.endpoint)).toEqual([thisDevice.endpoint]);
+      expect(sender.sent[0]?.payload).toMatchObject({ tag: "push-test", url: "/preferencias" });
+
+      await db
+        .update(pushSubscription)
+        .set({ testSentAt: sql`now() - interval '61 seconds'` })
+        .where(eq(pushSubscription.endpoint, thisDevice.endpoint));
+      expect(await sendTestPush(thisDevice.endpoint, sender)).toEqual({ status: "sent" });
+    });
+  });
+
+  it("never sends to another person's device", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const deviceB = fakeSubscriptionInput();
+      await createPushSubscriptionRepository(userB.scope).save(db, deviceB);
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+      const sender = createFakePushSender();
+
+      expect(await sendTestPush(deviceB.endpoint, sender)).toEqual({ status: "not_found" });
+      expect(sender.sent).toEqual([]);
+      const [row] = await db
+        .select()
+        .from(pushSubscription)
+        .where(eq(pushSubscription.endpoint, deviceB.endpoint));
+      expect(row?.testSentAt).toBeNull();
+    });
+  });
+
+  it("forgets a device the push service says is gone", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const device = fakeSubscriptionInput();
+      await createPushSubscriptionRepository(userA.scope).save(db, device);
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+      const sender = createFakePushSender();
+      sender.gone.add(device.endpoint);
+
+      expect(await sendTestPush(device.endpoint, sender)).toEqual({ status: "gone" });
+      expect(await db.select().from(pushSubscription)).toEqual([]);
+    });
+  });
+
+  it("refuses without a session, with push off, or with an address outside the push services", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      const sender = createFakePushSender();
+      getCurrentSessionMock.mockResolvedValue(null);
+      expect(await sendTestPush(fakeSubscriptionInput().endpoint, sender)).toEqual({
+        status: "unauthenticated",
+      });
+
+      getCurrentSessionMock.mockResolvedValue(userA.session);
+      expect(await sendTestPush(fakeSubscriptionInput().endpoint, null)).toEqual({
+        status: "disabled",
+      });
+      expect(await sendTestPush("https://evil.test/x", sender)).toEqual({ status: "invalid" });
+      expect(sender.sent).toEqual([]);
     });
   });
 });

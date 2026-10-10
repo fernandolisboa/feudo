@@ -40,6 +40,17 @@ export function householdEventPayload(
   }
 }
 
+// Preferências' test button: the same path as a real notification, with a
+// fixed message and a tag of its own.
+export function testPayload(): PushPayload {
+  return {
+    title: t.messages.test.title,
+    body: t.messages.test.body,
+    url: "/preferencias",
+    tag: "push-test",
+  };
+}
+
 export function userEventPayload(event: UserEvent): PushPayload {
   return {
     title: t.messages.syncFailing.title,

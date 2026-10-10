@@ -1,0 +1,1 @@
+ALTER TABLE "push_subscription" ADD COLUMN "test_sent_at" timestamp with time zone;

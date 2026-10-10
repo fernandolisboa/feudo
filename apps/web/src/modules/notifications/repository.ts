@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 
 import { member, organization, user } from "@/modules/auth/schema";
 import { householdIsNotPendingDeletion, type HouseholdScope } from "@/modules/households";
@@ -10,12 +10,18 @@ import type { PushSubscriptionInput } from "./validation";
 
 export const MAX_DEVICES_PER_USER = 10;
 
+export const TEST_SEND_COOLDOWN_SECONDS = 60;
+
 export type StoredPushSubscription = {
   id: string;
   endpoint: string;
   p256dh: string;
   auth: string;
 };
+
+export type TestSendClaim =
+  | { status: "claimed"; subscription: StoredPushSubscription }
+  | { status: "not_found" | "too_soon" };
 
 const storedColumns = {
   id: pushSubscription.id,
@@ -80,6 +86,38 @@ export function createPushSubscriptionRepository(scope: PushUserScope) {
 
     async removeAll(db: DatabaseOrTransaction): Promise<void> {
       await db.delete(pushSubscription).where(eq(pushSubscription.userId, scope.userId));
+    },
+
+    // Claimed in one statement, so two clicks in a row send once.
+    async claimTestSend(db: DatabaseOrTransaction, endpoint: string): Promise<TestSendClaim> {
+      const thisDevice = and(
+        eq(pushSubscription.userId, scope.userId),
+        eq(pushSubscription.endpoint, endpoint),
+      );
+      const [claimed] = await db
+        .update(pushSubscription)
+        .set({ testSentAt: sql`now()` })
+        .where(
+          and(
+            thisDevice,
+            or(
+              isNull(pushSubscription.testSentAt),
+              lt(
+                pushSubscription.testSentAt,
+                sql`now() - make_interval(secs => ${TEST_SEND_COOLDOWN_SECONDS})`,
+              ),
+            ),
+          ),
+        )
+        .returning(storedColumns);
+      if (claimed) {
+        return { status: "claimed", subscription: claimed };
+      }
+      const [held] = await db
+        .select({ id: pushSubscription.id })
+        .from(pushSubscription)
+        .where(thisDevice);
+      return { status: held ? "too_soon" : "not_found" };
     },
 
     async list(db: DatabaseOrTransaction): Promise<Array<{ endpoint: string; createdAt: Date }>> {
