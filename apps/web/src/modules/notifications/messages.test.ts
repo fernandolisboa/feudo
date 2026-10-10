@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parsePushPayload } from "@/lib/push-payload";
 
-import { householdEventPayload, userEventPayload } from "./messages";
+import { householdEventPayload, testPayload, userEventPayload } from "./messages";
 
 const payloads = [
   householdEventPayload(
@@ -12,6 +12,7 @@ const payloads = [
   ),
   householdEventPayload({ kind: "monthly_analysis_ready", month: "2026-09" }, "h1", "Casa Lisboa"),
   userEventPayload({ kind: "sync_failing", connectionId: "c1", institutionName: "Nubank" }),
+  testPayload(),
 ];
 
 describe("push payloads", () => {
@@ -34,6 +35,12 @@ describe("push payloads", () => {
         body: "Nubank não sincronizou nas últimas três tentativas. Veja o que fazer em Suas conexões, na Visão geral.",
         url: "/",
         tag: "sync-failing:c1",
+      },
+      {
+        title: "Notificação de teste",
+        body: "Se você está vendo isto, as notificações do Feudo chegam neste aparelho.",
+        url: "/preferencias",
+        tag: "push-test",
       },
     ]);
   });
