@@ -12,6 +12,10 @@ const en = {
       title: "Monthly reading is ready",
       body: "{household}: the analyst reading for {month} is ready.",
     },
+    test: {
+      title: "Test notification",
+      body: "If you can see this, Feudo's notifications reach this device.",
+    },
   },
   preferences: {
     sectionTitle: "Notifications",
@@ -29,6 +33,11 @@ const en = {
     failed: "Couldn't turn notifications on. Try again.",
     disableFailed: "Couldn't turn notifications off. Try again.",
     unauthenticated: "Sign in to change your notifications.",
+    sendTest: "Send a test notification",
+    testSent: "Test notification sent. It should show up in a few seconds.",
+    testTooSoon: "Wait a minute before sending another one.",
+    testLost: "This device no longer receives notifications. Turn them on again.",
+    testFailed: "Couldn't send the test notification. Try again.",
   },
 };
 
@@ -45,6 +54,10 @@ const ptBR = {
     monthlyAnalysisReady: {
       title: "A leitura do mês está pronta",
       body: "{household}: a leitura do analista de {month} está pronta.",
+    },
+    test: {
+      title: "Notificação de teste",
+      body: "Se você está vendo isto, as notificações do Feudo chegam neste aparelho.",
     },
   },
   preferences: {
@@ -64,6 +77,11 @@ const ptBR = {
     failed: "Não foi possível ativar as notificações. Tente de novo.",
     disableFailed: "Não foi possível desativar as notificações. Tente de novo.",
     unauthenticated: "Entre para mudar suas notificações.",
+    sendTest: "Enviar notificação de teste",
+    testSent: "Notificação de teste enviada. Ela deve aparecer em alguns segundos.",
+    testTooSoon: "Espere um minuto para enviar outra.",
+    testLost: "Este aparelho não recebe mais notificações. Ative-as de novo.",
+    testFailed: "Não foi possível enviar a notificação de teste. Tente de novo.",
   },
 } satisfies typeof en;
 

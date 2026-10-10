@@ -19,7 +19,7 @@ const device = vi.hoisted((): FakeDevice => ({
   subscribe: vi.fn(),
   unsubscribe: vi.fn(),
 }));
-const actions = vi.hoisted(() => ({ save: vi.fn(), remove: vi.fn() }));
+const actions = vi.hoisted(() => ({ save: vi.fn(), remove: vi.fn(), sendTest: vi.fn() }));
 
 vi.mock("@/platform/pwa/push-device", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/platform/pwa/push-device")>()),
@@ -33,6 +33,7 @@ vi.mock("@/platform/pwa/push-device", async (importOriginal) => ({
 vi.mock("../actions", () => ({
   savePushSubscriptionAction: actions.save,
   removePushSubscriptionAction: actions.remove,
+  sendTestPushAction: actions.sendTest,
 }));
 
 import { PushPermissionDeniedError } from "@/platform/pwa/push-device";
@@ -57,6 +58,7 @@ beforeEach(() => {
   device.unsubscribe.mockReset().mockResolvedValue(SUBSCRIPTION.endpoint);
   actions.save.mockReset().mockResolvedValue({ status: "ok" });
   actions.remove.mockReset().mockResolvedValue({ status: "ok" });
+  actions.sendTest.mockReset().mockResolvedValue({ status: "sent" });
 });
 
 afterEach(() => {
@@ -206,5 +208,76 @@ describe("PushNotificationsSection", () => {
     render(<PushNotificationsSection publicKey="PUBLIC" userId="user-a" />);
     expect(await screen.findByText("Este navegador não recebe notificações.")).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  describe("test notification", () => {
+    async function renderReceiving() {
+      device.current = SUBSCRIPTION;
+      device.owner = "user-a";
+      const toggle = await renderSection();
+      await waitFor(() => {
+        expect(toggle.getAttribute("aria-checked")).toBe("true");
+      });
+      return {
+        toggle,
+        button: screen.getByRole("button", { name: "Enviar notificação de teste" }),
+      };
+    }
+
+    it("is offered only once this device receives notifications", async () => {
+      await renderSection();
+      expect(screen.queryByRole("button", { name: "Enviar notificação de teste" })).toBeNull();
+    });
+
+    it("sends one to this device and says it is on its way", async () => {
+      const { button } = await renderReceiving();
+
+      fireEvent.click(button);
+
+      expect(await screen.findByText(/Notificação de teste enviada/)).toBeTruthy();
+      expect(actions.sendTest).toHaveBeenCalledWith(SUBSCRIPTION.endpoint);
+    });
+
+    it("asks to wait when one was sent less than a minute ago", async () => {
+      actions.sendTest.mockResolvedValue({ status: "too_soon" });
+      const { button } = await renderReceiving();
+
+      fireEvent.click(button);
+
+      expect(await screen.findByText("Espere um minuto para enviar outra.")).toBeTruthy();
+    });
+
+    it("when Feudo no longer holds this device, turns the switch off and asks to turn it on again", async () => {
+      actions.sendTest.mockResolvedValue({ status: "gone" });
+      const { toggle, button } = await renderReceiving();
+
+      fireEvent.click(button);
+
+      expect(await screen.findByText(/não recebe mais notificações/)).toBeTruthy();
+      expect(device.unsubscribe).toHaveBeenCalledOnce();
+      expect(toggle.getAttribute("aria-checked")).toBe("false");
+    });
+
+    it("says so when the send fails", async () => {
+      actions.sendTest.mockRejectedValue(new Error("network"));
+      const { button } = await renderReceiving();
+
+      fireEvent.click(button);
+
+      expect(
+        await screen.findByText("Não foi possível enviar a notificação de teste. Tente de novo."),
+      ).toBeTruthy();
+    });
+
+    it("offline, sends nothing", async () => {
+      const { button } = await renderReceiving();
+      online = false;
+
+      act(() => {
+        fireEvent.click(button);
+      });
+
+      expect(actions.sendTest).not.toHaveBeenCalled();
+    });
   });
 });
