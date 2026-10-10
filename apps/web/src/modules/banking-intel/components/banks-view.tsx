@@ -91,10 +91,10 @@ export function BanksView(props: BanksPageProps) {
     weightsAreCustom,
     weights,
     hasAccounts,
-    currentRows,
     baselineNotice,
     unrecognizedNotice,
     candidates,
+    reviewed,
   } = props;
 
   return (
@@ -132,31 +132,43 @@ export function BanksView(props: BanksPageProps) {
         </div>
       </section>
 
-      {currentRows.length > 0 ? (
-        <section className="mb-8">
-          <SectionHeader title={t.current.title} />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className={HEAD_CLASS}>{t.current.bank}</TableHead>
-                <TableHead className={`${HEAD_CLASS} text-right`}>{t.current.score}</TableHead>
-                <TableHead className={HEAD_CLASS}>{t.current.reviewedAt}</TableHead>
+      <section className="mb-8">
+        <SectionHeader
+          title={t.reviewed.title}
+          actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
+        />
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className={`${HEAD_CLASS} w-[1%] text-right`}>
+                {t.reviewed.position}
+              </TableHead>
+              <TableHead className={HEAD_CLASS}>{t.reviewed.bank}</TableHead>
+              <TableHead className={`${HEAD_CLASS} text-right`}>{t.reviewed.score}</TableHead>
+              <TableHead className={HEAD_CLASS}>{t.reviewed.reviewedAt}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {reviewed.map((row) => (
+              <TableRow key={row.institutionId} className="h-[var(--density-row)]">
+                <TableCell className="text-muted-foreground text-right tabular-nums">
+                  {row.positionLabel}
+                </TableCell>
+                <TableCell>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {row.name}
+                    {row.tag ? <Badge variant="secondary">{row.tag}</Badge> : null}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
+                <TableCell>
+                  <Review review={row.review} />
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentRows.map((row) => (
-                <TableRow key={row.institutionId} className="h-[var(--density-row)]">
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
-                  <TableCell>
-                    <Review review={row.review} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
-      ) : null}
+            ))}
+          </TableBody>
+        </Table>
+      </section>
 
       <section className="mb-8">
         <SectionHeader

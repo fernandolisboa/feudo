@@ -142,7 +142,12 @@ export {
   hasActiveCriterion,
   resolveCriteriaWeights,
 } from "./banking-intel/weights";
-export type { BankCandidate, BankScore, CriterionComparison } from "./banking-intel/scoring";
+export type {
+  BankCandidate,
+  BankComparison,
+  BankScore,
+  CriterionComparison,
+} from "./banking-intel/scoring";
 export { compareBanks } from "./banking-intel/scoring";
 
 export type {
