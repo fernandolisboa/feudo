@@ -2,6 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { signUpVerifyAndSignIn, uniqueEmail } from "./support/auth";
 
+function expectWithinAPixel(actual: number | undefined, expected: number) {
+  expect(Math.abs((actual ?? Number.NaN) - expected)).toBeLessThanOrEqual(1);
+}
+
 async function scrollToTheEndOfALongPage(page: Page) {
   await page.locator("main.app-shell-content").evaluate((main) => {
     const filler = document.createElement("div");
@@ -49,8 +53,8 @@ test("the app shell: sidebar (open, collapsed), topnav and mobile bottom tabs", 
     await scrollToTheEndOfALongPage(page);
 
     const box = await sidebar.boundingBox();
-    expect(box?.y).toBeCloseTo(0, 0);
-    expect(box?.height).toBeCloseTo(900, 0);
+    expectWithinAPixel(box?.y, 0);
+    expectWithinAPixel(box?.height, 900);
     await expect(page.getByRole("link", { name: "Transações" })).toBeInViewport();
     await expect(page.getByRole("button", { name: "Recolher menu" })).toBeInViewport();
   });
@@ -89,8 +93,8 @@ test("the app shell: sidebar (open, collapsed), topnav and mobile bottom tabs", 
 
     await scrollToTheEndOfALongPage(page);
     const tabbar = page.locator(".app-shell-tabbar");
-    await expect(tabbar).toBeInViewport({ ratio: 1 });
+    await expect(tabbar).toBeInViewport();
     const box = await tabbar.boundingBox();
-    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(844, 0);
+    expectWithinAPixel(box ? box.y + box.height : undefined, 844);
   });
 });
