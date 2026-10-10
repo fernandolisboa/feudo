@@ -195,6 +195,17 @@ describe("compareBanks", () => {
     ]);
   });
 
+  it("ranks every profiled institution, the household's own and the candidates alike", () => {
+    const comparison = compareBanks({
+      profiles: PROFILES,
+      weights: DEFAULT_CRITERIA_WEIGHTS,
+      currentInstitutionIds: ["itau", "inter"],
+    });
+
+    expect(comparison.ranking).toEqual(rankBankProfiles(PROFILES, DEFAULT_CRITERIA_WEIGHTS));
+    expect(comparison.ranking).toHaveLength(PROFILES.length);
+  });
+
   it("sets each candidate against the best score the household already has on every weighted criterion", () => {
     const comparison = compareBanks({
       profiles: PROFILES,

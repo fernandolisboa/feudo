@@ -35,6 +35,7 @@ export type BankCandidate = BankScore & {
 
 export type BankComparison = {
   baseline: "current" | "median";
+  ranking: BankScore[];
   current: BankScore[];
   candidates: BankCandidate[];
 };
@@ -217,6 +218,7 @@ export function compareBanks(input: {
 
   return {
     baseline,
+    ranking: ranked.map(withoutInternals),
     current: current.map(withoutInternals),
     candidates,
   };

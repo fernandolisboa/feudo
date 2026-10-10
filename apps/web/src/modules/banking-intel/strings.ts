@@ -20,10 +20,6 @@ const en = {
     publicReviews: { label: "Customer reviews", help: "Reclame Aqui and consumidor.gov.br" },
   },
   current: {
-    title: "Banks you already use",
-    bank: "Bank",
-    score: "Score",
-    reviewedAt: "Reviewed",
     noAccounts:
       "Connect a bank and the candidates will be compared with the banks you already use. Until then they are compared with the median bank on the list.",
     noneRecognized:
@@ -49,6 +45,16 @@ const en = {
     median: "median",
     missingEvidence: "Insufficient evidence for: {criteria}.",
     noScore: "insufficient evidence",
+  },
+  ranking: {
+    title: "All reviewed banks",
+    meta: "score from 0 to 100 with the household's weights",
+    position: "Position",
+    bank: "Bank",
+    score: "Score",
+    reviewedAt: "Reviewed",
+    current: "you use it",
+    candidate: "candidate",
   },
   weights: {
     title: "Criteria weights",
@@ -113,10 +119,6 @@ const ptBR = {
     },
   },
   current: {
-    title: "Bancos que vocês já usam",
-    bank: "Banco",
-    score: "Nota",
-    reviewedAt: "Revisão",
     noAccounts:
       "Conecte um banco para comparar os candidatos com os bancos que vocês já usam. Por enquanto, a comparação é com o banco mediano da lista.",
     noneRecognized:
@@ -142,6 +144,16 @@ const ptBR = {
     median: "mediana",
     missingEvidence: "Evidência insuficiente em: {criteria}.",
     noScore: "evidência insuficiente",
+  },
+  ranking: {
+    title: "Todos os bancos avaliados",
+    meta: "nota de 0 a 100 com os pesos da casa",
+    position: "Posição",
+    bank: "Banco",
+    score: "Nota",
+    reviewedAt: "Revisão",
+    current: "vocês usam",
+    candidate: "candidato",
   },
   weights: {
     title: "Pesos dos critérios",
