@@ -119,12 +119,18 @@ describe("isClearOfflineCopiesMessage", () => {
 });
 
 describe("isOfflineCopyScreen", () => {
-  it.each(["/", "/transacoes", "/reserva", "/bancos", "/casa", "/categorias", "/como-usar"])(
-    "keeps a copy of %s",
-    (path) => {
-      expect(isOfflineCopyScreen(path)).toBe(true);
-    },
-  );
+  it.each([
+    "/",
+    "/transacoes",
+    "/reserva",
+    "/bancos",
+    "/analises",
+    "/casa",
+    "/categorias",
+    "/como-usar",
+  ])("keeps a copy of %s", (path) => {
+    expect(isOfflineCopyScreen(path)).toBe(true);
+  });
 
   it.each(["/preferencias", "/conectar-banco", "/entrar", "/api/export", "/transacoes/x"])(
     "keeps no copy of %s",

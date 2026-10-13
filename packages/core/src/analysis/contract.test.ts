@@ -133,6 +133,32 @@ describe("analysisOutputSchema", () => {
     expect(() => analysisOutputSchema.parse(fixtureOutput())).not.toThrow();
   });
 
+  it("accepts a reading stored before the summary and the bank paragraph existed", () => {
+    const parsed = analysisOutputSchema.parse(fixtureOutput());
+    expect(parsed.summary).toBeUndefined();
+    expect(parsed.banks).toBeUndefined();
+  });
+
+  it("accepts a summary and a bank paragraph", () => {
+    const parsed = analysisOutputSchema.parse(
+      fixtureOutput({ summary: "A reserva está abaixo da meta.", banks: "Nada sugere troca." }),
+    );
+    expect(parsed.summary).toBe("A reserva está abaixo da meta.");
+    expect(parsed.banks).toBe("Nada sugere troca.");
+  });
+
+  it("rejects a whitespace-only summary", () => {
+    expect(() => analysisOutputSchema.parse(fixtureOutput({ summary: "   " }))).toThrow();
+  });
+
+  it("rejects a summary over 400 characters", () => {
+    expect(() => analysisOutputSchema.parse(fixtureOutput({ summary: "a".repeat(401) }))).toThrow();
+  });
+
+  it("rejects a bank paragraph over 1200 characters", () => {
+    expect(() => analysisOutputSchema.parse(fixtureOutput({ banks: "a".repeat(1201) }))).toThrow();
+  });
+
   it("rejects a whitespace-only reading", () => {
     expect(() => analysisOutputSchema.parse(fixtureOutput({ reading: "   " }))).toThrow();
   });

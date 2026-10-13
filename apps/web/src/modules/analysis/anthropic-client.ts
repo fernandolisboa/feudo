@@ -13,12 +13,14 @@ const EFFORT: Record<AiTier, "medium" | "high"> = { standard: "medium", deep: "h
 const OUTPUT_JSON_SCHEMA = {
   type: "object",
   properties: {
+    summary: { type: "string" },
     reading: { type: "string" },
+    banks: { type: "string" },
     tradeOffs: { type: "array", items: { type: "string" } },
     counterArgument: { type: "string" },
     citedKeys: { type: "array", items: { type: "string" } },
   },
-  required: ["reading", "tradeOffs", "counterArgument", "citedKeys"],
+  required: ["summary", "reading", "banks", "tradeOffs", "counterArgument", "citedKeys"],
   additionalProperties: false,
 };
 

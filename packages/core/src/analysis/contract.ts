@@ -42,8 +42,13 @@ export const analysisInputSchema = z
 
 export type AnalysisInput = z.infer<typeof analysisInputSchema>;
 
+// `summary` and `banks` arrived with analyst-v2: readings stored by
+// analyst-v1 have neither, so both stay optional on the way out of the
+// database; the v2 prompt's structured output always fills them.
 export const analysisOutputSchema = z.object({
+  summary: z.string().trim().min(1).max(400).optional(),
   reading: z.string().trim().min(1).max(2400),
+  banks: z.string().trim().min(1).max(1200).optional(),
   tradeOffs: z.array(z.string().trim().min(1).max(700)).min(1).max(4),
   counterArgument: z.string().trim().min(1).max(900),
   citedKeys: z.array(z.string().trim().min(1)).min(1).max(40),

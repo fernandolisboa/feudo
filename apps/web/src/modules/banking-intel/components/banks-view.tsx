@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { Badge } from "@/ui/badge";
@@ -84,7 +85,7 @@ function CandidateCard({ candidate }: { candidate: CandidateView }) {
   );
 }
 
-export function BanksView(props: BanksPageProps) {
+export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
   const {
     headline,
     canManage,
@@ -95,6 +96,7 @@ export function BanksView(props: BanksPageProps) {
     unrecognizedNotice,
     candidates,
     reviewed,
+    analystNote,
   } = props;
 
   return (
@@ -131,6 +133,8 @@ export function BanksView(props: BanksPageProps) {
           ))}
         </div>
       </section>
+
+      {analystNote}
 
       <section className="mb-8">
         <SectionHeader

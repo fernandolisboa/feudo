@@ -1,6 +1,7 @@
 import type { AnalysisInput } from "@feudo/core";
 
-import { ANALYST_V1_SYSTEM, ANALYST_V1_VERSION, renderAnalystV1User } from "./analyst-v1";
+import { renderAnalystV1User } from "./analyst-v1";
+import { ANALYST_V2_SYSTEM, ANALYST_V2_VERSION } from "./analyst-v2";
 
 export type AnalystPrompt = {
   version: string;
@@ -9,7 +10,7 @@ export type AnalystPrompt = {
 };
 
 export const CURRENT_ANALYST_PROMPT: AnalystPrompt = {
-  version: ANALYST_V1_VERSION,
-  system: ANALYST_V1_SYSTEM,
+  version: ANALYST_V2_VERSION,
+  system: ANALYST_V2_SYSTEM,
   renderUser: renderAnalystV1User,
 };

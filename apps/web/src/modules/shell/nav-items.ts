@@ -1,6 +1,7 @@
 import { t } from "./strings";
 
-export type NavIconName = "overview" | "transactions" | "reserve" | "banks" | "household";
+export type NavIconName =
+  "overview" | "transactions" | "reserve" | "banks" | "analyses" | "household";
 
 export type NavItem = {
   id: string;
@@ -8,6 +9,7 @@ export type NavItem = {
   href: string;
   icon: NavIconName;
   disabled: boolean;
+  desktopOnly?: boolean;
   tourTarget?: string;
 };
 
@@ -22,6 +24,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { id: "reserve", label: t.nav.reserve, href: "/reserva", icon: "reserve", disabled: false },
   { id: "banks", label: t.nav.banks, href: "/bancos", icon: "banks", disabled: false },
+  {
+    id: "analyses",
+    label: t.nav.analyses,
+    href: "/analises",
+    icon: "analyses",
+    disabled: false,
+    desktopOnly: true,
+  },
   {
     id: "household",
     label: t.nav.household,

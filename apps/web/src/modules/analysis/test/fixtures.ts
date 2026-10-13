@@ -34,8 +34,10 @@ export const FIXTURE_INPUT: AnalysisInput = {
 };
 
 export const FIXTURE_OUTPUT: AnalysisOutput = {
+  summary: "A casa guardou 20,6% da renda, mas a reserva cobre só 46,7% da meta.",
   reading:
     "Em setembro de 2026 a casa recebeu R$ 12.400,00 e gastou R$ 9.850,35, guardando 20,6% da renda.\n\nA reserva cobre 46,7% da meta de R$ 36.600,00, o equivalente a 2,8 meses de custo fixo.",
+  banks: "O Feudo ainda não tem comparação de bancos para esta casa.",
   tradeOffs: [
     "Colocar os próximos reais no CDB do 1º lugar rende 6,1% a.a. acima da inflação, mas depende de resgate em até 1 dia útil confirmado.",
   ],

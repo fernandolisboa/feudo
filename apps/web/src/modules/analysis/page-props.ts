@@ -4,7 +4,10 @@ import {
   formatYearMonth,
   isYearMonth,
   localDateOf,
+  type AnalysisInput,
+  type AnalysisOutput,
 } from "@feudo/core";
+import { z } from "zod";
 
 import {
   DEFAULT_TIME_ZONE,
@@ -17,9 +20,18 @@ import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import { AI_MODELS } from "./ai-client";
-import { createAnalysisRepository, type StoredAnalysis } from "./repository";
+import { ANALYSES_PATH, READING_PARAM } from "./paths";
+import {
+  createAnalysisRepository,
+  type AnalysisHistoryRow,
+  type StoredAnalysis,
+} from "./repository";
 import { isAnalysisEnabled, ON_DEMAND_ANALYSES_PER_DAY, RUNNING_STALE_MS } from "./service";
 import { t } from "./strings";
+
+const HISTORY_LIMIT = 12;
+
+const readingIdSchema = z.uuid();
 
 const MODEL_NAMES: Readonly<Record<string, string>> = {
   [AI_MODELS.standard]: "Claude Sonnet 5.5",
@@ -33,6 +45,36 @@ export type AnalystReadingView = {
   counterArgument: string;
   inputsUsed: { key: string; label: string; value: string }[];
   meta: string[];
+};
+
+export type AnalysisDetailView = Omit<AnalystReadingView, "paragraphs"> & {
+  id: string;
+  summary: string | null;
+  reading: string[];
+  banks: string[];
+};
+
+export type AnalysisHistoryItem = {
+  id: string;
+  title: string;
+  meta: string;
+  href: string;
+  current: boolean;
+};
+
+export type AnalysesPageProps = {
+  reading: AnalysisDetailView | null;
+  isLatest: boolean;
+  history: AnalysisHistoryItem[];
+  limit: number;
+  remaining: number;
+  inProgress: boolean;
+};
+
+export type AnalystBanksNoteProps = {
+  paragraphs: string[];
+  source: string;
+  href: string;
 };
 
 export type AnalystReadingProps = {
@@ -49,42 +91,102 @@ function modelName(model: string | null): string | null {
   return MODEL_NAMES[model] ?? model;
 }
 
-// A stored row is re-validated on the way out: a reading that no longer
-// parses (a hand-edited row, a schema drift) is simply not shown.
-export function readingView(row: StoredAnalysis, timeZone: string): AnalystReadingView | null {
+function splitParagraphs(text: string | undefined): string[] {
+  if (text === undefined) {
+    return [];
+  }
+  return text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+}
+
+function readingTitle(row: Pick<StoredAnalysis, "kind" | "period">): string {
+  const month = isYearMonth(row.period) ? formatYearMonth(row.period) : row.period;
+  return interpolate(t.panel.kinds[row.kind], "{month}", month);
+}
+
+function generatedAt(completedAt: Date | null, timeZone: string): string[] {
+  return completedAt === null
+    ? []
+    : [interpolate(t.panel.generatedAt, "{date}", formatShortDateTime(completedAt, timeZone))];
+}
+
+function parseStored(row: StoredAnalysis): { input: AnalysisInput; output: AnalysisOutput } | null {
   const input = analysisInputSchema.safeParse(row.input);
   const output = analysisOutputSchema.safeParse(row.output);
-  if (!input.success || !output.success) {
-    return null;
-  }
-  const factsByKey = new Map(input.data.facts.map((fact) => [fact.key, fact]));
-  const month = isYearMonth(row.period) ? formatYearMonth(row.period) : row.period;
+  return input.success && output.success ? { input: input.data, output: output.data } : null;
+}
+
+function baseView(
+  row: StoredAnalysis,
+  input: AnalysisInput,
+  output: AnalysisOutput,
+  timeZone: string,
+): Omit<AnalystReadingView, "paragraphs"> {
+  const factsByKey = new Map(input.facts.map((fact) => [fact.key, fact]));
   const name = modelName(row.model);
   return {
-    title: interpolate(t.panel.kinds[row.kind], "{month}", month),
-    paragraphs: output.data.reading
-      .split(/\n\s*\n/)
-      .map((paragraph) => paragraph.trim())
-      .filter((paragraph) => paragraph.length > 0),
-    tradeOffs: output.data.tradeOffs,
-    counterArgument: output.data.counterArgument,
-    inputsUsed: [...new Set(output.data.citedKeys)].flatMap((key) => {
+    title: readingTitle(row),
+    tradeOffs: output.tradeOffs,
+    counterArgument: output.counterArgument,
+    inputsUsed: [...new Set(output.citedKeys)].flatMap((key) => {
       const fact = factsByKey.get(key);
       return fact ? [{ key, label: fact.label, value: fact.value }] : [];
     }),
     meta: [
-      ...(row.completedAt === null
-        ? []
-        : [
-            interpolate(
-              t.panel.generatedAt,
-              "{date}",
-              formatShortDateTime(row.completedAt, timeZone),
-            ),
-          ]),
+      ...generatedAt(row.completedAt, timeZone),
       ...(name === null ? [] : [name]),
       interpolate(t.panel.promptVersion, "{version}", row.promptVersion),
     ],
+  };
+}
+
+// A stored row is re-validated on the way out: a reading that no longer
+// parses (a hand-edited row, a schema drift) is simply not shown.
+export function readingView(row: StoredAnalysis, timeZone: string): AnalystReadingView | null {
+  const parsed = parseStored(row);
+  if (parsed === null) {
+    return null;
+  }
+  return {
+    ...baseView(row, parsed.input, parsed.output, timeZone),
+    paragraphs: [
+      ...splitParagraphs(parsed.output.reading),
+      ...splitParagraphs(parsed.output.banks),
+    ],
+  };
+}
+
+export function analysisDetailView(
+  row: StoredAnalysis,
+  timeZone: string,
+): AnalysisDetailView | null {
+  const parsed = parseStored(row);
+  if (parsed === null) {
+    return null;
+  }
+  return {
+    ...baseView(row, parsed.input, parsed.output, timeZone),
+    id: row.id,
+    summary: parsed.output.summary ?? null,
+    reading: splitParagraphs(parsed.output.reading),
+    banks: splitParagraphs(parsed.output.banks),
+  };
+}
+
+export function historyItem(
+  row: AnalysisHistoryRow,
+  timeZone: string,
+  currentId: string | null,
+): AnalysisHistoryItem {
+  const name = modelName(row.model);
+  return {
+    id: row.id,
+    title: readingTitle(row),
+    meta: [...generatedAt(row.completedAt, timeZone), ...(name === null ? [] : [name])].join(" · "),
+    href: `${ANALYSES_PATH}?${READING_PARAM}=${encodeURIComponent(row.id)}`,
+    current: row.id === currentId,
   };
 }
 
@@ -113,5 +215,70 @@ export async function getAnalystReadingProps(
     limit: ON_DEMAND_ANALYSES_PER_DAY,
     remaining: Math.max(0, ON_DEMAND_ANALYSES_PER_DAY - used),
     inProgress,
+  };
+}
+
+async function householdContext(session: HouseholdSession) {
+  const db = getDb();
+  const scope = householdScope(session);
+  const settings = await getHouseholdSettings(scope, db);
+  return {
+    db,
+    repository: createAnalysisRepository(scope),
+    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+  };
+}
+
+// The Análises screen: the reading asked for in the address (the household's
+// own, or the newest when the id is not one of its readings), the readings
+// before it and the "Gerar nova leitura" quota. Null when the analysis is
+// turned off. Only reads what was stored: no page view calls the model.
+export async function getAnalysesPageProps(
+  session: HouseholdSession,
+  requestedId: unknown,
+  now: Date = new Date(),
+): Promise<AnalysesPageProps | null> {
+  if (!isAnalysisEnabled()) {
+    return null;
+  }
+  const { db, repository, timeZone } = await householdContext(session);
+  const id = readingIdSchema.safeParse(requestedId);
+  const [requested, history, used, inProgress] = await Promise.all([
+    id.success ? repository.findSucceeded(db, id.data) : Promise.resolve(null),
+    repository.listSucceeded(db, HISTORY_LIMIT),
+    repository.countOnDemandOn(db, localDateOf(now, timeZone)),
+    repository.hasRunningSince(db, new Date(now.getTime() - RUNNING_STALE_MS)),
+  ]);
+  const shown = requested ?? (await repository.latestSucceeded(db));
+  const reading = shown === null ? null : analysisDetailView(shown, timeZone);
+  const latestId = history[0]?.id ?? null;
+  return {
+    reading,
+    isLatest: reading === null || reading.id === latestId,
+    history: history.map((row) => historyItem(row, timeZone, reading?.id ?? null)),
+    limit: ON_DEMAND_ANALYSES_PER_DAY,
+    remaining: Math.max(0, ON_DEMAND_ANALYSES_PER_DAY - used),
+    inProgress,
+  };
+}
+
+// The newest reading's bank paragraph, shown on Bancos. Null when the
+// analysis is off or the newest reading has none (analyst-v1 readings).
+export async function getAnalystBanksNoteProps(
+  session: HouseholdSession,
+): Promise<AnalystBanksNoteProps | null> {
+  if (!isAnalysisEnabled()) {
+    return null;
+  }
+  const { db, repository, timeZone } = await householdContext(session);
+  const latest = await repository.latestSucceeded(db);
+  const view = latest === null ? null : analysisDetailView(latest, timeZone);
+  if (view === null || view.banks.length === 0) {
+    return null;
+  }
+  return {
+    paragraphs: view.banks,
+    source: [view.title, ...generatedAt(latest?.completedAt ?? null, timeZone)].join(" · "),
+    href: ANALYSES_PATH,
   };
 }
