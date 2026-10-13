@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { transactionsHref, transactionsRouteParams } from "./href";
+import { transactionsHref, transactionsRouteParams, transactionsSpreadsheetHref } from "./href";
 
 const BASE = {
   month: "2026-09",
@@ -54,6 +54,25 @@ describe("transactionsRouteParams", () => {
     ]);
     expect(transactionsHref(view)).toBe(
       `/transacoes?${new URLSearchParams(transactionsRouteParams(view)).toString()}`,
+    );
+  });
+});
+
+describe("transactionsSpreadsheetHref", () => {
+  it("carries the same filters as the page, never a page number, plus the format", () => {
+    expect(transactionsSpreadsheetHref(BASE, "xlsx")).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&formato=xlsx",
+    );
+    expect(
+      transactionsSpreadsheetHref(
+        { ...BASE, accountId: "acc 1", category: "housing", kind: "fixed", search: "aluguel" },
+        "csv",
+      ),
+    ).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&conta=acc+1&categoria=housing&tipo=fixed&busca=aluguel&formato=csv",
+    );
+    expect(transactionsSpreadsheetHref({ ...BASE, uncategorizedOnly: true }, "csv")).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&categoria=sem&formato=csv",
     );
   });
 });

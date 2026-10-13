@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -251,5 +251,37 @@ describe("TransactionsView", () => {
     );
 
     expect(screen.getByText("Nada registrado em setembro de 2026.")).not.toBeNull();
+  });
+  it("offers the listed transactions as a spreadsheet, with the screen's filters, in Excel and CSV", async () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          selectedAccountId: "acc-1",
+          selectedKind: "fixed",
+          searchQuery: "aluguel",
+          total: 12,
+          page: 2,
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar 12 transações" }));
+
+    const excel = await screen.findByRole("menuitem", { name: "Planilha do Excel (.xlsx)" });
+    const csv = screen.getByRole("menuitem", { name: "Arquivo CSV (.csv)" });
+    expect(excel.getAttribute("href")).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&conta=acc-1&tipo=fixed&busca=aluguel&formato=xlsx",
+    );
+    expect(csv.getAttribute("href")).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&conta=acc-1&tipo=fixed&busca=aluguel&formato=csv",
+    );
+    expect(excel.hasAttribute("download")).toBe(false);
+  });
+
+  it("offers no spreadsheet when nothing is listed", () => {
+    render(<TransactionsView {...buildProps({ accounts: oneAccount, total: 0 })} />);
+
+    expect(screen.queryByRole("button", { name: /Exportar/ })).toBeNull();
   });
 });

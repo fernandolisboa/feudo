@@ -1,4 +1,5 @@
 import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
+import type { SpreadsheetFormat } from "./spreadsheet";
 
 export type TransactionsRoute = {
   month: YearMonth;
@@ -40,4 +41,18 @@ export function transactionsHref(view: TransactionsRoute): string {
   const params = new URLSearchParams(transactionsRouteParams(view));
   return `${TRANSACTIONS_PATH}?${params.toString()}`;
 }
+
 export const GUIDED_CATEGORIZATION_PATH = "/categorizar";
+
+export const TRANSACTIONS_SPREADSHEET_ROUTE = "/api/transactions/spreadsheet";
+
+export function transactionsSpreadsheetHref(
+  view: Omit<TransactionsRoute, "page">,
+  format: SpreadsheetFormat,
+): string {
+  const params = new URLSearchParams([
+    ...transactionsRouteParams({ ...view, page: 1 }),
+    ["formato", format],
+  ]);
+  return `${TRANSACTIONS_SPREADSHEET_ROUTE}?${params.toString()}`;
+}
