@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 const recordFinancialDataAccessMock = vi.hoisted(() => vi.fn());
 const getHouseholdSettingsMock = vi.hoisted(() => vi.fn());
 const readHouseholdDashboardLinesMock = vi.hoisted(() => vi.fn());
+const householdHasAccountsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/audit", () => ({ recordFinancialDataAccess: recordFinancialDataAccessMock }));
 vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
@@ -14,6 +15,7 @@ vi.mock("@/modules/households", () => ({
 }));
 vi.mock("./dashboard-lines", () => ({
   readHouseholdDashboardLines: readHouseholdDashboardLinesMock,
+  householdHasAccounts: householdHasAccountsMock,
 }));
 
 import { getCategorizationNudgeProps, getGuidedCategorizationProps } from "./guided-categorization";
@@ -29,14 +31,14 @@ const SESSION = {
 const NOW = new Date("2026-10-13T12:00:00.000Z");
 const KINDS = { overrides: new Map(), householdSubcategories: new Map() };
 
-function uncategorizedRow(id: string, amountCentavos: number) {
+function uncategorizedRow(id: string, amountCentavos: number, currency = "BRL") {
   return {
     id,
     date: "2026-09-10",
     occurredAt: null,
     description: "PIX RECEBIDO EMPRESA",
     amountCentavos,
-    currency: "BRL",
+    currency,
     type: "credit" as const,
     providerCategory: null,
     accountId: "acc-1",
@@ -58,6 +60,7 @@ function resetAll() {
   recordFinancialDataAccessMock.mockReset().mockResolvedValue(undefined);
   getHouseholdSettingsMock.mockReset().mockResolvedValue(undefined);
   readHouseholdDashboardLinesMock.mockReset();
+  householdHasAccountsMock.mockReset().mockResolvedValue(true);
 }
 
 describe("guided categorization recording order (ADR-0008)", () => {
@@ -133,5 +136,32 @@ describe("guided categorization recording order (ADR-0008)", () => {
       amountLabel: formatMoney({ amountCentavos: 7500, currency: "BRL" }),
       sinceLabel: "abril de 2026",
     });
+  });
+
+  it("leaves foreign-currency rows out of the notice and the queue, like the overview's numbers", async () => {
+    resetAll();
+    readHouseholdDashboardLinesMock.mockResolvedValue({
+      kinds: KINDS,
+      rows: [uncategorizedRow("usd", 50000, "USD"), uncategorizedRow("brl", 40000)],
+      lines: [],
+    });
+
+    const nudge = await getCategorizationNudgeProps(SESSION, NOW);
+    const props = await getGuidedCategorizationProps(SESSION, NOW);
+
+    expect(nudge?.count).toBe(1);
+    expect(nudge?.amountLabel).toBe(formatMoney({ amountCentavos: 40000, currency: "BRL" }));
+    expect(props.items.map((item) => item.id)).toEqual(["brl"]);
+  });
+
+  it("shows nothing at all for a household whose only uncategorized rows are in another currency", async () => {
+    resetAll();
+    readHouseholdDashboardLinesMock.mockResolvedValue({
+      kinds: KINDS,
+      rows: [uncategorizedRow("usd", 12000, "USD")],
+      lines: [],
+    });
+
+    await expect(getCategorizationNudgeProps(SESSION, NOW)).resolves.toBeNull();
   });
 });

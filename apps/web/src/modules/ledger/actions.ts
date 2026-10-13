@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
+import { interpolateAll } from "@/lib/interpolate";
 import { requireHouseholdSession } from "@/modules/households";
 
 import {
@@ -21,6 +22,8 @@ import {
   addSubcategoryFormSchema,
   categorizeTransactionFormSchema,
   changeKindFormSchema,
+  RULE_PATTERN_MAX_LENGTH,
+  RULE_PATTERN_MIN_LENGTH,
   ruleIdFormSchema,
   transactionIdFormSchema,
   transferMarkFormSchema,
@@ -59,7 +62,10 @@ export async function categorizeTransactionAction(
     return {
       status: "error",
       message: parsed.error.issues.some((issue) => issue.path[0] === "pattern")
-        ? t.errors.invalidPattern
+        ? interpolateAll(t.errors.invalidPattern, {
+            min: String(RULE_PATTERN_MIN_LENGTH),
+            max: String(RULE_PATTERN_MAX_LENGTH),
+          })
         : t.errors.invalidInput,
     };
   }

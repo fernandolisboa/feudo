@@ -29,7 +29,10 @@ import { t } from "../strings";
 import { RULE_PATTERN_MAX_LENGTH, RULE_PATTERN_MIN_LENGTH } from "../validation";
 import type { SubcategoryOptionGroup } from "./categorize-transaction-dialog";
 
-function title(remaining: number, sinceLabel: string): string {
+function title(hasAccounts: boolean, remaining: number, sinceLabel: string): string {
+  if (!hasAccounts) {
+    return t.guided.noAccountsTitle;
+  }
   if (remaining === 0) {
     return interpolate(t.guided.title.none, "{month}", sinceLabel);
   }
@@ -55,7 +58,9 @@ function GuidedItem({
   onSkip: () => void;
 }) {
   const [createRule, setCreateRule] = useState(
-    item.similarCount > 0 && item.pattern.length >= RULE_PATTERN_MIN_LENGTH,
+    item.similarCount > 0 &&
+      item.pattern.length >= RULE_PATTERN_MIN_LENGTH &&
+      item.pattern.length <= RULE_PATTERN_MAX_LENGTH,
   );
   const [state, formAction, isSaving] = useActionState(
     categorizeTransactionAction,
@@ -163,7 +168,7 @@ function GuidedItem({
               />
             </div>
           ) : null}
-          {item.similarCount > 0 ? (
+          {createRule && item.similarCount > 0 ? (
             <p className="text-muted-foreground pl-6 text-xs">{similarLine(item.similarCount)}</p>
           ) : null}
         </div>
@@ -191,7 +196,7 @@ function GuidedItem({
 
 export function GuidedCategorizationView({
   sinceLabel,
-  hasTransactions,
+  hasAccounts,
   items,
   categoryGroups,
 }: GuidedCategorizationProps) {
@@ -207,13 +212,11 @@ export function GuidedCategorizationView({
     <>
       <PageHeader
         overline={interpolate(t.guided.overline, "{month}", sinceLabel)}
-        title={title(remaining, sinceLabel)}
+        title={title(hasAccounts, remaining, sinceLabel)}
       />
-      {!hasTransactions ? (
+      {!hasAccounts ? (
         <div className="flex flex-col items-start gap-3">
-          <p className="font-heading text-[18px]">
-            {interpolate(t.guided.empty, "{month}", sinceLabel)}
-          </p>
+          <p className="font-heading text-[18px]">{t.guided.noAccountsBody}</p>
           <Button render={<Link href="/conectar-banco" />}>
             <Landmark className="size-4" />
             {t.guided.connectAction}
@@ -249,7 +252,9 @@ export function GuidedCategorizationView({
           ) : (
             <div className="flex flex-col items-start gap-3">
               <p className="font-heading text-[18px]">
-                {interpolate(t.guided.skippedAll, "{count}", String(remaining))}
+                {remaining === 1
+                  ? t.guided.skippedAllOne
+                  : interpolate(t.guided.skippedAllMany, "{count}", String(remaining))}
               </p>
               <Button
                 variant="outline"

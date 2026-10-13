@@ -10,7 +10,7 @@ import { Notice } from "@/ui/notice";
 import { interpolateAll } from "@/lib/interpolate";
 
 import type { CategorizationNudgeProps } from "../guided-categorization";
-import { GUIDED_CATEGORIZATION_PATH } from "../href";
+import { GUIDED_CATEGORIZATION_PATH, TRANSACTIONS_PATH } from "../href";
 import {
   CATEGORIZATION_NUDGE_HIDDEN_COOKIE,
   CATEGORIZATION_NUDGE_HIDDEN_MAX_AGE_SECONDS,
@@ -21,14 +21,15 @@ import { t } from "../strings";
 // itself is where this notice would lead.
 const SCREENS_WITH_THEIR_OWN_NOTICE: ReadonlySet<string> = new Set([
   GUIDED_CATEGORIZATION_PATH,
-  "/transacoes",
+  TRANSACTIONS_PATH,
 ]);
 
 export function CategorizationNudgeNotice({
+  householdId,
   count,
   amountLabel,
   sinceLabel,
-}: CategorizationNudgeProps) {
+}: CategorizationNudgeProps & { householdId: string }) {
   const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
 
@@ -51,7 +52,7 @@ export function CategorizationNudgeNotice({
               aria-label={t.nudge.dismiss}
               title={t.nudge.dismiss}
               onClick={() => {
-                document.cookie = `${CATEGORIZATION_NUDGE_HIDDEN_COOKIE}=1; path=/; max-age=${CATEGORIZATION_NUDGE_HIDDEN_MAX_AGE_SECONDS.toString()}; samesite=lax`;
+                document.cookie = `${CATEGORIZATION_NUDGE_HIDDEN_COOKIE}=${encodeURIComponent(householdId)}; path=/; max-age=${CATEGORIZATION_NUDGE_HIDDEN_MAX_AGE_SECONDS.toString()}; samesite=lax`;
                 setHidden(true);
               }}
             >

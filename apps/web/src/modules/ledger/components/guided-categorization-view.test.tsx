@@ -8,6 +8,7 @@ vi.mock("../actions", () => ({
 }));
 
 import type { GuidedCategorizationProps, GuidedItemView } from "../guided-categorization";
+import { categorizeTransactionFormSchema } from "../validation";
 import { t } from "../strings";
 import { GuidedCategorizationView } from "./guided-categorization-view";
 
@@ -35,7 +36,7 @@ function item(overrides: Partial<GuidedItemView>): GuidedItemView {
 function props(overrides: Partial<GuidedCategorizationProps>): GuidedCategorizationProps {
   return {
     sinceLabel: "abril de 2026",
-    hasTransactions: true,
+    hasAccounts: true,
     items: [item({})],
     categoryGroups: [
       { label: "Renda", options: [{ value: "product:income.other", label: "Outras rendas" }] },
@@ -99,6 +100,40 @@ describe("GuidedCategorizationView", () => {
     ).toBeTruthy();
   });
 
+  it("submits fields the categorize action's schema accepts, rule included", () => {
+    const { container } = render(
+      <GuidedCategorizationView
+        {...props({
+          items: [
+            item({
+              id: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b",
+              pattern: "TED RECEBIDA",
+              similarCount: 1,
+            }),
+          ],
+        })}
+      />,
+    );
+
+    const form = container.querySelector("form");
+    if (!form) throw new Error("form missing");
+    const data = new FormData(form);
+    const parsed = categorizeTransactionFormSchema.safeParse({
+      transactionId: data.get("transactionId"),
+      subcategory: data.get("subcategory"),
+      createRule: data.get("createRule") === "on" ? "on" : "off",
+      pattern: data.get("pattern"),
+      direction: data.get("direction"),
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toMatchObject({
+      createRule: "on",
+      pattern: "TED RECEBIDA",
+      direction: "credit",
+    });
+  });
+
   it("leaves the rule unticked for a one-off description", () => {
     render(<GuidedCategorizationView {...props({})} />);
 
@@ -147,11 +182,43 @@ describe("GuidedCategorizationView", () => {
     expect(screen.getByRole("link", { name: t.guided.doneAction }).getAttribute("href")).toBe("/");
   });
 
-  it("asks for a bank connection when nothing was recorded in the window", () => {
-    render(<GuidedCategorizationView {...props({ hasTransactions: false, items: [] })} />);
+  it("asks for a bank connection when the household has no account", () => {
+    render(<GuidedCategorizationView {...props({ hasAccounts: false, items: [] })} />);
 
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(t.guided.noAccountsTitle);
     expect(screen.getByRole("link", { name: t.guided.connectAction }).getAttribute("href")).toBe(
       "/conectar-banco",
     );
+  });
+
+  it("uses the singular when the one transaction left was skipped", () => {
+    render(<GuidedCategorizationView {...props({})} />);
+
+    fireEvent.click(screen.getByRole("button", { name: t.guided.skip }));
+
+    expect(screen.getByText(t.guided.skippedAllOne)).toBeTruthy();
+  });
+
+  it("does not pre-tick a rule whose proposed text is longer than a rule allows", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({ items: [item({ pattern: "A".repeat(81), similarCount: 2 })] })}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox", { name: t.guided.createRule });
+    expect(checkbox.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("stops promising the similar ones the same category once the rule is unticked", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({ items: [item({ pattern: "BAZAR DA ESQUINA", similarCount: 2 })] })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: t.guided.createRule }));
+
+    expect(screen.queryByText(/vão receber a mesma categoria/)).toBeNull();
   });
 });

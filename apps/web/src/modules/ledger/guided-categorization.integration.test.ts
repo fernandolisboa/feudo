@@ -142,7 +142,7 @@ describe("guided categorization (integration)", () => {
 
       const propsB = await getGuidedCategorizationProps(userB.session, NOW);
       expect(propsB.items).toEqual([]);
-      expect(propsB.hasTransactions).toBe(false);
+      expect(propsB.hasAccounts).toBe(false);
       await expect(getCategorizationNudgeProps(userB.session, NOW)).resolves.toBeNull();
 
       const nudgeA = await getCategorizationNudgeProps(userA.session, NOW);

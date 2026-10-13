@@ -14,7 +14,12 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const PROPS = { count: 28, amountLabel: "R$ 57.092,73", sinceLabel: "abril de 2026" };
+const PROPS = {
+  householdId: "household-a",
+  count: 28,
+  amountLabel: "R$ 57.092,73",
+  sinceLabel: "abril de 2026",
+};
 
 describe("CategorizationNudgeNotice", () => {
   it("says how many are uncategorized since when, and that the overview is incomplete", () => {
@@ -48,12 +53,12 @@ describe("CategorizationNudgeNotice", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("hides on dismiss and remembers it in a cookie for 7 days", () => {
+  it("hides on dismiss and remembers it for this household in a cookie for 7 days", () => {
     render(<CategorizationNudgeNotice {...PROPS} />);
 
     fireEvent.click(screen.getByRole("button", { name: t.nudge.dismiss }));
 
     expect(screen.queryByRole("status")).toBeNull();
-    expect(document.cookie).toContain("categorization-nudge-hidden=1");
+    expect(document.cookie).toContain("categorization-nudge-hidden=household-a");
   });
 });

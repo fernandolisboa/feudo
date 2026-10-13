@@ -3,6 +3,7 @@ import {
   dashboardMonthRange,
   formatMoney,
   formatYearMonth,
+  HOUSEHOLD_CURRENCY,
   summarizeUncategorized,
   yearMonthOf,
   type CategorySuggestion,
@@ -18,7 +19,7 @@ import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modul
 import { getDb } from "@/platform/db/client";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
-import { readHouseholdDashboardLines } from "./dashboard-lines";
+import { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
@@ -40,7 +41,7 @@ export type GuidedItemView = {
 
 export type GuidedCategorizationProps = {
   sinceLabel: string;
-  hasTransactions: boolean;
+  hasAccounts: boolean;
   items: GuidedItemView[];
   categoryGroups: SubcategoryOptionGroup[];
 };
@@ -53,9 +54,11 @@ type UncategorizedWindow = {
   rows: ResolvedLedgerRow[];
 };
 
-// The same window as the overview's numbers (dashboardMonthRange through
-// readHouseholdDashboardLines): what is uncategorized here is exactly what
-// keeps Visão geral and the reserve target incomplete.
+// The same window and currency as the overview's numbers (dashboardMonthRange
+// through readHouseholdDashboardLines, household currency only per
+// ADR-0002): what is uncategorized here is exactly what keeps Visão geral and
+// the reserve target incomplete. A foreign-currency row is in no number, so
+// counting it would claim an incompleteness that categorizing cannot fix.
 async function readUncategorizedWindow(
   session: HouseholdSession,
   now: Date,
@@ -66,7 +69,11 @@ async function readUncategorizedWindow(
   const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
   const month = yearMonthOf(now, timeZone);
   const { kinds, rows } = await readHouseholdDashboardLines(db, scope, month, timeZone);
-  return { sinceLabel: formatYearMonth(dashboardMonthRange(month).from), kinds, rows };
+  return {
+    sinceLabel: formatYearMonth(dashboardMonthRange(month).from),
+    kinds,
+    rows: rows.filter((row) => row.currency === HOUSEHOLD_CURRENCY),
+  };
 }
 
 function suggestionReason(suggestion: CategorySuggestion, target: string): string {
@@ -108,7 +115,10 @@ export async function getGuidedCategorizationProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<GuidedCategorizationProps> {
-  const { sinceLabel, kinds, rows } = await readUncategorizedWindow(session, now);
+  const [{ sinceLabel, kinds, rows }, hasAccounts] = await Promise.all([
+    readUncategorizedWindow(session, now),
+    householdHasAccounts(getDb(), householdScope(session)),
+  ]);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(rows.map((row) => [row.id, row]));
 
@@ -125,7 +135,7 @@ export async function getGuidedCategorizationProps(
 
   const props: GuidedCategorizationProps = {
     sinceLabel,
-    hasTransactions: rows.length > 0,
+    hasAccounts,
     items: queue.flatMap((item): GuidedItemView[] => {
       const row = rowById.get(item.id);
       if (!row) {
