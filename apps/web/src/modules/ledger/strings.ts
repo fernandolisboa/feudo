@@ -341,11 +341,6 @@ const en = {
       noActivity: "Nothing was registered in {month}.",
     },
     inProgressSuffix: "so far",
-    uncategorized: {
-      one: "1 transaction in {month} has no category yet ({amount}). It stays out of every number here until it gets one.",
-      many: "{count} transactions in {month} have no category yet ({amount}). They stay out of every number here until they get one.",
-      action: "Categorize them",
-    },
     otherCurrencyNotice:
       "Accounts in another currency stay out of these numbers; see them in Transactions.",
     tiles: {
@@ -638,11 +633,6 @@ const ptBR = {
       noActivity: "Nada foi registrado em {month}.",
     },
     inProgressSuffix: "até agora",
-    uncategorized: {
-      one: "1 transação de {month} está sem categoria ({amount}) e fica fora destes números até ser categorizada.",
-      many: "{count} transações de {month} estão sem categoria ({amount}) e ficam fora destes números até serem categorizadas.",
-      action: "Categorizar agora",
-    },
     otherCurrencyNotice: "Contas em outra moeda ficam fora desses números; veja-as em Transações.",
     tiles: {
       income: "Renda",

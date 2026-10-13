@@ -3,13 +3,11 @@ import { Landmark } from "lucide-react";
 import { formatBasisPointsPercent } from "@feudo/core";
 
 import { Button } from "@/ui/button";
-import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
 import { StatTile } from "@/ui/stat-tile";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 
-import { transactionsHref } from "../href";
 import { overviewHref } from "../overview-href";
 import type { OverviewPageProps } from "../overview-page-props";
 import { t } from "../strings";
@@ -71,16 +69,8 @@ function headline({
   );
 }
 
-function uncategorizedMessage(count: number, amountLabel: string, monthLabel: string): string {
-  const copy = count === 1 ? t.overview.uncategorized.one : t.overview.uncategorized.many;
-  return interpolateAll(copy, { count: String(count), amount: amountLabel, month: monthLabel });
-}
-
 export function OverviewSummary({
-  month,
-  monthLabel,
   hasAccounts,
-  uncategorized,
   hasOtherCurrencyRows,
   tiles,
   categorySpending,
@@ -100,34 +90,6 @@ export function OverviewSummary({
 
   return (
     <>
-      {uncategorized.count > 0 ? (
-        <Notice
-          action={
-            <Button
-              variant="outline"
-              size="sm"
-              render={
-                <Link
-                  href={transactionsHref({
-                    month,
-                    accountId: null,
-                    page: 1,
-                    uncategorizedOnly: true,
-                    category: null,
-                    kind: null,
-                    search: null,
-                  })}
-                />
-              }
-            >
-              {t.overview.uncategorized.action}
-            </Button>
-          }
-        >
-          {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
-        </Notice>
-      ) : null}
-
       {hasOtherCurrencyRows ? (
         <p className="text-muted-foreground mb-4 text-[13px]">{t.overview.otherCurrencyNotice}</p>
       ) : null}

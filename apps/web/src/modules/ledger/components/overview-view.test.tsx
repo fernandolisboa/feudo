@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -173,17 +173,8 @@ describe("OverviewHeader and OverviewSummary", () => {
     ).not.toBeNull();
   });
 
-  it("shows the uncategorized notice linking to the month's uncategorized transactions", () => {
+  it("leaves the uncategorized notice to the app-wide one", () => {
     render(<Overview {...buildProps({ uncategorized: { count: 2, amountLabel: "R$ 150,00" } })} />);
-
-    const notice = screen.getByRole("status");
-    const link = within(notice).getByRole("link");
-    expect(link.getAttribute("href")).toContain("categoria=sem");
-    expect(link.getAttribute("href")).toContain("mes=2026-09");
-  });
-
-  it("does not show the uncategorized notice when there are no uncategorized rows", () => {
-    render(<Overview {...buildProps({ uncategorized: { count: 0, amountLabel: "R$ 0,00" } })} />);
 
     expect(screen.queryByRole("status")).toBeNull();
   });
