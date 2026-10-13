@@ -67,9 +67,19 @@ export function OverviewTabs({
           {t.overview.tabs.accounts}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="resumo">{summary}</TabsContent>
-      {reading === null ? null : <TabsContent value="leitura">{reading}</TabsContent>}
-      <TabsContent value="contas">{accounts}</TabsContent>
+      {/* Hidden panels stay mounted so a running sync or reading keeps its
+          pending state and result when the person looks at another tab. */}
+      <TabsContent value="resumo" keepMounted>
+        {summary}
+      </TabsContent>
+      {reading === null ? null : (
+        <TabsContent value="leitura" keepMounted>
+          {reading}
+        </TabsContent>
+      )}
+      <TabsContent value="contas" keepMounted>
+        {accounts}
+      </TabsContent>
     </Tabs>
   );
 }

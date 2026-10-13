@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 
 import {
   AnalystReading,
@@ -10,11 +10,14 @@ import { requireHouseholdSession, type HouseholdSession } from "@/modules/househ
 import {
   getOverviewPageProps,
   OverviewErrorBoundary,
+  OverviewHeader,
+  OverviewHeaderErrorBoundary,
+  OverviewHeaderSkeleton,
   OverviewSkeleton,
+  OverviewSummary,
   overviewTabOf,
-  OverviewView,
+  OverviewTabs,
   type OverviewSearchParams,
-  type OverviewSlots,
 } from "@/modules/ledger";
 import {
   getReserveNoticeBannerProps,
@@ -28,17 +31,30 @@ import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 // mirror it (page.test.ts pins them together).
 export const maxDuration = 60;
 
-async function OverviewContent({
+// The header and the summary tab render from the same read; one call per
+// request also keeps the access audit to a single row.
+const readOverview = cache(getOverviewPageProps);
+
+async function OverviewHeaderContent({
   session,
   searchParams,
-  slots,
 }: {
   session: HouseholdSession;
   searchParams: OverviewSearchParams;
-  slots: OverviewSlots;
 }) {
-  const props = await getOverviewPageProps(session, searchParams);
-  return <OverviewView {...props} {...slots} />;
+  const props = await readOverview(session, searchParams);
+  return <OverviewHeader {...props} />;
+}
+
+async function OverviewSummaryContent({
+  session,
+  searchParams,
+}: {
+  session: HouseholdSession;
+  searchParams: OverviewSearchParams;
+}) {
+  const props = await readOverview(session, searchParams);
+  return <OverviewSummary {...props} />;
 }
 
 async function AccountsSectionContent({ session }: { session: HouseholdSession }) {
@@ -63,21 +79,6 @@ export default async function Home({
 }) {
   const session = await requireHouseholdSession();
   const params = await searchParams;
-  const slots: OverviewSlots = {
-    initialTab: overviewTabOf(params),
-    reading: isAnalysisEnabled() ? (
-      <AnalystReadingErrorBoundary>
-        <Suspense fallback={null}>
-          <AnalystReadingContent session={session} />
-        </Suspense>
-      </AnalystReadingErrorBoundary>
-    ) : null,
-    accounts: (
-      <Suspense fallback={null}>
-        <AccountsSectionContent session={session} />
-      </Suspense>
-    ),
-  };
 
   return (
     <>
@@ -86,11 +87,38 @@ export default async function Home({
           <ReserveNoticeBannerContent session={session} />
         </Suspense>
       </ReserveNoticeBannerErrorBoundary>
-      <OverviewErrorBoundary>
-        <Suspense fallback={<OverviewSkeleton />}>
-          <OverviewContent session={session} searchParams={params} slots={slots} />
+      <OverviewHeaderErrorBoundary>
+        <Suspense fallback={<OverviewHeaderSkeleton />}>
+          <OverviewHeaderContent session={session} searchParams={params} />
         </Suspense>
-      </OverviewErrorBoundary>
+      </OverviewHeaderErrorBoundary>
+      {/* The month switcher's links carry no tab: a new month remounts the
+          tabs on the one its address names, so the address and the open tab agree. */}
+      <OverviewTabs
+        key={params.mes ?? ""}
+        initialTab={overviewTabOf(params)}
+        summary={
+          <OverviewErrorBoundary>
+            <Suspense fallback={<OverviewSkeleton />}>
+              <OverviewSummaryContent session={session} searchParams={params} />
+            </Suspense>
+          </OverviewErrorBoundary>
+        }
+        reading={
+          isAnalysisEnabled() ? (
+            <AnalystReadingErrorBoundary>
+              <Suspense fallback={null}>
+                <AnalystReadingContent session={session} />
+              </Suspense>
+            </AnalystReadingErrorBoundary>
+          ) : null
+        }
+        accounts={
+          <Suspense fallback={null}>
+            <AccountsSectionContent session={session} />
+          </Suspense>
+        }
+      />
     </>
   );
 }

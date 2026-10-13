@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { Landmark } from "lucide-react";
 import { formatBasisPointsPercent } from "@feudo/core";
@@ -14,11 +13,9 @@ import { transactionsHref } from "../href";
 import { overviewHref } from "../overview-href";
 import type { OverviewPageProps } from "../overview-page-props";
 import { t } from "../strings";
-import type { OverviewTab } from "../validation";
 import { BarList } from "./bar-list";
 import { MonthlyBars } from "./monthly-bars";
 import { MonthSwitcher } from "./month-switcher";
-import { OverviewTabs } from "./overview-tabs";
 
 function withProgress(sentence: string, inProgress: boolean): string {
   if (!inProgress) {
@@ -79,13 +76,7 @@ function uncategorizedMessage(count: number, amountLabel: string, monthLabel: st
   return interpolateAll(copy, { count: String(count), amount: amountLabel, month: monthLabel });
 }
 
-export type OverviewSlots = {
-  initialTab: OverviewTab;
-  reading: ReactNode | null;
-  accounts: ReactNode;
-};
-
-function Summary({
+export function OverviewSummary({
   month,
   monthLabel,
   hasAccounts,
@@ -166,31 +157,18 @@ function Summary({
   );
 }
 
-export function OverviewView({
-  initialTab,
-  reading,
-  accounts,
-  ...props
-}: OverviewPageProps & OverviewSlots) {
+export function OverviewHeader(props: OverviewPageProps) {
   return (
-    <>
-      <PageHeader
-        overline={`${t.overview.overline} · ${props.monthLabel}`}
-        title={headline(props)}
-        actions={
-          <MonthSwitcher
-            monthLabel={props.monthLabel}
-            previousHref={overviewHref(props.previousMonth)}
-            nextHref={props.nextMonth ? overviewHref(props.nextMonth) : null}
-          />
-        }
-      />
-      <OverviewTabs
-        initialTab={initialTab}
-        summary={<Summary {...props} />}
-        reading={reading}
-        accounts={accounts}
-      />
-    </>
+    <PageHeader
+      overline={`${t.overview.overline} · ${props.monthLabel}`}
+      title={headline(props)}
+      actions={
+        <MonthSwitcher
+          monthLabel={props.monthLabel}
+          previousHref={overviewHref(props.previousMonth)}
+          nextHref={props.nextMonth ? overviewHref(props.nextMonth) : null}
+        />
+      }
+    />
   );
 }
