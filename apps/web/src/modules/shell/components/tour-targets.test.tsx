@@ -21,9 +21,8 @@ afterEach(() => {
   cleanup();
 });
 
-// overview.accounts wraps the accounts section on the overview page itself
-// (app/(app)/page.tsx), which renders a slice the shell does not own; that
-// page's own test checks it.
+// overview.accounts is the Contas tab of the overview page, which a slice the
+// shell does not own renders; ledger's overview-tabs test checks it.
 const PAGE_TARGETS = new Set(["overview.accounts"]);
 
 describe("guided tour targets", () => {

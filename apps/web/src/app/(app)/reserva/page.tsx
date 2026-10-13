@@ -37,11 +37,13 @@ export default async function ReservePage() {
           <ReserveContent session={session} />
         </Suspense>
       </ReserveErrorBoundary>
-      <AnalystReadingErrorBoundary>
-        <Suspense fallback={null}>
-          <AnalystReadingContent session={session} />
-        </Suspense>
-      </AnalystReadingErrorBoundary>
+      <div className="mt-10">
+        <AnalystReadingErrorBoundary>
+          <Suspense fallback={null}>
+            <AnalystReadingContent session={session} />
+          </Suspense>
+        </AnalystReadingErrorBoundary>
+      </div>
     </>
   );
 }

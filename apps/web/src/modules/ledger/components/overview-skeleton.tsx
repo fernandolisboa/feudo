@@ -3,13 +3,18 @@ import { Skeleton } from "@/ui/skeleton";
 const TILE_KEYS = ["income", "spending", "savings-rate", "average-fixed-cost"] as const;
 const BAR_KEYS = ["a", "b", "c", "d"] as const;
 
+export function OverviewHeaderSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 pb-5">
+      <Skeleton className="h-3 w-32" />
+      <Skeleton className="h-8 w-80" />
+    </div>
+  );
+}
+
 export function OverviewSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 pb-5">
-        <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-8 w-80" />
-      </div>
       <div className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
         {TILE_KEYS.map((key) => (
           <div key={key} className="bg-card flex flex-col gap-2 p-4">

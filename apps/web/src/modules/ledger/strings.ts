@@ -361,11 +361,6 @@ const en = {
       noActivity: "Nothing was registered in {month}.",
     },
     inProgressSuffix: "so far",
-    uncategorized: {
-      one: "1 transaction in {month} has no category yet ({amount}). It stays out of every number here until it gets one.",
-      many: "{count} transactions in {month} have no category yet ({amount}). They stay out of every number here until they get one.",
-      action: "Categorize them",
-    },
     otherCurrencyNotice:
       "Accounts in another currency stay out of these numbers; see them in Transactions.",
     tiles: {
@@ -392,6 +387,13 @@ const en = {
     },
     empty: {
       noAccounts: "Connect a bank to see the household's spending here.",
+      connectAction: "Connect bank",
+    },
+    tabs: {
+      label: "Overview sections",
+      summary: "Summary",
+      reading: "Analyst's reading",
+      accounts: "Accounts",
     },
     error: {
       message: "Couldn't load the overview right now. Check your connection and try again.",
@@ -671,11 +673,6 @@ const ptBR = {
       noActivity: "Nada foi registrado em {month}.",
     },
     inProgressSuffix: "até agora",
-    uncategorized: {
-      one: "1 transação de {month} está sem categoria ({amount}) e fica fora destes números até ser categorizada.",
-      many: "{count} transações de {month} estão sem categoria ({amount}) e ficam fora destes números até serem categorizadas.",
-      action: "Categorizar agora",
-    },
     otherCurrencyNotice: "Contas em outra moeda ficam fora desses números; veja-as em Transações.",
     tiles: {
       income: "Renda",
@@ -701,6 +698,13 @@ const ptBR = {
     },
     empty: {
       noAccounts: "Conecte um banco para ver os gastos da casa aqui.",
+      connectAction: "Conectar banco",
+    },
+    tabs: {
+      label: "Seções da visão geral",
+      summary: "Resumo",
+      reading: "Leitura do analista",
+      accounts: "Contas",
     },
     error: {
       message: "Não deu para carregar a visão geral agora. Confira sua conexão e tente de novo.",

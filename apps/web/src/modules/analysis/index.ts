@@ -10,5 +10,5 @@ export {
 } from "./page-props";
 export { READING_PARAM } from "./paths";
 export type { AnalystReadingProps } from "./page-props";
-export { ON_DEMAND_BUDGET_MS, runMonthlyAnalysisStep } from "./service";
+export { isAnalysisEnabled, ON_DEMAND_BUDGET_MS, runMonthlyAnalysisStep } from "./service";
 export type { MonthlyAnalysisStep } from "./service";
