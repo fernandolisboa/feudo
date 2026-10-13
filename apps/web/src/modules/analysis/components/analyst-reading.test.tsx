@@ -11,11 +11,10 @@ function props(overrides: Partial<AnalystReadingProps> = {}): AnalystReadingProp
   return {
     reading: {
       title: "Leitura mensal de setembro de 2026",
-      paragraphs: ["Primeiro parágrafo.", "Segundo parágrafo."],
-      tradeOffs: ["Liquidez contra rendimento."],
+      summary: "Setembro fechou no azul e a reserva segue no caminho.",
       counterArgument: "Concentrar tem risco.",
-      inputsUsed: [{ key: "ledger.income", label: "Renda em setembro", value: "R$ 12.400,00" }],
-      meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5", "prompt analyst-v1"],
+      meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5"],
+      href: "/analises",
     },
     limit: 3,
     remaining: 2,
@@ -29,33 +28,26 @@ afterEach(() => {
 });
 
 describe("AnalystReading", () => {
-  it("shows the reading, its trade-offs, counter-argument, figures used and provenance", () => {
+  it("shows the summary, the counter-argument and provenance, and links to the full reading", () => {
     render(<AnalystReading {...props()} />);
 
     expect(screen.getByRole("heading", { name: "Leitura do analista" })).toBeDefined();
-    expect(screen.getByText("Segundo parágrafo.")).toBeDefined();
-    expect(screen.getByText("Liquidez contra rendimento.")).toBeDefined();
+    expect(screen.getByText("Leitura mensal de setembro de 2026")).toBeDefined();
+    expect(screen.getByText("Setembro fechou no azul e a reserva segue no caminho.")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Contra-argumento" })).toBeDefined();
     expect(screen.getByText("Concentrar tem risco.")).toBeDefined();
-    expect(screen.getByText("Renda em setembro")).toBeDefined();
-    expect(screen.getByText("R$ 12.400,00")).toBeDefined();
-    expect(
-      screen.getByText("gerada em 01/10/2026, 08:12 · Claude Opus 5.5 · prompt analyst-v1"),
-    ).toBeDefined();
+    expect(screen.getByText("gerada em 01/10/2026, 08:12 · Claude Opus 5.5")).toBeDefined();
     expect(screen.getByText(/Não é recomendação de investimento/)).toBeDefined();
+    expect(screen.getByRole("link", { name: "Ver a leitura completa" }).getAttribute("href")).toBe(
+      "/analises",
+    );
   });
 
-  it("sets the trade-offs beside the reading and folds the figures used away", () => {
+  it("leaves the trade-offs and the figures used to Análises", () => {
     render(<AnalystReading {...props()} />);
 
-    const aside = screen.getByRole("complementary");
-    expect(aside.textContent).toContain("Prós e contras");
-    expect(aside.textContent).toContain("Contra-argumento");
-    expect(aside.textContent).not.toContain("Segundo parágrafo.");
-
-    const figures = screen.getByText("Números usados (1)").closest("details");
-    expect(figures).not.toBeNull();
-    expect(figures?.open).toBe(false);
-    expect(figures?.textContent).toContain("R$ 12.400,00");
+    expect(screen.queryByText("Prós e contras")).toBeNull();
+    expect(screen.queryByText(/Números usados/)).toBeNull();
   });
 
   it("invites the first reading when there is none", () => {

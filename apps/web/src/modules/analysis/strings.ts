@@ -6,7 +6,7 @@ const en = {
     tradeOffs: "Trade-offs",
     counterArgument: "Counter-argument",
     inputsUsed: "Figures used",
-    inputsUsedCount: "Figures used ({count})",
+    readFull: "See the full reading",
     kinds: {
       monthly: "Monthly reading of {month}",
       on_demand: "Reading requested for {month}",
@@ -77,7 +77,7 @@ const ptBR = {
     tradeOffs: "Prós e contras",
     counterArgument: "Contra-argumento",
     inputsUsed: "Números usados",
-    inputsUsedCount: "Números usados ({count})",
+    readFull: "Ver a leitura completa",
     kinds: {
       monthly: "Leitura mensal de {month}",
       on_demand: "Leitura pedida sobre {month}",
