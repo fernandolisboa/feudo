@@ -9,6 +9,7 @@ import { interpolate } from "@/lib/interpolate";
 import { transactionsHref } from "../href";
 import type { TransactionsPageProps } from "../page-props";
 import { MonthSwitcher } from "./month-switcher";
+import { SpreadsheetMenu } from "./spreadsheet-menu";
 import { TransactionsFilterBar } from "./transactions-filter-bar";
 import { TransactionsTable } from "./transactions-table";
 import { t } from "../strings";
@@ -137,6 +138,12 @@ export function TransactionsView({
               <Tags className="size-4" />
               {t.categoriesLink}
             </Button>
+            {total > 0 ? (
+              <SpreadsheetMenu
+                view={{ month, accountId: selectedAccountId, ...activeFilters }}
+                total={total}
+              />
+            ) : null}
           </>
         }
       />

@@ -17,6 +17,7 @@
 | Privacy policy                              | política de privacidade                        | route `/privacidade`                                                         |
 | Terms re-acceptance                         | termos atualizados                             | route `/aceitar-termos`                                                      |
 | Data export                                 | baixar meus dados                              | section "Seus dados" in Preferências                                         |
+| Transactions spreadsheet                    | exportar transações                            | menu "Exportar" in Transações                                                |
 | Membership                                  | participação                                   | rarely shown; prefer "membro da casa"                                        |
 | Owner                                       | responsável                                    | one per household                                                            |
 | Admin                                       | administrador                                  |                                                                              |
