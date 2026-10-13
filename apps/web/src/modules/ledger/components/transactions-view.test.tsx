@@ -40,19 +40,7 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
 }
 
 describe("TransactionsView", () => {
-  it("shows the uncategorized notice with a link to the uncategorized filter when there are uncategorized rows", () => {
-    render(
-      <TransactionsView
-        {...buildProps({ uncategorized: { count: 2, amountLabel: "R$ 150,00" } })}
-      />,
-    );
-
-    const notice = screen.getByRole("status");
-    const link = within(notice).getByRole("link");
-    expect(link.getAttribute("href")).toContain("categoria=sem");
-  });
-
-  it("drops any active category, kind or search filter from the uncategorized notice's link, since its count is month-wide", () => {
+  it("leads the uncategorized notice to guided categorization, whatever filters are active", () => {
     render(
       <TransactionsView
         {...buildProps({
@@ -65,8 +53,8 @@ describe("TransactionsView", () => {
     );
 
     const notice = screen.getByRole("status");
-    const link = within(notice).getByRole("link");
-    expect(link.getAttribute("href")).toBe("/transacoes?mes=2026-09&conta=acc-1&categoria=sem");
+    const link = within(notice).getByRole("link", { name: "Categorizar uma a uma" });
+    expect(link.getAttribute("href")).toBe("/categorizar");
   });
 
   it("does not show the notice when there are no uncategorized rows", () => {

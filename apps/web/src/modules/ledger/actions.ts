@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDb } from "@/platform/db/client";
 import type { ActionState } from "@/lib/action-state";
+import { interpolateAll } from "@/lib/interpolate";
 import { requireHouseholdSession } from "@/modules/households";
 
 import {
@@ -21,14 +22,17 @@ import {
   addSubcategoryFormSchema,
   categorizeTransactionFormSchema,
   changeKindFormSchema,
+  RULE_PATTERN_MAX_LENGTH,
+  RULE_PATTERN_MIN_LENGTH,
   ruleIdFormSchema,
   transactionIdFormSchema,
   transferMarkFormSchema,
 } from "./validation";
 
+// Every signed-in screen carries the uncategorized notice from the layout,
+// so a categorization refreshes the whole shell, not only the ledger pages.
 function revalidateLedger(): void {
-  revalidatePath("/transacoes");
-  revalidatePath("/categorias");
+  revalidatePath("/", "layout");
 }
 
 function stateFor(outcome: CategorizeOutcome, success: string): ActionState {
@@ -58,7 +62,10 @@ export async function categorizeTransactionAction(
     return {
       status: "error",
       message: parsed.error.issues.some((issue) => issue.path[0] === "pattern")
-        ? t.errors.invalidPattern
+        ? interpolateAll(t.errors.invalidPattern, {
+            min: String(RULE_PATTERN_MIN_LENGTH),
+            max: String(RULE_PATTERN_MAX_LENGTH),
+          })
         : t.errors.invalidInput,
     };
   }

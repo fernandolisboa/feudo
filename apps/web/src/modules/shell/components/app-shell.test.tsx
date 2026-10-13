@@ -72,4 +72,28 @@ describe("AppShell", () => {
 
     expect(screen.queryByTestId("household-switcher")).toBeNull();
   });
+
+  it("renders the notice slot inside the content area, ahead of the page", () => {
+    render(
+      <AppShell
+        shell="sidebar"
+        sidebarCollapsed={false}
+        userName="Ada"
+        userEmail="ada@example.com"
+        householdSwitcher={null}
+        tourState={{ autoStart: true, seenVersions: {} }}
+        offline={OFFLINE}
+        notice={<p data-testid="notice">Aviso</p>}
+      >
+        <p data-testid="page">Página</p>
+      </AppShell>,
+    );
+
+    const main = screen.getByRole("main");
+    const notice = screen.getByTestId("notice");
+    expect(main.contains(notice)).toBe(true);
+    expect(
+      notice.compareDocumentPosition(screen.getByTestId("page")) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

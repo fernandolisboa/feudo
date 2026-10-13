@@ -12,6 +12,8 @@ export type TransactionsRoute = {
 
 export const UNCATEGORIZED_FILTER = "sem";
 
+export const TRANSACTIONS_PATH = "/transacoes";
+
 export function transactionsRouteParams(view: TransactionsRoute): [string, string][] {
   const entries: [string, string][] = [["mes", view.month]];
   if (view.accountId) {
@@ -36,5 +38,6 @@ export function transactionsRouteParams(view: TransactionsRoute): [string, strin
 
 export function transactionsHref(view: TransactionsRoute): string {
   const params = new URLSearchParams(transactionsRouteParams(view));
-  return `/transacoes?${params.toString()}`;
+  return `${TRANSACTIONS_PATH}?${params.toString()}`;
 }
+export const GUIDED_CATEGORIZATION_PATH = "/categorizar";
