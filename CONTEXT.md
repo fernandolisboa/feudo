@@ -126,6 +126,12 @@ A household's instruction that assigns a subcategory to transactions whose descr
 **Uncategorized**:
 A transaction that no internal-transfer mark or pair, manual choice, household rule, product default or provider category places in a subcategory. It has no kind, counts in no total, and is shown with its count and amount until a member categorizes it.
 
+**Guided categorization**:
+The screen that walks a member through the uncategorized transactions of the overview's window (the current month and the six before it), one at a time and largest amount first, and the notice above every screen that counts them. Each transaction comes with a categorization suggestion; saving it is a manual categorization, optionally with a categorization rule on the proposed text, which then takes every other transaction that matches.
+
+**Categorization suggestion**:
+What Feudo proposes for an uncategorized transaction, computed deterministically and never by AI: the subcategory the household most often gave to transactions its proposed rule text matches, in the same direction (ties go to the most recent); with no such history, income for money coming in and nothing for money going out. Never applied until a member saves it.
+
 **Fixed cost**:
 Spending in subcategories of kind fixed. The product marks the usual ones as fixed by default and a household can override the kind per subcategory. Detected recurring spending is suggested as fixed, never applied silently.
 _Avoid_: essential spending, mandatory expense

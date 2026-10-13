@@ -38,3 +38,4 @@ export function transactionsHref(view: TransactionsRoute): string {
   const params = new URLSearchParams(transactionsRouteParams(view));
   return `/transacoes?${params.toString()}`;
 }
+export const GUIDED_CATEGORIZATION_PATH = "/categorizar";

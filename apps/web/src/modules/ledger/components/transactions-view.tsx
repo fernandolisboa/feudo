@@ -6,7 +6,7 @@ import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { interpolate } from "@/lib/interpolate";
 
-import { transactionsHref } from "../href";
+import { GUIDED_CATEGORIZATION_PATH, transactionsHref } from "../href";
 import type { TransactionsPageProps } from "../page-props";
 import { MonthSwitcher } from "./month-switcher";
 import { TransactionsFilterBar } from "./transactions-filter-bar";
@@ -163,23 +163,7 @@ export function TransactionsView({
       {uncategorized.count > 0 && !uncategorizedOnly ? (
         <Notice
           action={
-            <Button
-              variant="outline"
-              size="sm"
-              render={
-                <Link
-                  href={transactionsHref({
-                    month,
-                    accountId: selectedAccountId,
-                    page: 1,
-                    uncategorizedOnly: true,
-                    category: null,
-                    kind: null,
-                    search: null,
-                  })}
-                />
-              }
-            >
+            <Button size="sm" render={<Link href={GUIDED_CATEGORIZATION_PATH} />}>
               {t.uncategorized.show}
             </Button>
           }

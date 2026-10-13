@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import {
   getHouseholdSwitcherProps,
@@ -12,6 +12,7 @@ import {
   getTourState,
   readSidebarCollapsed,
 } from "@/modules/shell";
+import { CategorizationNudge } from "@/modules/ledger";
 import { resolveTheme, shellLayoutFor } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -36,6 +37,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       householdSwitcher={householdSwitcher}
       tourState={tourState}
       offline={offline}
+      notice={
+        <Suspense fallback={null}>
+          <CategorizationNudge session={session} />
+        </Suspense>
+      }
     >
       {/* Switching household keeps the URL, so the key is what clears a failed page. */}
       <AppErrorBoundary key={householdId}>{children}</AppErrorBoundary>

@@ -26,9 +26,10 @@ import {
   transferMarkFormSchema,
 } from "./validation";
 
+// Every signed-in screen carries the uncategorized notice from the layout,
+// so a categorization refreshes the whole shell, not only the ledger pages.
 function revalidateLedger(): void {
-  revalidatePath("/transacoes");
-  revalidatePath("/categorias");
+  revalidatePath("/", "layout");
 }
 
 function stateFor(outcome: CategorizeOutcome, success: string): ActionState {

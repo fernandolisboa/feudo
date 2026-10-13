@@ -22,6 +22,7 @@ export function AppShell({
   householdSwitcher,
   tourState,
   offline,
+  notice,
   children,
 }: {
   shell: ShellLayout;
@@ -31,6 +32,7 @@ export function AppShell({
   householdSwitcher: ReactNode;
   tourState: TourState;
   offline: OfflineNoticeProps;
+  notice?: ReactNode;
   children: ReactNode;
 }) {
   const userMenu = <UserMenu name={userName} email={userEmail} />;
@@ -53,6 +55,7 @@ export function AppShell({
 
         <main className="app-shell-content">
           <OfflineNotice {...offline} />
+          {notice}
           {children}
         </main>
 
