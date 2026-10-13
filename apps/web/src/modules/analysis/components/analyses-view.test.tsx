@@ -115,6 +115,7 @@ describe("AnalysesView", () => {
     expect(screen.getByRole("link", { name: "Ver a mais recente" }).getAttribute("href")).toBe(
       "/analises",
     );
+    expect(screen.queryByRole("button", { name: /Gerar nova leitura/ })).toBeNull();
   });
 
   it("offers the first reading when there is none yet", () => {

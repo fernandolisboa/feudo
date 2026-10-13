@@ -5,6 +5,7 @@ import {
   analysisFactSchema,
   analysisInputSchema,
   analysisOutputSchema,
+  currentAnalysisOutputSchema,
 } from "./contract";
 
 const fixtureFacts = [
@@ -194,5 +195,14 @@ describe("analysisOutputSchema", () => {
   it("rejects more than 40 citedKeys", () => {
     const citedKeys = Array.from({ length: 41 }, (_, index) => `fact_${String(index)}`);
     expect(() => analysisOutputSchema.parse(fixtureOutput({ citedKeys }))).toThrow();
+  });
+});
+
+describe("currentAnalysisOutputSchema", () => {
+  it("requires the summary and the bank paragraph a fresh answer must carry", () => {
+    expect(() => currentAnalysisOutputSchema.parse(fixtureOutput())).toThrow();
+    expect(() =>
+      currentAnalysisOutputSchema.parse(fixtureOutput({ summary: "Resumo.", banks: "Bancos." })),
+    ).not.toThrow();
   });
 });

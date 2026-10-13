@@ -177,9 +177,11 @@ export function AnalysesView({
         <p className="font-heading max-w-[60ch] text-[18px]">{t.panel.empty}</p>
       )}
 
-      <div className="max-w-[68ch]">
-        <RequestAnalysisControl remaining={remaining} limit={limit} inProgress={inProgress} />
-      </div>
+      {isLatest ? (
+        <div className="max-w-[68ch]">
+          <RequestAnalysisControl remaining={remaining} limit={limit} inProgress={inProgress} />
+        </div>
+      ) : null}
 
       {history.length > 1 ? <History items={history} /> : null}
     </>

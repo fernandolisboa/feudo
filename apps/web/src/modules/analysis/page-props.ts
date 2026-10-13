@@ -9,6 +9,7 @@ import {
 } from "@feudo/core";
 import { z } from "zod";
 
+import { recordFinancialDataAccess } from "@/modules/audit";
 import {
   DEFAULT_TIME_ZONE,
   getHouseholdSettings,
@@ -190,6 +191,40 @@ export function historyItem(
   };
 }
 
+type HouseholdContext = {
+  db: ReturnType<typeof getDb>;
+  repository: ReturnType<typeof createAnalysisRepository>;
+  timeZone: string;
+};
+
+async function householdContext(session: HouseholdSession): Promise<HouseholdContext> {
+  const db = getDb();
+  const scope = householdScope(session);
+  const settings = await getHouseholdSettings(scope, db);
+  return {
+    db,
+    repository: createAnalysisRepository(scope),
+    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+  };
+}
+
+type QuotaState = Pick<AnalystReadingProps, "limit" | "remaining" | "inProgress">;
+
+async function quotaState(
+  { db, repository, timeZone }: HouseholdContext,
+  now: Date,
+): Promise<QuotaState> {
+  const [used, inProgress] = await Promise.all([
+    repository.countOnDemandOn(db, localDateOf(now, timeZone)),
+    repository.hasRunningSince(db, new Date(now.getTime() - RUNNING_STALE_MS)),
+  ]);
+  return {
+    limit: ON_DEMAND_ANALYSES_PER_DAY,
+    remaining: Math.max(0, ON_DEMAND_ANALYSES_PER_DAY - used),
+    inProgress,
+  };
+}
+
 // The "Leitura do analista" panel on Visão geral and Reserva. Null when the
 // analysis is turned off, so both pages render exactly as they do without it
 // (ADR-0004: no number on screen comes from the AI layer).
@@ -200,32 +235,14 @@ export async function getAnalystReadingProps(
   if (!isAnalysisEnabled()) {
     return null;
   }
-  const db = getDb();
-  const scope = householdScope(session);
-  const repository = createAnalysisRepository(scope);
-  const settings = await getHouseholdSettings(scope, db);
-  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
-  const [latest, used, inProgress] = await Promise.all([
-    repository.latestSucceeded(db),
-    repository.countOnDemandOn(db, localDateOf(now, timeZone)),
-    repository.hasRunningSince(db, new Date(now.getTime() - RUNNING_STALE_MS)),
+  const context = await householdContext(session);
+  const [latest, quota] = await Promise.all([
+    context.repository.latestSucceeded(context.db),
+    quotaState(context, now),
   ]);
   return {
-    reading: latest === null ? null : readingView(latest, timeZone),
-    limit: ON_DEMAND_ANALYSES_PER_DAY,
-    remaining: Math.max(0, ON_DEMAND_ANALYSES_PER_DAY - used),
-    inProgress,
-  };
-}
-
-async function householdContext(session: HouseholdSession) {
-  const db = getDb();
-  const scope = householdScope(session);
-  const settings = await getHouseholdSettings(scope, db);
-  return {
-    db,
-    repository: createAnalysisRepository(scope),
-    timeZone: settings?.timeZone ?? DEFAULT_TIME_ZONE,
+    reading: latest === null ? null : readingView(latest, context.timeZone),
+    ...quota,
   };
 }
 
@@ -241,24 +258,24 @@ export async function getAnalysesPageProps(
   if (!isAnalysisEnabled()) {
     return null;
   }
-  const { db, repository, timeZone } = await householdContext(session);
+  const context = await householdContext(session);
+  const { db, repository, timeZone } = context;
   const id = readingIdSchema.safeParse(requestedId);
-  const [requested, history, used, inProgress] = await Promise.all([
+  const [requested, history, quota] = await Promise.all([
     id.success ? repository.findSucceeded(db, id.data) : Promise.resolve(null),
     repository.listSucceeded(db, HISTORY_LIMIT),
-    repository.countOnDemandOn(db, localDateOf(now, timeZone)),
-    repository.hasRunningSince(db, new Date(now.getTime() - RUNNING_STALE_MS)),
+    quotaState(context, now),
   ]);
-  const shown = requested ?? (await repository.latestSucceeded(db));
-  const reading = shown === null ? null : analysisDetailView(shown, timeZone);
+  const requestedView = requested === null ? null : analysisDetailView(requested, timeZone);
+  const latest = requestedView === null ? await repository.latestSucceeded(db) : null;
+  const reading = requestedView ?? (latest === null ? null : analysisDetailView(latest, timeZone));
   const latestId = history[0]?.id ?? null;
+  await recordFinancialDataAccess(session, "analyses");
   return {
     reading,
-    isLatest: reading === null || reading.id === latestId,
+    isLatest: requestedView === null || requestedView.id === latestId,
     history: history.map((row) => historyItem(row, timeZone, reading?.id ?? null)),
-    limit: ON_DEMAND_ANALYSES_PER_DAY,
-    remaining: Math.max(0, ON_DEMAND_ANALYSES_PER_DAY - used),
-    inProgress,
+    ...quota,
   };
 }
 

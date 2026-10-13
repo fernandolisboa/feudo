@@ -55,3 +55,9 @@ export const analysisOutputSchema = z.object({
 });
 
 export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
+
+// What a fresh answer to the current prompt (analyst-v2) must contain.
+export const currentAnalysisOutputSchema = analysisOutputSchema.required({
+  summary: true,
+  banks: true,
+});

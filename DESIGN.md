@@ -17,7 +17,7 @@ shadows, one accent used sparingly, dense enough for a desktop that is open ever
   state remembered per browser via a cookie) or `topnav` (a horizontal bar under the header).
   Under 768px every theme uses a bottom tab bar. Five destinations: Visão geral, Transações,
   Reserva, Bancos, Casa. Análises sits in the sidebar and top bar only; on a phone it is reached
-  from the links on Visão geral and Bancos. Household switcher at the nav foot (sidebar), in the bar (topnav) or in
+  from the analyst's note on Bancos and from the monthly reading's notification. Household switcher at the nav foot (sidebar), in the bar (topnav) or in
   the mobile header.
 - **Page**: overline (section · period) + serif headline that states the month's fact in one
   sentence, actions on the right; then sections separated by hairlines with a serif section title

@@ -195,6 +195,7 @@ export {
   analysisFactSchema,
   analysisInputSchema,
   analysisOutputSchema,
+  currentAnalysisOutputSchema,
 } from "./analysis/contract";
 export { extractNumberTokens } from "./analysis/numbers";
 export type { AnalysisViolation } from "./analysis/validate";
