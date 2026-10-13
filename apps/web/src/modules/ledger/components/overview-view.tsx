@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { Landmark } from "lucide-react";
 import { formatBasisPointsPercent } from "@feudo/core";
 
 import { Button } from "@/ui/button";
@@ -12,9 +14,11 @@ import { transactionsHref } from "../href";
 import { overviewHref } from "../overview-href";
 import type { OverviewPageProps } from "../overview-page-props";
 import { t } from "../strings";
+import type { OverviewTab } from "../validation";
 import { BarList } from "./bar-list";
 import { MonthlyBars } from "./monthly-bars";
 import { MonthSwitcher } from "./month-switcher";
+import { OverviewTabs } from "./overview-tabs";
 
 function withProgress(sentence: string, inProgress: boolean): string {
   if (!inProgress) {
@@ -75,97 +79,118 @@ function uncategorizedMessage(count: number, amountLabel: string, monthLabel: st
   return interpolateAll(copy, { count: String(count), amount: amountLabel, month: monthLabel });
 }
 
-export function OverviewView(props: OverviewPageProps) {
-  const {
-    month,
-    monthLabel,
-    previousMonth,
-    nextMonth,
-    hasAccounts,
-    uncategorized,
-    hasOtherCurrencyRows,
-    tiles,
-    categorySpending,
-    series,
-  } = props;
+export type OverviewSlots = {
+  initialTab: OverviewTab;
+  reading: ReactNode | null;
+  accounts: ReactNode;
+};
+
+function Summary({
+  month,
+  monthLabel,
+  hasAccounts,
+  uncategorized,
+  hasOtherCurrencyRows,
+  tiles,
+  categorySpending,
+  series,
+}: OverviewPageProps) {
+  if (!hasAccounts) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="font-heading text-[18px]">{t.overview.empty.noAccounts}</p>
+        <Button render={<Link href="/conectar-banco" />}>
+          <Landmark className="size-4" />
+          {t.overview.empty.connectAction}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
+      {uncategorized.count > 0 ? (
+        <Notice
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link
+                  href={transactionsHref({
+                    month,
+                    accountId: null,
+                    page: 1,
+                    uncategorizedOnly: true,
+                    category: null,
+                    kind: null,
+                    search: null,
+                  })}
+                />
+              }
+            >
+              {t.overview.uncategorized.action}
+            </Button>
+          }
+        >
+          {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
+        </Notice>
+      ) : null}
+
+      {hasOtherCurrencyRows ? (
+        <p className="text-muted-foreground mb-4 text-[13px]">{t.overview.otherCurrencyNotice}</p>
+      ) : null}
+
+      <div className="bg-border mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
+        <StatTile {...tiles.income} />
+        <StatTile {...tiles.spending} />
+        <StatTile {...tiles.savingsRate} />
+        <StatTile {...tiles.averageFixedCost} />
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-[1fr_1.25fr]">
+        <section>
+          <SectionHeader title={t.overview.categorySpending.title} />
+          {categorySpending.length === 0 ? (
+            <p className="text-muted-foreground text-[13px]">{t.overview.categorySpending.empty}</p>
+          ) : (
+            <BarList items={categorySpending} />
+          )}
+        </section>
+        <section>
+          <SectionHeader title={t.overview.chart.title} />
+          <MonthlyBars points={series} />
+        </section>
+      </div>
+    </>
+  );
+}
+
+export function OverviewView({
+  initialTab,
+  reading,
+  accounts,
+  ...props
+}: OverviewPageProps & OverviewSlots) {
+  return (
+    <>
       <PageHeader
-        overline={`${t.overview.overline} · ${monthLabel}`}
+        overline={`${t.overview.overline} · ${props.monthLabel}`}
         title={headline(props)}
         actions={
           <MonthSwitcher
-            monthLabel={monthLabel}
-            previousHref={overviewHref(previousMonth)}
-            nextHref={nextMonth ? overviewHref(nextMonth) : null}
+            monthLabel={props.monthLabel}
+            previousHref={overviewHref(props.previousMonth)}
+            nextHref={props.nextMonth ? overviewHref(props.nextMonth) : null}
           />
         }
       />
-
-      {!hasAccounts ? (
-        <p className="font-heading text-[18px]">{t.overview.empty.noAccounts}</p>
-      ) : (
-        <>
-          {uncategorized.count > 0 ? (
-            <Notice
-              action={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  render={
-                    <Link
-                      href={transactionsHref({
-                        month,
-                        accountId: null,
-                        page: 1,
-                        uncategorizedOnly: true,
-                        category: null,
-                        kind: null,
-                        search: null,
-                      })}
-                    />
-                  }
-                >
-                  {t.overview.uncategorized.action}
-                </Button>
-              }
-            >
-              {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
-            </Notice>
-          ) : null}
-
-          {hasOtherCurrencyRows ? (
-            <p className="text-muted-foreground mb-4 text-[13px]">
-              {t.overview.otherCurrencyNotice}
-            </p>
-          ) : null}
-
-          <div className="bg-border mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border md:grid-cols-4">
-            <StatTile {...tiles.income} />
-            <StatTile {...tiles.spending} />
-            <StatTile {...tiles.savingsRate} />
-            <StatTile {...tiles.averageFixedCost} />
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-[1fr_1.25fr]">
-            <section>
-              <SectionHeader title={t.overview.categorySpending.title} />
-              {categorySpending.length === 0 ? (
-                <p className="text-muted-foreground text-[13px]">
-                  {t.overview.categorySpending.empty}
-                </p>
-              ) : (
-                <BarList items={categorySpending} />
-              )}
-            </section>
-            <section>
-              <SectionHeader title={t.overview.chart.title} />
-              <MonthlyBars points={series} />
-            </section>
-          </div>
-        </>
-      )}
+      <OverviewTabs
+        initialTab={initialTab}
+        summary={<Summary {...props} />}
+        reading={reading}
+        accounts={accounts}
+      />
     </>
   );
 }

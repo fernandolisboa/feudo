@@ -5,7 +5,7 @@ const en = {
       "No analyst reading yet. The first one arrives at the start of next month, or generate it now.",
     tradeOffs: "Trade-offs",
     counterArgument: "Counter-argument",
-    inputsUsed: "Figures used",
+    inputsUsed: "Figures used ({count})",
     kinds: {
       monthly: "Monthly reading of {month}",
       on_demand: "Reading requested for {month}",
@@ -54,7 +54,7 @@ const ptBR = {
       "Ainda não há leitura do analista. A primeira chega no início do próximo mês, ou gere agora.",
     tradeOffs: "Prós e contras",
     counterArgument: "Contra-argumento",
-    inputsUsed: "Números usados",
+    inputsUsed: "Números usados ({count})",
     kinds: {
       monthly: "Leitura mensal de {month}",
       on_demand: "Leitura pedida sobre {month}",

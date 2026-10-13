@@ -34,7 +34,7 @@ const en = {
         },
         accounts: {
           title: "Your accounts",
-          body: "These are the accounts your connections brought in and the household each one belongs to. Move takes an account to another household of yours. No connection yet? Start with Connect bank.",
+          body: "The Accounts tab lists the accounts your connections brought in and the household each one belongs to. Move takes an account to another household of yours. No connection yet? Start with Connect bank.",
         },
         help: {
           title: "Help whenever you need it",
@@ -166,7 +166,7 @@ const ptBR = {
         },
         accounts: {
           title: "Suas contas",
-          body: "Aqui estão as contas que suas conexões trouxeram e a casa de cada uma. Mover leva uma conta para outra casa sua. Ainda sem conexão? Comece por Conectar banco.",
+          body: "Na aba Contas ficam as contas que suas conexões trouxeram e a casa de cada uma. Mover leva uma conta para outra casa sua. Ainda sem conexão? Comece por Conectar banco.",
         },
         help: {
           title: "Ajuda quando precisar",

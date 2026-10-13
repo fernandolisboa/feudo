@@ -10,11 +10,13 @@ export { CategoriesErrorBoundary } from "./components/categories-error-boundary"
 export { getCategoriesPageProps } from "./categories-page-props";
 export type { CategoriesPageProps } from "./categories-page-props";
 export { OverviewView } from "./components/overview-view";
+export type { OverviewSlots } from "./components/overview-view";
 export { OverviewSkeleton } from "./components/overview-skeleton";
 export { OverviewErrorBoundary } from "./components/overview-error-boundary";
 export { getOverviewPageProps } from "./overview-page-props";
 export type { OverviewPageProps } from "./overview-page-props";
-export type { OverviewSearchParams } from "./validation";
+export { overviewTabOf } from "./validation";
+export type { OverviewSearchParams, OverviewTab } from "./validation";
 export { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 export { getLedgerAnalysisFacts } from "./analysis-facts";
 export { getLedgerExportAnnotations } from "./export";

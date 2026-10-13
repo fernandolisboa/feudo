@@ -47,9 +47,9 @@ test("a new user sees the Visão geral tour once, skips it, and reopens it from 
     await recorded;
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Contas", exact: true })).toBeVisible();
-    // The tour would start as soon as the accounts section renders; give it
-    // a moment to prove that it doesn't.
+    await expect(page.getByRole("tab", { name: "Contas" })).toBeVisible();
+    // The tour would start as soon as the Contas tab renders; give it a moment
+    // to prove that it doesn't.
     await page.waitForTimeout(1_500);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });

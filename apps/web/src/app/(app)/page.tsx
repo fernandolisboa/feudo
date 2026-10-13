@@ -4,14 +4,17 @@ import {
   AnalystReading,
   AnalystReadingErrorBoundary,
   getAnalystReadingProps,
+  isAnalysisEnabled,
 } from "@/modules/analysis";
 import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
 import {
   getOverviewPageProps,
   OverviewErrorBoundary,
   OverviewSkeleton,
+  overviewTabOf,
   OverviewView,
   type OverviewSearchParams,
+  type OverviewSlots,
 } from "@/modules/ledger";
 import {
   getReserveNoticeBannerProps,
@@ -28,12 +31,14 @@ export const maxDuration = 60;
 async function OverviewContent({
   session,
   searchParams,
+  slots,
 }: {
   session: HouseholdSession;
   searchParams: OverviewSearchParams;
+  slots: OverviewSlots;
 }) {
   const props = await getOverviewPageProps(session, searchParams);
-  return <OverviewView {...props} />;
+  return <OverviewView {...props} {...slots} />;
 }
 
 async function AccountsSectionContent({ session }: { session: HouseholdSession }) {
@@ -58,6 +63,21 @@ export default async function Home({
 }) {
   const session = await requireHouseholdSession();
   const params = await searchParams;
+  const slots: OverviewSlots = {
+    initialTab: overviewTabOf(params),
+    reading: isAnalysisEnabled() ? (
+      <AnalystReadingErrorBoundary>
+        <Suspense fallback={null}>
+          <AnalystReadingContent session={session} />
+        </Suspense>
+      </AnalystReadingErrorBoundary>
+    ) : null,
+    accounts: (
+      <Suspense fallback={null}>
+        <AccountsSectionContent session={session} />
+      </Suspense>
+    ),
+  };
 
   return (
     <>
@@ -68,19 +88,9 @@ export default async function Home({
       </ReserveNoticeBannerErrorBoundary>
       <OverviewErrorBoundary>
         <Suspense fallback={<OverviewSkeleton />}>
-          <OverviewContent session={session} searchParams={params} />
+          <OverviewContent session={session} searchParams={params} slots={slots} />
         </Suspense>
       </OverviewErrorBoundary>
-      <AnalystReadingErrorBoundary>
-        <Suspense fallback={null}>
-          <AnalystReadingContent session={session} />
-        </Suspense>
-      </AnalystReadingErrorBoundary>
-      <div className="mt-10" data-tour="overview.accounts">
-        <Suspense fallback={null}>
-          <AccountsSectionContent session={session} />
-        </Suspense>
-      </div>
     </>
   );
 }

@@ -62,8 +62,19 @@ export type TransactionsSearchParams = z.input<typeof transactionsSearchParamsSc
 // Same fallback contract as transactionsSearchParamsSchema: an unreadable
 // month in the URL falls back to the default (the current month) rather
 // than an error page.
-export const overviewSearchParamsSchema = z.object({ mes: yearMonthSchema });
+export const OVERVIEW_TABS = ["resumo", "leitura", "contas"] as const;
+export type OverviewTab = (typeof OVERVIEW_TABS)[number];
+export const DEFAULT_OVERVIEW_TAB: OverviewTab = "resumo";
+
+export const overviewSearchParamsSchema = z.object({
+  mes: yearMonthSchema,
+  aba: z.enum(OVERVIEW_TABS).optional().catch(undefined),
+});
 export type OverviewSearchParams = z.input<typeof overviewSearchParamsSchema>;
+
+export function overviewTabOf(searchParams: OverviewSearchParams): OverviewTab {
+  return overviewSearchParamsSchema.parse(searchParams).aba ?? DEFAULT_OVERVIEW_TAB;
+}
 
 const idSchema = z.string().trim().min(1).max(64);
 

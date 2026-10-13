@@ -56,21 +56,25 @@ function buildProps(overrides: Partial<OverviewPageProps> = {}): OverviewPagePro
   };
 }
 
+const SLOTS = { initialTab: "resumo", reading: null, accounts: null } as const;
+
 afterEach(() => {
   cleanup();
 });
 
 describe("OverviewView", () => {
   it("shows the empty state and no tiles when the household has no accounts", () => {
-    render(<OverviewView {...buildProps({ hasAccounts: false })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ hasAccounts: false })} />);
 
     expect(screen.getByText(t.overview.empty.noAccounts)).not.toBeNull();
-    expect(screen.queryByRole("link", { name: /conectar banco/i })).toBeNull();
+    expect(screen.getByRole("link", { name: /conectar banco/i }).getAttribute("href")).toBe(
+      "/conectar-banco",
+    );
     expect(screen.queryByText(t.overview.tiles.income)).toBeNull();
   });
 
   it("states how much of the income the household kept, with a percentage tile", () => {
-    render(<OverviewView {...buildProps()} />);
+    render(<OverviewView {...SLOTS} {...buildProps()} />);
 
     expect(
       screen.getByRole("heading", {
@@ -81,7 +85,7 @@ describe("OverviewView", () => {
   });
 
   it("says the household spent more than it received when the savings rate is negative", () => {
-    render(<OverviewView {...buildProps({ savingsRateBasisPoints: -500 })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ savingsRateBasisPoints: -500 })} />);
 
     expect(
       screen.getByRole("heading", {
@@ -93,6 +97,7 @@ describe("OverviewView", () => {
   it("names the spending with no income when the household has none registered", () => {
     render(
       <OverviewView
+        {...SLOTS}
         {...buildProps({
           savingsRateBasisPoints: null,
           incomeCentavos: 0,
@@ -111,6 +116,7 @@ describe("OverviewView", () => {
   it("says nothing was registered when there is no income and no spending", () => {
     render(
       <OverviewView
+        {...SLOTS}
         {...buildProps({ savingsRateBasisPoints: null, incomeCentavos: 0, spendingCentavos: 0 })}
       />,
     );
@@ -123,6 +129,7 @@ describe("OverviewView", () => {
   it("names the negative income when income is negative and there is no spending", () => {
     render(
       <OverviewView
+        {...SLOTS}
         {...buildProps({
           savingsRateBasisPoints: null,
           incomeCentavos: -50000,
@@ -153,7 +160,7 @@ describe("OverviewView", () => {
   });
 
   it("appends the in-progress suffix for the current month", () => {
-    render(<OverviewView {...buildProps({ inProgress: true })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ inProgress: true })} />);
 
     expect(
       screen.getByRole("heading", {
@@ -164,7 +171,10 @@ describe("OverviewView", () => {
 
   it("shows the uncategorized notice linking to the month's uncategorized transactions", () => {
     render(
-      <OverviewView {...buildProps({ uncategorized: { count: 2, amountLabel: "R$ 150,00" } })} />,
+      <OverviewView
+        {...SLOTS}
+        {...buildProps({ uncategorized: { count: 2, amountLabel: "R$ 150,00" } })}
+      />,
     );
 
     const notice = screen.getByRole("status");
@@ -175,26 +185,29 @@ describe("OverviewView", () => {
 
   it("does not show the uncategorized notice when there are no uncategorized rows", () => {
     render(
-      <OverviewView {...buildProps({ uncategorized: { count: 0, amountLabel: "R$ 0,00" } })} />,
+      <OverviewView
+        {...SLOTS}
+        {...buildProps({ uncategorized: { count: 0, amountLabel: "R$ 0,00" } })}
+      />,
     );
 
     expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("shows a calm sentence instead of an empty bar list when nothing was categorized", () => {
-    render(<OverviewView {...buildProps({ categorySpending: [] })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ categorySpending: [] })} />);
 
     expect(screen.getByText(t.overview.categorySpending.empty)).not.toBeNull();
   });
 
   it("shows the other-currency notice when the month has rows in another currency", () => {
-    render(<OverviewView {...buildProps({ hasOtherCurrencyRows: true })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ hasOtherCurrencyRows: true })} />);
 
     expect(screen.getByText(t.overview.otherCurrencyNotice)).not.toBeNull();
   });
 
   it("does not show the other-currency notice when every row is in the household's currency", () => {
-    render(<OverviewView {...buildProps({ hasOtherCurrencyRows: false })} />);
+    render(<OverviewView {...SLOTS} {...buildProps({ hasOtherCurrencyRows: false })} />);
 
     expect(screen.queryByText(t.overview.otherCurrencyNotice)).toBeNull();
   });

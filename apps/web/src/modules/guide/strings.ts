@@ -56,7 +56,7 @@ const en = {
       topics: [
         {
           title: "Individual account and household account",
-          body: "The accounts you connect join your active household as individual accounts. In Accounts, at the bottom of the Overview, whoever connected an account can mark it as a household account. Everyone in the household sees the accounts, balances and transactions, whatever the label.",
+          body: "The accounts you connect join your active household as individual accounts. In the Overview's Accounts tab, whoever connected an account can mark it as a household account. Everyone in the household sees the accounts, balances and transactions, whatever the label.",
         },
         {
           title: "No household",
@@ -155,12 +155,12 @@ const en = {
           body: "Income and Spending add up the month's transactions, with spending split into fixed and variable. The savings rate is the share of income that was not spent. Average fixed cost is the average of the last complete months; with less than three months of history, it is an estimate.",
         },
         {
-          title: "Charts and accounts",
-          body: "Spending by category shows where the money went in the month, and Last six months compares income and spending month by month. Transfers, transactions without a category and accounts in other currencies stay out of every number. Accounts and Your connections come right below.",
+          title: "Tabs and charts",
+          body: "The Overview has three tabs: Summary, Analyst's reading and Accounts; the headline and the month stay on top. In Summary, Spending by category shows where the money went in the month, and Last six months compares income and spending month by month. Transfers, transactions without a category and accounts in other currencies stay out of every number. Accounts and Your connections live in the Accounts tab.",
         },
         {
           title: "Analyst's reading",
-          body: "Below the charts, an AI analyst writes a short reading of the last closed month, the reserve and the bank comparison, using only the figures Feudo already shows, and lists the figures it used. A new reading arrives at the start of each month; Generate new reading asks for one now, up to three a day for the whole household. It weighs trade-offs and always gives the counter-argument, but it does not change any number and is not investment advice. The same reading appears on Reserve.",
+          body: "In the Analyst's reading tab, an AI analyst writes a short reading of the last closed month, the reserve and the bank comparison, using only the figures Feudo already shows, and lists the figures it used (tap Figures used to open the list). A new reading arrives at the start of each month; Generate new reading asks for one now, up to three a day for the whole household. It weighs trade-offs and always gives the counter-argument, but it does not change any number and is not investment advice. The same reading appears on Reserve.",
         },
       ],
     },
@@ -307,7 +307,7 @@ const ptBR = {
       topics: [
         {
           title: "Conta individual e conta da casa",
-          body: "As contas que você conecta entram na sua casa ativa como conta individual. Em Contas, no fim da Visão geral, quem conectou a conta pode marcá-la como conta da casa. Todos na casa veem as contas, os saldos e as transações, independentemente do rótulo.",
+          body: "As contas que você conecta entram na sua casa ativa como conta individual. Na aba Contas da Visão geral, quem conectou a conta pode marcá-la como conta da casa. Todos na casa veem as contas, os saldos e as transações, independentemente do rótulo.",
         },
         {
           title: "Sem casa",
@@ -406,12 +406,12 @@ const ptBR = {
           body: "Renda e Gastos somam as transações do mês, com os gastos divididos entre fixos e variáveis. A taxa de poupança é a parte da renda que não foi gasta. O custo fixo médio é a média dos últimos meses completos; com menos de três meses de histórico, é uma estimativa.",
         },
         {
-          title: "Gráficos e contas",
-          body: "Gastos por categoria mostra para onde foi o dinheiro no mês, e Últimos seis meses compara renda e gastos mês a mês. Transferências, transações sem categoria e contas em outras moedas ficam fora de todos os números. Logo abaixo vêm Contas e Suas conexões.",
+          title: "Abas e gráficos",
+          body: "A Visão geral tem três abas: Resumo, Leitura do analista e Contas; a frase do topo e o mês ficam sempre em cima. No Resumo, Gastos por categoria mostra para onde foi o dinheiro no mês, e Últimos seis meses compara renda e gastos mês a mês. Transferências, transações sem categoria e contas em outras moedas ficam fora de todos os números. Contas e Suas conexões ficam na aba Contas.",
         },
         {
           title: "Leitura do analista",
-          body: "Abaixo dos gráficos, um analista de IA escreve uma leitura curta do último mês fechado, da reserva e da comparação de bancos, usando só os números que o Feudo já mostra, e lista os números que usou. Uma leitura nova chega no começo de cada mês; Gerar nova leitura pede uma na hora, até três por dia para a casa toda. Ele pesa os prós e contras e sempre traz o contra-argumento, mas não muda nenhum número e não é recomendação de investimento. A mesma leitura aparece na Reserva.",
+          body: "Na aba Leitura do analista, um analista de IA escreve uma leitura curta do último mês fechado, da reserva e da comparação de bancos, usando só os números que o Feudo já mostra, e lista os números que usou (toque em Números usados para abrir a lista). Uma leitura nova chega no começo de cada mês; Gerar nova leitura pede uma na hora, até três por dia para a casa toda. Ele pesa os prós e contras e sempre traz o contra-argumento, mas não muda nenhum número e não é recomendação de investimento. A mesma leitura aparece na Reserva.",
         },
       ],
     },

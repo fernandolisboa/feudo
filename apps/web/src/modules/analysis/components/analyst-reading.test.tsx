@@ -44,6 +44,20 @@ describe("AnalystReading", () => {
     expect(screen.getByText(/Não é recomendação de investimento/)).toBeDefined();
   });
 
+  it("sets the trade-offs beside the reading and folds the figures used away", () => {
+    render(<AnalystReading {...props()} />);
+
+    const aside = screen.getByRole("complementary");
+    expect(aside.textContent).toContain("Prós e contras");
+    expect(aside.textContent).toContain("Contra-argumento");
+    expect(aside.textContent).not.toContain("Segundo parágrafo.");
+
+    const figures = screen.getByText("Números usados (1)").closest("details");
+    expect(figures).not.toBeNull();
+    expect(figures?.open).toBe(false);
+    expect(figures?.textContent).toContain("R$ 12.400,00");
+  });
+
   it("invites the first reading when there is none", () => {
     render(<AnalystReading {...props({ reading: null })} />);
 
