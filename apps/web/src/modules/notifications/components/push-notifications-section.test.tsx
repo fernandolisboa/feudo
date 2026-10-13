@@ -36,7 +36,7 @@ vi.mock("../actions", () => ({
   sendTestPushAction: actions.sendTest,
 }));
 
-import { PushPermissionDeniedError } from "@/platform/pwa/push-device";
+import { NoServiceWorkerError, PushPermissionDeniedError } from "@/platform/pwa/push-device";
 
 import { PushNotificationsSection } from "./push-notifications-section";
 
@@ -92,7 +92,7 @@ describe("PushNotificationsSection", () => {
   });
 
   it("when Feudo cannot save the device, the device stops too and says so", async () => {
-    actions.save.mockResolvedValue({ status: "invalid" });
+    actions.save.mockResolvedValue({ status: "failed" });
     const toggle = await renderSection();
 
     fireEvent.click(toggle);
@@ -102,6 +102,57 @@ describe("PushNotificationsSection", () => {
     ).toBeTruthy();
     expect(device.unsubscribe).toHaveBeenCalledOnce();
     expect(toggle.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("when Feudo refuses the browser's push service, says so and stops the device", async () => {
+    actions.save.mockResolvedValue({ status: "invalid" });
+    const toggle = await renderSection();
+
+    fireEvent.click(toggle);
+
+    expect(
+      await screen.findByText(
+        "O Feudo ainda não aceita o serviço de notificações deste navegador.",
+      ),
+    ).toBeTruthy();
+    expect(device.unsubscribe).toHaveBeenCalledOnce();
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("when the service worker is not ready, asks to reload", async () => {
+    device.subscribe.mockRejectedValue(new NoServiceWorkerError());
+    const toggle = await renderSection();
+
+    fireEvent.click(toggle);
+
+    expect(await screen.findByText(/Recarregue a página e tente de novo/)).toBeTruthy();
+    expect(actions.save).not.toHaveBeenCalled();
+  });
+
+  it("when the browser's push service refuses the sign-up, says it was the browser", async () => {
+    device.subscribe.mockRejectedValue(
+      new DOMException("Registration failed - push service error", "AbortError"),
+    );
+    const toggle = await renderSection();
+
+    fireEvent.click(toggle);
+
+    expect(
+      await screen.findByText(/não conseguiu se inscrever no próprio serviço de notificações/),
+    ).toBeTruthy();
+    expect(actions.save).not.toHaveBeenCalled();
+  });
+
+  it("any other failure while subscribing gets the generic message", async () => {
+    device.subscribe.mockRejectedValue(new Error("unsubscribe failed"));
+    const toggle = await renderSection();
+
+    fireEvent.click(toggle);
+
+    expect(
+      await screen.findByText("Não foi possível ativar as notificações. Tente de novo."),
+    ).toBeTruthy();
+    expect(actions.save).not.toHaveBeenCalled();
   });
 
   it("when the person blocks the browser's prompt, explains how to allow it", async () => {

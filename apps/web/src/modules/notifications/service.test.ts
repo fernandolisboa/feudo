@@ -49,3 +49,21 @@ describe("a database failure while turning notifications on or off", () => {
     expect(logged).not.toContain("user-a");
   });
 });
+
+describe("a device Feudo refuses", () => {
+  it("comes back as invalid and logs the push service and fields, never the endpoint", async () => {
+    const input = {
+      ...fakeSubscriptionInput(),
+      endpoint: "https://push.example.test/secret-device",
+      keys: { p256dh: "short", auth: "secret-auth-value" },
+    };
+
+    expect(await savePushSubscription(input)).toEqual({ status: "invalid" });
+
+    const logged = warn.mock.calls.map(([message]) => message).join("\n");
+    expect(logged).toContain("from push.example.test (endpoint, keys.p256dh)");
+    expect(logged).not.toContain("secret-device");
+    expect(logged).not.toContain("secret-auth-value");
+    expect(logged).not.toContain("user-a");
+  });
+});

@@ -24,7 +24,12 @@ import {
 } from "./repository";
 import { pushUserScope } from "./scope";
 import type { PushSender } from "./sender";
-import { pushEndpointSchema, pushServiceHost, pushSubscriptionInputSchema } from "./validation";
+import {
+  pushEndpointSchema,
+  pushServiceHost,
+  pushSubscriptionInputSchema,
+  refusedPushServiceForLog,
+} from "./validation";
 import { createWebPushSender } from "./web-push-sender";
 
 export type DeliveryCounts = { delivered: number; gone: number; failed: number };
@@ -145,6 +150,12 @@ export async function savePushSubscription(input: unknown): Promise<Subscription
   }
   const parsed = pushSubscriptionInputSchema.safeParse(input);
   if (!parsed.success) {
+    // Which service and which fields, so a browser that changes its push
+    // service shows up in the logs; never the endpoint or the keys.
+    const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join(".")))];
+    console.warn(
+      `notifications: refused a device from ${refusedPushServiceForLog(input)} (${fields.join(", ")})`,
+    );
     return { status: "invalid" };
   }
   try {

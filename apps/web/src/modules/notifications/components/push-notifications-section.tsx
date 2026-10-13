@@ -10,6 +10,7 @@ import { blockWriteWhenOffline, isBrowserOffline } from "@/lib/offline-writes";
 import {
   currentPushSubscription,
   isPushOwner,
+  NoServiceWorkerError,
   notificationPermission,
   PushPermissionDeniedError,
   pushSupport,
@@ -18,6 +19,7 @@ import {
   type PushSupport,
 } from "@/platform/pwa/push-device";
 
+import type { SubscriptionWriteOutcome } from "../service";
 import {
   removePushSubscriptionAction,
   savePushSubscriptionAction,
@@ -28,6 +30,28 @@ import { t } from "../strings";
 type Message = { tone: "info" | "error"; text: string };
 
 type DeviceState = { support: PushSupport; subscribed: boolean; denied: boolean };
+
+// Chromium reports a refusal from its push service as an AbortError.
+function subscribeFailureMessage(error: unknown): string {
+  if (error instanceof NoServiceWorkerError) {
+    return t.preferences.notReady;
+  }
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return t.preferences.subscribeFailed;
+  }
+  return t.preferences.failed;
+}
+
+function saveFailureMessage(status: SubscriptionWriteOutcome["status"] | undefined): string {
+  switch (status) {
+    case "unauthenticated":
+      return t.preferences.unauthenticated;
+    case "invalid":
+      return t.preferences.serviceRefused;
+    default:
+      return t.preferences.failed;
+  }
+}
 
 export function PushNotificationsSection({
   publicKey,
@@ -86,20 +110,17 @@ export function PushNotificationsSection({
         });
         return;
       }
-      setMessage({ tone: "error", text: t.preferences.failed });
+      setMessage({
+        tone: "error",
+        text: subscribeFailureMessage(error),
+      });
       return;
     }
     const outcome = await savePushSubscriptionAction(subscription).catch(() => null);
     if (outcome?.status !== "ok") {
       // Feudo did not keep it, so the device must not keep receiving either.
       await unsubscribeThisDevice().catch(() => null);
-      setMessage({
-        tone: "error",
-        text:
-          outcome?.status === "unauthenticated"
-            ? t.preferences.unauthenticated
-            : t.preferences.failed,
-      });
+      setMessage({ tone: "error", text: saveFailureMessage(outcome?.status) });
       return;
     }
     setDevice((current) => current && { ...current, subscribed: true, denied: false });

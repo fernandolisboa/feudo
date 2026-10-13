@@ -31,6 +31,10 @@ const en = {
     needsHomeScreen:
       "On iPhone, add Feudo to the Home Screen (Share › Add to Home Screen) and open it from there to turn notifications on.",
     failed: "Couldn't turn notifications on. Try again.",
+    notReady: "Feudo is still getting ready in this browser. Reload the page and try again.",
+    subscribeFailed:
+      "This browser couldn't sign up with its notification service. Try again in a few minutes.",
+    serviceRefused: "Feudo doesn't accept this browser's notification service yet.",
     disableFailed: "Couldn't turn notifications off. Try again.",
     unauthenticated: "Sign in to change your notifications.",
     sendTest: "Send a test notification",
@@ -75,6 +79,11 @@ const ptBR = {
     needsHomeScreen:
       "No iPhone, adicione o Feudo à Tela de Início (Compartilhar › Adicionar à Tela de Início) e abra por lá para ativar as notificações.",
     failed: "Não foi possível ativar as notificações. Tente de novo.",
+    notReady:
+      "O Feudo ainda está se preparando neste navegador. Recarregue a página e tente de novo.",
+    subscribeFailed:
+      "O navegador não conseguiu se inscrever no próprio serviço de notificações. Tente de novo daqui a alguns minutos.",
+    serviceRefused: "O Feudo ainda não aceita o serviço de notificações deste navegador.",
     disableFailed: "Não foi possível desativar as notificações. Tente de novo.",
     unauthenticated: "Entre para mudar suas notificações.",
     sendTest: "Enviar notificação de teste",
