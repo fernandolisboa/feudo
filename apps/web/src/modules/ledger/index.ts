@@ -21,6 +21,7 @@ export type { OverviewSearchParams, OverviewTab } from "./validation";
 export { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 export { getLedgerAnalysisFacts } from "./analysis-facts";
 export { getLedgerExportAnnotations } from "./export";
+export { handleTransactionsSpreadsheetRequest } from "./spreadsheet-request";
 export { t } from "./strings";
 export { CategorizationNudge } from "./components/categorization-nudge";
 export { GuidedCategorizationView } from "./components/guided-categorization-view";
