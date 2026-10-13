@@ -84,6 +84,9 @@ export { categoryOf, kindOf } from "./ledger/categories/kinds";
 export type { CurrencyAmount, UncategorizedSummary } from "./ledger/categories/uncategorized";
 export { summarizeUncategorized } from "./ledger/categories/uncategorized";
 
+export type { CategorySuggestion, QueueCandidate, QueueItem } from "./ledger/categories/suggest";
+export { buildCategorizationQueue } from "./ledger/categories/suggest";
+
 export type { RecurringInput, FixedSuggestion } from "./ledger/categories/recurring";
 export { suggestFixedSubcategories } from "./ledger/categories/recurring";
 

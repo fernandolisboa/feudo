@@ -52,6 +52,8 @@
 | Kind (income / fixed / variable / transfer) | tipo (renda / fixo / variável / transferência) |                                                                              |
 | Categorization rule                         | regra de categorização                         |                                                                              |
 | Uncategorized                               | sem categoria                                  |                                                                              |
+| Guided categorization                       | categorizar                                    | entry action "Categorizar agora"; one transaction at a time                  |
+| Categorization suggestion                   | sugestão do Feudo                              | from the household's own history, never AI                                   |
 | Fixed cost                                  | custo fixo                                     |                                                                              |
 | Savings rate                                | taxa de poupança                               |                                                                              |
 | Reserve target                              | meta da reserva                                |                                                                              |

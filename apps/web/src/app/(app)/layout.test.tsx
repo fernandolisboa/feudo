@@ -21,16 +21,25 @@ vi.mock("@/modules/shell", async (importOriginal) => ({
   getOfflineNoticeProps: getOfflineNoticePropsMock,
   AppShell: ({
     householdSwitcher,
+    notice,
     children,
   }: {
     householdSwitcher: ReactNode;
+    notice: ReactNode;
     children: ReactNode;
   }) => (
     <>
       <div data-testid="nav-slot">{householdSwitcher}</div>
+      <div data-testid="notice-slot">{notice}</div>
       <div data-testid="mobile-header-slot">{householdSwitcher}</div>
       <main data-testid="shell-content">{children}</main>
     </>
+  ),
+}));
+
+vi.mock("@/modules/ledger", () => ({
+  CategorizationNudge: ({ session }: { session: { householdId: string } }) => (
+    <div data-testid="categorization-nudge">{session.householdId}</div>
   ),
 }));
 
@@ -75,6 +84,15 @@ describe("AppLayout", () => {
 
     expect(getHouseholdSwitcherPropsMock).toHaveBeenCalledTimes(1);
     expect(screen.getAllByTestId("household-switcher")).toHaveLength(2);
+  });
+
+  it("puts the uncategorized notice for the session's household above every page", async () => {
+    getHouseholdSwitcherPropsMock.mockResolvedValue(null);
+
+    render(await AppLayout({ children: null }));
+
+    const slot = screen.getByTestId("notice-slot");
+    expect(within(slot).getByTestId("categorization-nudge").textContent).toBe("household-a");
   });
 
   it("passes null for the switcher slot when the user has no other households", async () => {
