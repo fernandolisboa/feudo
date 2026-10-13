@@ -160,7 +160,7 @@ const en = {
         },
         {
           title: "Analyst's reading",
-          body: "In the Analyst's reading tab, an AI analyst writes a short reading of the last closed month, the reserve and the bank comparison, using only the figures Feudo already shows, and lists the figures it used (tap Figures used to open the list). A new reading arrives at the start of each month; Generate new reading asks for one now, up to three a day for the whole household. It weighs trade-offs and always gives the counter-argument, but it does not change any number and is not investment advice. The same reading appears on Reserve. Analyses keeps it whole, with the earlier readings, and its bank paragraph also appears on Banks.",
+          body: "An AI analyst writes a reading of the last closed month, the reserve and the bank comparison, using only the figures Feudo already shows. The Analyst's reading tab shows its summary and counter-argument; See the full reading opens it in Analyses, with the trade-offs, the figures it used and the earlier readings. The same summary appears on Reserve, and the bank paragraph on Banks. A new reading arrives at the start of each month; Generate new reading asks for one now, up to three a day for the whole household. It does not change any number and is not investment advice.",
         },
       ],
     },
@@ -411,7 +411,7 @@ const ptBR = {
         },
         {
           title: "Leitura do analista",
-          body: "Na aba Leitura do analista, um analista de IA escreve uma leitura curta do último mês fechado, da reserva e da comparação de bancos, usando só os números que o Feudo já mostra, e lista os números que usou (toque em Números usados para abrir a lista). Uma leitura nova chega no começo de cada mês; Gerar nova leitura pede uma na hora, até três por dia para a casa toda. Ele pesa os prós e contras e sempre traz o contra-argumento, mas não muda nenhum número e não é recomendação de investimento. A mesma leitura aparece na Reserva. Em Análises ela fica completa, junto com as anteriores, e o trecho sobre bancos aparece também em Bancos.",
+          body: "Um analista de IA escreve uma leitura do último mês fechado, da reserva e da comparação de bancos, usando só os números que o Feudo já mostra. A aba Leitura do analista traz o resumo e o contra-argumento; Ver a leitura completa abre a leitura em Análises, com os prós e contras, os números usados e as leituras anteriores. O mesmo resumo aparece na Reserva, e o trecho sobre bancos aparece em Bancos. Uma leitura nova chega no começo de cada mês; Gerar nova leitura pede uma na hora, até três por dia para a casa toda. Ela não muda nenhum número e não é recomendação de investimento.",
         },
       ],
     },

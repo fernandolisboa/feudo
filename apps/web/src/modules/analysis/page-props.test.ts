@@ -26,28 +26,16 @@ function stored(overrides: Partial<StoredAnalysis> = {}): StoredAnalysis {
 }
 
 describe("readingView", () => {
-  it("shows the reading with the figures it cited, its model and its prompt version", () => {
-    const view = readingView(stored(), "America/Sao_Paulo");
+  it("summarizes the reading with its counter-argument, provenance and a link to Análises", () => {
+    const view = readingView(stored({ promptVersion: "analyst-v2" }), "America/Sao_Paulo");
 
-    expect(view?.title).toBe("Leitura mensal de setembro de 2026");
-    expect(view?.paragraphs).toEqual([
-      "Em setembro de 2026 a casa recebeu R$ 12.400,00 e gastou R$ 9.850,35, guardando 20,6% da renda.",
-      "A reserva cobre 46,7% da meta de R$ 36.600,00, o equivalente a 2,8 meses de custo fixo.",
-      FIXTURE_OUTPUT.banks,
-    ]);
-    expect(view?.tradeOffs).toEqual(FIXTURE_OUTPUT.tradeOffs);
-    expect(view?.counterArgument).toBe(FIXTURE_OUTPUT.counterArgument);
-    expect(view?.inputsUsed[0]).toEqual({
-      key: "ledger.income",
-      label: "Renda em setembro de 2026",
-      value: "R$ 12.400,00",
+    expect(view).toEqual({
+      title: "Leitura mensal de setembro de 2026",
+      summary: FIXTURE_OUTPUT.summary,
+      counterArgument: FIXTURE_OUTPUT.counterArgument,
+      meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5"],
+      href: "/analises?leitura=a-1",
     });
-    expect(view?.inputsUsed).toHaveLength(FIXTURE_OUTPUT.citedKeys.length);
-    expect(view?.meta).toEqual([
-      "gerada em 01/10/2026, 08:12",
-      "Claude Opus 5.5",
-      "prompt analyst-v1",
-    ]);
   });
 
   it("names an on-demand reading and an unknown model as they are", () => {
@@ -57,16 +45,7 @@ describe("readingView", () => {
     );
 
     expect(view?.title).toBe("Leitura pedida sobre setembro de 2026");
-    expect(view?.meta).toEqual(["claude-opus-4-8", "prompt analyst-v1"]);
-  });
-
-  it("lists a cited figure once even when the model cited it twice", () => {
-    const view = readingView(
-      stored({ output: { ...FIXTURE_OUTPUT, citedKeys: ["ledger.income", "ledger.income"] } }),
-      "America/Sao_Paulo",
-    );
-
-    expect(view?.inputsUsed).toHaveLength(1);
+    expect(view?.meta).toEqual(["claude-opus-4-8"]);
   });
 
   it("hides a stored reading that no longer meets the contract", () => {
@@ -101,10 +80,10 @@ describe("analysisDetailView", () => {
 });
 
 describe("readingView with an analyst-v1 reading", () => {
-  it("shows the paragraphs it has", () => {
-    expect(
-      readingView(stored({ output: V1_OUTPUT }), "America/Sao_Paulo")?.paragraphs,
-    ).toHaveLength(2);
+  it("stands its first paragraph in for the summary it does not have", () => {
+    expect(readingView(stored({ output: V1_OUTPUT }), "America/Sao_Paulo")?.summary).toBe(
+      "Em setembro de 2026 a casa recebeu R$ 12.400,00 e gastou R$ 9.850,35, guardando 20,6% da renda.",
+    );
   });
 });
 

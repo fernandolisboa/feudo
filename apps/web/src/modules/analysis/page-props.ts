@@ -39,16 +39,23 @@ const MODEL_NAMES: Readonly<Record<string, string>> = {
   [AI_MODELS.deep]: "Claude Opus 5.5",
 };
 
-export type AnalystReadingView = {
+type ReadingBase = {
   title: string;
-  paragraphs: string[];
   tradeOffs: string[];
   counterArgument: string;
   inputsUsed: { key: string; label: string; value: string }[];
   meta: string[];
 };
 
-export type AnalysisDetailView = Omit<AnalystReadingView, "paragraphs"> & {
+export type AnalystReadingView = {
+  title: string;
+  summary: string;
+  counterArgument: string;
+  meta: string[];
+  href: string;
+};
+
+export type AnalysisDetailView = ReadingBase & {
   id: string;
   summary: string | null;
   reading: string[];
@@ -124,7 +131,7 @@ function baseView(
   input: AnalysisInput,
   output: AnalysisOutput,
   timeZone: string,
-): Omit<AnalystReadingView, "paragraphs"> {
+): ReadingBase {
   const factsByKey = new Map(input.facts.map((fact) => [fact.key, fact]));
   const name = modelName(row.model);
   return {
@@ -150,12 +157,15 @@ export function readingView(row: StoredAnalysis, timeZone: string): AnalystReadi
   if (parsed === null) {
     return null;
   }
+  const { output } = parsed;
+  const name = modelName(row.model);
   return {
-    ...baseView(row, parsed.input, parsed.output, timeZone),
-    paragraphs: [
-      ...splitParagraphs(parsed.output.reading),
-      ...splitParagraphs(parsed.output.banks),
-    ],
+    title: readingTitle(row),
+    // analyst-v1 readings have no summary: their first paragraph stands in.
+    summary: output.summary ?? splitParagraphs(output.reading)[0] ?? output.reading,
+    counterArgument: output.counterArgument,
+    meta: [...generatedAt(row.completedAt, timeZone), ...(name === null ? [] : [name])],
+    href: `${ANALYSES_PATH}?${READING_PARAM}=${encodeURIComponent(row.id)}`,
   };
 }
 
@@ -225,9 +235,9 @@ async function quotaState(
   };
 }
 
-// The "Leitura do analista" panel on Visão geral and Reserva. Null when the
-// analysis is turned off, so both pages render exactly as they do without it
-// (ADR-0004: no number on screen comes from the AI layer).
+// The analyst's summary on Visão geral and Reserva; the whole reading lives on
+// Análises. Null when the analysis is turned off, so both pages render exactly
+// as they do without it (ADR-0004: no number on screen comes from the AI layer).
 export async function getAnalystReadingProps(
   session: HouseholdSession,
   now: Date = new Date(),
