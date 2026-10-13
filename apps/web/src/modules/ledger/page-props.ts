@@ -1,19 +1,14 @@
 import {
-  categoryOf,
   formatMoney,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
-  normalizeDescription,
   rulePatternFromDescription,
   shiftYearMonth,
   summarizeLedger,
   summarizeUncategorized,
-  yearMonthDayRange,
-  yearMonthOf,
   type CurrencyAmount,
   type InternalTransfer,
   type Kind,
-  type KindContext,
   type ProductCategoryId,
   type YearMonth,
 } from "@feudo/core";
@@ -21,28 +16,17 @@ import {
 import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
-import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
-import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
-import { UNCATEGORIZED_FILTER } from "./href";
-import { readHouseholdLedger } from "./ledger-read";
-import {
-  createHouseholdLedgerRepository,
-  type LedgerAccount,
-  type LedgerTransactionRow,
-} from "./repository";
+import type { LedgerAccount, LedgerTransactionRow } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
-import {
-  TRANSACTIONS_PAGE_SIZE,
-  transactionsSearchParamsSchema,
-  type TransactionsSearchParams,
-} from "./validation";
+import { readFilteredTransactions } from "./transactions-read";
+import { TRANSACTIONS_PAGE_SIZE, type TransactionsSearchParams } from "./validation";
 
 export type UncategorizedSummaryView = { count: number; amountLabel: string };
 
@@ -84,25 +68,6 @@ function fallbackCurrency(rows: readonly { currency: string }[]): string {
     a.localeCompare(b),
   );
   return currencies[0] ?? HOUSEHOLD_CURRENCY;
-}
-
-function matchesCategory(
-  row: ResolvedLedgerRow,
-  category: ProductCategoryId | null,
-  kinds: KindContext,
-): boolean {
-  if (category === null) return true;
-  return (
-    row.categorization !== null && categoryOf(row.categorization.subcategory, kinds) === category
-  );
-}
-
-function matchesKind(row: ResolvedLedgerRow, kind: Kind | null): boolean {
-  return kind === null || row.kind === kind;
-}
-
-function matchesSearch(row: ResolvedLedgerRow, normalizedQuery: string): boolean {
-  return normalizedQuery === "" || normalizeDescription(row.description).includes(normalizedQuery);
 }
 
 function amountsLabel(amounts: readonly CurrencyAmount[], currency: string): string {
@@ -179,10 +144,9 @@ function toRowView(
 }
 
 // Everything /transacoes renders, so the page stays a composition of this
-// slice's components (ADR-0011). The month defaults to today's in the
-// household's time zone and never moves past it, even from a crafted URL,
-// the same clamp the overview applies; an account id not in the household
-// is ignored and a page past the last one lands on the last. Pairing and
+// slice's components (ADR-0011). The URL is read by readFilteredTransactions
+// (month clamp, account and filters); a page past the last one lands on the
+// last. Pairing and
 // categorization are both resolved by readHouseholdLedger, the one read
 // path shared with /categorias (design contract's #16 review, item 3). The
 // audit write (ADR-0008, amended 2026-10-03 #27) happens only after the
@@ -203,38 +167,22 @@ async function buildTransactionsPageProps(
   searchParams: TransactionsSearchParams,
   now: Date,
 ): Promise<TransactionsPageProps> {
-  const db = getDb();
-  const scope = householdScope(session);
-  const repository = createHouseholdLedgerRepository(scope);
-  const params = transactionsSearchParamsSchema.parse(searchParams);
-
-  const [settings, accounts] = await Promise.all([
-    getHouseholdSettings(scope, db),
-    repository.listAccounts(db),
-  ]);
-  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
-  const currentMonth = yearMonthOf(now, timeZone);
-  const requestedMonth = params.mes ?? currentMonth;
-  const month = requestedMonth > currentMonth ? currentMonth : requestedMonth;
-  const selectedAccountId = accounts.some((account) => account.id === params.conta)
-    ? (params.conta ?? null)
-    : null;
-  const uncategorizedOnly = params.categoria === UNCATEGORIZED_FILTER;
-  const selectedCategory =
-    params.categoria !== undefined && params.categoria !== UNCATEGORIZED_FILTER
-      ? params.categoria
-      : null;
-  const selectedKind = params.tipo ?? null;
-  const rawSearch = params.busca && params.busca.length > 0 ? params.busca : null;
-  const normalizedSearch = rawSearch !== null ? normalizeDescription(rawSearch) : "";
-  const searchQuery = normalizedSearch !== "" ? rawSearch : null;
-
-  const monthRange = yearMonthDayRange(month);
   const {
+    currentMonth,
+    month,
+    accounts,
+    selectedAccountId,
+    uncategorizedOnly,
+    selectedCategory,
+    selectedKind,
+    searchQuery,
+    requestedPage,
     kinds,
-    rows: monthRows,
+    monthRows,
     padded,
-  } = await readHouseholdLedger(db, scope, monthRange, selectedAccountId, timeZone);
+    filteredRows,
+    listed,
+  } = await readFilteredTransactions(session, searchParams, now);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(padded.map((row) => [row.id, row]));
 
@@ -244,13 +192,6 @@ async function buildTransactionsPageProps(
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
-  // Uncategorized rows count in no total, so the sem filter never narrows the totals.
-  const filteredRows = monthRows.filter(
-    (row) =>
-      matchesCategory(row, selectedCategory, kinds) &&
-      matchesKind(row, selectedKind) &&
-      matchesSearch(row, normalizedSearch),
-  );
   const totals = summarizeLedger(
     filteredRows.map((row) => ({
       kind: row.kind,
@@ -258,12 +199,9 @@ async function buildTransactionsPageProps(
       amount: { amountCentavos: row.amountCentavos, currency: row.currency },
     })),
   );
-  const listed = uncategorizedOnly
-    ? filteredRows.filter((row) => row.categorization === null)
-    : filteredRows;
   const total = listed.length;
   const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
-  const page = Math.min(params.pagina ?? 1, lastPage);
+  const page = Math.min(requestedPage, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
   const totalsCurrency = fallbackCurrency(monthRows);
 

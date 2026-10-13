@@ -25,6 +25,10 @@ _Avoid_: consent (that is the bank-connection consent), agreement
 A user downloading their own data as one JSON file: their login identity with sign-in sessions and terms acceptance, preferences and tutorial state, memberships, provider-credential dates, consents, connections, accounts (positions included), transactions of those accounts, the annotations they authored and their own access-log entries. Household-wide data (settings, invites, analyst readings) and short-lived usage controls stay out. It needs an active household, because the access log records each export in one. It never carries another user's data, credentials or document hashes; it is limited to 3 per user per rolling 24 hours and each one is recorded as a financial-data access of kind export (ADR-0008).
 _Avoid_: backup, download (as a noun in code), report
 
+**Transactions spreadsheet**:
+A member downloading, from Transações, exactly the rows the screen lists for its current month and filters (every page, not just the one shown) as an Excel (.xlsx) or CSV file: household day, description, amount as a number, currency, account, bank, category, subcategory and kind. It holds nothing the screen does not already show that member, is generated on request and never stored, and is recorded as a financial-data access of kind transactions, after the read (ADR-0008). Unlike the data export, it covers the whole household's listed rows and has no quota.
+_Avoid_: report, data export (that is the LGPD JSON file)
+
 **Role**:
 What a membership allows. `Owner` administers people and settings and is the only one who can transfer ownership or delete the household. `Admin` administers people and settings. `Member` manages only their own bank connections. A household has exactly one owner.
 _Avoid_: permission level, tier
