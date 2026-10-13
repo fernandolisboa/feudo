@@ -113,6 +113,8 @@ describe("household_analysis isolation (integration)", () => {
 
       const repositoryA = createAnalysisRepository({ householdId: householdA });
       expect(await repositoryA.latestSucceeded(db)).toBeNull();
+      expect(await repositoryA.findSucceeded(db, othersRow.id)).toBeNull();
+      expect(await repositoryA.listSucceeded(db, 12)).toEqual([]);
       expect(await repositoryA.countOnDemandOn(db, othersRow.localDay)).toBe(0);
       expect(await repositoryA.hasRunningSince(db, new Date(0))).toBe(false);
 
@@ -125,6 +127,21 @@ describe("household_analysis isolation (integration)", () => {
       const [after] = await rowsOf(db, householdB);
       expect(after).toMatchObject({ status: "succeeded", failureReason: null });
       expect(await rowsOf(db, householdA)).toEqual([]);
+    });
+  });
+
+  it("finds and lists a household's own readings, newest first", async () => {
+    await withTwoUsers(async ({ db, userB, householdB }) => {
+      await seedLedger(db, userB, householdB);
+      await requestOnDemandAnalysis(userB.session, db, fakeDeps, options());
+      await requestOnDemandAnalysis(userB.session, db, fakeDeps, options());
+      const rows = await rowsOf(db, householdB);
+      const repositoryB = createAnalysisRepository({ householdId: householdB });
+
+      const history = await repositoryB.listSucceeded(db, 12);
+      expect(history.map((row) => row.id)).toEqual(rows.map((row) => row.id).reverse());
+      expect(await repositoryB.listSucceeded(db, 1)).toHaveLength(1);
+      expect((await repositoryB.findSucceeded(db, rows[0]?.id ?? ""))?.id).toBe(rows[0]?.id);
     });
   });
 
@@ -313,7 +330,10 @@ describe("runMonthlyAnalysis (integration)", () => {
 
       expect(sender.sent).toHaveLength(2);
       const sentToA = sender.sent.find((send) => send.endpoint === deviceA.endpoint);
-      expect(sentToA?.payload).toMatchObject({ title: "A leitura do mês está pronta", url: "/" });
+      expect(sentToA?.payload).toMatchObject({
+        title: "A leitura do mês está pronta",
+        url: "/analises",
+      });
       expect(sentToA?.payload.tag).toMatch(
         new RegExp(`^monthly-analysis:${householdA}:\\d{4}-\\d{2}$`),
       );

@@ -1,6 +1,6 @@
 import {
   analysisInputSchema,
-  analysisOutputSchema,
+  currentAnalysisOutputSchema,
   describeViolations,
   findAnalysisViolations,
   formatYearMonth,
@@ -190,7 +190,7 @@ export async function generateReading(
       }
       break;
     }
-    const parsed = analysisOutputSchema.safeParse(result.output);
+    const parsed = currentAnalysisOutputSchema.safeParse(result.output);
     if (!parsed.success) {
       reason = "invalid_output";
       correction = "The answer did not match the requested fields and lengths.";

@@ -37,6 +37,27 @@ export type StoredAnalysis = {
   completedAt: Date | null;
 };
 
+export type AnalysisHistoryRow = Pick<
+  StoredAnalysis,
+  "id" | "kind" | "period" | "model" | "completedAt"
+>;
+
+const STORED_COLUMNS = {
+  id: householdAnalysis.id,
+  kind: householdAnalysis.kind,
+  period: householdAnalysis.period,
+  promptVersion: householdAnalysis.promptVersion,
+  model: householdAnalysis.model,
+  input: householdAnalysis.input,
+  output: householdAnalysis.output,
+  completedAt: householdAnalysis.completedAt,
+};
+
+const succeeded = and(
+  eq(householdAnalysis.status, "succeeded"),
+  isNotNull(householdAnalysis.output),
+);
+
 export class AnalysisRepositoryInvariantError extends Error {
   constructor(message: string) {
     super(message);
@@ -117,27 +138,36 @@ export function createAnalysisRepository(scope: HouseholdScope) {
 
     async latestSucceeded(db: Database): Promise<StoredAnalysis | null> {
       const [row] = await db
+        .select(STORED_COLUMNS)
+        .from(householdAnalysis)
+        .where(and(inHousehold, succeeded))
+        .orderBy(desc(householdAnalysis.completedAt))
+        .limit(1);
+      return row ?? null;
+    },
+
+    async findSucceeded(db: Database, id: string): Promise<StoredAnalysis | null> {
+      const [row] = await db
+        .select(STORED_COLUMNS)
+        .from(householdAnalysis)
+        .where(and(inHousehold, succeeded, eq(householdAnalysis.id, id)))
+        .limit(1);
+      return row ?? null;
+    },
+
+    async listSucceeded(db: Database, limit: number): Promise<AnalysisHistoryRow[]> {
+      return db
         .select({
           id: householdAnalysis.id,
           kind: householdAnalysis.kind,
           period: householdAnalysis.period,
-          promptVersion: householdAnalysis.promptVersion,
           model: householdAnalysis.model,
-          input: householdAnalysis.input,
-          output: householdAnalysis.output,
           completedAt: householdAnalysis.completedAt,
         })
         .from(householdAnalysis)
-        .where(
-          and(
-            inHousehold,
-            eq(householdAnalysis.status, "succeeded"),
-            isNotNull(householdAnalysis.output),
-          ),
-        )
+        .where(and(inHousehold, succeeded))
         .orderBy(desc(householdAnalysis.completedAt))
-        .limit(1);
-      return row ?? null;
+        .limit(limit);
     },
 
     // Counting and inserting under a lock on the household's own row, the

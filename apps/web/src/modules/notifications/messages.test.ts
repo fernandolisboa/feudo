@@ -27,7 +27,7 @@ describe("push payloads", () => {
       {
         title: "A leitura do mês está pronta",
         body: "Casa Lisboa: a leitura do analista de setembro de 2026 está pronta.",
-        url: "/",
+        url: "/analises",
         tag: "monthly-analysis:h1:2026-09",
       },
       {

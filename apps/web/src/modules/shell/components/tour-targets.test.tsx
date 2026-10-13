@@ -68,4 +68,25 @@ describe("guided tour targets", () => {
     expect(tabBar?.getAttribute("data-tour")).toBe("overview.nav");
     expect(tabBar?.querySelector('[data-tour="overview.household"]')).not.toBeNull();
   });
+
+  it("keeps the bottom tabs to five destinations, leaving Análises to the wider navs", () => {
+    const { container } = render(
+      <AppShell
+        shell="sidebar"
+        sidebarCollapsed={false}
+        userName="Ada"
+        userEmail="ada@example.com"
+        householdSwitcher={null}
+        tourState={{ autoStart: false, seenVersions: {} }}
+        offline={OFFLINE}
+      >
+        {null}
+      </AppShell>,
+    );
+
+    const tabs = container.querySelectorAll(".app-shell-tabbar a");
+    expect(tabs).toHaveLength(5);
+    expect(container.querySelector('.app-shell-tabbar a[href="/analises"]')).toBeNull();
+    expect(container.querySelector('.app-shell-nav a[href="/analises"]')).not.toBeNull();
+  });
 });

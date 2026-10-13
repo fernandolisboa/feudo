@@ -13,36 +13,38 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
 
   return (
     <nav className="app-shell-tabbar" data-tour="overview.nav">
-      {items.map((item) => {
-        const isActive = pathname === item.href;
-        const Icon = NAV_ICONS[item.icon];
+      {items
+        .filter((item) => item.desktopOnly !== true)
+        .map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = NAV_ICONS[item.icon];
 
-        if (item.disabled) {
+          if (item.disabled) {
+            return (
+              <span
+                key={item.id}
+                className="app-shell-tab app-shell-tab-disabled"
+                aria-disabled="true"
+              >
+                <Icon className="size-5" aria-hidden="true" />
+                <span>{item.label}</span>
+              </span>
+            );
+          }
+
           return (
-            <span
+            <Link
               key={item.id}
-              className="app-shell-tab app-shell-tab-disabled"
-              aria-disabled="true"
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              data-tour={item.tourTarget}
+              className={cn("app-shell-tab", isActive && "app-shell-tab-active")}
             >
               <Icon className="size-5" aria-hidden="true" />
               <span>{item.label}</span>
-            </span>
+            </Link>
           );
-        }
-
-        return (
-          <Link
-            key={item.id}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            data-tour={item.tourTarget}
-            className={cn("app-shell-tab", isActive && "app-shell-tab-active")}
-          >
-            <Icon className="size-5" aria-hidden="true" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+        })}
     </nav>
   );
 }

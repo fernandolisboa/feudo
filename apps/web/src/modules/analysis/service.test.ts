@@ -116,6 +116,21 @@ describe("generateReading", () => {
     expect(client.requests[1]?.user).toContain("did not match the requested fields");
   });
 
+  it("never stores an answer without the summary or the bank paragraph", async () => {
+    const withoutBanks = { ...FIXTURE_OUTPUT, banks: undefined };
+    const client = scriptedClient([ok(withoutBanks), ok(withoutBanks)]);
+
+    const result = await generateReading(
+      client,
+      CURRENT_ANALYST_PROMPT,
+      FIXTURE_INPUT,
+      "standard",
+      FAR_DEADLINE(),
+    );
+
+    expect(result).toMatchObject({ status: "failed", reason: "invalid_output" });
+  });
+
   it("retries a malformed or truncated answer", async () => {
     const client = scriptedClient([
       { status: "truncated", model: "claude-opus-5-5", usage: USAGE },

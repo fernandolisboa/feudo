@@ -127,6 +127,32 @@ describe("findAnalysisViolations", () => {
     expect(violations).toEqual([{ kind: "unsupported_number", token: "12", field: "reading" }]);
   });
 
+  it("checks the summary and the bank paragraph like the reading", () => {
+    const violations = findAnalysisViolations(
+      input(),
+      output({
+        summary: "A reserva cobre 4,6 meses, mas cresceu 3 meses.",
+        banks: "Um banco com nota 80 ficaria à frente.",
+      }),
+    );
+    expect(violations).toEqual([
+      { kind: "unsupported_number", token: "3", field: "summary" },
+      { kind: "unsupported_number", token: "80", field: "banks" },
+    ]);
+  });
+
+  it("accepts a summary and a bank paragraph that quote the facts", () => {
+    expect(
+      findAnalysisViolations(
+        input(),
+        output({
+          summary: "A reserva cobre 4,6 meses, abaixo da meta de R$ 36.000,00.",
+          banks: "A comparação de bancos não sugere troca agora.",
+        }),
+      ),
+    ).toEqual([]);
+  });
+
   it("reports violations for both a fabricated number and an unknown citation", () => {
     const violations = findAnalysisViolations(
       input(),

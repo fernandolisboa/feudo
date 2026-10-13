@@ -12,7 +12,9 @@ export function createFakeAiClient(): AiClient {
       return Promise.resolve({
         status: "ok",
         output: {
+          summary: "Leitura de demonstração, sem análise real.",
           reading: `Leitura de demonstração, sem análise real. ${quoted}.`,
+          banks: "A comparação de bancos não é lida numa leitura de demonstração.",
           tradeOffs: ["Liquidez e rendimento puxam para lados opostos; esta leitura não escolhe."],
           counterArgument: "Uma leitura de demonstração não deve orientar nenhuma decisão.",
           citedKeys: cited.map((fact) => fact.key),

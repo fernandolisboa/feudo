@@ -47,7 +47,7 @@ function Reading({ reading }: { reading: AnalystReadingView }) {
               aria-hidden
               className="size-4 transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none"
             />
-            {interpolate(t.panel.inputsUsed, "{count}", String(reading.inputsUsed.length))}
+            {interpolate(t.panel.inputsUsedCount, "{count}", String(reading.inputsUsed.length))}
           </summary>
           <dl className="divide-border border-border divide-y border-t text-[13px]">
             {reading.inputsUsed.map((input) => (

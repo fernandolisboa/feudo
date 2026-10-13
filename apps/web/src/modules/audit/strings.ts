@@ -5,6 +5,7 @@ const en = {
     categories: "Categories",
     reserve: "Reserve",
     export: "Data export",
+    analyses: "Analyses",
   },
   recentAccess: {
     sectionTitle: "Your recent access",
@@ -23,6 +24,7 @@ const ptBR = {
     categories: "Categorias",
     reserve: "Reserva",
     export: "Exportação de dados",
+    analyses: "Análises",
   },
   recentAccess: {
     sectionTitle: "Seus acessos recentes",

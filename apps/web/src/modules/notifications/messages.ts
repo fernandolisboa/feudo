@@ -34,7 +34,7 @@ export function householdEventPayload(
           household: householdName,
           month: formatYearMonth(event.month),
         }),
-        url: "/",
+        url: "/analises",
         tag: `monthly-analysis:${householdId}:${event.month}`,
       };
   }
