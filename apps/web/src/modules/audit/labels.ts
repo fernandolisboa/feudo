@@ -16,5 +16,7 @@ export function financialDataKindLabel(kind: FinancialDataKind): string {
       return t.kinds.reserve;
     case "export":
       return t.kinds.export;
+    case "analyses":
+      return t.kinds.analyses;
   }
 }

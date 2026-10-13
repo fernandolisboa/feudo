@@ -19,6 +19,8 @@ describe("fake AI client", () => {
     const output = analysisOutputSchema.parse(result.output);
     expect(findAnalysisViolations(FIXTURE_INPUT, output)).toEqual([]);
     expect(output.reading).toContain("demonstração");
+    expect(output.summary).toContain("demonstração");
+    expect(output.banks).toContain("demonstração");
     expect(result.model).toBe("fake-claude-sonnet-5-5");
   });
 });

@@ -191,6 +191,18 @@ describe("BanksView", () => {
     expect(within(bradesco).getByText("53")).not.toBeNull();
   });
 
+  it("places the analyst's note between the candidates and the full list", () => {
+    render(<BanksView {...buildProps()} analystNote={<p>Nota do analista</p>} />);
+
+    const note = screen.getByText("Nota do analista");
+    const candidates = screen.getByRole("heading", { name: t.candidates.title });
+    const reviewed = screen.getByRole("heading", { name: t.reviewed.title });
+    expect(
+      candidates.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(note.compareDocumentPosition(reviewed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("offers to connect a bank when the household has no accounts", () => {
     render(
       <BanksView

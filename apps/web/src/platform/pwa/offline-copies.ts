@@ -23,6 +23,7 @@ const OFFLINE_COPY_SCREENS: ReadonlySet<string> = new Set([
   "/transacoes",
   "/reserva",
   "/bancos",
+  "/analises",
   "/casa",
   "/categorias",
   "/como-usar",

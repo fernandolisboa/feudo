@@ -15,6 +15,7 @@ describe("financialDataKindLabel", () => {
       "Categorias",
       "Reserva",
       "Exportação de dados",
+      "Análises",
     ]);
   });
 });

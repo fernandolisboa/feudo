@@ -51,7 +51,16 @@ function cacheNameFor(options: RouteMatchCallbackOptions): string | null {
   return handler instanceof Strategy ? handler.cacheName : null;
 }
 
-const SCREENS = ["/", "/transacoes", "/reserva", "/bancos", "/casa", "/categorias", "/como-usar"];
+const SCREENS = [
+  "/",
+  "/transacoes",
+  "/reserva",
+  "/bancos",
+  "/analises",
+  "/casa",
+  "/categorias",
+  "/como-usar",
+];
 
 describe("service worker runtime caching", () => {
   it("only uses function matchers, so every rule is checked by these tests", () => {

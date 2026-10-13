@@ -1,7 +1,7 @@
 import type { AnalysisInput, AnalysisOutput } from "./contract";
 import { extractNumberTokens } from "./numbers";
 
-type AnalysisViolationField = "reading" | "tradeOffs" | "counterArgument";
+type AnalysisViolationField = "summary" | "reading" | "banks" | "tradeOffs" | "counterArgument";
 
 export type AnalysisViolation =
   | { kind: "unsupported_number"; token: string; field: AnalysisViolationField }
@@ -44,9 +44,17 @@ export function findAnalysisViolations(
 ): AnalysisViolation[] {
   const allowed = allowedNumberTokens(input);
   const reportedNumbers = new Set<string>();
-  const violations: AnalysisViolation[] = [
-    ...unsupportedNumberViolations("reading", output.reading, allowed, reportedNumbers),
+  const violations: AnalysisViolation[] = [];
+  const prose: [AnalysisViolationField, string | undefined][] = [
+    ["summary", output.summary],
+    ["reading", output.reading],
+    ["banks", output.banks],
   ];
+  for (const [field, text] of prose) {
+    if (text !== undefined) {
+      violations.push(...unsupportedNumberViolations(field, text, allowed, reportedNumbers));
+    }
+  }
   for (const tradeOff of output.tradeOffs) {
     violations.push(
       ...unsupportedNumberViolations("tradeOffs", tradeOff, allowed, reportedNumbers),

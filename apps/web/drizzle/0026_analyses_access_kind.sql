@@ -1,0 +1,1 @@
+ALTER TYPE "public"."financial_data_access_kind" ADD VALUE 'analyses';

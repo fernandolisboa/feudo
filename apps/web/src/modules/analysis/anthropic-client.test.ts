@@ -65,6 +65,23 @@ describe("Anthropic AI client", () => {
     expect(options).toEqual({ timeout: 90_000 });
   });
 
+  it("requires every field the current prompt asks for", async () => {
+    create.mockResolvedValue(message());
+
+    await createAnthropicAiClient("sk-ant-test").complete(REQUEST);
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      output_config: {
+        format: {
+          schema: {
+            required: ["summary", "reading", "banks", "tradeOffs", "counterArgument", "citedKeys"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+  });
+
   it("uses Sonnet at medium effort for the standard tier", async () => {
     create.mockResolvedValue(message({ model: "claude-sonnet-5-5" }));
 
