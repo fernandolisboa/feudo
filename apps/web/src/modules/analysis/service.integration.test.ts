@@ -330,7 +330,10 @@ describe("runMonthlyAnalysis (integration)", () => {
 
       expect(sender.sent).toHaveLength(2);
       const sentToA = sender.sent.find((send) => send.endpoint === deviceA.endpoint);
-      expect(sentToA?.payload).toMatchObject({ title: "A leitura do mês está pronta", url: "/" });
+      expect(sentToA?.payload).toMatchObject({
+        title: "A leitura do mês está pronta",
+        url: "/analises",
+      });
       expect(sentToA?.payload.tag).toMatch(
         new RegExp(`^monthly-analysis:${householdA}:\\d{4}-\\d{2}$`),
       );
