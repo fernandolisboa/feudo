@@ -22,3 +22,7 @@ export { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-l
 export { getLedgerAnalysisFacts } from "./analysis-facts";
 export { getLedgerExportAnnotations } from "./export";
 export { t } from "./strings";
+export { CategorizationNudge } from "./components/categorization-nudge";
+export { GuidedCategorizationView } from "./components/guided-categorization-view";
+export { GuidedCategorizationErrorBoundary } from "./components/guided-categorization-error-boundary";
+export { getGuidedCategorizationProps } from "./guided-categorization";

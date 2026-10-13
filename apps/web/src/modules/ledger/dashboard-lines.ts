@@ -38,6 +38,7 @@ export function toDashboardLines(
 }
 
 export type HouseholdDashboardLines = {
+  kinds: KindContext;
   rows: ResolvedLedgerRow[];
   lines: DashboardLine[];
 };
@@ -50,8 +51,8 @@ export type HouseholdDashboardLines = {
 // contract's #16 shared read path), and maps each row the one way every
 // caller agrees on. Callers that only need the computed lines destructure
 // `lines`; the overview also needs the raw `rows` for its own uncategorized
-// count. `kinds` stays internal: no caller has needed it since toDashboardLines
-// already folds it into `lines`.
+// count, and guided categorization needs `rows` and `kinds` to label its
+// suggestions over the same window the overview's numbers come from.
 export async function readHouseholdDashboardLines(
   db: Database,
   scope: HouseholdScope,
@@ -64,7 +65,7 @@ export async function readHouseholdDashboardLines(
     to: yearMonthDayRange(month).to,
   };
   const { kinds, rows } = await readHouseholdLedger(db, scope, dayRange, null, timeZone);
-  return { rows, lines: toDashboardLines(rows, kinds) };
+  return { kinds, rows, lines: toDashboardLines(rows, kinds) };
 }
 
 // Whether the household has any bank account at all, the same check the
