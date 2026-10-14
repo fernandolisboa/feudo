@@ -8,6 +8,7 @@ export const BANK_PROFILE_CRITERIA = [
   "fees",
   "lockIn",
   "publicReviews",
+  "jointBanking",
 ] as const;
 export type BankProfileCriterion = (typeof BANK_PROFILE_CRITERIA)[number];
 
