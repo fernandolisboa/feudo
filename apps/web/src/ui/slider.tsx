@@ -4,19 +4,18 @@ import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 
 import { cn } from "@/lib/utils";
 
-function Slider({
+function Slider<Value extends number | readonly number[] = number>({
   className,
   defaultValue,
   value,
   min = 0,
   max = 100,
   ...props
-}: SliderPrimitive.Root.Props) {
-  const _values = Array.isArray(value)
-    ? value
-    : Array.isArray(defaultValue)
-      ? defaultValue
-      : [min, max];
+}: SliderPrimitive.Root.Props<Value>) {
+  // A plain number (the common single-thumb case) renders one thumb; only an
+  // explicit array of values renders one thumb per value.
+  const resolvedValue = value ?? defaultValue;
+  const _values = Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue ?? min];
 
   return (
     <SliderPrimitive.Root

@@ -188,15 +188,15 @@ const en = {
       topics: [
         {
           title: "Candidates and scores",
-          body: "Banks shows the three reviewed banks that best fit your household's weights, among the ones you do not use yet. Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with insufficient evidence stays out of the average and is shown as such. The review date sits under each bank. Below them, the All reviewed banks section lists every bank Feudo has reviewed in order of score, marking the ones you use and the candidates.",
+          body: "Banks shows the reviewed banks that best fit your household's weights, among the ones you do not use yet (three by default; the household can show from one to five). Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with insufficient evidence stays out of the average and is shown as such. The review date sits under each bank. A bank that does not meet one of the household's required criteria never shows up as a candidate, even with a good score; All reviewed banks shows it with what it is missing. If no bank meets every requirement, the page says so instead of naming a candidate.",
         },
         {
           title: "For and against",
-          body: "For and against compare the candidate, criterion by criterion, with the best score the banks you already use reach. Feudo recognizes those banks by the name of each connection; if a connection still says MeuPluggy, whoever made it can rename it to the bank's name.",
+          body: "For and against compare the candidate, criterion by criterion, with the best score the banks you already use reach. By default a gap of 10 points or more counts as a pro or a con; the household can widen or narrow that gap. Feudo recognizes those banks by the name of each connection; if a connection still says MeuPluggy, whoever made it can rename it to the bank's name.",
         },
         {
           title: "Criteria weights",
-          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, and can go back to Feudo's defaults at any time. At least one criterion has to count.",
+          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the note, and can go back to Feudo's defaults at any time. At least one criterion has to count. Joint banking (does the bank offer a joint or a shared account for the two of you) and any criterion set to Essential or Required are not just weighted: a bank that falls short of the minimum score for one of them is left out of the candidates entirely, Essential at a fixed 100 and Required at a minimum the household sets. Essential and Required criteria always carry exactly half the note between them, however many there are.",
         },
       ],
     },
@@ -439,15 +439,15 @@ const ptBR = {
       topics: [
         {
           title: "Candidatos e notas",
-          body: "Bancos mostra os três bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam. Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco. Logo abaixo, a seção Todos os bancos avaliados lista todos os bancos que o Feudo avaliou, em ordem de nota, e marca os que vocês usam e os candidatos.",
+          body: "Bancos mostra os bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam (três por padrão; a casa pode mostrar de um a cinco). Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco. Um banco que não atende a um critério obrigatório da casa nunca entra na lista de candidatos, mesmo com boa nota; Todos os bancos avaliados mostra esse banco e o que falta. Se nenhum banco atende a todos os critérios obrigatórios, a página avisa em vez de indicar um candidato.",
         },
         {
           title: "A favor e contra",
-          body: "A favor e Contra comparam o candidato, critério por critério, com a melhor nota que os bancos que vocês já usam alcançam. O Feudo reconhece esses bancos pelo nome de cada conexão; se uma conexão ainda se chama MeuPluggy, quem a fez pode renomeá-la com o nome do banco.",
+          body: "A favor e Contra comparam o candidato, critério por critério, com a melhor nota que os bancos que vocês já usam alcançam. Por padrão, uma diferença de 10 pontos ou mais conta como a favor ou contra; a casa pode aumentar ou diminuir essa diferença. O Feudo reconhece esses bancos pelo nome de cada conexão; se uma conexão ainda se chama MeuPluggy, quem a fez pode renomeá-la com o nome do banco.",
         },
         {
           title: "Pesos dos critérios",
-          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar.",
+          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar. Dinheiro a dois (o banco abre conta conjunta ou conta compartilhada para os dois) e qualquer critério marcado como Essencial ou Obrigatório não entram só no peso: um banco que fica abaixo da nota mínima nesse critério sai da lista de candidatos, mesmo que a nota geral seja boa. O Essencial tem nota mínima fixa em 100; no Obrigatório, a casa escolhe a nota mínima. Juntos, os critérios Essenciais e Obrigatórios sempre valem exatamente metade da nota, por mais critérios que sejam.",
         },
       ],
     },

@@ -3,24 +3,31 @@ import { eq } from "drizzle-orm";
 import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
 import { bankCriteriaWeights } from "./schema";
-import { storedCriteriaWeightsSchema, type StoredCriteriaWeights } from "./validation";
+import {
+  storedComparisonOptionsSchema,
+  storedWeightLevelsSchema,
+  type StoredComparisonOptions,
+  type StoredWeightLevels,
+} from "./validation";
 
-import type { CriteriaWeights } from "@feudo/core";
+import type { WeightLevels } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
-export type StoredWeightsRead =
+export type StoredSettingsRead =
   | { status: "none" }
-  | { status: "found"; weights: StoredCriteriaWeights }
+  | { status: "found"; levels: StoredWeightLevels; options: StoredComparisonOptions | null }
   | { status: "unreadable" };
+
+export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOptions };
 
 // Every method is bound to the household taken from the session (ADR-0001):
 // none accepts a household id.
 export function createCriteriaWeightsRepository(scope: HouseholdScope) {
   return {
-    async get(db: Database): Promise<StoredWeightsRead> {
+    async get(db: Database): Promise<StoredSettingsRead> {
       const rows = await db
-        .select({ weights: bankCriteriaWeights.weights })
+        .select({ weights: bankCriteriaWeights.weights, options: bankCriteriaWeights.options })
         .from(bankCriteriaWeights)
         .where(eq(bankCriteriaWeights.householdId, scope.householdId))
         .limit(1);
@@ -28,17 +35,32 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       if (!row) {
         return { status: "none" };
       }
-      const parsed = storedCriteriaWeightsSchema.safeParse(row.weights);
-      return parsed.success ? { status: "found", weights: parsed.data } : { status: "unreadable" };
+      const levels = storedWeightLevelsSchema.safeParse(row.weights);
+      if (!levels.success) {
+        return { status: "unreadable" };
+      }
+      if (row.options === null) {
+        return { status: "found", levels: levels.data, options: null };
+      }
+      const options = storedComparisonOptionsSchema.safeParse(row.options);
+      return {
+        status: "found",
+        levels: levels.data,
+        options: options.success ? options.data : null,
+      };
     },
 
-    async save(db: Database, weights: CriteriaWeights): Promise<void> {
+    async save(db: Database, settings: StoredSettings): Promise<void> {
       await db
         .insert(bankCriteriaWeights)
-        .values({ householdId: scope.householdId, weights })
+        .values({
+          householdId: scope.householdId,
+          weights: settings.levels,
+          options: settings.options,
+        })
         .onConflictDoUpdate({
           target: bankCriteriaWeights.householdId,
-          set: { weights, updatedAt: new Date() },
+          set: { weights: settings.levels, options: settings.options, updatedAt: new Date() },
         });
     },
 

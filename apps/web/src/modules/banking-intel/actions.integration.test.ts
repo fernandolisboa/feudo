@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BANK_PROFILE_CRITERIA, DEFAULT_CRITERIA_WEIGHTS, type CriteriaWeights } from "@feudo/core";
+import { BANK_PROFILE_CRITERIA, DEFAULT_MINIMUM_SCORES, type WeightLevels } from "@feudo/core";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 
@@ -17,14 +17,15 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 
 import { initialActionState } from "@/lib/action-state";
 import type { Database } from "@/platform/db/client";
-import { resetCriteriaWeightsAction, updateCriteriaWeightsAction } from "./actions";
+import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "./actions";
 import { BANK_PROFILES } from "./bank-profiles";
 import { getBanksPageProps } from "./page-props";
 import { t } from "./strings";
+import { minimumScoreFieldName } from "./validation";
 
 const NOW = new Date("2026-10-02T12:00:00.000Z");
 
-const ONLY_CARDS: CriteriaWeights = {
+const ONLY_CARDS: WeightLevels = {
   cardBenefits: 5,
   investmentAccess: 0,
   appQuality: 0,
@@ -32,13 +33,20 @@ const ONLY_CARDS: CriteriaWeights = {
   fees: 0,
   lockIn: 0,
   publicReviews: 0,
+  jointBanking: 0,
 };
 
-function weightsForm(weights: CriteriaWeights): FormData {
+function settingsForm(
+  levels: WeightLevels,
+  overrides: { candidateCount?: number; proConMinDifference?: number } = {},
+): FormData {
   const formData = new FormData();
   for (const criterion of BANK_PROFILE_CRITERIA) {
-    formData.set(criterion, String(weights[criterion]));
+    formData.set(criterion, String(levels[criterion]));
+    formData.set(minimumScoreFieldName(criterion), String(DEFAULT_MINIMUM_SCORES[criterion]));
   }
+  formData.set("candidateCount", String(overrides.candidateCount ?? 3));
+  formData.set("proConMinDifference", String(overrides.proConMinDifference ?? 10));
   return formData;
 }
 
@@ -63,13 +71,13 @@ describe("Bancos server boundary (integration)", () => {
       const props = await getBanksPageProps(userA.session, NOW);
 
       expect(props.weightsAreCustom).toBe(false);
-      expect(props.weights.map((entry) => entry.weight)).toEqual(
-        BANK_PROFILE_CRITERIA.map((criterion) => DEFAULT_CRITERIA_WEIGHTS[criterion]),
+      expect(props.weights.find((entry) => entry.criterion === "jointBanking")?.levelLabel).toBe(
+        "Essencial",
       );
       expect(props.hasAccounts).toBe(false);
       expect(props.baselineNotice).toBe(t.current.noAccounts);
       expect(props.currentRows).toEqual([]);
-      expect(props.candidates).toHaveLength(3);
+      expect(props.candidates.length).toBeGreaterThan(0);
       expect(props.candidates.every((candidate) => candidate.review.label.length > 0)).toBe(true);
       expect(props.reviewed.map((row) => row.institutionId)).toEqual(
         expect.arrayContaining(["bradesco", "itau"]),
@@ -101,18 +109,19 @@ describe("Bancos server boundary (integration)", () => {
     });
   });
 
-  it("saves an owner's weights for their own household only and ranks with them", async () => {
+  it("saves an owner's settings for their own household only and ranks with them", async () => {
     await withTwoUsers(async ({ userA, userB }) => {
       signInAs(userA.session);
 
-      const result = await updateCriteriaWeightsAction(initialActionState, weightsForm(ONLY_CARDS));
+      const result = await updateComparisonSettingsAction(
+        initialActionState,
+        settingsForm(ONLY_CARDS),
+      );
 
       expect(result).toEqual({ status: "success", message: t.saved });
       const propsA = await getBanksPageProps(userA.session, NOW);
       expect(propsA.weightsAreCustom).toBe(true);
-      expect(propsA.weights.map((entry) => entry.weight)).toEqual(
-        BANK_PROFILE_CRITERIA.map((criterion) => ONLY_CARDS[criterion]),
-      );
+      expect(propsA.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(5);
       expect(propsA.candidates.every((candidate) => candidate.scoreLabel === "80")).toBe(true);
       const propsB = await getBanksPageProps(userB.session, NOW);
       expect(propsB.weightsAreCustom).toBe(false);
@@ -122,16 +131,16 @@ describe("Bancos server boundary (integration)", () => {
   it("refuses a set where nothing counts and keeps what was stored", async () => {
     await withTwoUsers(async ({ userA }) => {
       signInAs(userA.session);
-      await updateCriteriaWeightsAction(initialActionState, weightsForm(ONLY_CARDS));
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
 
-      const result = await updateCriteriaWeightsAction(
+      const result = await updateComparisonSettingsAction(
         initialActionState,
-        weightsForm({ ...ONLY_CARDS, cardBenefits: 0 }),
+        settingsForm({ ...ONLY_CARDS, cardBenefits: 0 }),
       );
 
       expect(result).toEqual({ status: "error", message: t.errors.allZero });
       const props = await getBanksPageProps(userA.session, NOW);
-      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.weight).toBe(5);
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(5);
     });
   });
 
@@ -141,7 +150,10 @@ describe("Bancos server boundary (integration)", () => {
       const memberSession = { ...userB.session, householdId: householdA };
       signInAs(memberSession);
 
-      const result = await updateCriteriaWeightsAction(initialActionState, weightsForm(ONLY_CARDS));
+      const result = await updateComparisonSettingsAction(
+        initialActionState,
+        settingsForm(ONLY_CARDS),
+      );
       const reset = await resetCriteriaWeightsAction();
 
       expect(result).toEqual({ status: "error", message: t.errors.notAllowed });
@@ -155,13 +167,30 @@ describe("Bancos server boundary (integration)", () => {
   it("puts the product defaults back on reset", async () => {
     await withTwoUsers(async ({ userA }) => {
       signInAs(userA.session);
-      await updateCriteriaWeightsAction(initialActionState, weightsForm(ONLY_CARDS));
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
 
       const result = await resetCriteriaWeightsAction();
 
       expect(result).toEqual({ status: "success", message: t.resetDone });
       const props = await getBanksPageProps(userA.session, NOW);
       expect(props.weightsAreCustom).toBe(false);
+    });
+  });
+
+  it("gates candidates on a required criterion's minimum score", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+      const formData = settingsForm({ ...ONLY_CARDS, jointBanking: "required" });
+      formData.set(minimumScoreFieldName("jointBanking"), "100");
+
+      await updateComparisonSettingsAction(initialActionState, formData);
+      const props = await getBanksPageProps(userA.session, NOW);
+
+      for (const candidate of props.candidates) {
+        expect(
+          props.reviewed.find((row) => row.institutionId === candidate.institutionId)?.unmetLabel,
+        ).toBeNull();
+      }
     });
   });
 });

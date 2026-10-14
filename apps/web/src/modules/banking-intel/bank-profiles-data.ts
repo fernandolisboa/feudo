@@ -149,6 +149,28 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 65,
+          evidence:
+            "Nubank has no joint account by its own account: the blog says 'o Nubank não oferece conta conjunta'. Ultravioleta clients get Saldo Compartilhado inside Espaço Família, where administrators share one balance from their own logins and spending is attributed pro rata to each person's deposits.",
+          citations: [
+            {
+              url: "https://blog.nubank.com.br/conta-conjunta/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding: "Blog states 'o Nubank não oferece conta conjunta', updated 28 Jul 2026.",
+            },
+            {
+              url: "https://nu.com/pt/sala-de-imprensa/consumidores/espaco-familia-nubank-ultravioleta-lanca-recurso-de-saldo-compartilhado",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Press release: Espaço Família (Ultravioleta) shares one balance among the client and up to four others from their own logins; both administrators are notified and spending is attributed pro rata to each person's deposits.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -291,6 +313,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 0,
+          evidence:
+            "Inter's help center says 'Atualmente, não é possível ter uma conta conjunta no Inter' and that it only offers individual accounts tied to a CPF; it no longer opens joint accounts for new customers.",
+          citations: [
+            {
+              url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/posso-ter-uma-conta-conjunta-no-inter",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'Atualmente, não é possível ter uma conta conjunta no Inter. A instituição oferece apenas contas individuais vinculadas ao CPF.'",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -404,6 +442,29 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Itaú's Conta Universal terms define a joint account ('E/OU' or 'E'), and the account FAQ confirms every holder opens one by going to a branch with documents; branch-only opening does not lower this score.",
+          citations: [
+            {
+              url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-corrente/como-faco-para-abrir-uma-conta-corrente-no-itau",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'Para abrir uma conta-conjunta, todos os titulares devem ir à agência com os documentos.'",
+            },
+            {
+              url: "https://www.itau.com.br/_arquivosestaticos/Itau/PDF/para-voce/conta-corrente/condicoes-gerais-da-conta-universal-itau.pdf",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta Universal terms define joint 'E/OU' (one signature suffices) and 'E' (all holders must sign) accounts, with every holder jointly liable.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },
@@ -541,6 +602,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Bradesco's account-opening regulation defines Conta Conjunta Simples ('e') and Conta Conjunta Solidária ('e/ou') for new personal accounts, with every holder jointly liable, including for credit.",
+          citations: [
+            {
+              url: "https://banco.bradesco/assets/classic/pdf/produtos-servicos/tipos-de-conta/regulamento-para-abertura-de-contas-de-depositos-produtos-e-servicos-pessoa-fisica.pdf",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Regulation 1.408-7E (04/2026) 2.4.2 defines joint types 'e' (simples) and 'e/ou' (solidária); holders are jointly liable for credit limits.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -655,6 +732,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Banco do Brasil's own blog describes a joint account (solidária or simples) open to anyone 18 or older with up to four holders, each with their own App BB access and, per the blog, their own credit card.",
+          citations: [
+            {
+              url: "https://blog.bb.com.br/conta-conjunta-dez-perguntas-e-respostas-que-voce-precisa-conhecer/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Anyone 18+, no family tie needed, up to 4 holders; each holder can have their own credit card and accesses the account individually via App BB or Internet Banking.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -755,6 +848,28 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Caixa's account-opening contract defines joint current and savings accounts, solidária (any holder moves alone) or não-solidária (all must act together), each holder with their own app login by CPF.",
+          citations: [
+            {
+              url: "https://www.caixa.gov.br/Downloads/contas-pessoa-fisica/Contrato-Pessoa-Fisica-10-11-2021.pdf",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Cláusulas Gerais (37.105 v023) define joint current/savings accounts as solidária or não-solidária; a holder can leave without the others' authorisation, adding one needs all of them.",
+            },
+            {
+              url: "https://www.caixa.gov.br/atendimento/canais-digitais/app-caixa-internet-banking/perguntas-frequentes/Paginas/default.aspx",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding: "Each joint holder registers their own user and access password by CPF.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },
@@ -860,6 +975,22 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Santander's current-account terms define joint accounts of type 'OU' (either holder moves alone) or 'E' (all act together), with one debit card issued per holder.",
+          citations: [
+            {
+              url: "https://cms.santander.com.br/sites/WPS/documentos/arq-condicoes-gerais-conta-corrente/25-11-07_143048_condicoes-gerais-conta-corrente-nov25.pdf",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Terms 1614-S06 (10/2025) define joint 'OU'/'E' types; clause 7.2: one debit card issued per holder.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },
@@ -975,6 +1106,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 65,
+          evidence:
+            "C6 has no joint account, as its own blog states, and instead offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder.",
+          citations: [
+            {
+              url: "https://ajuda.c6bank.com.br/s/article/O-que-%C3%A9-conta-compartilhada",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'A Conta Compartilhada é quando uma pessoa física compartilha sua conta corrente com uma outra pessoa... convidado, com poderes de procurador... movimentação de crédito, débito... de forma independente.'",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -1081,6 +1228,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 65,
+          evidence:
+            "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead: the holder invites one other BTG client as a representative who switches into the account from their own login with full access except Investments and Financing, without co-ownership.",
+          citations: [
+            {
+              url: "https://banking.btgpactual.com/services/api/faq",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'Por enquanto, não é possível abrir uma conta conjunta pelo BTG Pactual Banking'; Conta Compartilhada gives an invited representative full access except Investments and Financing, not co-ownership.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -1184,6 +1347,29 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 30,
+          evidence:
+            "XP's joint option exists only for the investment account, Conta Conjunta Investimento, linking exactly one co-holder requested through an advisor; the Conta Digital, XP's everyday account, explicitly has no joint option.",
+          citations: [
+            {
+              url: "https://atendimento.xpi.com.br/categoria/minha-conta-e-login/conta-investimento-conjunta",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta Investimento Conjunta links two people to one investment account, PF only, one co-holder maximum, requested through the advisor.",
+            },
+            {
+              url: "https://atendimento.xpi.com.br/categoria/conta-digital/duvidas-gerais",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Article 2499: 'A Conta digital permitirá conta conjunta?' answered not available.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },
@@ -1297,6 +1483,22 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 100,
+          evidence:
+            "Sicoob lists conta conjunta among its personal account types, and its FAQ describes opening one by both people going in person to a cooperative with proof of residence, income and ID; branch-only opening does not lower this score.",
+          citations: [
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/faq-contas/-/most_viewed_assets/i44fjP4SVO9M/content/id/1197104",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'Como faço para abrir uma conta conjunta?': both must go in person to a cooperative with proof of residence, income, ID and CPF.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },
@@ -1414,6 +1616,22 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
+        jointBanking: {
+          status: "scored",
+          score: 0,
+          evidence:
+            "PicPay's help center says PicPay Empresas has no joint-account option and that, as in PF, only one account is allowed per CPF; no PF joint-account product was found.",
+          citations: [
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/42718886279955-Posso-ter-conta-conjunta-PJ",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "'No PicPay Empresas não existe a opção de conta conjunta'; one account per CNPJ, 'assim como em PF que é permitido apenas uma conta por CPF'.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
       },
     },
     {
@@ -1519,6 +1737,22 @@ export const BANK_PROFILES_DATASET = {
             },
           ],
           reviewedAt: "2026-09-09",
+        },
+        jointBanking: {
+          status: "scored",
+          score: 0,
+          evidence:
+            "Mercado Pago's own blog presents only alternatives to a joint account (Dividir Gastos for personal expenses, Colaboradores for seller accounts), 'sem o compromisso de um contrato bancário'; it does not open joint accounts for personal customers.",
+          citations: [
+            {
+              url: "https://www.mercadopago.com.br/blog/como-funciona-conta-conjunta",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Section 'Alternativas digitais à conta conjunta no Mercado Pago': Dividir Gastos for personal life, Colaboradores for PJ seller accounts, 'sem o compromisso de um contrato bancário'.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
         },
       },
     },

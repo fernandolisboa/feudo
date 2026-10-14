@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CRITERIA_WEIGHTS } from "@feudo/core";
+import { DEFAULT_COMPARISON_SETTINGS, DEFAULT_WEIGHT_LEVELS } from "@feudo/core";
 
 import { householdScope } from "@/modules/households";
 import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
@@ -9,11 +9,21 @@ import { seedAccount, seedSyncedConnection } from "@/modules/sync/test/seed-sync
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import type { Database } from "@/platform/db/client";
-import { createCriteriaWeightsRepository, listHouseholdInstitutionLabels } from "./repository";
+import {
+  createCriteriaWeightsRepository,
+  listHouseholdInstitutionLabels,
+  type StoredSettings,
+} from "./repository";
 import { bankCriteriaWeights } from "./schema";
 
-const FEES_FIRST = { ...DEFAULT_CRITERIA_WEIGHTS, fees: 5, cardBenefits: 0 };
-const CARDS_FIRST = { ...DEFAULT_CRITERIA_WEIGHTS, fees: 1, cardBenefits: 5 };
+const FEES_FIRST: StoredSettings = {
+  levels: { ...DEFAULT_WEIGHT_LEVELS, fees: 5, cardBenefits: 0 },
+  options: DEFAULT_COMPARISON_SETTINGS,
+};
+const CARDS_FIRST: StoredSettings = {
+  levels: { ...DEFAULT_WEIGHT_LEVELS, fees: 1, cardBenefits: 5 },
+  options: { ...DEFAULT_COMPARISON_SETTINGS, candidateCount: 2 },
+};
 
 async function renameConnection(db: Database, connectionId: string, label: string): Promise<void> {
   await db
@@ -23,13 +33,14 @@ async function renameConnection(db: Database, connectionId: string, label: strin
 }
 
 describe("criteria weights repository isolation (integration)", () => {
-  it("reads only the scoped household's own weights", async () => {
+  it("reads only the scoped household's own weights and options", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
       await createCriteriaWeightsRepository(householdA.scope).save(db, FEES_FIRST);
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
-        weights: FEES_FIRST,
+        levels: FEES_FIRST.levels,
+        options: FEES_FIRST.options,
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "none",
@@ -37,22 +48,24 @@ describe("criteria weights repository isolation (integration)", () => {
     });
   });
 
-  it("never overwrites another household's weights when saving its own", async () => {
+  it("never overwrites another household's weights or options when saving its own", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
       await createCriteriaWeightsRepository(householdA.scope).save(db, FEES_FIRST);
       await createCriteriaWeightsRepository(householdB.scope).save(db, CARDS_FIRST);
       await createCriteriaWeightsRepository(householdB.scope).save(db, {
         ...CARDS_FIRST,
-        lockIn: 0,
+        levels: { ...CARDS_FIRST.levels, lockIn: 0 },
       });
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
-        weights: FEES_FIRST,
+        levels: FEES_FIRST.levels,
+        options: FEES_FIRST.options,
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
-        weights: { ...CARDS_FIRST, lockIn: 0 },
+        levels: { ...CARDS_FIRST.levels, lockIn: 0 },
+        options: CARDS_FIRST.options,
       });
       const rows = await db.select().from(bankCriteriaWeights);
       expect(rows).toHaveLength(2);
@@ -67,12 +80,13 @@ describe("criteria weights repository isolation (integration)", () => {
 
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
-        weights: CARDS_FIRST,
+        levels: CARDS_FIRST.levels,
+        options: CARDS_FIRST.options,
       });
     });
   });
 
-  it("reports a stored set that fails validation instead of trusting it", async () => {
+  it("reports a stored weights set that fails validation instead of trusting it", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       await db
         .insert(bankCriteriaWeights)
@@ -80,6 +94,22 @@ describe("criteria weights repository isolation (integration)", () => {
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "unreadable",
+      });
+    });
+  });
+
+  it("falls back to null options when the stored options fail validation, without failing the weights", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(bankCriteriaWeights).values({
+        householdId: householdA.id,
+        weights: DEFAULT_WEIGHT_LEVELS,
+        options: { candidateCount: 99 },
+      });
+
+      expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
+        status: "found",
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: null,
       });
     });
   });

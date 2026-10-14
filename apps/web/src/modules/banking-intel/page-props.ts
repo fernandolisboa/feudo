@@ -1,13 +1,18 @@
 import {
   BANK_PROFILE_CRITERIA,
   compareBanks,
+  criterionShares,
+  effectiveWeights,
   localDateOf,
+  requiredCriteriaOf,
   type BankCandidate,
   type BankComparison,
   type BankProfileCriterion,
   type BankScore,
-  type CriteriaWeights,
+  type ComparisonSettings,
   type CriterionComparison,
+  type CriterionWeightLevel,
+  type WeightLevels,
 } from "@feudo/core";
 import { institutionById, isStale } from "@feudo/core/reference-data";
 
@@ -32,8 +37,17 @@ export type CriterionWeightView = {
   criterion: BankProfileCriterion;
   label: string;
   help: string;
-  weight: number;
+  level: CriterionWeightLevel;
   levelLabel: string;
+  share: number;
+  isRequired: boolean;
+  minimumScore: number;
+  minimumScoreHint: string | null;
+};
+
+export type ComparisonOptionsView = {
+  candidateCount: number;
+  proConMinDifference: number;
 };
 
 export type ReviewView = { label: string; stale: boolean };
@@ -50,6 +64,7 @@ export type ReviewedBankRow = {
   positionLabel: string;
   name: string;
   tag: string | null;
+  unmetLabel: string | null;
   scoreLabel: string;
   review: ReviewView;
 };
@@ -72,6 +87,7 @@ export type BanksPageProps = {
   canManage: boolean;
   weightsAreCustom: boolean;
   weights: CriterionWeightView[];
+  options: ComparisonOptionsView;
   hasAccounts: boolean;
   currentRows: CurrentBankRow[];
   baselineNotice: string | null;
@@ -111,14 +127,34 @@ function comparisonLine(item: CriterionComparison): string {
   });
 }
 
-function weightViews(weights: CriteriaWeights): CriterionWeightView[] {
-  return BANK_PROFILE_CRITERIA.map((criterion) => ({
-    criterion,
-    label: t.criteria[criterion].label,
-    help: t.criteria[criterion].help,
-    weight: weights[criterion],
-    levelLabel: t.weights.levels[weights[criterion]] ?? String(weights[criterion]),
-  }));
+function levelLabel(level: CriterionWeightLevel): string {
+  if (level === "essential") return t.weights.levels[6] ?? "essential";
+  if (level === "required") return t.weights.levels[7] ?? "required";
+  return t.weights.levels[level] ?? String(level);
+}
+
+function weightViews(levels: WeightLevels, options: ComparisonSettings): CriterionWeightView[] {
+  const shares = criterionShares(effectiveWeights(levels));
+  return BANK_PROFILE_CRITERIA.map((criterion) => {
+    const level = levels[criterion];
+    return {
+      criterion,
+      label: t.criteria[criterion].label,
+      help: t.criteria[criterion].help,
+      level,
+      levelLabel: levelLabel(level),
+      share: shares[criterion],
+      isRequired: level === "required",
+      minimumScore: options.minimumScores[criterion],
+      minimumScoreHint: criterion === "jointBanking" ? t.weights.jointBankingHint : null,
+    };
+  });
+}
+
+function unmetLabel(unmetRequirements: readonly BankProfileCriterion[]): string | null {
+  return unmetRequirements.length === 0
+    ? null
+    : interpolate(t.reviewed.unmet, "{criteria}", unmetRequirements.map(criterionLabel).join(", "));
 }
 
 function currentRow(score: BankScore, today: string): CurrentBankRow {
@@ -145,6 +181,7 @@ function reviewedRows(comparison: BankComparison, today: string): ReviewedBankRo
       : candidateIds.has(score.institutionId)
         ? t.reviewed.candidate
         : null,
+    unmetLabel: unmetLabel(score.unmetRequirements),
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
   }));
@@ -154,8 +191,10 @@ function candidateView(
   candidate: BankCandidate,
   index: number,
   baseline: "current" | "median",
+  proConMinDifference: number,
   today: string,
 ): CandidateView {
+  const threshold = String(proConMinDifference);
   return {
     institutionId: candidate.institutionId,
     rankLabel: interpolate(t.candidates.rank, "{rank}", String(index + 1)),
@@ -164,8 +203,16 @@ function candidateView(
     review: reviewView(candidate.reviewedAt, today),
     pros: candidate.pros.map(comparisonLine),
     cons: candidate.cons.map(comparisonLine),
-    emptyPros: baseline === "current" ? t.candidates.noPros : t.candidates.noProsMedian,
-    emptyCons: baseline === "current" ? t.candidates.noCons : t.candidates.noConsMedian,
+    emptyPros: interpolate(
+      baseline === "current" ? t.candidates.noPros : t.candidates.noProsMedian,
+      "{threshold}",
+      threshold,
+    ),
+    emptyCons: interpolate(
+      baseline === "current" ? t.candidates.noCons : t.candidates.noConsMedian,
+      "{threshold}",
+      threshold,
+    ),
     missingEvidence:
       candidate.missingEvidence.length === 0
         ? null
@@ -198,27 +245,39 @@ export async function buildBanksPageProps(
   const db = getDb();
   const { now, canManage } = options;
 
-  const [settings, weights, institutions] = await Promise.all([
+  const [settings, stored, institutions] = await Promise.all([
     getHouseholdSettings(scope, db),
     getHouseholdCriteriaWeights(scope, db),
     getHouseholdInstitutions(scope, db),
   ]);
   const today = localDateOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
+  const requiredCriteria = requiredCriteriaOf(stored.levels);
 
   const comparison = compareBanks({
     profiles: BANK_PROFILES,
-    weights: weights.weights,
+    weights: effectiveWeights(stored.levels),
     currentInstitutionIds: institutions.institutionIds,
+    requiredCriteria,
+    settings: stored.options,
   });
   const [top] = comparison.candidates;
+  const noneMeetsRequirements =
+    requiredCriteria.length > 0 &&
+    comparison.reviewed.every((score) => score.unmetRequirements.length > 0);
 
   return {
-    headline: top
-      ? interpolate(t.headline.candidate, "{bank}", institutionName(top.institutionId))
-      : t.headline.noCandidate,
+    headline: noneMeetsRequirements
+      ? t.headline.noneMeetsRequirements
+      : top
+        ? interpolate(t.headline.candidate, "{bank}", institutionName(top.institutionId))
+        : t.headline.noCandidate,
     canManage,
-    weightsAreCustom: weights.isCustom,
-    weights: weightViews(weights.weights),
+    weightsAreCustom: stored.isCustom,
+    weights: weightViews(stored.levels, stored.options),
+    options: {
+      candidateCount: stored.options.candidateCount,
+      proConMinDifference: stored.options.proConMinDifference,
+    },
     hasAccounts: institutions.hasAccounts,
     currentRows: comparison.current.map((score) => currentRow(score, today)),
     baselineNotice:
@@ -236,7 +295,13 @@ export async function buildBanksPageProps(
             institutions.unrecognizedLabels.join(", "),
           ),
     candidates: comparison.candidates.map((candidate, index) =>
-      candidateView(candidate, index, comparison.baseline, today),
+      candidateView(
+        candidate,
+        index,
+        comparison.baseline,
+        stored.options.proConMinDifference,
+        today,
+      ),
     ),
     reviewed: reviewedRows(comparison, today),
   };

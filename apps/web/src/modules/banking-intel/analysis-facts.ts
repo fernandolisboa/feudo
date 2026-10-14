@@ -24,12 +24,41 @@ export function banksAnalysisFacts(props: BanksPageProps): AnalysisFact[] {
         .map((weight) =>
           interpolateAll(strings.weight, {
             criterion: weight.label,
-            weight: String(weight.weight),
+            level: weight.levelLabel,
+            share: String(weight.share),
           }),
         )
         .join("; "),
     },
   ];
+
+  const required = props.weights.filter((weight) => weight.isRequired);
+  if (required.length > 0) {
+    facts.push({
+      key: "banks.required_minimums",
+      label: strings.requiredMinimums,
+      value: required
+        .map((weight) =>
+          interpolateAll(strings.requiredMinimum, {
+            criterion: weight.label,
+            score: String(weight.minimumScore),
+          }),
+        )
+        .join("; "),
+    });
+  }
+
+  const unmet = props.reviewed.filter(
+    (row): row is typeof row & { unmetLabel: string } => row.unmetLabel !== null,
+  );
+  if (unmet.length > 0) {
+    facts.push({
+      key: "banks.unmet_requirements",
+      label: strings.unmetRequirements,
+      value: unmet.map((row) => `${row.name} (${row.unmetLabel})`).join("; "),
+    });
+  }
+
   props.currentRows.forEach((row, index) => {
     facts.push({
       key: `banks.current.${String(index + 1)}`,
