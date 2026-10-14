@@ -125,9 +125,11 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     ],
     baselineNotice: null,
     unrecognizedNotice: null,
+    overridesNotice: null,
     candidates: [
       {
         institutionId: "nubank",
+        href: "/bancos/nubank",
         rankLabel: "1º",
         name: "Nubank",
         scoreLabel: "77",
@@ -140,6 +142,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
       },
       {
         institutionId: "btg",
+        href: "/bancos/btg",
         rankLabel: "2º",
         name: "BTG Pactual",
         scoreLabel: "76",
@@ -154,37 +157,45 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     reviewed: [
       {
         institutionId: "nubank",
+        href: "/bancos/nubank",
         positionLabel: "1º",
         name: "Nubank",
         tag: t.reviewed.candidate,
         unmetLabel: null,
+        overriddenLabel: null,
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
       {
         institutionId: "btg",
+        href: "/bancos/btg",
         positionLabel: "2º",
         name: "BTG Pactual",
         tag: t.reviewed.candidate,
         unmetLabel: null,
+        overriddenLabel: null,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
       },
       {
         institutionId: "itau",
+        href: "/bancos/itau",
         positionLabel: "3º",
         name: "Itaú",
         tag: t.reviewed.current,
         unmetLabel: null,
+        overriddenLabel: null,
         scoreLabel: "60",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
       {
         institutionId: "bradesco",
+        href: "/bancos/bradesco",
         positionLabel: "4º",
         name: "Bradesco",
         tag: null,
         unmetLabel: "não atende: Dinheiro a dois",
+        overriddenLabel: null,
         scoreLabel: "53",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -287,6 +298,19 @@ describe("BanksView", () => {
     render(<BanksView {...buildProps({ unrecognizedNotice: "Não reconhecemos: MeuPluggy." })} />);
 
     expect(screen.getByText("Não reconhecemos: MeuPluggy.")).not.toBeNull();
+  });
+
+  it("links every bank to its own page and says when Feudo reviewed one of the household's corrections", () => {
+    render(
+      <BanksView
+        {...buildProps({ overridesNotice: "O Feudo tem uma revisão mais nova (Nubank)." })}
+      />,
+    );
+
+    const links = screen.getAllByRole("link", { name: "Nubank" });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.every((link) => link.getAttribute("href") === "/bancos/nubank")).toBe(true);
+    expect(screen.getByText("O Feudo tem uma revisão mais nova (Nubank).")).not.toBeNull();
   });
 
   it("shows the weights read-only to a member who cannot manage the household, with shares and minimums", () => {

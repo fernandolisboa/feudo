@@ -188,8 +188,12 @@ _Avoid_: indicators (ambiguous with dashboard stat tiles), rates table
 ### Banking intelligence
 
 **Bank profile**:
-Reference data about an institution: card benefits, investment access, app quality, security, fees, lock-in, public customer reviews (Reclame Aqui, consumidor.gov.br) and joint banking ("Dinheiro a dois"), each scored as an integer from 0 to 100 with cited evidence and a review date, or marked as insufficient evidence when no source backs a score. Higher is always better for the household. Maintained by the product, not by households.
+Reference data about an institution: card benefits, investment access, app quality, security, fees, lock-in, public customer reviews (Reclame Aqui, consumidor.gov.br) and joint banking ("Dinheiro a dois"), each scored as an integer from 0 to 100 with cited evidence and a review date, or marked as insufficient evidence when no source backs a score. Higher is always better for the household. Maintained by the product, not by households. Each criterion also carries a pt-BR summary of its evidence for the bank's page. A household can put its own **Bank data correction** on top, never edit the profile itself.
 _Avoid_: bank rating, bank review
+
+**Bank data correction**:
+A household's own score for one criterion of one bank, with a required note on what changed and an optional https source link, made by the owner or an admin on the bank's page. It replaces the profile's score in that household's comparison only, and a profile update never overwrites it: the correction remembers the review date of the profile it corrected, and when the profile is reviewed again later the household is asked whether to use the new version (dropping its correction) or keep its own (which silences the question until the next review). Members see corrections but cannot make them.
+_Avoid_: override (code name only), manual edit, bank edit
 
 **Lock-in**:
 How hard an institution makes it for a customer to leave or move money out: arbitrary limits, pushed products, friction on transfers, portability and account closure. A property of the bank, scored from evidence so that 100 means the easiest to leave; Feudo itself only reads data.

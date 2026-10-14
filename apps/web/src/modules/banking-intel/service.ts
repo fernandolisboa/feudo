@@ -13,8 +13,14 @@ import type { HouseholdScope } from "@/modules/households";
 import { errorName } from "@/lib/error-name";
 import type { SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
-import { createCriteriaWeightsRepository, listHouseholdInstitutionLabels } from "./repository";
+import { referenceProfileOf } from "./bank-profiles";
+import {
+  createCriteriaWeightsRepository,
+  createCriterionOverridesRepository,
+  listHouseholdInstitutionLabels,
+} from "./repository";
 import type { StoredSettings } from "./repository";
+import type { OverrideForm, OverrideTarget, StoredOverride } from "./validation";
 
 export type HouseholdComparisonSettings = {
   levels: WeightLevels;
@@ -114,4 +120,74 @@ export async function getHouseholdInstitutions(
     institutionIds: [...institutionIds],
     unrecognizedLabels,
   };
+}
+
+export async function getHouseholdOverrides(
+  scope: HouseholdScope,
+  db: Database,
+): Promise<StoredOverride[]> {
+  const { overrides, skipped } = await createCriterionOverridesRepository(scope).list(db);
+  if (skipped > 0) {
+    console.warn(`banking-intel: skipped ${String(skipped)} unreadable criterion overrides`);
+  }
+  return overrides;
+}
+
+export type OverrideWriteOutcome = SimpleOutcome<"ok" | "failed">;
+
+// The reference date an override answers to is always read here from the
+// shipped data, never taken from the form, so a household cannot silence a
+// reference update it has not seen.
+function referenceReviewedAt(target: OverrideTarget): string | null {
+  return referenceProfileOf(target.institutionId)?.criteria[target.criterion].reviewedAt ?? null;
+}
+
+export async function saveCriterionOverride(
+  scope: HouseholdScope,
+  form: OverrideForm,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  const baseReviewedAt = referenceReviewedAt(form);
+  if (baseReviewedAt === null) return { status: "failed" };
+  try {
+    await createCriterionOverridesRepository(scope).save(db, { ...form, baseReviewedAt });
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`banking-intel: saving a criterion override failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export async function removeCriterionOverride(
+  scope: HouseholdScope,
+  target: OverrideTarget,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  try {
+    await createCriterionOverridesRepository(scope).remove(db, target);
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`banking-intel: removing a criterion override failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export async function keepCriterionOverride(
+  scope: HouseholdScope,
+  target: OverrideTarget,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  const baseReviewedAt = referenceReviewedAt(target);
+  if (baseReviewedAt === null) return { status: "failed" };
+  try {
+    const found = await createCriterionOverridesRepository(scope).rebase(
+      db,
+      target,
+      baseReviewedAt,
+    );
+    return { status: found ? "ok" : "failed" };
+  } catch (error) {
+    console.warn(`banking-intel: keeping a criterion override failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
 }

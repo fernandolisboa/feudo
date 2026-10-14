@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   BANK_PROFILE_CRITERIA,
+  BANK_PROFILE_SCORE_MAX,
+  BANK_PROFILE_SCORE_MIN,
   CANDIDATE_COUNT_MAX,
   CANDIDATE_COUNT_MIN,
   CRITERION_WEIGHT_MAX,
@@ -16,6 +18,7 @@ import {
   type ComparisonSettings,
   type WeightLevels,
 } from "@feudo/core";
+import { institutionById, isoDateSchema } from "@feudo/core/reference-data";
 
 const numericLevelSchema = z.int().min(CRITERION_WEIGHT_MIN).max(CRITERION_WEIGHT_MAX);
 const weightLevelSchema = z.union([
@@ -224,4 +227,62 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
       proConMinDifference: parsed.data.proConMinDifference,
     },
   };
+}
+
+export const OVERRIDE_NOTE_MAX_LENGTH = 500;
+export const OVERRIDE_SOURCE_URL_MAX_LENGTH = 500;
+
+const institutionIdSchema = z.string().refine((id) => institutionById(id) !== undefined);
+const overrideScoreSchema = z.int().min(BANK_PROFILE_SCORE_MIN).max(BANK_PROFILE_SCORE_MAX);
+const overrideNoteSchema = z.string().trim().min(1).max(OVERRIDE_NOTE_MAX_LENGTH);
+const overrideSourceUrlSchema = z.url({ protocol: /^https$/ }).max(OVERRIDE_SOURCE_URL_MAX_LENGTH);
+
+export const overrideTargetSchema = z.object({
+  institutionId: institutionIdSchema,
+  criterion: z.enum(BANK_PROFILE_CRITERIA),
+});
+export type OverrideTarget = z.infer<typeof overrideTargetSchema>;
+
+// What the table may hold: an institution dropped from the reference data,
+// or a criterion renamed, leaves a row that no longer names anything; the
+// repository skips it rather than failing the household's whole comparison.
+export const storedOverrideSchema = overrideTargetSchema.extend({
+  score: overrideScoreSchema,
+  note: overrideNoteSchema,
+  sourceUrl: overrideSourceUrlSchema.nullable(),
+  baseReviewedAt: isoDateSchema,
+  updatedAt: z.date(),
+});
+export type StoredOverride = z.infer<typeof storedOverrideSchema>;
+
+const overrideFormSchema = overrideTargetSchema.extend({
+  score: z
+    .string()
+    .regex(/^[0-9]+$/)
+    .transform(Number)
+    .pipe(overrideScoreSchema),
+  note: overrideNoteSchema,
+  sourceUrl: z
+    .string()
+    .trim()
+    .transform((value) => (value === "" ? null : value))
+    .pipe(overrideSourceUrlSchema.nullable()),
+});
+export type OverrideForm = z.infer<typeof overrideFormSchema>;
+
+export type OverrideFormResult =
+  { status: "ok"; value: OverrideForm } | { status: "invalid_source" } | { status: "invalid" };
+
+export function parseOverrideForm(formData: FormData): OverrideFormResult {
+  const parsed = overrideFormSchema.safeParse({
+    institutionId: formData.get("institutionId"),
+    criterion: formData.get("criterion"),
+    score: formData.get("score"),
+    note: formData.get("note"),
+    sourceUrl: formData.get("sourceUrl") ?? "",
+  });
+  if (parsed.success) return { status: "ok", value: parsed.data };
+  return parsed.error.issues.some((issue) => issue.path[0] === "sourceUrl")
+    ? { status: "invalid_source" }
+    : { status: "invalid" };
 }

@@ -5,6 +5,7 @@ import {
   isReadableComparisonOptions,
   minimumScoreFieldName,
   parseComparisonSettingsForm,
+  parseOverrideForm,
   parseStoredComparisonOptions,
   storedWeightLevelsSchema,
 } from "./validation";
@@ -180,5 +181,55 @@ describe("isReadableComparisonOptions", () => {
     expect(isReadableComparisonOptions([1, 2, 3])).toBe(false);
     expect(isReadableComparisonOptions("garbage")).toBe(false);
     expect(isReadableComparisonOptions(42)).toBe(false);
+  });
+});
+
+describe("parseOverrideForm", () => {
+  const valid = {
+    institutionId: "nubank",
+    criterion: "fees",
+    score: "40",
+    note: "  A tarifa subiu.  ",
+    sourceUrl: "",
+  };
+
+  it("accepts a correction to a profiled bank, trims the note and treats an empty link as none", () => {
+    expect(parseOverrideForm(form(valid))).toEqual({
+      status: "ok",
+      value: {
+        institutionId: "nubank",
+        criterion: "fees",
+        score: 40,
+        note: "A tarifa subiu.",
+        sourceUrl: null,
+      },
+    });
+    expect(
+      parseOverrideForm(form({ ...valid, sourceUrl: "https://nubank.com.br/tarifas" })),
+    ).toMatchObject({ status: "ok", value: { sourceUrl: "https://nubank.com.br/tarifas" } });
+  });
+
+  it("refuses an unknown bank or criterion, a score outside 0 to 100 and an empty note", () => {
+    for (const entries of [
+      { ...valid, institutionId: "banco-inexistente" },
+      { ...valid, criterion: "vibes" },
+      { ...valid, score: "101" },
+      { ...valid, score: "-1" },
+      { ...valid, score: "4.5" },
+      { ...valid, note: "   " },
+      { ...valid, note: "x".repeat(501) },
+    ]) {
+      expect(parseOverrideForm(form(entries)), JSON.stringify(entries)).toEqual({
+        status: "invalid",
+      });
+    }
+  });
+
+  it("asks for an https link when the source is anything else", () => {
+    for (const sourceUrl of ["http://nubank.com.br", "javascript:alert(1)", "nubank.com.br"]) {
+      expect(parseOverrideForm(form({ ...valid, sourceUrl })), sourceUrl).toEqual({
+        status: "invalid_source",
+      });
+    }
   });
 });

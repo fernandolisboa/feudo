@@ -21,13 +21,25 @@ vi.mock("@/modules/households", () => ({
   canManageHouseholdSettings: (role: string) => role === "owner" || role === "admin",
   householdScope: (session: { householdId: string }) => ({ householdId: session.householdId }),
 }));
+const saveCriterionOverrideMock = vi.hoisted(() => vi.fn());
+const removeCriterionOverrideMock = vi.hoisted(() => vi.fn());
+const keepCriterionOverrideMock = vi.hoisted(() => vi.fn());
+
 vi.mock("./service", () => ({
   setHouseholdCriteriaWeights: setHouseholdCriteriaWeightsMock,
   resetHouseholdCriteriaWeights: resetHouseholdCriteriaWeightsMock,
+  saveCriterionOverride: saveCriterionOverrideMock,
+  removeCriterionOverride: removeCriterionOverrideMock,
+  keepCriterionOverride: keepCriterionOverrideMock,
 }));
 
 import { initialActionState } from "@/lib/action-state";
-import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "./actions";
+import {
+  resetCriteriaWeightsAction,
+  resolveCriterionOverrideAction,
+  saveCriterionOverrideAction,
+  updateComparisonSettingsAction,
+} from "./actions";
 import { t } from "./strings";
 import { minimumScoreFieldName } from "./validation";
 
@@ -48,6 +60,9 @@ beforeEach(() => {
   setHouseholdCriteriaWeightsMock.mockReset();
   resetHouseholdCriteriaWeightsMock.mockReset();
   revalidatePathMock.mockClear();
+  saveCriterionOverrideMock.mockReset().mockResolvedValue({ status: "ok" });
+  removeCriterionOverrideMock.mockReset().mockResolvedValue({ status: "ok" });
+  keepCriterionOverrideMock.mockReset().mockResolvedValue({ status: "ok" });
 });
 
 describe("updateComparisonSettingsAction", () => {
@@ -105,5 +120,96 @@ describe("resetCriteriaWeightsAction", () => {
       status: "error",
       message: t.errors.failed,
     });
+  });
+});
+
+function overrideForm(entries: Record<string, string>): FormData {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries({
+    institutionId: "nubank",
+    criterion: "fees",
+    score: "40",
+    note: "A tarifa subiu.",
+    sourceUrl: "",
+    ...entries,
+  })) {
+    formData.set(key, value);
+  }
+  return formData;
+}
+
+describe("saveCriterionOverrideAction", () => {
+  it("rejects a malformed correction or a non-https link before touching the session", async () => {
+    expect(
+      await saveCriterionOverrideAction(initialActionState, overrideForm({ score: "x" })),
+    ).toEqual({ status: "error", message: t.errors.invalidInput });
+    expect(
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ sourceUrl: "http://nubank.com.br" }),
+      ),
+    ).toEqual({ status: "error", message: t.override.invalidSource });
+    expect(getViewerRoleMock).not.toHaveBeenCalled();
+    expect(saveCriterionOverrideMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a member and saves an admin's correction for the session's household", async () => {
+    getViewerRoleMock.mockResolvedValue("member");
+    expect(await saveCriterionOverrideAction(initialActionState, overrideForm({}))).toEqual({
+      status: "error",
+      message: t.errors.notAllowed,
+    });
+    expect(saveCriterionOverrideMock).not.toHaveBeenCalled();
+
+    getViewerRoleMock.mockResolvedValue("admin");
+    expect(await saveCriterionOverrideAction(initialActionState, overrideForm({}))).toEqual({
+      status: "success",
+      message: t.override.saved,
+    });
+    expect(saveCriterionOverrideMock).toHaveBeenCalledWith(
+      { householdId: "household-1" },
+      {
+        institutionId: "nubank",
+        criterion: "fees",
+        score: 40,
+        note: "A tarifa subiu.",
+        sourceUrl: null,
+      },
+      {},
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/bancos/nubank");
+  });
+});
+
+describe("resolveCriterionOverrideAction", () => {
+  it("rejects an unknown bank, criterion or decision before touching the session", async () => {
+    for (const args of [
+      ["banco-inexistente", "fees", "keepOwn"],
+      ["nubank", "vibes", "keepOwn"],
+      ["nubank", "fees", "deleteEverything"],
+    ] as const) {
+      const [institutionId, criterion, decision] = args;
+      expect(
+        await resolveCriterionOverrideAction(institutionId, criterion, decision),
+        args.join(),
+      ).toEqual({
+        status: "error",
+        message: t.errors.invalidInput,
+      });
+    }
+    expect(getViewerRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("drops the correction to use Feudo's data, or keeps it against the newer review", async () => {
+    expect(await resolveCriterionOverrideAction("nubank", "fees", "useReference")).toEqual({
+      status: "success",
+      message: t.override.removed,
+    });
+    expect(removeCriterionOverrideMock).toHaveBeenCalledTimes(1);
+    expect(await resolveCriterionOverrideAction("nubank", "fees", "keepOwn")).toEqual({
+      status: "success",
+      message: t.override.kept,
+    });
+    expect(keepCriterionOverrideMock).toHaveBeenCalledTimes(1);
   });
 });

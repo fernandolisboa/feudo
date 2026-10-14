@@ -22,3 +22,11 @@ export function staleCriteria(profiles: readonly BankProfile[], today: string): 
       })),
   );
 }
+
+export function referenceProfileOf(institutionId: string): BankProfile | undefined {
+  return BANK_PROFILES.find((profile) => profile.institutionId === institutionId);
+}
+
+export function hasBankProfile(institutionId: string): boolean {
+  return referenceProfileOf(institutionId) !== undefined;
+}

@@ -1,4 +1,14 @@
-import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  date,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { organization } from "../auth/schema.ts";
 
@@ -17,3 +27,31 @@ export const bankCriteriaWeights = pgTable("bank_criteria_weights", {
   options: jsonb("options"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Household-scoped (ADR-0001): the household's own score for one criterion
+// of one bank, which wins over the shipped reference data in its comparison
+// and is never rewritten by a reference update (ADR-0006, 2026-10-14).
+// base_reviewed_at is the reference review date the household overrode, so a
+// later reference review can be offered to it instead of silently applied.
+export const bankCriterionOverride = pgTable(
+  "bank_criterion_override",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    institutionId: text("institution_id").notNull(),
+    criterion: text("criterion").notNull(),
+    score: integer("score").notNull(),
+    note: text("note").notNull(),
+    sourceUrl: text("source_url"),
+    baseReviewedAt: date("base_reviewed_at").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "bank_criterion_override_pk",
+      columns: [table.householdId, table.institutionId, table.criterion],
+    }),
+    check("bank_criterion_override_score_check", sql`${table.score} between 0 and 100`),
+  ],
+);

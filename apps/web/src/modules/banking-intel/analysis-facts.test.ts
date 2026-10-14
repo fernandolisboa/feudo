@@ -56,9 +56,11 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     ],
     baselineNotice: null,
     unrecognizedNotice: "Não reconhecemos: Conta da Maria.",
+    overridesNotice: null,
     candidates: [
       {
         institutionId: "nubank",
+        href: "/bancos/nubank",
         rankLabel: "1º",
         name: "Nubank",
         scoreLabel: "77",
@@ -71,6 +73,7 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
       },
       {
         institutionId: "c6",
+        href: "/bancos/c6",
         rankLabel: "2º",
         name: "C6 Bank",
         scoreLabel: t.candidates.noScore,
@@ -169,10 +172,12 @@ describe("banksAnalysisFacts", () => {
         reviewed: [
           {
             institutionId: "nubank",
+            href: "/bancos/nubank",
             positionLabel: "4º",
             name: "Nubank",
             tag: null,
             unmetLabel: "não atende: Dinheiro a dois",
+            overriddenLabel: null,
             scoreLabel: "77",
             review: { label: "", stale: false },
           },
