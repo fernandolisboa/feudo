@@ -3,6 +3,7 @@ const en = {
   headline: {
     candidate: "{bank} is the bank that best fits the household's weights.",
     noCandidate: "No bank outside the ones you already use has a score with these weights.",
+    noneMeetsRequirements: "No bank meets the household's required criteria.",
   },
   criteria: {
     cardBenefits: { label: "Card benefits", help: "points, cashback, annual fee and perks" },
@@ -18,6 +19,10 @@ const en = {
       help: "how much the bank holds you back; 100 is the easiest to leave",
     },
     publicReviews: { label: "Customer reviews", help: "Reclame Aqui and consumidor.gov.br" },
+    jointBanking: {
+      label: "Joint banking",
+      help: "a joint account or a shared account for the two of you",
+    },
   },
   current: {
     noAccounts:
@@ -37,10 +42,10 @@ const en = {
     stale: "review older than 180 days",
     pros: "For",
     cons: "Against",
-    noPros: "No criterion 10 or more points above what you already have.",
-    noCons: "No criterion 10 or more points below what you already have.",
-    noProsMedian: "No criterion 10 or more points above the median bank.",
-    noConsMedian: "No criterion 10 or more points below the median bank.",
+    noPros: "No criterion {threshold} or more points above what you already have.",
+    noCons: "No criterion {threshold} or more points below what you already have.",
+    noProsMedian: "No criterion {threshold} or more points above the median bank.",
+    noConsMedian: "No criterion {threshold} or more points below the median bank.",
     comparison: "{criterion}: {candidate} vs. {baseline} ({bank})",
     median: "median",
     missingEvidence: "Insufficient evidence for: {criteria}.",
@@ -56,6 +61,7 @@ const en = {
     current: "you use it",
     candidate: "candidate",
     noPosition: "—",
+    unmet: "doesn't meet: {criteria}",
   },
   weights: {
     title: "Criteria weights",
@@ -63,13 +69,33 @@ const en = {
     custom: "set by the household",
     readOnly: "Only the household's owner or admin can change the weights.",
     reset: "Back to defaults",
-    levels: ["Doesn't count", "Very low", "Low", "Medium", "High", "Very high"],
+    levels: {
+      0: "Doesn't count",
+      1: "Very low",
+      2: "Low",
+      3: "Medium",
+      4: "High",
+      5: "Very high",
+      essential: "Essential",
+      required: "Required",
+    },
+    share: "{share}% of the score",
+    minimumScore: "Minimum score: {score}",
+    jointBankingHint: "100: only a joint account · 65: a shared account counts",
+  },
+  options: {
+    title: "Comparison settings",
+    candidateCount: "Candidates shown",
+    proConMinDifference: "Minimum difference to count as for or against",
+    pointsSuffix: "points",
   },
   method:
-    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
+    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Essential and Required criteria together always count for half the score, split equally among them; a Required one also sets a minimum score the bank must meet to become a candidate. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
   analysisFacts: {
-    weights: "Household criteria weights (0 to 5)",
-    weight: "{criterion} {weight}",
+    weights: "Household criteria weights",
+    weight: "{criterion} {level} ({share}%)",
+    requiredMinimums: "Required minimum scores",
+    requiredMinimum: "{criterion} needs at least {score}",
     current: "Bank the household uses: {bank}",
     score: "score {score} out of 100",
     baseline: "Comparison baseline",
@@ -77,18 +103,19 @@ const en = {
     pros: "In favour of {bank}",
     cons: "Against {bank}",
     missingEvidence: "Evidence gaps for {bank}",
+    unmetRequirements: "Banks that don't meet a required criterion",
   },
-  saved: "Weights saved.",
-  resetDone: "Weights back to defaults.",
+  saved: "Settings saved.",
+  resetDone: "Settings back to defaults.",
   error: {
     message: "Couldn't load the bank comparison right now. Check your connection and try again.",
     retry: "Try again",
   },
   errors: {
-    invalidInput: "Check the weights and try again.",
+    invalidInput: "Check the settings and try again.",
     allZero: "At least one criterion has to count.",
     failed: "Couldn't save right now. Try again.",
-    notAllowed: "Only the household's owner or admin can change the weights.",
+    notAllowed: "Only the household's owner or admin can change the settings.",
   },
 };
 
@@ -97,6 +124,7 @@ const ptBR = {
   headline: {
     candidate: "{bank} é o banco que mais combina com os pesos da casa.",
     noCandidate: "Nenhum banco além dos que vocês já usam tem nota com esses pesos.",
+    noneMeetsRequirements: "Nenhum banco atende aos critérios obrigatórios da casa.",
   },
   criteria: {
     cardBenefits: {
@@ -118,6 +146,10 @@ const ptBR = {
       label: "Avaliações de clientes",
       help: "Reclame Aqui e consumidor.gov.br",
     },
+    jointBanking: {
+      label: "Dinheiro a dois",
+      help: "conta conjunta ou conta compartilhada para os dois",
+    },
   },
   current: {
     noAccounts:
@@ -137,10 +169,10 @@ const ptBR = {
     stale: "revisão com mais de 180 dias",
     pros: "A favor",
     cons: "Contra",
-    noPros: "Nenhum critério 10 pontos ou mais acima do que vocês já têm.",
-    noCons: "Nenhum critério 10 pontos ou mais abaixo do que vocês já têm.",
-    noProsMedian: "Nenhum critério 10 pontos ou mais acima do banco mediano.",
-    noConsMedian: "Nenhum critério 10 pontos ou mais abaixo do banco mediano.",
+    noPros: "Nenhum critério {threshold} pontos ou mais acima do que vocês já têm.",
+    noCons: "Nenhum critério {threshold} pontos ou mais abaixo do que vocês já têm.",
+    noProsMedian: "Nenhum critério {threshold} pontos ou mais acima do banco mediano.",
+    noConsMedian: "Nenhum critério {threshold} pontos ou mais abaixo do banco mediano.",
     comparison: "{criterion}: {candidate} contra {baseline} ({bank})",
     median: "mediana",
     missingEvidence: "Evidência insuficiente em: {criteria}.",
@@ -156,6 +188,7 @@ const ptBR = {
     current: "vocês usam",
     candidate: "candidato",
     noPosition: "—",
+    unmet: "não atende: {criteria}",
   },
   weights: {
     title: "Pesos dos critérios",
@@ -163,13 +196,33 @@ const ptBR = {
     custom: "definidos pela casa",
     readOnly: "Só o responsável pela casa ou um administrador pode mudar os pesos.",
     reset: "Voltar ao padrão",
-    levels: ["Não conta", "Muito baixo", "Baixo", "Médio", "Alto", "Muito alto"],
+    levels: {
+      0: "Não conta",
+      1: "Muito baixo",
+      2: "Baixo",
+      3: "Médio",
+      4: "Alto",
+      5: "Muito alto",
+      essential: "Essencial",
+      required: "Obrigatório",
+    },
+    share: "{share}% da nota",
+    minimumScore: "Nota mínima: {score}",
+    jointBankingHint: "100: só conta conjunta · 65: aceita conta compartilhada",
+  },
+  options: {
+    title: "Ajustes da comparação",
+    candidateCount: "Candidatos mostrados",
+    proConMinDifference: "Diferença mínima para contar como a favor ou contra",
+    pointsSuffix: "pontos",
   },
   method:
-    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. Os critérios Essenciais e Obrigatórios, juntos, valem metade da nota, dividida igualmente entre eles; o Obrigatório ainda exige uma nota mínima para o banco ser candidato. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
   analysisFacts: {
-    weights: "Pesos dos critérios da casa (0 a 5)",
-    weight: "{criterion} {weight}",
+    weights: "Pesos dos critérios da casa",
+    weight: "{criterion} {level} ({share}%)",
+    requiredMinimums: "Notas mínimas obrigatórias",
+    requiredMinimum: "{criterion} precisa de pelo menos {score}",
     current: "Banco que a casa usa: {bank}",
     score: "nota {score} de 100",
     baseline: "Base da comparação",
@@ -177,19 +230,20 @@ const ptBR = {
     pros: "A favor de {bank}",
     cons: "Contra {bank}",
     missingEvidence: "Evidência insuficiente sobre {bank}",
+    unmetRequirements: "Bancos que não atendem a um critério obrigatório",
   },
-  saved: "Pesos salvos.",
-  resetDone: "Pesos de volta ao padrão.",
+  saved: "Ajustes salvos.",
+  resetDone: "Ajustes de volta ao padrão.",
   error: {
     message:
       "Não deu para carregar a comparação de bancos agora. Confira sua conexão e tente de novo.",
     retry: "Tentar de novo",
   },
   errors: {
-    invalidInput: "Confira os pesos e tente de novo.",
+    invalidInput: "Confira os ajustes e tente de novo.",
     allZero: "Pelo menos um critério precisa contar.",
     failed: "Não deu para salvar agora. Tente de novo.",
-    notAllowed: "Só o responsável pela casa ou um administrador pode mudar os pesos.",
+    notAllowed: "Só o responsável pela casa ou um administrador pode mudar os ajustes.",
   },
 } satisfies typeof en;
 

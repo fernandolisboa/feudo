@@ -7,6 +7,7 @@ import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { interpolate } from "@/lib/interpolate";
 
 import type { BanksPageProps, CandidateView, ReviewView } from "../page-props";
 import { t } from "../strings";
@@ -91,6 +92,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
     canManage,
     weightsAreCustom,
     weights,
+    options,
     hasAccounts,
     baselineNotice,
     unrecognizedNotice,
@@ -162,6 +164,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
                   <span className="flex flex-wrap items-center gap-2">
                     {row.name}
                     {row.tag ? <Badge variant="secondary">{row.tag}</Badge> : null}
+                    {row.unmetLabel ? <Badge variant="outline">{row.unmetLabel}</Badge> : null}
                   </span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
@@ -184,20 +187,31 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
           }
         />
         {canManage ? (
-          <CriteriaWeightsEditor weights={weights} weightsAreCustom={weightsAreCustom} />
+          <CriteriaWeightsEditor
+            weights={weights}
+            options={options}
+            weightsAreCustom={weightsAreCustom}
+          />
         ) : (
           <>
             <ul className="divide-border flex flex-col divide-y border-y">
               {weights.map((entry) => (
-                <li
-                  key={entry.criterion}
-                  className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto] items-center gap-3 py-2"
-                >
-                  <div className="flex min-w-0 flex-col">
-                    <span className="text-[14px]">{entry.label}</span>
-                    <span className="text-muted-foreground text-[12px]">{entry.help}</span>
+                <li key={entry.criterion} className="flex flex-col gap-1 py-2">
+                  <div className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto_auto] items-center gap-3">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-[14px]">{entry.label}</span>
+                      <span className="text-muted-foreground text-[12px]">{entry.help}</span>
+                    </div>
+                    <span className="text-muted-foreground text-[12px] tabular-nums">
+                      {interpolate(t.weights.share, "{share}", String(entry.share))}
+                    </span>
+                    <span className="text-[14px]">{entry.levelLabel}</span>
                   </div>
-                  <span className="text-[14px]">{entry.levelLabel}</span>
+                  {entry.isRequired ? (
+                    <span className="text-muted-foreground text-[12px] tabular-nums">
+                      {interpolate(t.weights.minimumScore, "{score}", String(entry.minimumScore))}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>

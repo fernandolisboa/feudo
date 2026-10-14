@@ -1,7 +1,10 @@
 import {
-  DEFAULT_CRITERIA_WEIGHTS,
+  DEFAULT_COMPARISON_SETTINGS,
+  DEFAULT_WEIGHT_LEVELS,
+  resolveComparisonSettings,
   resolveCriteriaWeights,
-  type CriteriaWeights,
+  type ComparisonSettings,
+  type WeightLevels,
 } from "@feudo/core";
 import { matchInstitutionByLabel } from "@feudo/core/reference-data";
 
@@ -11,22 +14,48 @@ import { errorName } from "@/lib/error-name";
 import type { SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import { createCriteriaWeightsRepository, listHouseholdInstitutionLabels } from "./repository";
+import type { StoredSettings } from "./repository";
 
-export type HouseholdCriteriaWeights = { weights: CriteriaWeights; isCustom: boolean };
+export type HouseholdComparisonSettings = {
+  levels: WeightLevels;
+  options: ComparisonSettings;
+  isCustom: boolean;
+};
 
 export async function getHouseholdCriteriaWeights(
   scope: HouseholdScope,
   db: Database,
-): Promise<HouseholdCriteriaWeights> {
+): Promise<HouseholdComparisonSettings> {
   const stored = await createCriteriaWeightsRepository(scope).get(db);
   switch (stored.status) {
     case "none":
-      return { weights: DEFAULT_CRITERIA_WEIGHTS, isCustom: false };
+      return {
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: DEFAULT_COMPARISON_SETTINGS,
+        isCustom: false,
+      };
     case "unreadable":
       console.warn("banking-intel: stored criteria weights failed validation; using defaults");
-      return { weights: DEFAULT_CRITERIA_WEIGHTS, isCustom: false };
-    case "found":
-      return { weights: resolveCriteriaWeights(stored.weights), isCustom: true };
+      return {
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: DEFAULT_COMPARISON_SETTINGS,
+        isCustom: false,
+      };
+    case "found": {
+      if (stored.options.status === "unreadable") {
+        console.warn("banking-intel: stored comparison options failed validation; using defaults");
+      } else if (stored.options.status === "found" && stored.options.droppedFields.length > 0) {
+        console.warn(
+          `banking-intel: dropped invalid comparison option fields: ${stored.options.droppedFields.join(", ")}`,
+        );
+      }
+      const options = stored.options.status === "found" ? stored.options.value : {};
+      return {
+        levels: resolveCriteriaWeights(stored.levels),
+        options: resolveComparisonSettings(options),
+        isCustom: true,
+      };
+    }
   }
 }
 
@@ -34,11 +63,11 @@ export type SaveCriteriaWeightsOutcome = SimpleOutcome<"ok" | "failed">;
 
 export async function setHouseholdCriteriaWeights(
   scope: HouseholdScope,
-  weights: CriteriaWeights,
+  settings: StoredSettings,
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
   try {
-    await createCriteriaWeightsRepository(scope).save(db, weights);
+    await createCriteriaWeightsRepository(scope).save(db, settings);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: saving criteria weights failed (${errorName(error)})`);

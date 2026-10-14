@@ -10,9 +10,41 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     canManage: false,
     weightsAreCustom: false,
     weights: [
-      { criterion: "fees", label: "Tarifas", help: "", weight: 5, levelLabel: "Muito alto" },
-      { criterion: "lockIn", label: "Aprisionamento", help: "", weight: 4, levelLabel: "Alto" },
+      {
+        criterion: "fees",
+        label: "Tarifas",
+        help: "",
+        level: 5,
+        levelLabel: "Muito alto",
+        share: 25,
+        isRequired: false,
+        minimumScore: 60,
+        minimumScoreHint: null,
+      },
+      {
+        criterion: "lockIn",
+        label: "Aprisionamento",
+        help: "",
+        level: 4,
+        levelLabel: "Alto",
+        share: 20,
+        isRequired: false,
+        minimumScore: 60,
+        minimumScoreHint: null,
+      },
+      {
+        criterion: "jointBanking",
+        label: "Dinheiro a dois",
+        help: "",
+        level: "essential",
+        levelLabel: "Essencial",
+        share: 50,
+        isRequired: false,
+        minimumScore: 100,
+        minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
+      },
     ],
+    options: { candidateCount: 3, proConMinDifference: 10 },
     hasAccounts: true,
     currentRows: [
       {
@@ -56,12 +88,13 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
 }
 
 describe("banksAnalysisFacts", () => {
-  it("quotes the Bancos page's weights, scores, pros and cons", () => {
+  it("quotes the Bancos page's weight levels, shares, scores, pros and cons", () => {
     expect(banksAnalysisFacts(props())).toEqual([
       {
         key: "banks.weights",
-        label: "Pesos dos critérios da casa (0 a 5)",
-        value: "Tarifas 5; Aprisionamento 4",
+        label: "Pesos dos critérios da casa",
+        value:
+          "Tarifas Muito alto (25%); Aprisionamento Alto (20%); Dinheiro a dois Essencial (50%)",
       },
       { key: "banks.current.1", label: "Banco que a casa usa: Itaú", value: "nota 60 de 100" },
       { key: "banks.candidate.1", label: "Banco candidato 1º: Nubank", value: "nota 77 de 100" },
@@ -102,5 +135,62 @@ describe("banksAnalysisFacts", () => {
     expect(facts.find((fact) => fact.key === "banks.baseline")?.value).toBe(
       t.current.noneRecognized,
     );
+  });
+
+  it("lists a required criterion's minimum score", () => {
+    const facts = banksAnalysisFacts(
+      props({
+        weights: [
+          {
+            criterion: "jointBanking",
+            label: "Dinheiro a dois",
+            help: "",
+            level: "required",
+            levelLabel: "Obrigatório",
+            share: 50,
+            isRequired: true,
+            minimumScore: 100,
+            minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
+          },
+        ],
+      }),
+    );
+
+    expect(facts.find((fact) => fact.key === "banks.required_minimums")).toEqual({
+      key: "banks.required_minimums",
+      label: "Notas mínimas obrigatórias",
+      value: "Dinheiro a dois precisa de pelo menos 100",
+    });
+  });
+
+  it("lists the banks that miss a required criterion, when any does", () => {
+    const facts = banksAnalysisFacts(
+      props({
+        reviewed: [
+          {
+            institutionId: "nubank",
+            positionLabel: "4º",
+            name: "Nubank",
+            tag: null,
+            unmetLabel: "não atende: Dinheiro a dois",
+            scoreLabel: "77",
+            review: { label: "", stale: false },
+          },
+        ],
+      }),
+    );
+
+    expect(facts.find((fact) => fact.key === "banks.unmet_requirements")).toEqual({
+      key: "banks.unmet_requirements",
+      label: "Bancos que não atendem a um critério obrigatório",
+      value: "Nubank (não atende: Dinheiro a dois)",
+    });
+  });
+
+  it("omits the required-minimums and unmet-requirements facts when nothing is required", () => {
+    const keys = banksAnalysisFacts(props()).map((fact) => fact.key);
+
+    expect(keys).not.toContain("banks.required_minimums");
+    expect(keys).not.toContain("banks.unmet_requirements");
   });
 });

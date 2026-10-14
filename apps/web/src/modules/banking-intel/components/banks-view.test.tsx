@@ -2,16 +2,17 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const updateCriteriaWeightsActionMock = vi.hoisted(() => vi.fn());
+const updateComparisonSettingsActionMock = vi.hoisted(() => vi.fn());
 const resetCriteriaWeightsActionMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("../actions", () => ({
-  updateCriteriaWeightsAction: updateCriteriaWeightsActionMock,
+  updateComparisonSettingsAction: updateComparisonSettingsActionMock,
   resetCriteriaWeightsAction: resetCriteriaWeightsActionMock,
 }));
 
 import type { BanksPageProps, CriterionWeightView } from "../page-props";
+import { interpolate } from "@/lib/interpolate";
 import { t } from "../strings";
 import { BanksView } from "./banks-view";
 
@@ -20,32 +21,89 @@ const WEIGHTS: CriterionWeightView[] = [
     criterion: "cardBenefits",
     label: "Benefícios do cartão",
     help: "pontos",
-    weight: 2,
+    level: 2,
     levelLabel: "Baixo",
+    share: 7,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
   },
   {
     criterion: "investmentAccess",
     label: "Acesso a investimentos",
     help: "Tesouro",
-    weight: 3,
+    level: 3,
     levelLabel: "Médio",
+    share: 10,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
   },
   {
     criterion: "appQuality",
     label: "Qualidade do app",
     help: "lojas",
-    weight: 3,
+    level: 3,
     levelLabel: "Médio",
+    share: 10,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
   },
-  { criterion: "security", label: "Segurança", help: "proteção", weight: 4, levelLabel: "Alto" },
-  { criterion: "fees", label: "Tarifas", help: "custo", weight: 5, levelLabel: "Muito alto" },
-  { criterion: "lockIn", label: "Aprisionamento", help: "sair", weight: 4, levelLabel: "Alto" },
+  {
+    criterion: "security",
+    label: "Segurança",
+    help: "proteção",
+    level: 4,
+    levelLabel: "Alto",
+    share: 13,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
+  },
+  {
+    criterion: "fees",
+    label: "Tarifas",
+    help: "custo",
+    level: 5,
+    levelLabel: "Muito alto",
+    share: 17,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
+  },
+  {
+    criterion: "lockIn",
+    label: "Aprisionamento",
+    help: "sair",
+    level: 4,
+    levelLabel: "Alto",
+    share: 13,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
+  },
   {
     criterion: "publicReviews",
     label: "Avaliações de clientes",
     help: "Reclame Aqui",
-    weight: 4,
+    level: 4,
     levelLabel: "Alto",
+    share: 13,
+    isRequired: false,
+    minimumScore: 60,
+    minimumScoreHint: null,
+  },
+  {
+    criterion: "jointBanking",
+    label: "Dinheiro a dois",
+    help: "conta conjunta ou conta compartilhada para os dois",
+    level: "essential",
+    levelLabel: "Essencial",
+    share: 50,
+    isRequired: false,
+    minimumScore: 100,
+    minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
   },
 ];
 
@@ -55,6 +113,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     canManage: true,
     weightsAreCustom: false,
     weights: WEIGHTS,
+    options: { candidateCount: 3, proConMinDifference: 10 },
     hasAccounts: true,
     currentRows: [
       {
@@ -75,8 +134,8 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         review: { label: "Revisado em 09/09/2026", stale: false },
         pros: ["Tarifas: 100 contra 40 (Itaú)"],
         cons: [],
-        emptyPros: t.candidates.noPros,
-        emptyCons: t.candidates.noCons,
+        emptyPros: interpolate(t.candidates.noPros, "{threshold}", "10"),
+        emptyCons: interpolate(t.candidates.noCons, "{threshold}", "10"),
         missingEvidence: null,
       },
       {
@@ -87,8 +146,8 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         review: { label: "Revisado em 01/03/2026", stale: true },
         pros: [],
         cons: ["Aprisionamento: 40 contra 60 (Itaú)"],
-        emptyPros: t.candidates.noPros,
-        emptyCons: t.candidates.noCons,
+        emptyPros: interpolate(t.candidates.noPros, "{threshold}", "10"),
+        emptyCons: interpolate(t.candidates.noCons, "{threshold}", "10"),
         missingEvidence: "Evidência insuficiente em: Qualidade do app, Segurança.",
       },
     ],
@@ -98,6 +157,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         positionLabel: "1º",
         name: "Nubank",
         tag: t.reviewed.candidate,
+        unmetLabel: null,
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -106,6 +166,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         positionLabel: "2º",
         name: "BTG Pactual",
         tag: t.reviewed.candidate,
+        unmetLabel: null,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
       },
@@ -114,6 +175,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         positionLabel: "3º",
         name: "Itaú",
         tag: t.reviewed.current,
+        unmetLabel: null,
         scoreLabel: "60",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -122,6 +184,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         positionLabel: "4º",
         name: "Bradesco",
         tag: null,
+        unmetLabel: "não atende: Dinheiro a dois",
         scoreLabel: "53",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -131,7 +194,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
 }
 
 beforeEach(() => {
-  updateCriteriaWeightsActionMock
+  updateComparisonSettingsActionMock
     .mockReset()
     .mockResolvedValue({ status: "success", message: t.saved });
   resetCriteriaWeightsActionMock
@@ -162,15 +225,15 @@ describe("BanksView", () => {
     expect(nubank.getByText("77")).not.toBeNull();
     expect(nubank.getByText("Revisado em 09/09/2026")).not.toBeNull();
     expect(nubank.getByText("Tarifas: 100 contra 40 (Itaú)")).not.toBeNull();
-    expect(nubank.getByText(t.candidates.noCons)).not.toBeNull();
+    expect(nubank.getByText(interpolate(t.candidates.noCons, "{threshold}", "10"))).not.toBeNull();
 
     const btg = within(screen.getByRole("article", { name: "BTG Pactual" }));
     expect(btg.getByText(t.candidates.stale)).not.toBeNull();
-    expect(btg.getByText(t.candidates.noPros)).not.toBeNull();
+    expect(btg.getByText(interpolate(t.candidates.noPros, "{threshold}", "10"))).not.toBeNull();
     expect(btg.getByText("Evidência insuficiente em: Qualidade do app, Segurança.")).not.toBeNull();
   });
 
-  it("lists every reviewed bank in score order, marking the household's and the candidates", () => {
+  it("lists every reviewed bank in score order, marking the household's, the candidates and a bank that misses a requirement", () => {
     render(<BanksView {...buildProps()} />);
 
     const table = within(screen.getByRole("table"));
@@ -179,7 +242,7 @@ describe("BanksView", () => {
       `Nubank${t.reviewed.candidate}`,
       `BTG Pactual${t.reviewed.candidate}`,
       `Itaú${t.reviewed.current}`,
-      "Bradesco",
+      "Bradesconão atende: Dinheiro a dois",
     ]);
 
     const itau = table.getByRole("row", { name: /Itaú/ });
@@ -226,21 +289,24 @@ describe("BanksView", () => {
     expect(screen.getByText("Não reconhecemos: MeuPluggy.")).not.toBeNull();
   });
 
-  it("shows the weights read-only to a member who cannot manage the household", () => {
+  it("shows the weights read-only to a member who cannot manage the household, with shares and minimums", () => {
     render(<BanksView {...buildProps({ canManage: false })} />);
 
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.getByText("Muito alto")).not.toBeNull();
+    expect(screen.getByText("50% da nota")).not.toBeNull();
     expect(screen.getByText(t.weights.readOnly)).not.toBeNull();
   });
 
-  it("gives an owner or admin one weight control per criterion", () => {
+  it("gives an owner or admin one level control per criterion, plus the comparison settings sliders", () => {
     render(<BanksView {...buildProps()} />);
 
     expect(screen.getAllByRole("combobox")).toHaveLength(WEIGHTS.length);
     expect(screen.getByRole("combobox", { name: "Tarifas" })).not.toBeNull();
     expect(screen.getByText(t.weights.defaults)).not.toBeNull();
     expect(screen.queryByRole("button", { name: t.weights.reset })).toBeNull();
+    expect(screen.getByText(t.options.title)).not.toBeNull();
+    expect(screen.getAllByRole("slider", { hidden: true }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("resets custom weights to the product defaults", async () => {

@@ -3,24 +3,50 @@ import { eq } from "drizzle-orm";
 import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
 import { bankCriteriaWeights } from "./schema";
-import { storedCriteriaWeightsSchema, type StoredCriteriaWeights } from "./validation";
+import {
+  isReadableComparisonOptions,
+  parseStoredComparisonOptions,
+  storedWeightLevelsSchema,
+  type StoredComparisonOptions,
+  type StoredWeightLevels,
+} from "./validation";
 
-import type { CriteriaWeights } from "@feudo/core";
+import type { WeightLevels } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
-export type StoredWeightsRead =
+// A household that never touched the comparison settings has no options
+// stored at all (absent, not worth a warning); one whose column holds
+// something that is not even options-shaped is unreadable (worth one).
+// droppedFields names the fields of an otherwise-readable object that failed
+// validation on their own and fell back to their default (service.ts warns
+// with the names only, never the household id or the invalid values).
+export type StoredOptionsRead =
+  | { status: "absent" }
+  | { status: "unreadable" }
+  | { status: "found"; value: StoredComparisonOptions; droppedFields: string[] };
+
+export type StoredSettingsRead =
   | { status: "none" }
-  | { status: "found"; weights: StoredCriteriaWeights }
+  | { status: "found"; levels: StoredWeightLevels; options: StoredOptionsRead }
   | { status: "unreadable" };
+
+export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOptions };
+
+function readOptions(value: unknown): StoredOptionsRead {
+  if (value === null) return { status: "absent" };
+  if (!isReadableComparisonOptions(value)) return { status: "unreadable" };
+  const parsed = parseStoredComparisonOptions(value);
+  return { status: "found", value: parsed.value, droppedFields: parsed.droppedFields };
+}
 
 // Every method is bound to the household taken from the session (ADR-0001):
 // none accepts a household id.
 export function createCriteriaWeightsRepository(scope: HouseholdScope) {
   return {
-    async get(db: Database): Promise<StoredWeightsRead> {
+    async get(db: Database): Promise<StoredSettingsRead> {
       const rows = await db
-        .select({ weights: bankCriteriaWeights.weights })
+        .select({ weights: bankCriteriaWeights.weights, options: bankCriteriaWeights.options })
         .from(bankCriteriaWeights)
         .where(eq(bankCriteriaWeights.householdId, scope.householdId))
         .limit(1);
@@ -28,17 +54,24 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       if (!row) {
         return { status: "none" };
       }
-      const parsed = storedCriteriaWeightsSchema.safeParse(row.weights);
-      return parsed.success ? { status: "found", weights: parsed.data } : { status: "unreadable" };
+      const levels = storedWeightLevelsSchema.safeParse(row.weights);
+      if (!levels.success) {
+        return { status: "unreadable" };
+      }
+      return { status: "found", levels: levels.data, options: readOptions(row.options) };
     },
 
-    async save(db: Database, weights: CriteriaWeights): Promise<void> {
+    async save(db: Database, settings: StoredSettings): Promise<void> {
       await db
         .insert(bankCriteriaWeights)
-        .values({ householdId: scope.householdId, weights })
+        .values({
+          householdId: scope.householdId,
+          weights: settings.levels,
+          options: settings.options,
+        })
         .onConflictDoUpdate({
           target: bankCriteriaWeights.householdId,
-          set: { weights, updatedAt: new Date() },
+          set: { weights: settings.levels, options: settings.options, updatedAt: new Date() },
         });
     },
 

@@ -1,0 +1,1 @@
+ALTER TABLE "bank_criteria_weights" ADD COLUMN "options" jsonb;

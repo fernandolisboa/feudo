@@ -137,21 +137,45 @@ export {
   BANK_PROFILE_SCORE_MIN,
 } from "./banking-intel/criteria";
 
-export type { CriteriaWeights } from "./banking-intel/weights";
+export type { CriteriaWeights, CriterionWeightLevel, WeightLevels } from "./banking-intel/weights";
 export {
+  criterionShares,
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
-  DEFAULT_CRITERIA_WEIGHTS,
-  hasActiveCriterion,
+  DEFAULT_WEIGHT_LEVELS,
+  effectiveWeights,
+  hasActiveLevel,
+  isValidWeightLevel,
+  requiredCriteriaOf,
   resolveCriteriaWeights,
 } from "./banking-intel/weights";
 export type {
   BankCandidate,
   BankComparison,
   BankScore,
+  ComparisonSettings,
   CriterionComparison,
+  StoredComparisonSettings,
 } from "./banking-intel/scoring";
-export { compareBanks } from "./banking-intel/scoring";
+export {
+  CANDIDATE_COUNT_MAX,
+  CANDIDATE_COUNT_MIN,
+  compareBanks,
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_COMPARISON_SETTINGS,
+  DEFAULT_MINIMUM_SCORES,
+  DEFAULT_PRO_CON_MIN_DIFFERENCE,
+  isValidCandidateCount,
+  isValidMinimumScore,
+  isValidProConMinDifference,
+  MINIMUM_SCORE_MAX,
+  MINIMUM_SCORE_MIN,
+  MINIMUM_SCORE_STEP,
+  PRO_CON_MIN_DIFFERENCE_MAX,
+  PRO_CON_MIN_DIFFERENCE_MIN,
+  PRO_CON_MIN_DIFFERENCE_STEP,
+  resolveComparisonSettings,
+} from "./banking-intel/scoring";
 
 export type {
   LiquidityMark,

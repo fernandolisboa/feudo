@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { BankProfileCriterion } from "./criteria";
 import {
-  BANK_COMPARISON_CANDIDATES,
   compareBanks,
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_COMPARISON_SETTINGS,
+  DEFAULT_MINIMUM_SCORES,
+  DEFAULT_PRO_CON_MIN_DIFFERENCE,
   rankBankProfiles,
+  resolveComparisonSettings,
+  type ComparisonSettings,
   type ScorableBankProfile,
   type ScorableCriterionEntry,
 } from "./scoring";
-import {
-  DEFAULT_CRITERIA_WEIGHTS,
-  InvalidCriteriaWeightsError,
-  type CriteriaWeights,
-} from "./weights";
+import { InvalidCriteriaWeightsError, type CriteriaWeights, type WeightLevels } from "./weights";
 
 const REVIEWED = "2026-09-09";
 
@@ -39,11 +40,31 @@ function profile(
       fees: entry(scores.fees, reviewedAt),
       lockIn: entry(scores.lockIn, reviewedAt),
       publicReviews: entry(scores.publicReviews, reviewedAt),
+      jointBanking: entry(scores.jointBanking, reviewedAt),
     },
   };
 }
 
-// Scores copied from the shipped bank-profiles dataset (PR #105).
+// Mirrors the product defaults for the original seven criteria (packages/core
+// weights.ts), with jointBanking left at zero so the scoring math below
+// matches the fixtures copied from the shipped dataset before jointBanking
+// existed (PR #105).
+const BASE_WEIGHTS: CriteriaWeights = {
+  cardBenefits: 2,
+  investmentAccess: 3,
+  appQuality: 3,
+  security: 4,
+  fees: 5,
+  lockIn: 4,
+  publicReviews: 4,
+  jointBanking: 0,
+};
+
+// compareBanks takes the household's weight levels (ADR-0006, 2026-10-14) and
+// derives effectiveWeights itself; every weight here is plain numeric, so the
+// levels below resolve to exactly the CriteriaWeights above.
+const BASE_LEVELS = BASE_WEIGHTS as unknown as WeightLevels;
+
 const NUBANK = profile("nubank", {
   cardBenefits: 60,
   investmentAccess: 80,
@@ -52,6 +73,7 @@ const NUBANK = profile("nubank", {
   fees: 100,
   lockIn: 60,
   publicReviews: 87,
+  jointBanking: 65,
 });
 const INTER = profile("inter", {
   cardBenefits: 60,
@@ -61,6 +83,7 @@ const INTER = profile("inter", {
   fees: 80,
   lockIn: 60,
   publicReviews: 85,
+  jointBanking: 0,
 });
 const ITAU = profile("itau", {
   cardBenefits: 80,
@@ -70,6 +93,7 @@ const ITAU = profile("itau", {
   fees: 40,
   lockIn: 40,
   publicReviews: 81,
+  jointBanking: 100,
 });
 const C6 = profile("c6", {
   cardBenefits: 80,
@@ -79,6 +103,7 @@ const C6 = profile("c6", {
   fees: 80,
   lockIn: 60,
   publicReviews: 72,
+  jointBanking: 65,
 });
 const BTG = profile("btg", {
   cardBenefits: 60,
@@ -88,6 +113,7 @@ const BTG = profile("btg", {
   fees: 100,
   lockIn: 40,
   publicReviews: 74,
+  jointBanking: 65,
 });
 const SANTANDER = profile("santander", {
   cardBenefits: null,
@@ -97,6 +123,7 @@ const SANTANDER = profile("santander", {
   fees: 40,
   lockIn: 20,
   publicReviews: 57,
+  jointBanking: 100,
 });
 
 const PROFILES = [NUBANK, INTER, ITAU, C6, BTG, SANTANDER];
@@ -109,15 +136,18 @@ const ONLY_FEES: CriteriaWeights = {
   fees: 1,
   lockIn: 0,
   publicReviews: 0,
+  jointBanking: 0,
 };
+const ONLY_FEES_LEVELS = ONLY_FEES as unknown as WeightLevels;
 
 describe("rankBankProfiles", () => {
   it("scores each profile as the weighted mean of its evidenced criteria, rounded half up", () => {
-    const [first] = rankBankProfiles([ITAU], DEFAULT_CRITERIA_WEIGHTS);
+    const [first] = rankBankProfiles([ITAU], BASE_WEIGHTS);
 
     // (2·80 + 3·80 + 5·40 + 4·40 + 4·81) / (2 + 3 + 5 + 4 + 4) = 1084 / 18 = 60.2
     expect(first?.score).toBe(60);
     expect(first?.missingEvidence).toEqual(["appQuality", "security"]);
+    expect(first?.unmetRequirements).toEqual([]);
   });
 
   it("ranks by the exact weighted mean, not the rounded one", () => {
@@ -134,10 +164,15 @@ describe("rankBankProfiles", () => {
     ]);
   });
 
-  it("orders the shipped profiles under the default weights", () => {
-    expect(
-      rankBankProfiles(PROFILES, DEFAULT_CRITERIA_WEIGHTS).map((score) => score.institutionId),
-    ).toEqual(["nubank", "btg", "c6", "inter", "itau", "santander"]);
+  it("orders the shipped profiles under the base weights", () => {
+    expect(rankBankProfiles(PROFILES, BASE_WEIGHTS).map((score) => score.institutionId)).toEqual([
+      "nubank",
+      "btg",
+      "c6",
+      "inter",
+      "itau",
+      "santander",
+    ]);
   });
 
   it("drops a zero-weight criterion from the score", () => {
@@ -168,7 +203,7 @@ describe("rankBankProfiles", () => {
       criteria: { ...NUBANK.criteria, lockIn: entry(60, "2026-03-01") },
     };
 
-    expect(rankBankProfiles([mixed], DEFAULT_CRITERIA_WEIGHTS)[0]?.reviewedAt).toBe("2026-03-01");
+    expect(rankBankProfiles([mixed], BASE_WEIGHTS)[0]?.reviewedAt).toBe("2026-03-01");
   });
 
   it("refuses weights that leave nothing to weigh", () => {
@@ -176,14 +211,21 @@ describe("rankBankProfiles", () => {
       InvalidCriteriaWeightsError,
     );
   });
+
+  it("never gates without a required criterion: every bank meets requirements vacuously", () => {
+    const ranked = rankBankProfiles(PROFILES, BASE_WEIGHTS);
+
+    expect(ranked.every((score) => score.unmetRequirements.length === 0)).toBe(true);
+  });
 });
 
 describe("compareBanks", () => {
-  it(`offers the top ${String(BANK_COMPARISON_CANDIDATES)} institutions the household does not use`, () => {
+  it(`offers the top ${String(DEFAULT_CANDIDATE_COUNT)} institutions the household does not use`, () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: DEFAULT_CRITERIA_WEIGHTS,
+      levels: BASE_LEVELS,
       currentInstitutionIds: ["itau", "inter"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
 
     expect(comparison.baseline).toBe("current");
@@ -193,24 +235,29 @@ describe("compareBanks", () => {
       "btg",
       "c6",
     ]);
+    expect(comparison.noneMeetsRequirements).toBe(false);
   });
 
-  it("scores every profiled institution in order, the household's own and the candidates alike", () => {
+  it("scores every profiled institution, the household's own and the candidates alike", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: DEFAULT_CRITERIA_WEIGHTS,
+      levels: BASE_LEVELS,
       currentInstitutionIds: ["itau", "inter"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
 
-    expect(comparison.reviewed).toEqual(rankBankProfiles(PROFILES, DEFAULT_CRITERIA_WEIGHTS));
     expect(comparison.reviewed).toHaveLength(PROFILES.length);
+    expect(new Set(comparison.reviewed.map((score) => score.institutionId))).toEqual(
+      new Set(PROFILES.map((profile) => profile.institutionId)),
+    );
   });
 
   it("sets each candidate against the best score the household already has on every weighted criterion", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: DEFAULT_CRITERIA_WEIGHTS,
+      levels: BASE_LEVELS,
       currentInstitutionIds: ["itau", "inter"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
     const c6 = comparison.candidates.find((candidate) => candidate.institutionId === "c6");
 
@@ -244,8 +291,9 @@ describe("compareBanks", () => {
   it("orders pros by weight times gap, largest first", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: DEFAULT_CRITERIA_WEIGHTS,
+      levels: BASE_LEVELS,
       currentInstitutionIds: ["santander"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
     const nubank = comparison.candidates.find((candidate) => candidate.institutionId === "nubank");
 
@@ -260,8 +308,9 @@ describe("compareBanks", () => {
   it("leaves out of pros and cons a criterion with zero weight or no evidence on either side", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: { ...DEFAULT_CRITERIA_WEIGHTS, lockIn: 0 },
+      levels: { ...BASE_LEVELS, lockIn: 0 },
       currentInstitutionIds: ["itau"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
     const listed = comparison.candidates.flatMap((candidate) =>
       [...candidate.pros, ...candidate.cons].map((item) => item.criterion),
@@ -275,8 +324,9 @@ describe("compareBanks", () => {
   it("ignores differences smaller than the threshold", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: DEFAULT_CRITERIA_WEIGHTS,
+      levels: BASE_LEVELS,
       currentInstitutionIds: ["nubank"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
     const inter = comparison.candidates.find((candidate) => candidate.institutionId === "inter");
 
@@ -289,8 +339,9 @@ describe("compareBanks", () => {
   it("compares against the median bank when the household uses none of the profiled institutions", () => {
     const comparison = compareBanks({
       profiles: PROFILES,
-      weights: ONLY_FEES,
+      levels: ONLY_FEES_LEVELS,
       currentInstitutionIds: ["unknown-bank"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
 
     expect(comparison.baseline).toBe("median");
@@ -309,8 +360,9 @@ describe("compareBanks", () => {
   it("never offers an institution without a score", () => {
     const comparison = compareBanks({
       profiles: [profile("blank", nulls()), NUBANK],
-      weights: ONLY_FEES,
+      levels: ONLY_FEES_LEVELS,
       currentInstitutionIds: [],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
 
     expect(comparison.candidates.map((candidate) => candidate.institutionId)).toEqual(["nubank"]);
@@ -319,12 +371,172 @@ describe("compareBanks", () => {
   it("has no baseline for a criterion none of the household's institutions has evidence on", () => {
     const comparison = compareBanks({
       profiles: [ITAU, C6],
-      weights: { ...ONLY_FEES, fees: 0, security: 1 },
+      levels: { ...ONLY_FEES_LEVELS, fees: 0, security: 1 },
       currentInstitutionIds: ["itau"],
+      settings: DEFAULT_COMPARISON_SETTINGS,
     });
 
     expect(comparison.candidates[0]?.pros).toEqual([]);
     expect(comparison.candidates[0]?.cons).toEqual([]);
+  });
+
+  // jointBanking is "required" here, not a numeric weight: with every other
+  // criterion at 0, effectiveWeights falls back to a gate weight of 1 for it
+  // (ADR-0006, 2026-10-14), matching the old plain-weight fixture below.
+  const ONLY_JOINT_LEVELS: WeightLevels = {
+    ...ONLY_FEES_LEVELS,
+    fees: 0,
+    jointBanking: "required",
+  };
+
+  describe("the requirement gate (ADR-0006, 2026-10-14)", () => {
+    it("marks a required criterion unmet when the bank is scored below the minimum", () => {
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: ONLY_JOINT_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+      const nubank = comparison.reviewed.find((score) => score.institutionId === "nubank");
+      const itau = comparison.reviewed.find((score) => score.institutionId === "itau");
+
+      expect(nubank?.unmetRequirements).toEqual(["jointBanking"]);
+      expect(itau?.unmetRequirements).toEqual([]);
+      expect(comparison.noneMeetsRequirements).toBe(false);
+    });
+
+    it("treats insufficient evidence on a required criterion as unmet, never a guess", () => {
+      const noEvidence = profile("no-evidence", nulls());
+
+      const comparison = compareBanks({
+        profiles: [noEvidence],
+        levels: ONLY_JOINT_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(comparison.reviewed[0]?.unmetRequirements).toEqual(["jointBanking"]);
+    });
+
+    it("never yields a candidate that misses a requirement", () => {
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: ONLY_JOINT_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(comparison.candidates.map((candidate) => candidate.institutionId)).toEqual([
+        "itau",
+        "santander",
+      ]);
+    });
+
+    it("says no bank meets the requirements only when every reviewed bank fails a required criterion", () => {
+      const noBankMeetsIt = compareBanks({
+        profiles: PROFILES,
+        levels: { ...BASE_LEVELS, security: "required" },
+        currentInstitutionIds: [],
+        settings: {
+          minimumScores: { ...DEFAULT_MINIMUM_SCORES, security: 100 },
+          candidateCount: DEFAULT_CANDIDATE_COUNT,
+          proConMinDifference: 10,
+        },
+      });
+
+      expect(noBankMeetsIt.candidates).toEqual([]);
+      expect(noBankMeetsIt.noneMeetsRequirements).toBe(true);
+
+      const someBankMeetsIt = compareBanks({
+        profiles: PROFILES,
+        levels: ONLY_JOINT_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(someBankMeetsIt.noneMeetsRequirements).toBe(false);
+    });
+
+    it("never says no bank meets the requirements when the household has no required criterion", () => {
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: BASE_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(comparison.noneMeetsRequirements).toBe(false);
+    });
+
+    it("orders reviewed banks that meet every requirement before the ones that miss one", () => {
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: { ...BASE_LEVELS, jointBanking: "required" },
+        currentInstitutionIds: [],
+        settings: {
+          minimumScores: { ...DEFAULT_MINIMUM_SCORES, jointBanking: 100 },
+          candidateCount: DEFAULT_CANDIDATE_COUNT,
+          proConMinDifference: 10,
+        },
+      });
+
+      const meetsCount = comparison.reviewed.filter(
+        (score) => score.unmetRequirements.length === 0,
+      ).length;
+      const metPrefix = comparison.reviewed.slice(0, meetsCount);
+      const missedSuffix = comparison.reviewed.slice(meetsCount);
+
+      expect(metPrefix.every((score) => score.unmetRequirements.length === 0)).toBe(true);
+      expect(missedSuffix.every((score) => score.unmetRequirements.length > 0)).toBe(true);
+      expect(metPrefix.map((score) => score.institutionId)).toEqual(["itau", "santander"]);
+    });
+
+    it("overrides the candidate count and the pro/con threshold from settings", () => {
+      const settings: ComparisonSettings = {
+        minimumScores: DEFAULT_MINIMUM_SCORES,
+        candidateCount: 1,
+        proConMinDifference: 30,
+      };
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: BASE_LEVELS,
+        currentInstitutionIds: ["itau", "inter"],
+        settings,
+      });
+
+      expect(comparison.candidates).toHaveLength(1);
+      expect(comparison.candidates[0]?.cons).toEqual([]);
+    });
+  });
+});
+
+describe("resolveComparisonSettings", () => {
+  it("falls back to every default when nothing is stored", () => {
+    expect(resolveComparisonSettings({})).toEqual(DEFAULT_COMPARISON_SETTINGS);
+  });
+
+  it("keeps a valid stored value and falls back per field otherwise", () => {
+    expect(
+      resolveComparisonSettings({
+        minimumScores: { jointBanking: 65, fees: 999 },
+        candidateCount: 2,
+        proConMinDifference: 7,
+      }),
+    ).toEqual({
+      minimumScores: { ...DEFAULT_MINIMUM_SCORES, jointBanking: 65 },
+      candidateCount: 2,
+      proConMinDifference: DEFAULT_PRO_CON_MIN_DIFFERENCE,
+    });
+  });
+
+  it("refuses a step violation", () => {
+    expect(resolveComparisonSettings({ proConMinDifference: 11 })).toEqual(
+      DEFAULT_COMPARISON_SETTINGS,
+    );
+    expect(resolveComparisonSettings({ minimumScores: { fees: 61 } })).toEqual({
+      ...DEFAULT_COMPARISON_SETTINGS,
+      minimumScores: DEFAULT_MINIMUM_SCORES,
+    });
   });
 });
 
@@ -337,5 +549,6 @@ function nulls(): Scores {
     fees: null,
     lockIn: null,
     publicReviews: null,
+    jointBanking: null,
   };
 }

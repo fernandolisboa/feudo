@@ -13,13 +13,13 @@ import type { ActionState } from "@/lib/action-state";
 import { getDb } from "@/platform/db/client";
 import { resetHouseholdCriteriaWeights, setHouseholdCriteriaWeights } from "./service";
 import { t } from "./strings";
-import { parseCriteriaWeightsForm } from "./validation";
+import { parseComparisonSettingsForm } from "./validation";
 
-export async function updateCriteriaWeightsAction(
+export async function updateComparisonSettingsAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = parseCriteriaWeightsForm(formData);
+  const parsed = parseComparisonSettingsForm(formData);
   switch (parsed.status) {
     case "invalid":
       return { status: "error", message: t.errors.invalidInput };
@@ -35,7 +35,11 @@ export async function updateCriteriaWeightsAction(
     return { status: "error", message: t.errors.notAllowed };
   }
 
-  const outcome = await setHouseholdCriteriaWeights(householdScope(session), parsed.weights, db);
+  const outcome = await setHouseholdCriteriaWeights(
+    householdScope(session),
+    { levels: parsed.levels, options: parsed.options },
+    db,
+  );
   switch (outcome.status) {
     case "ok":
       revalidatePath("/bancos");

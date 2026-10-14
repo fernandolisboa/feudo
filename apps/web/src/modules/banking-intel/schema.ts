@@ -12,5 +12,8 @@ export const bankCriteriaWeights = pgTable("bank_criteria_weights", {
     .primaryKey()
     .references(() => organization.id, { onDelete: "cascade" }),
   weights: jsonb("weights").notNull(),
+  // Nullable: a household that only ever set weights has no options row yet;
+  // every field falls back to its product default (ADR-0006, 2026-10-14).
+  options: jsonb("options"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

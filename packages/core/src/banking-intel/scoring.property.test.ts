@@ -2,8 +2,21 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
-import { compareBanks, rankBankProfiles, type ScorableBankProfile } from "./scoring";
-import { CRITERION_WEIGHT_MAX, hasActiveCriterion, type CriteriaWeights } from "./weights";
+import {
+  compareBanks,
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_COMPARISON_SETTINGS,
+  MINIMUM_SCORE_MAX,
+  MINIMUM_SCORE_MIN,
+  rankBankProfiles,
+  type ScorableBankProfile,
+} from "./scoring";
+import {
+  CRITERION_WEIGHT_MAX,
+  hasActiveCriterion,
+  type CriteriaWeights,
+  type WeightLevels,
+} from "./weights";
 
 const entryArb = fc.oneof(
   fc.record({
@@ -43,6 +56,17 @@ const weightsArb = fc
   .filter((weights: CriteriaWeights) => hasActiveCriterion(weights));
 
 const criterionArb = fc.constantFrom(...BANK_PROFILE_CRITERIA);
+
+const requiredCriteriaArb = fc.uniqueArray(criterionArb, { maxLength: 3 });
+
+const minimumScoresArb = fc.record(
+  Object.fromEntries(
+    BANK_PROFILE_CRITERIA.map((criterion) => [
+      criterion,
+      fc.integer({ min: MINIMUM_SCORE_MIN, max: MINIMUM_SCORE_MAX }),
+    ]),
+  ) as Record<BankProfileCriterion, fc.Arbitrary<number>>,
+);
 
 function scale(weights: CriteriaWeights, factor: number): CriteriaWeights {
   return Object.fromEntries(
@@ -145,7 +169,7 @@ describe("bank scoring properties", () => {
     );
   });
 
-  it("never offers an institution the household already uses, and offers at most three", () => {
+  it(`never offers an institution the household already uses, and offers at most ${String(DEFAULT_CANDIDATE_COUNT)}`, () => {
     fc.assert(
       fc.property(
         profilesArb,
@@ -153,15 +177,62 @@ describe("bank scoring properties", () => {
         fc.array(fc.nat({ max: 12 })),
         (profiles, weights, picks) => {
           const currentInstitutionIds = picks.map((index) => `bank-${String(index)}`);
-          const { candidates } = compareBanks({ profiles, weights, currentInstitutionIds });
+          const levels = weights as unknown as WeightLevels;
+          const { candidates } = compareBanks({
+            profiles,
+            levels,
+            currentInstitutionIds,
+            settings: DEFAULT_COMPARISON_SETTINGS,
+          });
 
-          expect(candidates.length).toBeLessThanOrEqual(3);
+          expect(candidates.length).toBeLessThanOrEqual(DEFAULT_CANDIDATE_COUNT);
           for (const candidate of candidates) {
             expect(currentInstitutionIds).not.toContain(candidate.institutionId);
             expect(candidate.score).not.toBeNull();
             for (const item of [...candidate.pros, ...candidate.cons]) {
               expect(weights[item.criterion]).toBeGreaterThan(0);
               expect(item.difference).toBe(item.candidateScore - item.baselineScore);
+            }
+          }
+        },
+      ),
+    );
+  });
+
+  // ADR-0006, 2026-10-14: a required criterion gates candidacy, whatever the
+  // household's minimum and whichever criteria it picked as required. The
+  // picked criteria become "required" levels, not a separate parameter, since
+  // compareBanks now derives both the required set and the effective weights
+  // from the household's own weight levels.
+  it("never yields a candidate that misses a required criterion", () => {
+    fc.assert(
+      fc.property(
+        profilesArb,
+        weightsArb,
+        requiredCriteriaArb,
+        minimumScoresArb,
+        (profiles, weights, requiredCriteria, minimumScores) => {
+          const levels = Object.fromEntries(
+            BANK_PROFILE_CRITERIA.map((criterion) => [
+              criterion,
+              requiredCriteria.includes(criterion) ? "required" : weights[criterion],
+            ]),
+          ) as WeightLevels;
+          const { candidates } = compareBanks({
+            profiles,
+            levels,
+            currentInstitutionIds: [],
+            settings: { minimumScores, candidateCount: 5, proConMinDifference: 10 },
+          });
+
+          for (const candidate of candidates) {
+            const profile = profiles.find((p) => p.institutionId === candidate.institutionId);
+            for (const criterion of requiredCriteria) {
+              const entry = profile?.criteria[criterion];
+              expect(entry?.status).toBe("scored");
+              if (entry?.status === "scored") {
+                expect(entry.score).toBeGreaterThanOrEqual(minimumScores[criterion]);
+              }
             }
           }
         },
