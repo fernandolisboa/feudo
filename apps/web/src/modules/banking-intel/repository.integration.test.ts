@@ -40,7 +40,7 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: { status: "found", value: FEES_FIRST.options },
+        options: { status: "found", value: FEES_FIRST.options, droppedFields: [] },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "none",
@@ -60,12 +60,12 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: { status: "found", value: FEES_FIRST.options },
+        options: { status: "found", value: FEES_FIRST.options, droppedFields: [] },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: { ...CARDS_FIRST.levels, lockIn: 0 },
-        options: { status: "found", value: CARDS_FIRST.options },
+        options: { status: "found", value: CARDS_FIRST.options, droppedFields: [] },
       });
       const rows = await db.select().from(bankCriteriaWeights);
       expect(rows).toHaveLength(2);
@@ -81,7 +81,7 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: CARDS_FIRST.levels,
-        options: { status: "found", value: CARDS_FIRST.options },
+        options: { status: "found", value: CARDS_FIRST.options, droppedFields: [] },
       });
     });
   });
@@ -123,7 +123,11 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: DEFAULT_WEIGHT_LEVELS,
-        options: { status: "found", value: { proConMinDifference: 15 } },
+        options: {
+          status: "found",
+          value: { proConMinDifference: 15 },
+          droppedFields: ["candidateCount"],
+        },
       });
     });
   });

@@ -134,6 +134,7 @@ export type BankComparison = {
   reviewed: BankScore[];
   current: BankScore[];
   candidates: BankCandidate[];
+  noneMeetsRequirements: boolean;
 };
 
 type WeightedScore = BankScore & {
@@ -322,6 +323,9 @@ function prosAndCons(
 // levels directly, rather than a caller-derived weights-and-required-criteria
 // pair, so effectiveWeights and requiredCriteriaOf (the ADR-0006 amendment,
 // 2026-10-14) can never drift from what the household actually stored.
+// noneMeetsRequirements is true only when the household set at least one
+// required criterion and no reviewed bank meets every one of them, so a
+// caller never has to re-derive it from the required criteria itself.
 export function compareBanks(input: {
   profiles: readonly ScorableBankProfile[];
   levels: WeightLevels;
@@ -364,5 +368,7 @@ export function compareBanks(input: {
     reviewed: [...ranked].sort(byRequirementsThenScore).map(withoutInternals),
     current: current.map(withoutInternals),
     candidates,
+    noneMeetsRequirements:
+      requiredCriteria.length > 0 && ranked.every((score) => score.unmetRequirements.length > 0),
   };
 }

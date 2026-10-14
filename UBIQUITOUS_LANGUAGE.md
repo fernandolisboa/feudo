@@ -70,8 +70,8 @@
 | Bank comparison                             | comparação de bancos                           | full list "Todos os bancos avaliados"; tags "vocês usam", "candidato"        |
 | Joint banking                               | dinheiro a dois                                | "conta conjunta ou conta compartilhada para os dois"                         |
 | Criteria weights                            | pesos dos critérios                            | levels "Não conta" .. "Muito alto", "Essencial", "Obrigatório"               |
-| Essential criterion                         | critério essencial                             | carries half the note; no gate                                               |
-| Required criterion                          | critério obrigatório                           | carries half the note; household-chosen minimum score gates candidacy        |
+| Essential criterion                         | critério essencial                             | with Required, half the note split equally; no gate                          |
+| Required criterion                          | critério obrigatório                           | with Essential, half the note split equally; min. score gates candidacy      |
 | Net real yield                              | rendimento real líquido                        | "depois do imposto e da inflação"                                            |
 | FGC headroom                                | folga do FGC                                   | "quanto ainda cabe protegido pelo FGC"                                       |
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"; 100 = mais fácil de sair                         |

@@ -12,9 +12,9 @@ export type CriterionWeightLevel = CriterionNumericWeight | "essential" | "requi
 export type CriteriaWeights = Readonly<Record<BankProfileCriterion, number>>;
 
 // What a household stores per criterion: a level from "doesn't count" to
-// "very high", or the two gate levels that double a criterion's pull on the
-// note (essential) or also demand a minimum score to be a candidate
-// (required, scoring.ts).
+// "very high", or one of the two special levels that double a criterion's
+// pull on the note, essential and required; only required also demands a
+// minimum score to be a candidate (scoring.ts) — essential is weight only.
 export type WeightLevels = Readonly<Record<BankProfileCriterion, CriterionWeightLevel>>;
 
 export const DEFAULT_WEIGHT_LEVELS: WeightLevels = {
@@ -89,16 +89,17 @@ export function resolveCriteriaWeights(
 }
 
 // ADR-0006 amendment 2026-10-14: a criterion marked essential or required
-// pulls exactly as much as every numeric criterion combined, so the gate
-// criteria always account for half the note. With E essential-or-required
-// criteria and N the sum of the numeric levels, each numeric weight scales
-// by E and each gate criterion's weight becomes N; with no numeric weight at
-// all (N = 0), each gate criterion simply gets weight 1.
+// pulls exactly as much as every numeric criterion combined, so the special
+// (essential-or-required) criteria together always account for exactly half
+// the note. With E special criteria and N the sum of the numeric levels,
+// each numeric weight scales by E and each special criterion's weight
+// becomes N; with no numeric weight at all (N = 0), each special criterion
+// simply gets weight 1.
 export function effectiveWeights(levels: WeightLevels): CriteriaWeights {
-  const gateCriteria = BANK_PROFILE_CRITERIA.filter(
+  const specialCriteria = BANK_PROFILE_CRITERIA.filter(
     (criterion) => typeof levels[criterion] !== "number",
   );
-  const essentialOrRequiredCount = gateCriteria.length;
+  const essentialOrRequiredCount = specialCriteria.length;
   const numericSum = BANK_PROFILE_CRITERIA.reduce((sum, criterion) => {
     const level = levels[criterion];
     return typeof level === "number" ? sum + level : sum;
@@ -110,14 +111,14 @@ export function effectiveWeights(levels: WeightLevels): CriteriaWeights {
     ) as CriteriaWeights;
   }
 
-  const gateWeight = numericSum > 0 ? numericSum : 1;
+  const specialWeight = numericSum > 0 ? numericSum : 1;
   return Object.fromEntries(
     BANK_PROFILE_CRITERIA.map((criterion) => {
       const level = levels[criterion];
       if (typeof level === "number") {
         return [criterion, numericSum > 0 ? level * essentialOrRequiredCount : 0];
       }
-      return [criterion, gateWeight];
+      return [criterion, specialWeight];
     }),
   ) as CriteriaWeights;
 }

@@ -44,6 +44,10 @@ export async function getHouseholdCriteriaWeights(
     case "found": {
       if (stored.options.status === "unreadable") {
         console.warn("banking-intel: stored comparison options failed validation; using defaults");
+      } else if (stored.options.status === "found" && stored.options.droppedFields.length > 0) {
+        console.warn(
+          `banking-intel: dropped invalid comparison option fields: ${stored.options.droppedFields.join(", ")}`,
+        );
       }
       const options = stored.options.status === "found" ? stored.options.value : {};
       return {

@@ -235,6 +235,7 @@ describe("compareBanks", () => {
       "btg",
       "c6",
     ]);
+    expect(comparison.noneMeetsRequirements).toBe(false);
   });
 
   it("scores every profiled institution, the household's own and the candidates alike", () => {
@@ -401,6 +402,7 @@ describe("compareBanks", () => {
 
       expect(nubank?.unmetRequirements).toEqual(["jointBanking"]);
       expect(itau?.unmetRequirements).toEqual([]);
+      expect(comparison.noneMeetsRequirements).toBe(false);
     });
 
     it("treats insufficient evidence on a required criterion as unmet, never a guess", () => {
@@ -428,6 +430,42 @@ describe("compareBanks", () => {
         "itau",
         "santander",
       ]);
+    });
+
+    it("says no bank meets the requirements only when every reviewed bank fails a required criterion", () => {
+      const noBankMeetsIt = compareBanks({
+        profiles: PROFILES,
+        levels: { ...BASE_LEVELS, security: "required" },
+        currentInstitutionIds: [],
+        settings: {
+          minimumScores: { ...DEFAULT_MINIMUM_SCORES, security: 100 },
+          candidateCount: DEFAULT_CANDIDATE_COUNT,
+          proConMinDifference: 10,
+        },
+      });
+
+      expect(noBankMeetsIt.candidates).toEqual([]);
+      expect(noBankMeetsIt.noneMeetsRequirements).toBe(true);
+
+      const someBankMeetsIt = compareBanks({
+        profiles: PROFILES,
+        levels: ONLY_JOINT_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(someBankMeetsIt.noneMeetsRequirements).toBe(false);
+    });
+
+    it("never says no bank meets the requirements when the household has no required criterion", () => {
+      const comparison = compareBanks({
+        profiles: PROFILES,
+        levels: BASE_LEVELS,
+        currentInstitutionIds: [],
+        settings: DEFAULT_COMPARISON_SETTINGS,
+      });
+
+      expect(comparison.noneMeetsRequirements).toBe(false);
     });
 
     it("orders reviewed banks that meet every requirement before the ones that miss one", () => {

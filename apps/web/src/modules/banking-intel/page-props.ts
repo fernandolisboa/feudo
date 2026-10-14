@@ -4,7 +4,6 @@ import {
   criterionShares,
   effectiveWeights,
   localDateOf,
-  requiredCriteriaOf,
   type BankCandidate,
   type BankComparison,
   type BankProfileCriterion,
@@ -246,7 +245,6 @@ export async function buildBanksPageProps(
     getHouseholdInstitutions(scope, db),
   ]);
   const today = localDateOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
-  const requiredCriteria = requiredCriteriaOf(stored.levels);
 
   const comparison = compareBanks({
     profiles: BANK_PROFILES,
@@ -255,12 +253,9 @@ export async function buildBanksPageProps(
     settings: stored.options,
   });
   const [top] = comparison.candidates;
-  const noneMeetsRequirements =
-    requiredCriteria.length > 0 &&
-    comparison.reviewed.every((score) => score.unmetRequirements.length > 0);
 
   return {
-    headline: noneMeetsRequirements
+    headline: comparison.noneMeetsRequirements
       ? t.headline.noneMeetsRequirements
       : top
         ? interpolate(t.headline.candidate, "{bank}", institutionName(top.institutionId))

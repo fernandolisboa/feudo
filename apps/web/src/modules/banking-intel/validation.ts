@@ -55,33 +55,82 @@ export type StoredComparisonOptions = {
   proConMinDifference?: number;
 };
 
-function parseStoredMinimumScores(
-  value: unknown,
-): Partial<Record<BankProfileCriterion, number>> | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+type ParsedMinimumScores = {
+  minimumScores: Partial<Record<BankProfileCriterion, number>> | undefined;
+  droppedFields: string[];
+};
+
+// A criterion missing from the object is the normal "never set" case, not a
+// drop; only a criterion that is present but fails validation is reported, so
+// the service only warns about data that was actually wrong.
+function parseStoredMinimumScores(value: unknown): ParsedMinimumScores {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {
+      minimumScores: undefined,
+      droppedFields: value === undefined ? [] : ["minimumScores"],
+    };
+  }
   const record = value as Record<string, unknown>;
   const minimumScores: Partial<Record<BankProfileCriterion, number>> = {};
+  const droppedFields: string[] = [];
   for (const criterion of BANK_PROFILE_CRITERIA) {
+    if (!(criterion in record)) continue;
     const parsed = minimumScoreSchema.safeParse(record[criterion]);
-    if (parsed.success) minimumScores[criterion] = parsed.data;
+    if (parsed.success) {
+      minimumScores[criterion] = parsed.data;
+    } else {
+      droppedFields.push(`minimumScores.${criterion}`);
+    }
   }
-  return Object.keys(minimumScores).length === 0 ? undefined : minimumScores;
+  return {
+    minimumScores: Object.keys(minimumScores).length === 0 ? undefined : minimumScores,
+    droppedFields,
+  };
 }
+
+export type ParsedComparisonOptions = {
+  value: StoredComparisonOptions;
+  droppedFields: string[];
+};
 
 // Every field falls back to its own default independently (ADR-0006,
 // 2026-10-14): one bad field (an out-of-range candidateCount, say) never
 // discards an otherwise valid minimumScores or proConMinDifference next to
 // it, so this never fails outright, unlike storedWeightLevelsSchema above.
-export function parseStoredComparisonOptions(value: unknown): StoredComparisonOptions {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+// droppedFields names only the fields that were present and invalid, for the
+// service to warn about (repository.ts); a field the household never set is
+// not a drop.
+export function parseStoredComparisonOptions(value: unknown): ParsedComparisonOptions {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return { value: {}, droppedFields: [] };
+  }
   const record = value as Record<string, unknown>;
-  const minimumScores = parseStoredMinimumScores(record.minimumScores);
-  const candidateCount = candidateCountSchema.safeParse(record.candidateCount);
-  const proConMinDifference = proConMinDifferenceSchema.safeParse(record.proConMinDifference);
+  const { minimumScores, droppedFields: minimumScoreDrops } = parseStoredMinimumScores(
+    record.minimumScores,
+  );
+  const droppedFields = [...minimumScoreDrops];
+
+  let candidateCount: number | undefined;
+  if ("candidateCount" in record) {
+    const parsed = candidateCountSchema.safeParse(record.candidateCount);
+    if (parsed.success) candidateCount = parsed.data;
+    else droppedFields.push("candidateCount");
+  }
+
+  let proConMinDifference: number | undefined;
+  if ("proConMinDifference" in record) {
+    const parsed = proConMinDifferenceSchema.safeParse(record.proConMinDifference);
+    if (parsed.success) proConMinDifference = parsed.data;
+    else droppedFields.push("proConMinDifference");
+  }
+
   return {
-    ...(minimumScores ? { minimumScores } : {}),
-    ...(candidateCount.success ? { candidateCount: candidateCount.data } : {}),
-    ...(proConMinDifference.success ? { proConMinDifference: proConMinDifference.data } : {}),
+    value: {
+      ...(minimumScores ? { minimumScores } : {}),
+      ...(candidateCount !== undefined ? { candidateCount } : {}),
+      ...(proConMinDifference !== undefined ? { proConMinDifference } : {}),
+    },
+    droppedFields,
   };
 }
 

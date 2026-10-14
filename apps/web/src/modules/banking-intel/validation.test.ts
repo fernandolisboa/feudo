@@ -113,36 +113,59 @@ describe("storedWeightLevelsSchema", () => {
 });
 
 describe("parseStoredComparisonOptions", () => {
-  it("accepts a partial set", () => {
-    expect(parseStoredComparisonOptions({ candidateCount: 2 })).toEqual({ candidateCount: 2 });
+  it("accepts a partial set with nothing dropped", () => {
+    expect(parseStoredComparisonOptions({ candidateCount: 2 })).toEqual({
+      value: { candidateCount: 2 },
+      droppedFields: [],
+    });
   });
 
   it("accepts an empty object", () => {
-    expect(parseStoredComparisonOptions({})).toEqual({});
+    expect(parseStoredComparisonOptions({})).toEqual({ value: {}, droppedFields: [] });
   });
 
-  it("falls back to nothing for a step violation or an out-of-range value", () => {
-    expect(parseStoredComparisonOptions({ proConMinDifference: 11 })).toEqual({});
-    expect(parseStoredComparisonOptions({ candidateCount: 6 })).toEqual({});
-    expect(parseStoredComparisonOptions({ minimumScores: { fees: 61 } })).toEqual({});
+  it("falls back to nothing and names the field for a step violation or an out-of-range value", () => {
+    expect(parseStoredComparisonOptions({ proConMinDifference: 11 })).toEqual({
+      value: {},
+      droppedFields: ["proConMinDifference"],
+    });
+    expect(parseStoredComparisonOptions({ candidateCount: 6 })).toEqual({
+      value: {},
+      droppedFields: ["candidateCount"],
+    });
+    expect(parseStoredComparisonOptions({ minimumScores: { fees: 61 } })).toEqual({
+      value: {},
+      droppedFields: ["minimumScores.fees"],
+    });
   });
 
   it("keeps the fields that are valid and drops only the one that fails, instead of failing the whole object", () => {
     expect(parseStoredComparisonOptions({ candidateCount: 99, proConMinDifference: 15 })).toEqual({
-      proConMinDifference: 15,
+      value: { proConMinDifference: 15 },
+      droppedFields: ["candidateCount"],
     });
   });
 
   it("keeps the valid criteria of a partially invalid minimumScores object", () => {
     expect(
       parseStoredComparisonOptions({ minimumScores: { fees: 65, jointBanking: 999 } }),
-    ).toEqual({ minimumScores: { fees: 65 } });
+    ).toEqual({
+      value: { minimumScores: { fees: 65 } },
+      droppedFields: ["minimumScores.jointBanking"],
+    });
   });
 
-  it("falls back to nothing for a value that is not an options-shaped object at all", () => {
-    expect(parseStoredComparisonOptions("garbage")).toEqual({});
-    expect(parseStoredComparisonOptions(null)).toEqual({});
-    expect(parseStoredComparisonOptions([1, 2, 3])).toEqual({});
+  it("never names a field the household simply never set", () => {
+    expect(parseStoredComparisonOptions({ minimumScores: { fees: 60 } })).toEqual({
+      value: { minimumScores: { fees: 60 } },
+      droppedFields: [],
+    });
+  });
+
+  it("falls back to nothing, with no individual field named, for a value that is not an options-shaped object at all", () => {
+    expect(parseStoredComparisonOptions("garbage")).toEqual({ value: {}, droppedFields: [] });
+    expect(parseStoredComparisonOptions(null)).toEqual({ value: {}, droppedFields: [] });
+    expect(parseStoredComparisonOptions([1, 2, 3])).toEqual({ value: {}, droppedFields: [] });
   });
 });
 

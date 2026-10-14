@@ -90,7 +90,7 @@ const en = {
     pointsSuffix: "points",
   },
   method:
-    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. An Essential criterion counts for half the score; a Required one also counts for half and a bank only becomes a candidate if it meets that criterion's minimum score. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
+    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Essential and Required criteria together always count for half the score, split equally among them; a Required one also sets a minimum score the bank must meet to become a candidate. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
   analysisFacts: {
     weights: "Household criteria weights",
     weight: "{criterion} {level} ({share}%)",
@@ -217,7 +217,7 @@ const ptBR = {
     pointsSuffix: "pontos",
   },
   method:
-    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. Um critério Essencial vale metade da nota; um Obrigatório também vale metade e só entra como candidato o banco que atender à nota mínima dele. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. Os critérios Essenciais e Obrigatórios, juntos, valem metade da nota, dividida igualmente entre eles; o Obrigatório ainda exige uma nota mínima para o banco ser candidato. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
   analysisFacts: {
     weights: "Pesos dos critérios da casa",
     weight: "{criterion} {level} ({share}%)",

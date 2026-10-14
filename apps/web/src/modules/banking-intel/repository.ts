@@ -18,10 +18,13 @@ import type { Database } from "@/platform/db/client";
 // A household that never touched the comparison settings has no options
 // stored at all (absent, not worth a warning); one whose column holds
 // something that is not even options-shaped is unreadable (worth one).
+// droppedFields names the fields of an otherwise-readable object that failed
+// validation on their own and fell back to their default (service.ts warns
+// with the names only, never the household id or the invalid values).
 export type StoredOptionsRead =
   | { status: "absent" }
   | { status: "unreadable" }
-  | { status: "found"; value: StoredComparisonOptions };
+  | { status: "found"; value: StoredComparisonOptions; droppedFields: string[] };
 
 export type StoredSettingsRead =
   | { status: "none" }
@@ -33,7 +36,8 @@ export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOp
 function readOptions(value: unknown): StoredOptionsRead {
   if (value === null) return { status: "absent" };
   if (!isReadableComparisonOptions(value)) return { status: "unreadable" };
-  return { status: "found", value: parseStoredComparisonOptions(value) };
+  const parsed = parseStoredComparisonOptions(value);
+  return { status: "found", value: parsed.value, droppedFields: parsed.droppedFields };
 }
 
 // Every method is bound to the household taken from the session (ADR-0001):
