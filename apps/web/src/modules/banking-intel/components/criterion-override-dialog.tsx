@@ -30,6 +30,7 @@ export function CriterionOverrideDialog({
   institutionId,
   bankName,
   criterion,
+  seenReviewedAt,
   criterionLabel,
   triggerLabel,
   defaults,
@@ -37,6 +38,7 @@ export function CriterionOverrideDialog({
   institutionId: string;
   bankName: string;
   criterion: BankProfileCriterion;
+  seenReviewedAt: string;
   criterionLabel: string;
   triggerLabel: string;
   defaults: { score: number | null; note: string; sourceUrl: string };
@@ -72,6 +74,7 @@ export function CriterionOverrideDialog({
 
           <input type="hidden" name="institutionId" value={institutionId} />
           <input type="hidden" name="criterion" value={criterion} />
+          <input type="hidden" name="seenReviewedAt" value={seenReviewedAt} />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={fieldId("score")}>{t.override.score}</Label>
@@ -110,6 +113,7 @@ export function CriterionOverrideDialog({
               inputMode="url"
               maxLength={OVERRIDE_SOURCE_URL_MAX_LENGTH}
               placeholder="https://"
+              pattern="https://.+"
               defaultValue={defaults.sourceUrl}
             />
           </div>

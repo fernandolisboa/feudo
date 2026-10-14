@@ -129,7 +129,7 @@ describe("buildBanksPageProps", () => {
     expect(props.candidates[0]?.href).toBe("/bancos/bank-b");
     expect(props.reviewed.map((row) => [row.institutionId, row.href, row.overriddenLabel])).toEqual(
       [
-        ["bank-b", "/bancos/bank-b", t.reviewed.overridden],
+        ["bank-b", "/bancos/bank-b", "corrigido pela casa: Dinheiro a dois"],
         ["bank-a", "/bancos/bank-a", null],
       ],
     );

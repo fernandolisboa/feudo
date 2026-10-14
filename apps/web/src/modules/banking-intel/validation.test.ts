@@ -188,6 +188,7 @@ describe("parseOverrideForm", () => {
   const valid = {
     institutionId: "nubank",
     criterion: "fees",
+    seenReviewedAt: "2026-10-02",
     score: "40",
     note: "  A tarifa subiu.  ",
     sourceUrl: "",
@@ -199,6 +200,7 @@ describe("parseOverrideForm", () => {
       value: {
         institutionId: "nubank",
         criterion: "fees",
+        seenReviewedAt: "2026-10-02",
         score: 40,
         note: "A tarifa subiu.",
         sourceUrl: null,
@@ -213,6 +215,7 @@ describe("parseOverrideForm", () => {
     for (const entries of [
       { ...valid, institutionId: "banco-inexistente" },
       { ...valid, criterion: "vibes" },
+      { ...valid, seenReviewedAt: "" },
       { ...valid, score: "101" },
       { ...valid, score: "-1" },
       { ...valid, score: "4.5" },

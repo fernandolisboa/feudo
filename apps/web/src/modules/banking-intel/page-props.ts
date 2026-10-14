@@ -113,7 +113,7 @@ export function bankHref(institutionId: string): string {
   return `/bancos/${institutionId}`;
 }
 
-export function institutionName(institutionId: string): string {
+function institutionName(institutionId: string): string {
   return institutionById(institutionId)?.name ?? institutionId;
 }
 
@@ -197,19 +197,29 @@ export function bankTag(comparison: BankComparison, institutionId: string): stri
     : null;
 }
 
+function overriddenLabel(criteria: readonly string[] | undefined): string | null {
+  return criteria === undefined
+    ? null
+    : interpolate(t.reviewed.overridden, "{criteria}", criteria.join(", "));
+}
+
 function reviewedRows(
   comparison: BankComparison,
   overrides: readonly StoredOverride[],
   today: string,
 ): ReviewedBankRow[] {
-  const overriddenIds = new Set(overrides.map((override) => override.institutionId));
+  const corrected = new Map<string, string[]>();
+  for (const override of overrides) {
+    const labels = corrected.get(override.institutionId) ?? [];
+    corrected.set(override.institutionId, [...labels, criterionLabel(override.criterion)]);
+  }
   return comparison.reviewed.map((score) => ({
     institutionId: score.institutionId,
     href: bankHref(score.institutionId),
     positionLabel: positionLabel(comparison, score.institutionId),
     name: institutionName(score.institutionId),
     tag: bankTag(comparison, score.institutionId),
-    overriddenLabel: overriddenIds.has(score.institutionId) ? t.reviewed.overridden : null,
+    overriddenLabel: overriddenLabel(corrected.get(score.institutionId)),
     unmetLabel: unmetLabel(score.unmetRequirements),
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
@@ -268,7 +278,7 @@ export async function getBanksPageProps(
   });
 }
 
-export function outdatedOverrides(overrides: readonly StoredOverride[]): StoredOverride[] {
+function outdatedOverrides(overrides: readonly StoredOverride[]): StoredOverride[] {
   return overrides.filter((override) => {
     const reviewedAt = referenceProfileOf(override.institutionId)?.criteria[override.criterion]
       .reviewedAt;

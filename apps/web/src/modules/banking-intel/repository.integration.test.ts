@@ -229,17 +229,16 @@ describe("criterion overrides repository isolation (integration)", () => {
     });
   });
 
-  it("skips a row naming an institution Feudo no longer profiles", async () => {
+  it("skips a row naming an institution or a criterion Feudo no longer profiles", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
-      await db.insert(bankCriterionOverride).values({
-        householdId: householdA.id,
-        ...NUBANK_JOINT,
-        institutionId: "banco-extinto",
-      });
+      await db.insert(bankCriterionOverride).values([
+        { householdId: householdA.id, ...NUBANK_JOINT, institutionId: "banco-extinto" },
+        { householdId: householdA.id, ...NUBANK_JOINT, criterion: "criterioAntigo" },
+      ]);
 
       expect(await createCriterionOverridesRepository(householdA.scope).list(db)).toEqual({
         overrides: [],
-        skipped: 1,
+        skipped: 2,
       });
     });
   });

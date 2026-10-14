@@ -243,6 +243,9 @@ export const overrideTargetSchema = z.object({
 });
 export type OverrideTarget = z.infer<typeof overrideTargetSchema>;
 
+export const overrideDecisionSchema = z.enum(["useReference", "keepOwn"]);
+export type OverrideDecision = z.infer<typeof overrideDecisionSchema>;
+
 // What the table may hold: an institution dropped from the reference data,
 // or a criterion renamed, leaves a row that no longer names anything; the
 // repository skips it rather than failing the household's whole comparison.
@@ -256,6 +259,7 @@ export const storedOverrideSchema = overrideTargetSchema.extend({
 export type StoredOverride = z.infer<typeof storedOverrideSchema>;
 
 const overrideFormSchema = overrideTargetSchema.extend({
+  seenReviewedAt: isoDateSchema,
   score: z
     .string()
     .regex(/^[0-9]+$/)
@@ -277,6 +281,7 @@ export function parseOverrideForm(formData: FormData): OverrideFormResult {
   const parsed = overrideFormSchema.safeParse({
     institutionId: formData.get("institutionId"),
     criterion: formData.get("criterion"),
+    seenReviewedAt: formData.get("seenReviewedAt"),
     score: formData.get("score"),
     note: formData.get("note"),
     sourceUrl: formData.get("sourceUrl") ?? "",

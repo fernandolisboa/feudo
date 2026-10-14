@@ -56,6 +56,7 @@ const SCREENS = [
   "/transacoes",
   "/reserva",
   "/bancos",
+  "/bancos/banco-do-brasil",
   "/analises",
   "/casa",
   "/categorias",

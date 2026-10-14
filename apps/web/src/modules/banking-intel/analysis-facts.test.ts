@@ -192,6 +192,35 @@ describe("banksAnalysisFacts", () => {
     });
   });
 
+  it("tells the analyst which scores the household corrected itself, without the household's note", () => {
+    const facts = banksAnalysisFacts(
+      props({
+        reviewed: [
+          {
+            institutionId: "nubank",
+            href: "/bancos/nubank",
+            positionLabel: "1º",
+            name: "Nubank",
+            tag: "candidato",
+            unmetLabel: null,
+            overriddenLabel: "corrigido pela casa: Dinheiro a dois",
+            scoreLabel: "90",
+            review: { label: "", stale: false },
+          },
+        ],
+      }),
+    );
+
+    expect(facts.find((fact) => fact.key === "banks.household_corrections")).toEqual({
+      key: "banks.household_corrections",
+      label: "Notas corrigidas pela própria casa (não são do Feudo)",
+      value: "Nubank (corrigido pela casa: Dinheiro a dois)",
+    });
+    expect(banksAnalysisFacts(props()).map((fact) => fact.key)).not.toContain(
+      "banks.household_corrections",
+    );
+  });
+
   it("omits the required-minimums and unmet-requirements facts when nothing is required", () => {
     const keys = banksAnalysisFacts(props()).map((fact) => fact.key);
 

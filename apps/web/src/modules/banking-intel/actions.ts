@@ -19,7 +19,30 @@ import {
   setHouseholdCriteriaWeights,
 } from "./service";
 import { t } from "./strings";
-import { overrideTargetSchema, parseComparisonSettingsForm, parseOverrideForm } from "./validation";
+import {
+  overrideDecisionSchema,
+  overrideTargetSchema,
+  parseComparisonSettingsForm,
+  parseOverrideForm,
+  type OverrideDecision,
+} from "./validation";
+
+import type { BankProfileCriterion } from "@feudo/core";
+import { isoDateSchema } from "@feudo/core/reference-data";
+import type { HouseholdScope } from "@/modules/households";
+import type { Database } from "@/platform/db/client";
+
+// Every write on the Bancos screens is the owner's or an admin's, checked on
+// the server against the session's household (CLAUDE.md, security).
+async function managerContext(): Promise<{ scope: HouseholdScope; db: Database } | null> {
+  const session = await requireHouseholdSession();
+  const db = getDb();
+  return canManageHouseholdSettings(await getViewerRole(session, db))
+    ? { scope: householdScope(session), db }
+    : null;
+}
+
+const NOT_ALLOWED: ActionState = { status: "error", message: t.errors.notAllowed };
 
 export async function updateComparisonSettingsAction(
   _prevState: ActionState,
@@ -35,16 +58,13 @@ export async function updateComparisonSettingsAction(
       break;
   }
 
-  const session = await requireHouseholdSession();
-  const db = getDb();
-  if (!canManageHouseholdSettings(await getViewerRole(session, db))) {
-    return { status: "error", message: t.errors.notAllowed };
-  }
+  const context = await managerContext();
+  if (context === null) return NOT_ALLOWED;
 
   const outcome = await setHouseholdCriteriaWeights(
-    householdScope(session),
+    context.scope,
     { levels: parsed.levels, options: parsed.options },
-    db,
+    context.db,
   );
   switch (outcome.status) {
     case "ok":
@@ -56,13 +76,10 @@ export async function updateComparisonSettingsAction(
 }
 
 export async function resetCriteriaWeightsAction(): Promise<ActionState> {
-  const session = await requireHouseholdSession();
-  const db = getDb();
-  if (!canManageHouseholdSettings(await getViewerRole(session, db))) {
-    return { status: "error", message: t.errors.notAllowed };
-  }
+  const context = await managerContext();
+  if (context === null) return NOT_ALLOWED;
 
-  const outcome = await resetHouseholdCriteriaWeights(householdScope(session), db);
+  const outcome = await resetHouseholdCriteriaWeights(context.scope, context.db);
   switch (outcome.status) {
     case "ok":
       revalidatePath("/bancos");
@@ -91,13 +108,10 @@ export async function saveCriterionOverrideAction(
       break;
   }
 
-  const session = await requireHouseholdSession();
-  const db = getDb();
-  if (!canManageHouseholdSettings(await getViewerRole(session, db))) {
-    return { status: "error", message: t.errors.notAllowed };
-  }
+  const context = await managerContext();
+  if (context === null) return NOT_ALLOWED;
 
-  const outcome = await saveCriterionOverride(householdScope(session), parsed.value, db);
+  const outcome = await saveCriterionOverride(context.scope, parsed.value, context.db);
   switch (outcome.status) {
     case "ok":
       revalidateBank(parsed.value.institutionId);
@@ -112,31 +126,31 @@ export async function saveCriterionOverrideAction(
 // same target, they differ only in what is written.
 export async function resolveCriterionOverrideAction(
   institutionId: string,
-  criterion: string,
-  decision: string,
+  criterion: BankProfileCriterion,
+  decision: OverrideDecision,
+  seenReviewedAt: string,
 ): Promise<ActionState> {
   const target = overrideTargetSchema.safeParse({ institutionId, criterion });
-  if (!target.success || (decision !== "useReference" && decision !== "keepOwn")) {
+  const seen = isoDateSchema.safeParse(seenReviewedAt);
+  const chosen = overrideDecisionSchema.safeParse(decision);
+  if (!target.success || !seen.success || !chosen.success) {
     return { status: "error", message: t.errors.invalidInput };
   }
 
-  const session = await requireHouseholdSession();
-  const db = getDb();
-  if (!canManageHouseholdSettings(await getViewerRole(session, db))) {
-    return { status: "error", message: t.errors.notAllowed };
-  }
+  const context = await managerContext();
+  if (context === null) return NOT_ALLOWED;
 
-  const scope = householdScope(session);
+  const { scope, db } = context;
   const outcome =
-    decision === "useReference"
+    chosen.data === "useReference"
       ? await removeCriterionOverride(scope, target.data, db)
-      : await keepCriterionOverride(scope, target.data, db);
+      : await keepCriterionOverride(scope, target.data, seen.data, db);
   switch (outcome.status) {
     case "ok":
       revalidateBank(target.data.institutionId);
       return {
         status: "success",
-        message: decision === "useReference" ? t.override.removed : t.override.kept,
+        message: chosen.data === "useReference" ? t.override.removed : t.override.kept,
       };
     case "failed":
       return { status: "error", message: t.errors.failed };

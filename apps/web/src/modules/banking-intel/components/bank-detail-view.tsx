@@ -36,9 +36,13 @@ function CriterionBlock({
           <p className="text-muted-foreground text-[12px] tabular-nums">{item.weightLabel}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="font-heading text-[26px] leading-none tabular-nums">
-            {item.scoreLabel}
-          </span>
+          {item.scored ? (
+            <span className="font-heading text-[26px] leading-none tabular-nums">
+              {item.scoreLabel}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-right text-[13px]">{item.scoreLabel}</span>
+          )}
           {override ? <Badge variant="secondary">{t.detail.householdScore}</Badge> : null}
         </div>
       </div>
@@ -61,6 +65,7 @@ function CriterionBlock({
             <OverrideActions
               institutionId={institutionId}
               criterion={item.criterion}
+              seenReviewedAt={item.referenceReviewedAt}
               outdated={override.outdatedHint !== null}
             />
           ) : null}
@@ -113,6 +118,7 @@ function CriterionBlock({
             institutionId={institutionId}
             bankName={bankName}
             criterion={item.criterion}
+            seenReviewedAt={item.referenceReviewedAt}
             criterionLabel={item.label}
             triggerLabel={override ? t.detail.editOwn : t.detail.correct}
             defaults={item.formDefaults}

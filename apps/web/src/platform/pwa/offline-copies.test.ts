@@ -124,6 +124,7 @@ describe("isOfflineCopyScreen", () => {
     "/transacoes",
     "/reserva",
     "/bancos",
+    "/bancos/banco-do-brasil",
     "/analises",
     "/casa",
     "/categorias",
@@ -132,10 +133,15 @@ describe("isOfflineCopyScreen", () => {
     expect(isOfflineCopyScreen(path)).toBe(true);
   });
 
-  it.each(["/preferencias", "/conectar-banco", "/entrar", "/api/export", "/transacoes/x"])(
-    "keeps no copy of %s",
-    (path) => {
-      expect(isOfflineCopyScreen(path)).toBe(false);
-    },
-  );
+  it.each([
+    "/preferencias",
+    "/conectar-banco",
+    "/entrar",
+    "/api/export",
+    "/transacoes/x",
+    "/bancos/x/y",
+    "/bancos/",
+  ])("keeps no copy of %s", (path) => {
+    expect(isOfflineCopyScreen(path)).toBe(false);
+  });
 });

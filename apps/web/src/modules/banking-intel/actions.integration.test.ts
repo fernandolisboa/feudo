@@ -62,6 +62,13 @@ function settingsForm(
   return formData;
 }
 
+function reviewedAtOf(institutionId: string, criterion: string): string {
+  const reviewedAt = BANK_PROFILES.find((profile) => profile.institutionId === institutionId)
+    ?.criteria[criterion as keyof (typeof BANK_PROFILES)[number]["criteria"]].reviewedAt;
+  if (reviewedAt === undefined) throw new Error(`no profile for ${institutionId}`);
+  return reviewedAt;
+}
+
 function overrideForm(fields: {
   institutionId: string;
   criterion: string;
@@ -70,6 +77,7 @@ function overrideForm(fields: {
   const formData = new FormData();
   formData.set("institutionId", fields.institutionId);
   formData.set("criterion", fields.criterion);
+  formData.set("seenReviewedAt", reviewedAtOf(fields.institutionId, fields.criterion));
   formData.set("score", fields.score);
   formData.set("note", "Conferido no site do banco.");
   formData.set("sourceUrl", "");
@@ -265,11 +273,25 @@ describe("Bancos server boundary (integration)", () => {
       expect(fees?.override?.outdatedHint).toContain("Tarifas");
       expect((await getBanksPageProps(userA.session, NOW)).overridesNotice).toContain("Nubank");
 
-      expect(await resolveCriterionOverrideAction("nubank", "fees", "useReference")).toEqual({
+      expect(
+        await resolveCriterionOverrideAction(
+          "nubank",
+          "fees",
+          "useReference",
+          reviewedAtOf("nubank", "fees"),
+        ),
+      ).toEqual({
         status: "success",
         message: t.override.removed,
       });
-      expect(await resolveCriterionOverrideAction("nubank", "lockIn", "keepOwn")).toEqual({
+      expect(
+        await resolveCriterionOverrideAction(
+          "nubank",
+          "lockIn",
+          "keepOwn",
+          reviewedAtOf("nubank", "lockIn"),
+        ),
+      ).toEqual({
         status: "success",
         message: t.override.kept,
       });
@@ -300,7 +322,14 @@ describe("Bancos server boundary (integration)", () => {
           overrideForm({ institutionId: "itau", criterion: "fees", score: "99" }),
         ),
       ).toEqual({ status: "error", message: t.errors.notAllowed });
-      expect(await resolveCriterionOverrideAction("itau", "fees", "useReference")).toEqual({
+      expect(
+        await resolveCriterionOverrideAction(
+          "itau",
+          "fees",
+          "useReference",
+          reviewedAtOf("itau", "fees"),
+        ),
+      ).toEqual({
         status: "error",
         message: t.errors.notAllowed,
       });
@@ -322,7 +351,12 @@ describe("Bancos server boundary (integration)", () => {
       );
       signInAs(userA.session);
 
-      await resolveCriterionOverrideAction("c6", "fees", "useReference");
+      await resolveCriterionOverrideAction(
+        "c6",
+        "fees",
+        "useReference",
+        reviewedAtOf("c6", "fees"),
+      );
 
       expect(await db.select().from(bankCriterionOverride)).toHaveLength(1);
     });
@@ -331,6 +365,33 @@ describe("Bancos server boundary (integration)", () => {
   it("has no page for an institution Feudo does not profile", async () => {
     await withTwoUsers(async ({ userA }) => {
       expect(await getBankDetailPageProps(userA.session, "banco-inexistente", NOW)).toBeNull();
+    });
+  });
+
+  it("keeps asking when the household answers from a page that showed an older review", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      signInAs(userA.session);
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "nubank", criterion: "fees", score: "50" }),
+      );
+      await db.update(bankCriterionOverride).set({ baseReviewedAt: "2026-01-01" });
+
+      expect(
+        await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2026-02-01"),
+      ).toEqual({ status: "success", message: t.override.kept });
+      expect(
+        await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2999-01-01"),
+      ).toEqual({ status: "success", message: t.override.kept });
+
+      const [row] = await db.select().from(bankCriterionOverride);
+      expect(row?.baseReviewedAt).toBe(reviewedAtOf("nubank", "fees"));
+      await db.update(bankCriterionOverride).set({ baseReviewedAt: "2026-01-01" });
+      await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2026-02-01");
+      const detail = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      expect(
+        detail?.criteria.find((item) => item.criterion === "fees")?.override?.outdatedHint,
+      ).not.toBeNull();
     });
   });
 });

@@ -135,11 +135,14 @@ export async function getHouseholdOverrides(
 
 export type OverrideWriteOutcome = SimpleOutcome<"ok" | "failed">;
 
-// The reference date an override answers to is always read here from the
-// shipped data, never taken from the form, so a household cannot silence a
-// reference update it has not seen.
-function referenceReviewedAt(target: OverrideTarget): string | null {
-  return referenceProfileOf(target.institutionId)?.criteria[target.criterion].reviewedAt ?? null;
+// The reference date an override answers to is the review the page showed,
+// capped at the shipped data's current one: a tab left open across a
+// reference update, or a forged date, can never silence a review the
+// household has not seen.
+function baseReviewedAtFor(target: OverrideTarget, seenReviewedAt: string): string | null {
+  const current = referenceProfileOf(target.institutionId)?.criteria[target.criterion].reviewedAt;
+  if (current === undefined) return null;
+  return seenReviewedAt < current ? seenReviewedAt : current;
 }
 
 export async function saveCriterionOverride(
@@ -147,10 +150,17 @@ export async function saveCriterionOverride(
   form: OverrideForm,
   db: Database,
 ): Promise<OverrideWriteOutcome> {
-  const baseReviewedAt = referenceReviewedAt(form);
+  const baseReviewedAt = baseReviewedAtFor(form, form.seenReviewedAt);
   if (baseReviewedAt === null) return { status: "failed" };
   try {
-    await createCriterionOverridesRepository(scope).save(db, { ...form, baseReviewedAt });
+    await createCriterionOverridesRepository(scope).save(db, {
+      institutionId: form.institutionId,
+      criterion: form.criterion,
+      score: form.score,
+      note: form.note,
+      sourceUrl: form.sourceUrl,
+      baseReviewedAt,
+    });
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: saving a criterion override failed (${errorName(error)})`);
@@ -175,9 +185,10 @@ export async function removeCriterionOverride(
 export async function keepCriterionOverride(
   scope: HouseholdScope,
   target: OverrideTarget,
+  seenReviewedAt: string,
   db: Database,
 ): Promise<OverrideWriteOutcome> {
-  const baseReviewedAt = referenceReviewedAt(target);
+  const baseReviewedAt = baseReviewedAtFor(target, seenReviewedAt);
   if (baseReviewedAt === null) return { status: "failed" };
   try {
     const found = await createCriterionOverridesRepository(scope).rebase(

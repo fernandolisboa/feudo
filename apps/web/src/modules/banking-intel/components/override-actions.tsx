@@ -9,19 +9,22 @@ import { resolveCriterionOverrideAction } from "../actions";
 import { t } from "../strings";
 
 // With a newer reference review the household chooses between the two
-// versions; without one, the only thing to do is undo its correction.
+// versions, weighted equally because either can be the right one; without
+// one, the only thing to do is undo its correction.
 export function OverrideActions({
   institutionId,
   criterion,
+  seenReviewedAt,
   outdated,
 }: {
   institutionId: string;
   criterion: BankProfileCriterion;
+  seenReviewedAt: string;
   outdated: boolean;
 }) {
   const { errorMessage, isPending, run } = useActionInTransition(t.errors.failed);
   const decide = (decision: "useReference" | "keepOwn") => {
-    run(() => resolveCriterionOverrideAction(institutionId, criterion, decision));
+    run(() => resolveCriterionOverrideAction(institutionId, criterion, decision, seenReviewedAt));
   };
 
   return (
@@ -32,6 +35,7 @@ export function OverrideActions({
             <Button
               type="button"
               size="sm"
+              variant="outline"
               disabled={isPending}
               onClick={() => {
                 decide("useReference");

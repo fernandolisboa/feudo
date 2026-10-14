@@ -3,6 +3,7 @@ import {
   BANK_PROFILE_CRITERIA,
   DEFAULT_MINIMUM_SCORES,
   DEFAULT_WEIGHT_LEVELS,
+  type BankProfileCriterion,
   type ComparisonSettings,
 } from "@feudo/core";
 
@@ -41,6 +42,7 @@ import {
   updateComparisonSettingsAction,
 } from "./actions";
 import { t } from "./strings";
+import type { OverrideDecision } from "./validation";
 import { minimumScoreFieldName } from "./validation";
 
 function defaultsForm(): FormData {
@@ -128,6 +130,7 @@ function overrideForm(entries: Record<string, string>): FormData {
   for (const [key, value] of Object.entries({
     institutionId: "nubank",
     criterion: "fees",
+    seenReviewedAt: "2026-10-02",
     score: "40",
     note: "A tarifa subiu.",
     sourceUrl: "",
@@ -171,6 +174,7 @@ describe("saveCriterionOverrideAction", () => {
       {
         institutionId: "nubank",
         criterion: "fees",
+        seenReviewedAt: "2026-10-02",
         score: 40,
         note: "A tarifa subiu.",
         sourceUrl: null,
@@ -184,13 +188,19 @@ describe("saveCriterionOverrideAction", () => {
 describe("resolveCriterionOverrideAction", () => {
   it("rejects an unknown bank, criterion or decision before touching the session", async () => {
     for (const args of [
-      ["banco-inexistente", "fees", "keepOwn"],
-      ["nubank", "vibes", "keepOwn"],
-      ["nubank", "fees", "deleteEverything"],
-    ] as const) {
-      const [institutionId, criterion, decision] = args;
+      ["banco-inexistente", "fees", "keepOwn", "2026-10-02"],
+      ["nubank", "vibes", "keepOwn", "2026-10-02"],
+      ["nubank", "fees", "deleteEverything", "2026-10-02"],
+      ["nubank", "fees", "keepOwn", "ontem"],
+    ]) {
+      const [institutionId = "", criterion = "", decision = "", seenReviewedAt = ""] = args;
       expect(
-        await resolveCriterionOverrideAction(institutionId, criterion, decision),
+        await resolveCriterionOverrideAction(
+          institutionId,
+          criterion as BankProfileCriterion,
+          decision as OverrideDecision,
+          seenReviewedAt,
+        ),
         args.join(),
       ).toEqual({
         status: "error",
@@ -201,15 +211,19 @@ describe("resolveCriterionOverrideAction", () => {
   });
 
   it("drops the correction to use Feudo's data, or keeps it against the newer review", async () => {
-    expect(await resolveCriterionOverrideAction("nubank", "fees", "useReference")).toEqual({
+    expect(
+      await resolveCriterionOverrideAction("nubank", "fees", "useReference", "2026-10-02"),
+    ).toEqual({
       status: "success",
       message: t.override.removed,
     });
     expect(removeCriterionOverrideMock).toHaveBeenCalledTimes(1);
-    expect(await resolveCriterionOverrideAction("nubank", "fees", "keepOwn")).toEqual({
-      status: "success",
-      message: t.override.kept,
-    });
+    expect(await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2026-10-02")).toEqual(
+      {
+        status: "success",
+        message: t.override.kept,
+      },
+    );
     expect(keepCriterionOverrideMock).toHaveBeenCalledTimes(1);
   });
 });

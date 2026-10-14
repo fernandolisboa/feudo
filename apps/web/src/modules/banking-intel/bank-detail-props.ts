@@ -54,11 +54,13 @@ export type CriterionDetailView = {
   label: string;
   help: string;
   weightLabel: string;
+  scored: boolean;
   scoreLabel: string;
   referenceScoreLabel: string;
   summary: string;
   sources: SourceView[];
   review: ReviewView;
+  referenceReviewedAt: string;
   override: OverrideView | null;
   formDefaults: OverrideFormDefaults;
 };
@@ -153,7 +155,7 @@ export async function getBankDetailPageProps(
   });
 }
 
-export async function buildBankDetailPageProps(
+async function buildBankDetailPageProps(
   scope: HouseholdScope,
   institutionId: string,
   options: { now: Date; canManage: boolean },
@@ -210,11 +212,13 @@ export async function buildBankDetailPageProps(
           level: weight?.levelLabel ?? "",
           share: String(weight?.share ?? 0),
         }),
+        scored: override !== undefined || entry.status === "scored",
         scoreLabel: override ? String(override.score) : referenceScoreLabel,
         referenceScoreLabel,
         summary: entry.summaryPtBr,
         sources: (entry.citations ?? []).map(sourceView),
         review: reviewView(entry.reviewedAt, today),
+        referenceReviewedAt: entry.reviewedAt,
         override: override ? overrideView(criterion, entry, override, timeZone) : null,
         formDefaults: override
           ? { score: override.score, note: override.note, sourceUrl: override.sourceUrl ?? "" }

@@ -20,6 +20,7 @@ const FEES: CriterionDetailView = {
   label: "Tarifas",
   help: "quanto custa",
   weightLabel: "Peso: Muito alto · 17% da nota",
+  scored: true,
   scoreLabel: "100",
   referenceScoreLabel: "100",
   summary: "Sem tarifa de manutenção de conta.",
@@ -31,6 +32,7 @@ const FEES: CriterionDetailView = {
     },
   ],
   review: { label: "Revisado em 09/09/2026", stale: false },
+  referenceReviewedAt: "2026-09-09",
   override: null,
   formDefaults: { score: 100, note: "", sourceUrl: "" },
 };
@@ -40,11 +42,13 @@ const JOINT: CriterionDetailView = {
   label: "Dinheiro a dois",
   help: "conta conjunta",
   weightLabel: "Peso: Essencial · 50% da nota",
+  scored: true,
   scoreLabel: "30",
   referenceScoreLabel: "65",
   summary: "Saldo Compartilhado no Ultravioleta.",
   sources: [],
   review: { label: "Revisado em 13/10/2026", stale: false },
+  referenceReviewedAt: "2026-11-01",
   override: {
     scoreLabel: "30",
     summary: "A casa mudou para 30 em 14/10/2026: só no Ultravioleta.",
@@ -119,6 +123,7 @@ describe("BankDetailView", () => {
         "nubank",
         "jointBanking",
         "keepOwn",
+        "2026-11-01",
       );
     });
   });
@@ -137,6 +142,7 @@ describe("BankDetailView", () => {
         "nubank",
         "jointBanking",
         "useReference",
+        "2026-11-01",
       );
     });
   });

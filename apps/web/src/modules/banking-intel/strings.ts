@@ -62,7 +62,7 @@ const en = {
     candidate: "candidate",
     noPosition: "—",
     unmet: "doesn't meet: {criteria}",
-    overridden: "corrected by the household",
+    overridden: "corrected by the household: {criteria}",
   },
   weights: {
     title: "Criteria weights",
@@ -105,6 +105,7 @@ const en = {
     cons: "Against {bank}",
     missingEvidence: "Evidence gaps for {bank}",
     unmetRequirements: "Banks that don't meet a required criterion",
+    corrections: "Scores the household corrected itself (not Feudo's)",
   },
   detail: {
     back: "All banks",
@@ -127,7 +128,7 @@ const en = {
     secondary: "secondary source",
     checkedAt: "checked on {date}",
     referenceScore: "Feudo's score: {score}",
-    householdScore: "changed by the household",
+    householdScore: "corrected by the household",
     householdNote: "The household changed it to {score} on {date}: {note}",
     householdSource: "household's source",
     outdated:
@@ -138,7 +139,6 @@ const en = {
     editOwn: "Edit change",
     undo: "Undo change",
     readOnly: "Only the household's owner or admin can correct a bank's data.",
-    notFound: "Bank not found.",
   },
   override: {
     title: "Correct {criterion} · {bank}",
@@ -146,7 +146,7 @@ const en = {
       "Applies to your household only. Feudo's updates never overwrite it; when Feudo reviews this criterion again, you'll be asked whether to switch.",
     score: "Score from 0 to 100",
     note: "What changed",
-    notePlaceholder: "e.g. the fee went up to R$ 25 in October",
+    notePlaceholder: "e.g. the fee went up to R$ 25.00 in October",
     sourceUrl: "Source link (optional)",
     cancel: "Cancel",
     submit: "Save",
@@ -243,7 +243,7 @@ const ptBR = {
     candidate: "candidato",
     noPosition: "—",
     unmet: "não atende: {criteria}",
-    overridden: "corrigido pela casa",
+    overridden: "corrigido pela casa: {criteria}",
   },
   weights: {
     title: "Pesos dos critérios",
@@ -286,6 +286,7 @@ const ptBR = {
     cons: "Contra {bank}",
     missingEvidence: "Evidência insuficiente sobre {bank}",
     unmetRequirements: "Bancos que não atendem a um critério obrigatório",
+    corrections: "Notas corrigidas pela própria casa (não são do Feudo)",
   },
   detail: {
     back: "Todos os bancos",
@@ -308,7 +309,7 @@ const ptBR = {
     secondary: "fonte secundária",
     checkedAt: "consultada em {date}",
     referenceScore: "Nota do Feudo: {score}",
-    householdScore: "alterada pela casa",
+    householdScore: "corrigido pela casa",
     householdNote: "A casa mudou para {score} em {date}: {note}",
     householdSource: "fonte da casa",
     outdated:
@@ -319,7 +320,6 @@ const ptBR = {
     editOwn: "Editar alteração",
     undo: "Desfazer alteração",
     readOnly: "Só o responsável pela casa ou um administrador pode corrigir os dados de um banco.",
-    notFound: "Banco não encontrado.",
   },
   override: {
     title: "Corrigir {criterion} · {bank}",
@@ -327,7 +327,7 @@ const ptBR = {
       "Vale só para a sua casa. As atualizações do Feudo não sobrescrevem a correção; quando o Feudo revisar este critério de novo, vocês decidem se trocam.",
     score: "Nota de 0 a 100",
     note: "O que mudou",
-    notePlaceholder: "ex.: a tarifa subiu para R$ 25 em outubro",
+    notePlaceholder: "ex.: a tarifa subiu para R$ 25,00 em outubro",
     sourceUrl: "Link da fonte (opcional)",
     cancel: "Cancelar",
     submit: "Salvar",
