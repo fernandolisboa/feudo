@@ -33,7 +33,7 @@ const en = {
     failed: "Couldn't turn notifications on. Try again.",
     notReady: "Feudo is still getting ready in this browser. Reload the page and try again.",
     subscribeFailed:
-      "This browser couldn't sign up with its notification service. Try again in a few minutes.",
+      "This browser couldn't sign up with its notification service. Some privacy-focused browsers turn that service off; if this keeps happening, use another browser on this device.",
     serviceRefused: "Feudo doesn't accept this browser's notification service yet.",
     disableFailed: "Couldn't turn notifications off. Try again.",
     unauthenticated: "Sign in to change your notifications.",
@@ -82,7 +82,7 @@ const ptBR = {
     notReady:
       "O Feudo ainda está se preparando neste navegador. Recarregue a página e tente de novo.",
     subscribeFailed:
-      "O navegador não conseguiu se inscrever no próprio serviço de notificações. Tente de novo daqui a alguns minutos.",
+      "O navegador não conseguiu se inscrever no próprio serviço de notificações. Alguns navegadores focados em privacidade desligam esse serviço; se continuar, use outro navegador neste aparelho.",
     serviceRefused: "O Feudo ainda não aceita o serviço de notificações deste navegador.",
     disableFailed: "Não foi possível desativar as notificações. Tente de novo.",
     unauthenticated: "Entre para mudar suas notificações.",
