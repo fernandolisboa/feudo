@@ -1,5 +1,11 @@
 import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
-import { assertScorableWeights, type CriteriaWeights } from "./weights";
+import {
+  assertScorableWeights,
+  effectiveWeights,
+  requiredCriteriaOf,
+  type CriteriaWeights,
+  type WeightLevels,
+} from "./weights";
 
 export const MINIMUM_SCORE_MIN = 0;
 export const MINIMUM_SCORE_MAX = 100;
@@ -312,17 +318,19 @@ function prosAndCons(
 // does not use yet among those that meet every requirement, each set against
 // the best score the household's own institutions already reach on every
 // weighted criterion. A household whose institutions are all unrecognised is
-// compared against the median bank instead.
+// compared against the median bank instead. Takes the household's weight
+// levels directly, rather than a caller-derived weights-and-required-criteria
+// pair, so effectiveWeights and requiredCriteriaOf (the ADR-0006 amendment,
+// 2026-10-14) can never drift from what the household actually stored.
 export function compareBanks(input: {
   profiles: readonly ScorableBankProfile[];
-  weights: CriteriaWeights;
+  levels: WeightLevels;
   currentInstitutionIds: readonly string[];
-  requiredCriteria?: readonly BankProfileCriterion[];
-  settings?: ComparisonSettings;
+  settings: ComparisonSettings;
 }): BankComparison {
-  const { profiles, weights } = input;
-  const requiredCriteria = input.requiredCriteria ?? [];
-  const settings = input.settings ?? DEFAULT_COMPARISON_SETTINGS;
+  const { profiles, levels, settings } = input;
+  const weights = effectiveWeights(levels);
+  const requiredCriteria = requiredCriteriaOf(levels);
   const currentIds = new Set(input.currentInstitutionIds);
   const ranked = rankWeighted(profiles, weights, requiredCriteria, settings.minimumScores);
   const current = ranked.filter((score) => currentIds.has(score.institutionId));

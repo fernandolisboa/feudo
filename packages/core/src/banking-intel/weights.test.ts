@@ -13,6 +13,7 @@ import {
   InvalidCriteriaWeightsError,
   isValidCriterionWeight,
   isValidWeightLevel,
+  requiredCriteriaOf,
   resolveCriteriaWeights,
   type CriteriaWeights,
   type WeightLevels,
@@ -83,6 +84,33 @@ describe("criteria weight levels", () => {
 
   it("falls back to the defaults when the stored set leaves nothing to weigh", () => {
     expect(resolveCriteriaWeights(ALL_ZERO)).toEqual(DEFAULT_WEIGHT_LEVELS);
+  });
+});
+
+describe("requiredCriteriaOf", () => {
+  it("names nothing when no criterion is required", () => {
+    expect(requiredCriteriaOf(ALL_ZERO_LEVELS)).toEqual([]);
+  });
+
+  it("names nothing for the product defaults: jointBanking is essential, not required", () => {
+    expect(requiredCriteriaOf(DEFAULT_WEIGHT_LEVELS)).toEqual([]);
+  });
+
+  it("never counts an essential criterion as required: essential carries weight, not a gate", () => {
+    const levels: WeightLevels = { ...ALL_ZERO_LEVELS, jointBanking: "essential" };
+
+    expect(requiredCriteriaOf(levels)).toEqual([]);
+  });
+
+  it("names every criterion set to required, in BANK_PROFILE_CRITERIA order", () => {
+    const levels: WeightLevels = {
+      ...ALL_ZERO_LEVELS,
+      jointBanking: "required",
+      security: "required",
+      fees: 2,
+    };
+
+    expect(requiredCriteriaOf(levels)).toEqual(["security", "jointBanking"]);
   });
 });
 

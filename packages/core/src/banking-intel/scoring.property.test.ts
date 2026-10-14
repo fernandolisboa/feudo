@@ -5,12 +5,18 @@ import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
 import {
   compareBanks,
   DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_COMPARISON_SETTINGS,
   MINIMUM_SCORE_MAX,
   MINIMUM_SCORE_MIN,
   rankBankProfiles,
   type ScorableBankProfile,
 } from "./scoring";
-import { CRITERION_WEIGHT_MAX, hasActiveCriterion, type CriteriaWeights } from "./weights";
+import {
+  CRITERION_WEIGHT_MAX,
+  hasActiveCriterion,
+  type CriteriaWeights,
+  type WeightLevels,
+} from "./weights";
 
 const entryArb = fc.oneof(
   fc.record({
@@ -171,7 +177,13 @@ describe("bank scoring properties", () => {
         fc.array(fc.nat({ max: 12 })),
         (profiles, weights, picks) => {
           const currentInstitutionIds = picks.map((index) => `bank-${String(index)}`);
-          const { candidates } = compareBanks({ profiles, weights, currentInstitutionIds });
+          const levels = weights as unknown as WeightLevels;
+          const { candidates } = compareBanks({
+            profiles,
+            levels,
+            currentInstitutionIds,
+            settings: DEFAULT_COMPARISON_SETTINGS,
+          });
 
           expect(candidates.length).toBeLessThanOrEqual(DEFAULT_CANDIDATE_COUNT);
           for (const candidate of candidates) {
@@ -188,7 +200,10 @@ describe("bank scoring properties", () => {
   });
 
   // ADR-0006, 2026-10-14: a required criterion gates candidacy, whatever the
-  // household's minimum and whichever criteria it picked as required.
+  // household's minimum and whichever criteria it picked as required. The
+  // picked criteria become "required" levels, not a separate parameter, since
+  // compareBanks now derives both the required set and the effective weights
+  // from the household's own weight levels.
   it("never yields a candidate that misses a required criterion", () => {
     fc.assert(
       fc.property(
@@ -197,11 +212,16 @@ describe("bank scoring properties", () => {
         requiredCriteriaArb,
         minimumScoresArb,
         (profiles, weights, requiredCriteria, minimumScores) => {
+          const levels = Object.fromEntries(
+            BANK_PROFILE_CRITERIA.map((criterion) => [
+              criterion,
+              requiredCriteria.includes(criterion) ? "required" : weights[criterion],
+            ]),
+          ) as WeightLevels;
           const { candidates } = compareBanks({
             profiles,
-            weights,
+            levels,
             currentInstitutionIds: [],
-            requiredCriteria,
             settings: { minimumScores, candidateCount: 5, proConMinDifference: 10 },
           });
 

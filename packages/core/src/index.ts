@@ -144,7 +144,6 @@ export {
   CRITERION_WEIGHT_MIN,
   DEFAULT_WEIGHT_LEVELS,
   effectiveWeights,
-  hasActiveCriterion,
   hasActiveLevel,
   isValidWeightLevel,
   requiredCriteriaOf,
