@@ -137,9 +137,7 @@ describe("PushNotificationsSection", () => {
 
     fireEvent.click(toggle);
 
-    expect(
-      await screen.findByText(/não conseguiu se inscrever no próprio serviço de notificações/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/focados em privacidade desligam esse serviço/)).toBeTruthy();
     expect(actions.save).not.toHaveBeenCalled();
   });
 
