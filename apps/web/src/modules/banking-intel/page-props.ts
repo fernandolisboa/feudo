@@ -30,6 +30,7 @@ import { formatIsoDate } from "@/lib/format-date";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import { BANK_PROFILES } from "./bank-profiles";
+import { levelLabel } from "./level-label";
 import { getHouseholdCriteriaWeights, getHouseholdInstitutions } from "./service";
 import { t } from "./strings";
 
@@ -125,12 +126,6 @@ function comparisonLine(item: CriterionComparison): string {
         ? t.candidates.median
         : institutionName(item.baselineInstitutionId),
   });
-}
-
-function levelLabel(level: CriterionWeightLevel): string {
-  if (level === "essential") return t.weights.levels[6] ?? "essential";
-  if (level === "required") return t.weights.levels[7] ?? "required";
-  return t.weights.levels[level] ?? String(level);
 }
 
 function weightViews(levels: WeightLevels, options: ComparisonSettings): CriterionWeightView[] {
@@ -255,9 +250,8 @@ export async function buildBanksPageProps(
 
   const comparison = compareBanks({
     profiles: BANK_PROFILES,
-    weights: effectiveWeights(stored.levels),
+    levels: stored.levels,
     currentInstitutionIds: institutions.institutionIds,
-    requiredCriteria,
     settings: stored.options,
   });
   const [top] = comparison.candidates;

@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { BANK_PROFILE_CRITERIA, DEFAULT_MINIMUM_SCORES, DEFAULT_WEIGHT_LEVELS } from "@feudo/core";
 
 import {
+  isReadableComparisonOptions,
   minimumScoreFieldName,
   parseComparisonSettingsForm,
-  storedComparisonOptionsSchema,
+  parseStoredComparisonOptions,
   storedWeightLevelsSchema,
 } from "./validation";
 
@@ -111,24 +112,50 @@ describe("storedWeightLevelsSchema", () => {
   });
 });
 
-describe("storedComparisonOptionsSchema", () => {
+describe("parseStoredComparisonOptions", () => {
   it("accepts a partial set", () => {
-    expect(storedComparisonOptionsSchema.parse({ candidateCount: 2 })).toEqual({
-      candidateCount: 2,
-    });
+    expect(parseStoredComparisonOptions({ candidateCount: 2 })).toEqual({ candidateCount: 2 });
   });
 
   it("accepts an empty object", () => {
-    expect(storedComparisonOptionsSchema.parse({})).toEqual({});
+    expect(parseStoredComparisonOptions({})).toEqual({});
   });
 
-  it("refuses a step violation or an out-of-range value", () => {
-    expect(storedComparisonOptionsSchema.safeParse({ proConMinDifference: 11 }).success).toBe(
-      false,
-    );
-    expect(storedComparisonOptionsSchema.safeParse({ candidateCount: 6 }).success).toBe(false);
-    expect(storedComparisonOptionsSchema.safeParse({ minimumScores: { fees: 61 } }).success).toBe(
-      false,
-    );
+  it("falls back to nothing for a step violation or an out-of-range value", () => {
+    expect(parseStoredComparisonOptions({ proConMinDifference: 11 })).toEqual({});
+    expect(parseStoredComparisonOptions({ candidateCount: 6 })).toEqual({});
+    expect(parseStoredComparisonOptions({ minimumScores: { fees: 61 } })).toEqual({});
+  });
+
+  it("keeps the fields that are valid and drops only the one that fails, instead of failing the whole object", () => {
+    expect(parseStoredComparisonOptions({ candidateCount: 99, proConMinDifference: 15 })).toEqual({
+      proConMinDifference: 15,
+    });
+  });
+
+  it("keeps the valid criteria of a partially invalid minimumScores object", () => {
+    expect(
+      parseStoredComparisonOptions({ minimumScores: { fees: 65, jointBanking: 999 } }),
+    ).toEqual({ minimumScores: { fees: 65 } });
+  });
+
+  it("falls back to nothing for a value that is not an options-shaped object at all", () => {
+    expect(parseStoredComparisonOptions("garbage")).toEqual({});
+    expect(parseStoredComparisonOptions(null)).toEqual({});
+    expect(parseStoredComparisonOptions([1, 2, 3])).toEqual({});
+  });
+});
+
+describe("isReadableComparisonOptions", () => {
+  it("accepts a plain object, even an empty one", () => {
+    expect(isReadableComparisonOptions({})).toBe(true);
+    expect(isReadableComparisonOptions({ candidateCount: 2 })).toBe(true);
+  });
+
+  it("refuses null, an array or a non-object value", () => {
+    expect(isReadableComparisonOptions(null)).toBe(false);
+    expect(isReadableComparisonOptions([1, 2, 3])).toBe(false);
+    expect(isReadableComparisonOptions("garbage")).toBe(false);
+    expect(isReadableComparisonOptions(42)).toBe(false);
   });
 });

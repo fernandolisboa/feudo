@@ -46,13 +46,51 @@ const proConMinDifferenceSchema = z
 
 // What the table may hold for comparison options: every field is optional,
 // the same "missing or invalid falls back to the default" policy as weights
-// (resolveComparisonSettings, packages/core).
-export const storedComparisonOptionsSchema = z.object({
-  minimumScores: z.partialRecord(z.enum(BANK_PROFILE_CRITERIA), minimumScoreSchema).optional(),
-  candidateCount: candidateCountSchema.optional(),
-  proConMinDifference: proConMinDifferenceSchema.optional(),
-});
-export type StoredComparisonOptions = z.infer<typeof storedComparisonOptionsSchema>;
+// (resolveComparisonSettings, packages/core). Parsed field by field below
+// (parseStoredComparisonOptions), not through a single zod object schema, so
+// one invalid field never discards the others.
+export type StoredComparisonOptions = {
+  minimumScores?: Partial<Record<BankProfileCriterion, number>>;
+  candidateCount?: number;
+  proConMinDifference?: number;
+};
+
+function parseStoredMinimumScores(
+  value: unknown,
+): Partial<Record<BankProfileCriterion, number>> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const minimumScores: Partial<Record<BankProfileCriterion, number>> = {};
+  for (const criterion of BANK_PROFILE_CRITERIA) {
+    const parsed = minimumScoreSchema.safeParse(record[criterion]);
+    if (parsed.success) minimumScores[criterion] = parsed.data;
+  }
+  return Object.keys(minimumScores).length === 0 ? undefined : minimumScores;
+}
+
+// Every field falls back to its own default independently (ADR-0006,
+// 2026-10-14): one bad field (an out-of-range candidateCount, say) never
+// discards an otherwise valid minimumScores or proConMinDifference next to
+// it, so this never fails outright, unlike storedWeightLevelsSchema above.
+export function parseStoredComparisonOptions(value: unknown): StoredComparisonOptions {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const record = value as Record<string, unknown>;
+  const minimumScores = parseStoredMinimumScores(record.minimumScores);
+  const candidateCount = candidateCountSchema.safeParse(record.candidateCount);
+  const proConMinDifference = proConMinDifferenceSchema.safeParse(record.proConMinDifference);
+  return {
+    ...(minimumScores ? { minimumScores } : {}),
+    ...(candidateCount.success ? { candidateCount: candidateCount.data } : {}),
+    ...(proConMinDifference.success ? { proConMinDifference: proConMinDifference.data } : {}),
+  };
+}
+
+// Whether the column held something shaped at all like comparison options,
+// as opposed to garbage (repository.ts: a column that is merely absent, the
+// common case for a row saved before this setting existed, is not this).
+export function isReadableComparisonOptions(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 const formNumericLevelSchema = z
   .string()

@@ -196,7 +196,7 @@ const en = {
         },
         {
           title: "Criteria weights",
-          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the note, and can go back to Feudo's defaults at any time. At least one criterion has to count. Joint banking (does the bank offer a joint or a shared account for the two of you) and any criterion set to Essential or Required are not just weighted: a bank that falls short of the minimum score for one of them is left out of the candidates entirely, Essential at a fixed 100 and Required at a minimum the household sets. Essential and Required criteria always carry exactly half the note between them, however many there are.",
+          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the score, and can go back to Feudo's defaults at any time. At least one criterion has to count. Essential and Required both weigh more: together they always carry exactly half the score, however many there are of each. The difference is the gate: Essential (Joint banking's default) only weighs more, while Required also sets a minimum score, and a bank that falls short of it is left out of the candidates entirely, even with a good overall score.",
         },
       ],
     },
@@ -447,7 +447,7 @@ const ptBR = {
         },
         {
           title: "Pesos dos critérios",
-          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar. Dinheiro a dois (o banco abre conta conjunta ou conta compartilhada para os dois) e qualquer critério marcado como Essencial ou Obrigatório não entram só no peso: um banco que fica abaixo da nota mínima nesse critério sai da lista de candidatos, mesmo que a nota geral seja boa. O Essencial tem nota mínima fixa em 100; no Obrigatório, a casa escolhe a nota mínima. Juntos, os critérios Essenciais e Obrigatórios sempre valem exatamente metade da nota, por mais critérios que sejam.",
+          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar. Essencial e Obrigatório pesam mais: juntos, eles sempre valem exatamente metade da nota, por mais critérios que sejam dos dois tipos. A diferença está no filtro: o Essencial (o padrão de Dinheiro a dois) só pesa mais, enquanto o Obrigatório também define uma nota mínima, e um banco que fica abaixo dela sai da lista de candidatos, mesmo com uma nota geral boa.",
         },
       ],
     },

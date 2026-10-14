@@ -40,7 +40,7 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: FEES_FIRST.options,
+        options: { status: "found", value: FEES_FIRST.options },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "none",
@@ -60,12 +60,12 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: FEES_FIRST.options,
+        options: { status: "found", value: FEES_FIRST.options },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: { ...CARDS_FIRST.levels, lockIn: 0 },
-        options: CARDS_FIRST.options,
+        options: { status: "found", value: CARDS_FIRST.options },
       });
       const rows = await db.select().from(bankCriteriaWeights);
       expect(rows).toHaveLength(2);
@@ -81,7 +81,7 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: CARDS_FIRST.levels,
-        options: CARDS_FIRST.options,
+        options: { status: "found", value: CARDS_FIRST.options },
       });
     });
   });
@@ -98,18 +98,48 @@ describe("criteria weights repository isolation (integration)", () => {
     });
   });
 
-  it("falls back to null options when the stored options fail validation, without failing the weights", async () => {
+  it("reports options as absent, not unreadable, for a row saved before options existed", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db
+        .insert(bankCriteriaWeights)
+        .values({ householdId: householdA.id, weights: DEFAULT_WEIGHT_LEVELS });
+
+      expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
+        status: "found",
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: { status: "absent" },
+      });
+    });
+  });
+
+  it("keeps a stored option field that is still valid and drops only the one that fails, without failing the weights", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       await db.insert(bankCriteriaWeights).values({
         householdId: householdA.id,
         weights: DEFAULT_WEIGHT_LEVELS,
-        options: { candidateCount: 99 },
+        options: { candidateCount: 99, proConMinDifference: 15 },
       });
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: DEFAULT_WEIGHT_LEVELS,
-        options: null,
+        options: { status: "found", value: { proConMinDifference: 15 } },
+      });
+    });
+  });
+
+  it("reports unreadable options, not absent, for a column that is not options-shaped at all", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(bankCriteriaWeights).values({
+        householdId: householdA.id,
+        weights: DEFAULT_WEIGHT_LEVELS,
+        options: "not an object",
+      });
+
+      expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
+        status: "found",
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: { status: "unreadable" },
       });
     });
   });

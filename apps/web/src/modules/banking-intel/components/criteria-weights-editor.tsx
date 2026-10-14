@@ -26,6 +26,7 @@ import { interpolate } from "@/lib/interpolate";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
 
 import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "../actions";
+import { levelLabel } from "../level-label";
 import type { ComparisonOptionsView, CriterionWeightView } from "../page-props";
 import { t } from "../strings";
 import { minimumScoreFieldName } from "../validation";
@@ -41,14 +42,16 @@ function valueToLevel(value: LevelValue): CriterionWeightLevel {
   return Number(value) as CriterionWeightLevel;
 }
 
-const LEVEL_OPTIONS: { value: LevelValue; label: string }[] = [
-  ...Array.from({ length: 6 }, (_, weight) => ({
-    value: String(weight) as LevelValue,
-    label: t.weights.levels[weight] ?? String(weight),
-  })),
-  { value: "essential", label: t.weights.levels[6] ?? "essential" },
-  { value: "required", label: t.weights.levels[7] ?? "required" },
+const LEVEL_VALUES: LevelValue[] = [
+  ...Array.from({ length: 6 }, (_, weight) => String(weight) as LevelValue),
+  "essential",
+  "required",
 ];
+
+const LEVEL_OPTIONS: { value: LevelValue; label: string }[] = LEVEL_VALUES.map((value) => ({
+  value,
+  label: levelLabel(valueToLevel(value)),
+}));
 
 type EditorState = {
   levels: Record<BankProfileCriterion, LevelValue>;
@@ -57,7 +60,10 @@ type EditorState = {
   proConMinDifference: number;
 };
 
-function initialState(weights: CriterionWeightView[], options: ComparisonOptionsView): EditorState {
+function stateFromProps(
+  weights: CriterionWeightView[],
+  options: ComparisonOptionsView,
+): EditorState {
   return {
     levels: Object.fromEntries(
       weights.map((entry) => [entry.criterion, levelToValue(entry.level)]),
@@ -87,6 +93,12 @@ function effectiveLevels(state: EditorState): WeightLevels {
   ) as WeightLevels;
 }
 
+// The server's props are the source of truth: what is on screen is always
+// either the latest props, turned into editor state, or a draft the household
+// is actively making (a select just picked, or a slider mid-drag) that has
+// not reached the server yet. Nothing here survives a prop change on its own
+// (a reset, a rejected save, another admin saving first) without being
+// derived from props again.
 export function CriteriaWeightsEditor({
   weights,
   options,
@@ -97,11 +109,30 @@ export function CriteriaWeightsEditor({
   weightsAreCustom: boolean;
 }) {
   const { errorMessage, isPending, run } = useActionInTransition(t.errors.failed);
-  const [state, setState] = useState<EditorState>(() => initialState(weights, options));
+  const serverState = useMemo(() => stateFromProps(weights, options), [weights, options]);
+  const [draft, setDraft] = useState<EditorState | null>(null);
+
+  // Adjusting state during render, not in an effect (React's own pattern for
+  // "reset a derived draft when its source changes"): a new serverState (new
+  // props) or a freshly failed save both mean whatever the household was
+  // looking at no longer matches the server, so the draft is stale and the
+  // next render should fall back to serverState instead.
+  const [lastServerState, setLastServerState] = useState(serverState);
+  const [lastErrorMessage, setLastErrorMessage] = useState(errorMessage);
+  if (serverState !== lastServerState) {
+    setLastServerState(serverState);
+    setDraft(null);
+  }
+  if (errorMessage !== lastErrorMessage) {
+    setLastErrorMessage(errorMessage);
+    if (errorMessage !== null) setDraft(null);
+  }
+
+  const state = draft ?? serverState;
   const shares = useMemo(() => criterionShares(effectiveWeights(effectiveLevels(state))), [state]);
 
   function save(next: EditorState) {
-    setState(next);
+    setDraft(next);
     run(() => updateComparisonSettingsAction(initialActionState, toFormData(next)));
   }
 
@@ -160,10 +191,10 @@ export function CriteriaWeightsEditor({
                     value={minimumScore}
                     disabled={isPending}
                     onValueChange={(value) => {
-                      setState((current) => ({
-                        ...current,
-                        minimumScores: { ...current.minimumScores, [entry.criterion]: value },
-                      }));
+                      setDraft({
+                        ...state,
+                        minimumScores: { ...state.minimumScores, [entry.criterion]: value },
+                      });
                     }}
                     onValueCommitted={(value) => {
                       save({
@@ -206,7 +237,10 @@ export function CriteriaWeightsEditor({
         candidateCount={state.candidateCount}
         proConMinDifference={state.proConMinDifference}
         disabled={isPending}
-        onChange={(next) => {
+        onLiveChange={(next) => {
+          setDraft({ ...state, ...next });
+        }}
+        onCommit={(next) => {
           save({ ...state, ...next });
         }}
       />
@@ -218,50 +252,53 @@ function ComparisonOptionsEditor({
   candidateCount,
   proConMinDifference,
   disabled,
-  onChange,
+  onLiveChange,
+  onCommit,
 }: {
   candidateCount: number;
   proConMinDifference: number;
   disabled: boolean;
-  onChange: (next: { candidateCount: number; proConMinDifference: number }) => void;
+  onLiveChange: (next: { candidateCount: number; proConMinDifference: number }) => void;
+  onCommit: (next: { candidateCount: number; proConMinDifference: number }) => void;
 }) {
-  const [localCandidateCount, setLocalCandidateCount] = useState(candidateCount);
-  const [localProConMinDifference, setLocalProConMinDifference] = useState(proConMinDifference);
-
   return (
     <section className="flex flex-col gap-4 border-t pt-4">
       <h3 className="text-[14px]">{t.options.title}</h3>
       <div className="flex flex-col gap-1">
         <span className="text-[13px] tabular-nums">
-          {t.options.candidateCount}: {localCandidateCount}
+          {t.options.candidateCount}: {candidateCount}
         </span>
         <Slider
           aria-label={t.options.candidateCount}
           min={CANDIDATE_COUNT_MIN}
           max={CANDIDATE_COUNT_MAX}
           step={1}
-          value={localCandidateCount}
+          value={candidateCount}
           disabled={disabled}
-          onValueChange={setLocalCandidateCount}
+          onValueChange={(value) => {
+            onLiveChange({ candidateCount: value, proConMinDifference });
+          }}
           onValueCommitted={(value) => {
-            onChange({ candidateCount: value, proConMinDifference: localProConMinDifference });
+            onCommit({ candidateCount: value, proConMinDifference });
           }}
         />
       </div>
       <div className="flex flex-col gap-1">
         <span className="text-[13px] tabular-nums">
-          {t.options.proConMinDifference}: {localProConMinDifference} {t.options.pointsSuffix}
+          {t.options.proConMinDifference}: {proConMinDifference} {t.options.pointsSuffix}
         </span>
         <Slider
           aria-label={t.options.proConMinDifference}
           min={PRO_CON_MIN_DIFFERENCE_MIN}
           max={PRO_CON_MIN_DIFFERENCE_MAX}
           step={PRO_CON_MIN_DIFFERENCE_STEP}
-          value={localProConMinDifference}
+          value={proConMinDifference}
           disabled={disabled}
-          onValueChange={setLocalProConMinDifference}
+          onValueChange={(value) => {
+            onLiveChange({ candidateCount, proConMinDifference: value });
+          }}
           onValueCommitted={(value) => {
-            onChange({ candidateCount: localCandidateCount, proConMinDifference: value });
+            onCommit({ candidateCount, proConMinDifference: value });
           }}
         />
       </div>

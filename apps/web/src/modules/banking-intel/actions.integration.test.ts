@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BANK_PROFILE_CRITERIA, DEFAULT_MINIMUM_SCORES, type WeightLevels } from "@feudo/core";
+import {
+  BANK_PROFILE_CRITERIA,
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_MINIMUM_SCORES,
+  type WeightLevels,
+} from "@feudo/core";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 
@@ -77,7 +82,7 @@ describe("Bancos server boundary (integration)", () => {
       expect(props.hasAccounts).toBe(false);
       expect(props.baselineNotice).toBe(t.current.noAccounts);
       expect(props.currentRows).toEqual([]);
-      expect(props.candidates.length).toBeGreaterThan(0);
+      expect(props.candidates).toHaveLength(DEFAULT_CANDIDATE_COUNT);
       expect(props.candidates.every((candidate) => candidate.review.label.length > 0)).toBe(true);
       expect(props.reviewed.map((row) => row.institutionId)).toEqual(
         expect.arrayContaining(["bradesco", "itau"]),

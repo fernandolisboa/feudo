@@ -4,7 +4,8 @@ import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
 import { bankCriteriaWeights } from "./schema";
 import {
-  storedComparisonOptionsSchema,
+  isReadableComparisonOptions,
+  parseStoredComparisonOptions,
   storedWeightLevelsSchema,
   type StoredComparisonOptions,
   type StoredWeightLevels,
@@ -14,12 +15,26 @@ import type { WeightLevels } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
+// A household that never touched the comparison settings has no options
+// stored at all (absent, not worth a warning); one whose column holds
+// something that is not even options-shaped is unreadable (worth one).
+export type StoredOptionsRead =
+  | { status: "absent" }
+  | { status: "unreadable" }
+  | { status: "found"; value: StoredComparisonOptions };
+
 export type StoredSettingsRead =
   | { status: "none" }
-  | { status: "found"; levels: StoredWeightLevels; options: StoredComparisonOptions | null }
+  | { status: "found"; levels: StoredWeightLevels; options: StoredOptionsRead }
   | { status: "unreadable" };
 
 export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOptions };
+
+function readOptions(value: unknown): StoredOptionsRead {
+  if (value === null) return { status: "absent" };
+  if (!isReadableComparisonOptions(value)) return { status: "unreadable" };
+  return { status: "found", value: parseStoredComparisonOptions(value) };
+}
 
 // Every method is bound to the household taken from the session (ADR-0001):
 // none accepts a household id.
@@ -39,15 +54,7 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       if (!levels.success) {
         return { status: "unreadable" };
       }
-      if (row.options === null) {
-        return { status: "found", levels: levels.data, options: null };
-      }
-      const options = storedComparisonOptionsSchema.safeParse(row.options);
-      return {
-        status: "found",
-        levels: levels.data,
-        options: options.success ? options.data : null,
-      };
+      return { status: "found", levels: levels.data, options: readOptions(row.options) };
     },
 
     async save(db: Database, settings: StoredSettings): Promise<void> {

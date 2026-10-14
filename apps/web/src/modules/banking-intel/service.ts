@@ -41,17 +41,17 @@ export async function getHouseholdCriteriaWeights(
         options: DEFAULT_COMPARISON_SETTINGS,
         isCustom: false,
       };
-    case "found":
-      if (stored.options === null) {
-        console.warn(
-          "banking-intel: stored comparison options missing or unreadable; using defaults",
-        );
+    case "found": {
+      if (stored.options.status === "unreadable") {
+        console.warn("banking-intel: stored comparison options failed validation; using defaults");
       }
+      const options = stored.options.status === "found" ? stored.options.value : {};
       return {
         levels: resolveCriteriaWeights(stored.levels),
-        options: resolveComparisonSettings(stored.options ?? {}),
+        options: resolveComparisonSettings(options),
         isCustom: true,
       };
+    }
   }
 }
 
