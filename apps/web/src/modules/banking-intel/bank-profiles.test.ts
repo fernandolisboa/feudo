@@ -36,7 +36,7 @@ describe("bank profiles dataset", () => {
         ]),
       ) as BankProfile["criteria"],
     };
-    expect(staleCriteria([profile], "2026-06-29")).toEqual([]);
+    expect(staleCriteria([profile], "2026-06-30")).toEqual([]);
     expect(staleCriteria([profile], "2026-07-01")).toEqual([
       { institutionId: profile.institutionId, criterion: "cardBenefits", reviewedAt: "2026-01-01" },
     ]);

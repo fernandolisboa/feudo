@@ -13,6 +13,9 @@ with the repository's normal PR flow.
   limited to this repository) goes to two places at run time: the vault, for the GitHub MCP server
   that opens the PR, and the session's `github_repository` resource, for clone and push. Neither
   reaches the sandbox; Anthropic's proxies inject it.
+- The PAT needs only Contents (read and write), Pull requests (read and write) and Metadata (read)
+  on this repository; never Workflows. CI fails a `claude/bank-data-refresh-*` PR that changes any
+  other file before a job with secrets runs.
 - `environment.yaml` and the web tools in `agent.md` allow only the sites the profiles already cite
   (plus GitHub). A new source on another site needs its domain added to both lists.
 - Each session carries a hard budget (`max_list_cost`), so a run cannot spend beyond it.

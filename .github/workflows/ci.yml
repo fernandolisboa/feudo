@@ -56,6 +56,17 @@ jobs:
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
           echo "docs_only=$docs_only ($(wc -l < changed-files.txt) changed paths)"
 
+      # The bank-data refresh agent reads untrusted web pages. Its branch may
+      # change only the data file, checked here before any job with secrets.
+      - name: Bank refresh touches only bank data
+        if: startsWith(github.head_ref, 'claude/bank-data-refresh-')
+        run: |
+          set -euo pipefail
+          if grep -vxF 'apps/web/src/modules/banking-intel/bank-profiles-data.ts' changed-files.txt; then
+            echo "::error::A bank-data refresh branch may change only bank-profiles-data.ts."
+            exit 1
+          fi
+
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
