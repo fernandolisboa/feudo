@@ -40,35 +40,66 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nubank.com.br/nu/investimentos/tesouro-direto",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Tesouro Direto in the app.",
             },
             {
               url: "https://nubank.com.br/sobre-investimentos/taxas-e-precos",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Investment fees and prices.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         appQuality: {
           status: "scored",
-          score: 80,
+          score: 60,
           evidence:
-            "Google Play shows about 4.7 stars from about 5.5 million ratings (search aggregate, not read from the live listing). No confirmed 2026 mass outage found.",
+            "Secondary sources put the app at about 4.6 stars on Google Play and 4.8 on the App Store (undated); the earlier figure of about 4.7 stars from about 5.5 million ratings was not re-read and the store listing does not show a rating to automated reads. Confirmed 2026 instability: 7 February (login, transfers and internet banking, about 6,820 Downdetector reports at the peak, resolved the same day per Nubank), 6 March (login, transfers and Pix, about 389 reports) and a temporary Pix intermittency in late May that Nubank confirmed.",
           summaryPtBr:
-            "O Google Play mostra cerca de 4,7 estrelas, com cerca de 5,5 milhões de avaliações (agregado de busca, não lido na página ao vivo). Não foi encontrada nenhuma queda geral confirmada em 2026.",
+            "Fontes secundárias indicam cerca de 4,6 estrelas no Google Play e 4,8 na App Store (sem data). O número anterior, cerca de 4,7 estrelas com cerca de 5,5 milhões de avaliações, não foi relido, e a página da loja não mostra a nota para leitura automática. Houve instabilidade confirmada em 2026: em 7 de fevereiro (login, transferências e internet banking, com cerca de 6.820 relatos no pico do Downdetector, resolvida no mesmo dia segundo o Nubank), em 6 de março (login, transferências e Pix, cerca de 389 relatos) e uma intermitência temporária do Pix no fim de maio, confirmada pelo Nubank.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.nu.production",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
+              finding: "Listing found through search; the snippet shows no rating figure.",
+            },
+            {
+              url: "https://www.mobills.com.br/blog/bancos/como-baixar-app-nubank/",
+              kind: "secondary",
+              checkedAt: "2026-10-15",
+              finding: "Undated: Play Store 4.6 and App Store 4.8.",
+            },
+            {
+              url: "https://comunidade.nubank.com.br/vida-financeira/post/nubank-fora-do-ar-resolvido---07-02-2026-jawvM3kMEGDQQnk",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding: "Nubank community post: app instability on 07/02/2026 resolved at 17:00.",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/100630/nubank-fora-do-ar-servicos-apresentam-instabilidade-hoje-neste-sabado-dia-7-de-fevereiro-de-2026.html",
+              kind: "secondary",
+              checkedAt: "2026-10-15",
               finding:
-                "Rating read from a search-engine aggregate; the listing truncated for automated reads.",
+                "Downdetector: login, transfers and internet banking on 7 February 2026, about 6,820 reports at the peak.",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/101518/nubank-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-sexta-dia-6-de-marco-de-2026.html",
+              kind: "secondary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Downdetector: login, transfers and Pix on 6 March 2026, about 389 reports at the peak.",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/05/29/pix-fora-do-ar-nubank-itau-bradesco-santander-e-inter-registram-falhas-e-clientes-entram-em-alerta/",
+              kind: "secondary",
+              checkedAt: "2026-10-15",
+              finding: "Nubank confirmed a temporary Pix instability in the week of 27 May 2026.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         security: {
           status: "scored",
@@ -81,17 +112,17 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nubank.com.br/transparencia/politicas-de-privacidade-e-seguranca/politica-de-seguranca",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Security policy.",
             },
             {
               url: "https://blog.nubank.com.br/autenticacao-dois-fatores/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Two-factor authentication.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         fees: {
           status: "scored",
@@ -104,14 +135,21 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.nubank.com.br/quanto-custa-uma-ted-nos-bancos-tradicionais/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Free transfers.",
+            },
+            {
+              url: "https://nubank.com.br/contratos",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding: "Contracts page lists TED, Pix and deposit by boleto at R$ 0.",
             },
             {
               url: "https://nubank.com.br/sobre-investimentos/taxas-e-precos",
               kind: "primary",
-              checkedAt: "2026-09-09",
-              finding: "Investment fees.",
+              checkedAt: "2026-10-15",
+              finding:
+                "No service fee for Tesouro Direto, CDB, LCI, LCA, stocks or BDRs; only the B3 custody fee on Tesouro.",
             },
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/18236120.asp?idpai=tarifa&frame=1",
@@ -119,25 +157,53 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-02",
               finding: "The registry says this institution did not report its tariffs.",
             },
+            {
+              url: "https://www.bcb.gov.br/fis/tarifas/htms/18236120.asp?seg=bancossegmento09&frame=1",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Automated read failed (url_not_accessible); the registry page was not re-read, only its listing was seen.",
+            },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
           score: 60,
           evidence:
-            "Night Pix limit is the market-wide R$ 1,000 default, raised in 24 to 48 hours. Fee-free core account, but cashback, points and lounges on Nubank+ and Ultravioleta are gated by spend or account tier.",
+            "Night Pix limit is the market-wide R$ 1,000 default, raised in 24 to 48 hours and lowered immediately. Fee-free core account, but cashback, points and lounges on Croma and Ultravioleta are gated by spend or account tier.",
           summaryPtBr:
-            "O limite do Pix noturno é o padrão de R$ 1.000 adotado em todo o mercado, e pode ser aumentado em 24 a 48 horas. A conta básica não tem tarifa, mas o cashback, os pontos e as salas VIP do Nubank+ e do Ultravioleta dependem de gastos ou do nível da conta.",
+            "O limite do Pix noturno é o padrão de R$ 1.000 adotado em todo o mercado, aumentado em 24 a 48 horas e reduzido na hora. A conta básica não tem tarifa, mas o cashback, os pontos e as salas VIP do Croma e do Ultravioleta dependem de gastos ou do nível da conta.",
           citations: [
             {
               url: "https://blog.nubank.com.br/meus-limites-pix-nubank-permite-definir-limites-diurno-e-noturno-para-transacoes/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Pix day and night limits.",
             },
+            {
+              url: "https://blog.nubank.com.br/limite-pix/",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Increases take 24 to 48 hours after the request; reductions apply immediately.",
+            },
+            {
+              url: "https://comunidade.nubank.com.br/novidades/post/mais-seguranca-nas-transacoes-noturnas-em-sua-conta-4QKoa2N4jHuTsn3",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Night limit of up to R$ 1,000 on Pix and boleto payments between individuals, set by Banco Central.",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/13/nubank-agora-tem-5-cartoes-de-credito-veja-qual-e-o-seu-e-como-subir-de-nivel-em-2026/",
+              kind: "secondary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Croma and Ultravioleta fees are waived only above monthly spend or invested thresholds.",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         publicReviews: {
           status: "scored",
@@ -150,9 +216,9 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/nubank/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): maximum reputation, average 8.7/10 over the last 6 months, 99.6% response. Resolution and would-do-business-again figures were not visible in the snippet.",
             },
             {
               url: "https://www.consumidor.gov.br/pages/empresa/20150204000053619/perfil",
@@ -161,7 +227,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Page rendered no indicators to an automated read.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         jointBanking: {
           status: "scored",
@@ -203,17 +269,17 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://inter.co/pra-voce/cartoes/programa-de-pontos/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Inter Loop programme.",
             },
             {
               url: "https://altarendablog.com.br/2026/04/05",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Card overview.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         investmentAccess: {
           status: "scored",
@@ -226,11 +292,11 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://inter.co/pra-voce/investimentos/renda-fixa/cdb/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "CDB offer.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         appQuality: {
           status: "scored",
@@ -243,8 +309,9 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://dol.com.br/noticias/brasil/946160",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "App instability report.",
+              checkedAt: "2026-10-15",
+              finding:
+                "Login instability on 02/07/2026 per Downdetector, no official statement; read through the AMP mirror of the same article.",
             },
             {
               url: "https://www.portaldecamaqua.com.br/noticias/100635",
@@ -253,7 +320,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "App instability report.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         security: {
           status: "scored",
@@ -266,7 +333,7 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://tecnoblog.net/noticias/banco-inter-vazou-dados-correntistas-acao-mp/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Leak coverage.",
             },
             {
@@ -276,7 +343,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Inter statement.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-10-15",
         },
         fees: {
           status: "scored",
@@ -289,18 +356,18 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00416968.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "TED R$ 15.00; standard packages I to III R$ 20.00, 30.00, 45.00; basic national card annuity R$ 80.00; updated 01/10/2026.",
+                "TED R$ 15.00; standard packages I to III R$ 20.00, 30.00, 45.00; basic national card annuity R$ 80.00; page last updated 08/09/2026.",
             },
             {
               url: "https://www.cnnbrasil.com.br/economia/money/negocios/inter-cobra-taxa-de-manutencao-da-conta-tudo-sobre-a-estrutura-de-tarifas/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-10-15",
               finding: "Free digital account.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -447,12 +514,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60701190.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Standard packages I to IV R$ 16.10, 28.00, 37.40, 55.70; TED R$ 11.10 internet, R$ 20.70 in person; updated 01/10/2026.",
+                "Standard packages I to IV R$ 16.10, 28.00, 37.40, 55.70; TED R$ 11.10 internet, R$ 20.70 in person; page last updated 23/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -616,12 +683,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60746948.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Standard packages I to IV R$ 18.65, 32.40, 43.40, 64.70; TED R$ 13.85 internet, R$ 29.45 in person; basic national card annuity R$ 108.00; updated 01/10/2026.",
+                "Standard packages I to IV R$ 18.65, 32.40, 43.40, 64.70; TED R$ 13.85 internet, R$ 29.45 in person; basic national card annuity R$ 108.00; page last updated 29/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -762,12 +829,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00000000.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Standard packages I to IV R$ 15.90, 27.90, 37.30, 55.60; TED R$ 14.00 internet, R$ 34.60 in person; basic national card annuity R$ 234.00; updated 01/10/2026.",
+                "Standard packages I to IV R$ 15.90, 27.90, 37.30, 55.60; TED R$ 14.00 internet, R$ 34.60 in person; basic national card annuity R$ 234.00; page last updated 25/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -901,12 +968,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00360305.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Standard packages I to IV R$ 16.00, 26.90, 35.50, 53.00; TED R$ 13.00 internet, R$ 25.00 in person; basic national card annuity R$ 156.00; updated 01/10/2026.",
+                "Standard packages I to IV R$ 16.00, 26.90, 35.50, 53.00; TED R$ 13.00 internet, R$ 25.00 in person; basic national card annuity R$ 156.00; page last updated 23/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1038,12 +1105,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/90400888.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Standard packages I to IV R$ 16.85, 28.95, 38.70, 57.50; TED R$ 14.10 internet, R$ 26.70 in person; updated 01/10/2026.",
+                "Standard packages I to IV R$ 16.85, 28.95, 38.70, 57.50; TED R$ 14.10 internet, R$ 26.70 in person; page last updated 24/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1190,12 +1257,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/31872495.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "TED R$ 4.00; basic national and international card annuity R$ 98.00; updated 01/10/2026.",
+                "TED R$ 4.00; basic national and international card annuity R$ 98.00, listed with a periodicity of every 30 days; page last updated 15/10/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1321,12 +1388,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/30306294.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "14 items reported, all R$ 0.00 except administrative cheque R$ 40.00; no packages or annuity listed; updated 01/10/2026.",
+                "14 items reported, all R$ 0.00 except administrative cheque R$ 40.00; no packages or annuity listed; page last updated 22/07/2026.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1449,18 +1516,25 @@ export const BANK_PROFILES_DATASET = {
         },
         fees: {
           status: "scored",
-          score: 60,
+          score: 80,
           evidence:
-            "TED R$ 0.00 in the registry, but bundled packages run R$ 36.00 to R$ 82.00 and the card annuity ceiling is R$ 18,000 (premium card). The digital account is free.",
+            "TED R$ 0.00 in the registry and standard packages I to IV now R$ 18.00, 18.00, 29.50 and 41.00 (were R$ 36.00 to R$ 82.00 until XP's table of 05/09/2026). The card annuity ceiling is still R$ 18,000 (Privilege Visa Infinite); XP's own table shows the practised annuity is zero on XP, Rico and One Visa Infinite, R$ 4,200 on Legacy and R$ 18,000 on Privilege. The digital account is free. Scored level with Inter and C6, one step below the all-zero registries.",
           summaryPtBr:
-            "TED de R$ 0,00 no cadastro, mas os pacotes custam de R$ 36,00 a R$ 82,00 e o teto da anuidade do cartão é R$ 18.000 (cartão premium). A conta digital é gratuita.",
+            "TED de R$ 0,00 no cadastro e pacotes padronizados I a IV agora de R$ 18,00, R$ 18,00, R$ 29,50 e R$ 41,00 (antes de R$ 36,00 a R$ 82,00, até a tabela da XP de 05/09/2026). O teto da anuidade do cartão continua em R$ 18.000 (Privilege Visa Infinite). A própria tabela da XP mostra que a anuidade cobrada é zero nos cartões XP, Rico e One Visa Infinite, R$ 4.200 no Legacy e R$ 18.000 no Privilege. A conta digital é gratuita. A nota fica no mesmo nível do Inter e do C6, um degrau abaixo dos cadastros com tudo zerado.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/33264668.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "TED R$ 0.00; standard packages I to IV R$ 36.00, 36.00, 59.00, 82.00; card annuity R$ 18,000.00; updated 01/10/2026.",
+                "TED R$ 0.00; standard packages I to IV R$ 18.00, 18.00, 29.50, 41.00; card annuity R$ 18,000.00; page last updated 14/08/2026.",
+            },
+            {
+              url: "https://www.xpi.com.br/documentos/tarifas_20_01_22/",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Banco XP table published 05/08/2026, in force from 05/09/2026: packages I to IV R$ 18.00, 18.00, 29.50, 41.00; TED and transfers by electronic means zero; annuity practised zero on XP, Rico and One Visa Infinite, R$ 4,200 Legacy, R$ 18,000 Privilege.",
             },
             {
               url: "https://itsmoney.com.br/onde-investir/conta-digital-xp-vale-a-pena",
@@ -1469,7 +1543,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Free digital account.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1606,14 +1680,14 @@ export const BANK_PROFILES_DATASET = {
             "Each cooperative publishes its own tariff table. The Central Bank registry entry for Banco Sicoob (packages R$ 4.00 to R$ 24.00, TED R$ 12.00) is not the table a member pays.",
           summaryPtBr:
             "Não há evidência suficiente. Cada cooperativa publica a própria tabela de tarifas. O registro do Banco Central para o Banco Sicoob (pacotes de R$ 4,00 a R$ 24,00, TED de R$ 12,00) não é a tabela que o associado paga.",
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/02038232.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "Banco Sicoob: packages I to IV R$ 4.00, 12.00, 16.00, 24.00; TED R$ 12.00 internet; updated 01/10/2026.",
+                "Banco Sicoob: packages I to IV R$ 4.00, 12.00, 16.00, 24.00; TED R$ 12.00 internet; page last updated 13/08/2026.",
             },
           ],
         },
@@ -1746,9 +1820,9 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/09516419.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
+              checkedAt: "2026-10-15",
               finding:
-                "TED, standard packages I to IV and card annuities R$ 0.00; registration R$ 200.00; updated 01/10/2026.",
+                "TED, standard packages I to IV and card annuities R$ 0.00; registration R$ 200.00; page last updated 15/10/2026.",
             },
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/22896431.asp?idpai=tarifa&frame=1",
@@ -1757,7 +1831,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "The registry says this institution did not report its tariffs.",
             },
           ],
-          reviewedAt: "2026-10-02",
+          reviewedAt: "2026-10-15",
         },
         lockIn: {
           status: "scored",
@@ -1896,16 +1970,31 @@ export const BANK_PROFILES_DATASET = {
         fees: {
           status: "insufficient-evidence",
           reason:
-            "Mercado Pago's payment institution reports no tariff table to the Central Bank registry and no full fee schedule was found.",
+            "Mercado Pago's payment institution reports no tariff table to the Central Bank registry. Its help centre lists a fee table, but the page did not load to an automated read, and the blog describing a free account (no maintenance fee, free Pix and TED, paid cash withdrawal) is marketing, not a schedule.",
           summaryPtBr:
-            "Não há evidência suficiente. A instituição de pagamento do Mercado Pago não informa tabela de tarifas ao cadastro do Banco Central, e não foi encontrada uma tabela completa.",
-          reviewedAt: "2026-10-02",
+            "Não há evidência suficiente. A instituição de pagamento do Mercado Pago não informa tabela de tarifas ao cadastro do Banco Central. A central de ajuda indica uma tabela de tarifas, mas a página não carregou na leitura automática, e o blog que descreve conta gratuita (sem tarifa de manutenção, Pix e TED gratuitos, saque em espécie pago) é material de divulgação, não uma tabela.",
+          reviewedAt: "2026-10-15",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/10573521.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-02",
-              finding: "The registry says this institution did not report its tariffs.",
+              checkedAt: "2026-10-15",
+              finding:
+                "The registry says this institution did not report its tariffs; page last updated 04/09/2026.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/ajuda/tabela-taxas-tarifas_45243",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Help centre page titled 'Tabela de taxas e tarifas'; the content did not load to an automated read.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/conta-mercado-pago-quanto-custa",
+              kind: "primary",
+              checkedAt: "2026-10-15",
+              finding:
+                "Blog: no maintenance fee, free Pix and TED to any institution, cash withdrawal is paid; no fee schedule.",
             },
           ],
         },
