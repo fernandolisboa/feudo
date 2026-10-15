@@ -54,7 +54,7 @@ export const BANK_PROFILES_DATASET = {
         },
         appQuality: {
           status: "scored",
-          score: 80,
+          score: 60,
           evidence:
             "Secondary sources put the app at about 4.6 stars on Google Play and 4.8 on the App Store (undated); the earlier figure of about 4.7 stars from about 5.5 million ratings was not re-read and the store listing does not show a rating to automated reads. Confirmed 2026 instability: 7 February (login, transfers and internet banking, about 6,820 Downdetector reports at the peak, resolved the same day per Nubank), 6 March (login, transfers and Pix, about 389 reports) and a temporary Pix intermittency in late May that Nubank confirmed.",
           summaryPtBr:
