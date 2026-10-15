@@ -1,0 +1,7 @@
+events:
+  - type: user.message
+    content:
+      - type: text
+        text: |
+          Run the bank data refresh now. Use today's date for the branch name, the commit message
+          and every `reviewedAt` / `checkedAt` you update.

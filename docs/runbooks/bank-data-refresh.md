@@ -42,3 +42,5 @@ The output is one pull request that changes only
   the next run.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm format:check` before pushing; one push.
 - Then follow the repository's PR rules: review, merge when green, confirm production.
+- Run as the Managed Agents session in `agents/bank-data-refresh/` (owner's API credits), the run
+  stops at the open PR; review and merge happen in the repository's normal PR flow.
