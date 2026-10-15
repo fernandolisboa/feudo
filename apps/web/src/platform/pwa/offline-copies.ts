@@ -29,8 +29,11 @@ const OFFLINE_COPY_SCREENS: ReadonlySet<string> = new Set([
   "/como-usar",
 ]);
 
+// A bank's own page (ADR-0007, 2026-10-14); 13 banks fit the entry cap.
+const BANK_PAGE = /^\/bancos\/[a-z0-9]+(-[a-z0-9]+)*$/;
+
 export function isOfflineCopyScreen(pathname: string): boolean {
-  return OFFLINE_COPY_SCREENS.has(pathname);
+  return OFFLINE_COPY_SCREENS.has(pathname) || BANK_PAGE.test(pathname);
 }
 
 function holdsOnlyBuildAssets(cacheName: string): boolean {

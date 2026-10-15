@@ -11,6 +11,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Nubank Rewards was discontinued. Nubank+ gives 0.8% cashback or 1.4 points per US$ for a R$ 39 monthly fee that can be waived; Ultravioleta gives 2.2 points per US$, IOF exemption abroad and 4 lounge visits a year. The entry card has no ongoing points programme.",
+          summaryPtBr:
+            "O Nubank Rewards foi encerrado. O Nubank+ dá 0,8% de cashback ou 1,4 ponto por US$, com mensalidade de R$ 39 que pode ser isenta. O Ultravioleta dá 2,2 pontos por US$, isenção de IOF no exterior e 4 acessos a salas VIP por ano. O cartão de entrada não tem programa de pontos contínuo.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/06/09",
@@ -32,6 +34,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "NuInvest inside the same app: stocks, ETFs, BDRs, Tesouro Direto with no service fee, funds, CDB/LCI/LCA and crypto.",
+          summaryPtBr:
+            "NuInvest dentro do mesmo app: ações, ETFs, BDRs, Tesouro Direto sem taxa de serviço, fundos, CDB/LCI/LCA e criptomoedas.",
           citations: [
             {
               url: "https://nubank.com.br/nu/investimentos/tesouro-direto",
@@ -53,6 +57,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Google Play shows about 4.7 stars from about 5.5 million ratings (search aggregate, not read from the live listing). No confirmed 2026 mass outage found.",
+          summaryPtBr:
+            "O Google Play mostra cerca de 4,7 estrelas, com cerca de 5,5 milhões de avaliações (agregado de busca, não lido na página ao vivo). Não foi encontrada nenhuma queda geral confirmada em 2026.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.nu.production",
@@ -69,6 +75,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Publishes its 2FA and TLS policy and recommends a biometric second factor. One March 2025 complaint alleges data sharing that enabled fraud; no confirmed mass breach.",
+          summaryPtBr:
+            "Publica sua política de 2FA e TLS e recomenda biometria como segundo fator. Uma reclamação de março de 2025 alega compartilhamento de dados que facilitou fraude. Não há vazamento em massa confirmado.",
           citations: [
             {
               url: "https://nubank.com.br/transparencia/politicas-de-privacidade-e-seguranca/politica-de-seguranca",
@@ -90,6 +98,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "No account maintenance fee; free TED, Pix and boleto for individuals; no fee for Tesouro Direto or stock trading. Nu Pagamentos reports no tariff table to the Central Bank registry.",
+          summaryPtBr:
+            "Sem tarifa de manutenção de conta. TED, Pix e boleto gratuitos para pessoas físicas. Sem tarifa para Tesouro Direto ou negociação de ações. A Nu Pagamentos não informa tabela de tarifas ao cadastro do Banco Central.",
           citations: [
             {
               url: "https://blog.nubank.com.br/quanto-custa-uma-ted-nos-bancos-tradicionais/",
@@ -117,6 +127,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Night Pix limit is the market-wide R$ 1,000 default, raised in 24 to 48 hours. Fee-free core account, but cashback, points and lounges on Nubank+ and Ultravioleta are gated by spend or account tier.",
+          summaryPtBr:
+            "O limite do Pix noturno é o padrão de R$ 1.000 adotado em todo o mercado, e pode ser aumentado em 24 a 48 horas. A conta básica não tem tarifa, mas o cashback, os pontos e as salas VIP do Nubank+ e do Ultravioleta dependem de gastos ou do nível da conta.",
           citations: [
             {
               url: "https://blog.nubank.com.br/meus-limites-pix-nubank-permite-definir-limites-diurno-e-noturno-para-transacoes/",
@@ -132,6 +144,8 @@ export const BANK_PROFILES_DATASET = {
           score: 87,
           evidence:
             "Reclame Aqui: reputation 8.7/10, consumer average 7.72, 99.6% response, 92.9% resolution, 81.1% would do business again. consumidor.gov.br rendered no data.",
+          summaryPtBr:
+            "Reclame Aqui: reputação 8,7/10, nota média dos consumidores 7,72, 99,6% de respostas, 92,9% de solução, 81,1% voltariam a fazer negócio. O consumidor.gov.br não trouxe dados.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/nubank/",
@@ -154,6 +168,8 @@ export const BANK_PROFILES_DATASET = {
           score: 65,
           evidence:
             "Nubank has no joint account by its own account: the blog says 'o Nubank não oferece conta conjunta'. Ultravioleta clients get Saldo Compartilhado inside Espaço Família, where administrators share one balance from their own logins and spending is attributed pro rata to each person's deposits.",
+          summaryPtBr:
+            "O próprio blog do Nubank diz que 'o Nubank não oferece conta conjunta'. Clientes Ultravioleta têm o Saldo Compartilhado no Espaço Família: os administradores dividem um mesmo saldo, cada um com seu login, e os gastos são atribuídos a cada pessoa na proporção do que depositou.",
           citations: [
             {
               url: "https://blog.nubank.com.br/conta-conjunta/",
@@ -181,6 +197,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Zero-annuity cards with no spending condition on several variants; Inter Loop points convert to cashback, miles, dollars, bill discount or investments, with no programme fee.",
+          summaryPtBr:
+            "Cartões sem anuidade e, em várias versões, sem exigência de gasto. Os pontos do Inter Loop podem virar cashback, milhas, dólares, desconto na fatura ou investimentos, sem tarifa pelo programa.",
           citations: [
             {
               url: "https://inter.co/pra-voce/cartoes/programa-de-pontos/",
@@ -202,6 +220,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Inter Invest in the same app: CDB from R$ 1, Tesouro Direto with no Inter fee (only the B3 0.20% a year), funds, crypto, Brazilian and foreign stocks.",
+          summaryPtBr:
+            "Inter Invest no mesmo app: CDB a partir de R$ 1, Tesouro Direto sem taxa do Inter (só os 0,20% ao ano da B3), fundos, criptomoedas, ações brasileiras e estrangeiras.",
           citations: [
             {
               url: "https://inter.co/pra-voce/investimentos/renda-fixa/cdb/",
@@ -217,6 +237,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Only branded content claims top ratings, with no number or independent source. Confirmed instability on 7 February 2026 and in July 2026 (login, Pix, purchases).",
+          summaryPtBr:
+            "Só conteúdo da própria marca fala em notas máximas, sem número nem fonte independente. Houve instabilidade confirmada em 7 de fevereiro de 2026 e em julho de 2026 (login, Pix, compras).",
           citations: [
             {
               url: "https://dol.com.br/noticias/brasil/946160",
@@ -238,6 +260,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Confirmed leak: a public prosecutor investigation found about 19,961 customers' records exposed, 13,207 with account number, password, address and CPF; Inter attributed it to an insider.",
+          summaryPtBr:
+            "Vazamento confirmado: uma investigação do Ministério Público encontrou dados de cerca de 19.961 clientes expostos, 13.207 deles com número da conta, senha, endereço e CPF. O Inter atribuiu o caso a uma pessoa de dentro da empresa.",
           citations: [
             {
               url: "https://tecnoblog.net/noticias/banco-inter-vazou-dados-correntistas-acao-mp/",
@@ -259,6 +283,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "The free digital account has no maintenance fee and free Pix. The Central Bank registry still lists maximum tariffs: TED up to R$ 15.00, packages R$ 20.00 to R$ 45.00, basic card annuity up to R$ 80.00. Scored one step below the all-zero registries (BTG, PicPay Bank).",
+          summaryPtBr:
+            "A conta digital gratuita não tem tarifa de manutenção e o Pix é gratuito. O cadastro do Banco Central ainda lista tarifas máximas: TED até R$ 15,00, pacotes de R$ 20,00 a R$ 45,00, anuidade do cartão básico até R$ 80,00. Recebeu nota um nível abaixo dos cadastros com tudo zerado (BTG, PicPay Bank).",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00416968.asp?idpai=tarifa&frame=1",
@@ -281,6 +307,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Market-wide R$ 1,000 night Pix default, 24 hours to raise. Free account and an ungated points programme; individual complaints about slow limit increases.",
+          summaryPtBr:
+            "Padrão de mercado de R$ 1.000 no Pix noturno, com 24 horas para aumentar. Conta gratuita e programa de pontos sem condições. Há reclamações individuais sobre demora no aumento de limite.",
           citations: [
             {
               url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/o-que-e-limite-noturno",
@@ -302,6 +330,8 @@ export const BANK_PROFILES_DATASET = {
           score: 85,
           evidence:
             "Reclame Aqui: 8.5/10, 98.4% response, 90% resolution, 78% would do business again, average response 9 days 13 hours.",
+          summaryPtBr:
+            "Reclame Aqui: 8,5/10, 98,4% de respostas, 90% de solução, 78% voltariam a fazer negócio, tempo médio de resposta de 9 dias e 13 horas.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/inter/",
@@ -318,6 +348,8 @@ export const BANK_PROFILES_DATASET = {
           score: 0,
           evidence:
             "Inter's help center says 'Atualmente, não é possível ter uma conta conjunta no Inter' and that it only offers individual accounts tied to a CPF; it no longer opens joint accounts for new customers.",
+          summaryPtBr:
+            "A central de ajuda do Inter diz 'Atualmente, não é possível ter uma conta conjunta no Inter' e que o banco só oferece contas individuais ligadas a um CPF. O Inter não abre mais contas conjuntas para novos clientes.",
           citations: [
             {
               url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/posso-ter-uma-conta-conjunta-no-inter",
@@ -339,6 +371,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Broad card ladder: Personnalité Black, LATAM Pass co-brand, Private Visa Infinite with DragonPass, Magalu up to 2% cashback. Annuity waiver from R$ 8,000 monthly spend or R$ 50,000 invested.",
+          summaryPtBr:
+            "Vários níveis de cartão: Personnalité Black, parceria com LATAM Pass, Private Visa Infinite com DragonPass e Magalu com até 2% de cashback. A anuidade é isenta a partir de R$ 8.000 de gastos por mês ou R$ 50.000 investidos.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/01/28",
@@ -360,6 +394,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Itaú Corretora and íon: Tesouro Direto, stocks, funds; invested balance also counts toward fee waivers.",
+          summaryPtBr:
+            "Itaú Corretora e íon: Tesouro Direto, ações e fundos. O saldo investido também conta para a isenção de tarifas.",
           citations: [
             {
               url: "https://www.ion.itau/investimentos/produtos/tesouro-direto/",
@@ -380,6 +416,8 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "No current store rating could be read for the Itaú app and no 2026 outage was found either way.",
+          summaryPtBr:
+            "Não há evidência suficiente. Não foi possível ler a nota atual do app do Itaú, e não se encontrou nenhuma queda em 2026 que confirme ou descarte problemas.",
           reviewedAt: "2026-09-09",
           citations: [
             {
@@ -394,6 +432,8 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "No Itaú-specific incident or security-feature evidence was found; absence of findings is not a clean record.",
+          summaryPtBr:
+            "Não há evidência suficiente. Não foram encontrados incidentes nem recursos de segurança específicos do Itaú. Não achar nada não significa histórico limpo.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -401,6 +441,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Bundled packages from R$ 16.10 to R$ 55.70 a month; TED up to R$ 11.10 online and R$ 20.70 in person; waivers tied to spend or investment.",
+          summaryPtBr:
+            "Pacotes de R$ 16,10 a R$ 55,70 por mês. TED de até R$ 11,10 online e R$ 20,70 no atendimento presencial. Isenções ligadas a gastos ou investimentos.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60701190.asp?idpai=tarifa&frame=1",
@@ -417,6 +459,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Account fee and card annuity waivers depend on R$ 4,000 to R$ 8,000 monthly spend or R$ 50,000 or more invested at Itaú: a structural reason to keep banking and investments there.",
+          summaryPtBr:
+            "A isenção da tarifa da conta e da anuidade do cartão depende de R$ 4.000 a R$ 8.000 de gastos por mês ou de R$ 50.000 ou mais investidos no Itaú. É um motivo estrutural para manter conta e investimentos lá.",
           citations: [
             {
               url: "https://diariodopara.com.br/seu-bolso/itau-muda-regras-de-pontos-e-anuidade-dos-cartoes-veja-o-que-muda",
@@ -432,6 +476,8 @@ export const BANK_PROFILES_DATASET = {
           score: 81,
           evidence:
             "Reclame Aqui: 8.1/10, consumer average 7.02, 97.5% response, 85.4% resolution, 74.2% would do business again.",
+          summaryPtBr:
+            "Reclame Aqui: 8,1/10, nota média dos consumidores 7,02, 97,5% de respostas, 85,4% de solução, 74,2% voltariam a fazer negócio.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/itau/",
@@ -448,6 +494,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Itaú's Conta Universal terms define a joint account ('E/OU' or 'E'), and the account FAQ confirms every holder opens one by going to a branch with documents; branch-only opening does not lower this score.",
+          summaryPtBr:
+            "Os termos da Conta Universal do Itaú definem a conta conjunta ('E/OU' ou 'E'), e o FAQ da conta confirma que cada titular a abre indo a uma agência com os documentos. A abertura só em agência não reduz esta nota.",
           citations: [
             {
               url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-corrente/como-faco-para-abrir-uma-conta-corrente-no-itau",
@@ -476,6 +524,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Livelo points; periodic annuity-waiver campaigns rather than a permanent waiver; the top card waiver needs R$ 5 million invested.",
+          summaryPtBr:
+            "Pontos Livelo. Há campanhas periódicas de isenção de anuidade, e não uma isenção permanente. A isenção do cartão topo de linha exige R$ 5 milhões investidos.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/08/02",
@@ -497,6 +547,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Ágora brokerage plus Tesouro Direto and CDB in the main app; the split across two brands adds a step.",
+          summaryPtBr:
+            "Corretora Ágora, além de Tesouro Direto e CDB no app principal. A divisão entre duas marcas acrescenta um passo.",
           citations: [
             {
               url: "https://investimentos.bradesco/",
@@ -518,6 +570,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "About 4.7 stars from about 5.9 million ratings on Google Play (search aggregate, not read from the listing).",
+          summaryPtBr:
+            "Cerca de 4,7 estrelas, com cerca de 5,9 milhões de avaliações no Google Play (agregado de busca, não lido na página).",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.bradesco",
@@ -533,6 +587,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Two confirmed incidents: a 2022 Bradesco Financiamentos leak of about 53,000 vehicle-financing contracts and a 2023 cyber incident at its US securities subsidiary.",
+          summaryPtBr:
+            "Dois incidentes confirmados: um vazamento de 2022 na Bradesco Financiamentos, com cerca de 53.000 contratos de financiamento de veículos, e um incidente cibernético em 2023 na subsidiária de valores mobiliários nos EUA.",
           citations: [
             {
               url: "https://contec.org.br/bradesco-financiamentos-relata-possivel-vazamento-de-dados-de-53-mil-clientes/",
@@ -554,6 +610,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Bundled packages from R$ 18.65 to R$ 64.70 a month; TED R$ 13.85 online and R$ 29.45 in person; basic card annuity R$ 108.00.",
+          summaryPtBr:
+            "Pacotes de R$ 18,65 a R$ 64,70 por mês. TED de R$ 13,85 online e R$ 29,45 no atendimento presencial. Anuidade do cartão básico de R$ 108,00.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60746948.asp?idpai=tarifa&frame=1",
@@ -570,6 +628,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Fee waivers are tied to the investment balance kept at the bank. One complaint alleges the night Pix limit cannot be raised (anecdotal).",
+          summaryPtBr:
+            "As isenções de tarifas dependem do saldo investido mantido no banco. Uma reclamação alega que o limite do Pix noturno não pode ser aumentado (relato isolado).",
           citations: [
             {
               url: "https://banco.bradesco/html/exclusive/produtos-servicos/tarifas/index.shtm",
@@ -591,6 +651,8 @@ export const BANK_PROFILES_DATASET = {
           score: 69,
           evidence:
             "Reclame Aqui: 6.9/10, consumer average 5.54, 100% response but 68.5% resolution, 58.3% would do business again.",
+          summaryPtBr:
+            "Reclame Aqui: 6,9/10, nota média dos consumidores 5,54, 100% de respostas, mas 68,5% de solução e 58,3% voltariam a fazer negócio.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/bradesco/",
@@ -607,6 +669,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Bradesco's account-opening regulation defines Conta Conjunta Simples ('e') and Conta Conjunta Solidária ('e/ou') for new personal accounts, with every holder jointly liable, including for credit.",
+          summaryPtBr:
+            "O regulamento de abertura de contas do Bradesco define a Conta Conjunta Simples ('e') e a Conta Conjunta Solidária ('e/ou') para novas contas de pessoa física, com todos os titulares respondendo em conjunto, inclusive pelo crédito.",
           citations: [
             {
               url: "https://banco.bradesco/assets/classic/pdf/produtos-servicos/tipos-de-conta/regulamento-para-abertura-de-contas-de-depositos-produtos-e-servicos-pessoa-fisica.pdf",
@@ -628,6 +692,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Ourocard Visa Infinite: points, cashback or investment; 1% cashback on Infinite, 0.30% on Gold. Benefits concentrate on premium tiers.",
+          summaryPtBr:
+            "Ourocard Visa Infinite: pontos, cashback ou investimento. Cashback de 1% no Infinite e de 0,30% no Gold. Os benefícios se concentram nos níveis premium.",
           citations: [
             {
               url: "https://pontospravoar.com/guia-completo-beneficios-cartao-banco-brasil-ourocard-visa-infinite/",
@@ -649,6 +715,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Own brokerage (BB Investimentos) and an investments app; whether third-party products are distributed was not checked.",
+          summaryPtBr:
+            "Corretora própria (BB Investimentos) e um app de investimentos. Não foi verificado se há distribuição de produtos de terceiros.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=br.com.bb.investimentosbb",
@@ -664,6 +732,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Search snippets put the main app at 4.4 to 4.6 stars on Google Play; the listing was not read directly.",
+          summaryPtBr:
+            "Trechos de busca indicam de 4,4 a 4,6 estrelas para o app principal no Google Play. A página não foi lida diretamente.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=br.com.bb.android",
@@ -677,6 +747,8 @@ export const BANK_PROFILES_DATASET = {
         security: {
           status: "insufficient-evidence",
           reason: "No citable source was found; the research left this criterion unscored.",
+          summaryPtBr:
+            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -684,6 +756,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Bundled packages from R$ 15.90 to R$ 55.60 a month; TED R$ 14.00 online, R$ 34.60 in person; basic card annuity R$ 234.00.",
+          summaryPtBr:
+            "Pacotes de R$ 15,90 a R$ 55,60 por mês. TED de R$ 14,00 online e R$ 34,60 no atendimento presencial. Anuidade do cartão básico de R$ 234,00.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00000000.asp?idpai=tarifa&frame=1",
@@ -700,6 +774,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Night Pix limit R$ 1,000 with up to 48 hours to raise; several complaints about salary portability requests denied or delayed up to 10 business days.",
+          summaryPtBr:
+            "Limite do Pix noturno de R$ 1.000, com até 48 horas para aumentar. Há várias reclamações sobre pedidos de portabilidade de salário negados ou atrasados em até 10 dias úteis.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/contas/aumentar-limite-pix-no-banco-do-brasil/",
@@ -721,6 +797,8 @@ export const BANK_PROFILES_DATASET = {
           score: 75,
           evidence:
             "Reclame Aqui: 7.5/10 (February to July 2026), 76.5% resolution, 68.4% would do business again, average response 9 days 16 hours.",
+          summaryPtBr:
+            "Reclame Aqui: 7,5/10 (fevereiro a julho de 2026), 76,5% de solução, 68,4% voltariam a fazer negócio, tempo médio de resposta de 9 dias e 16 horas.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/banco-do-brasil/",
@@ -737,6 +815,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Banco do Brasil's own blog describes a joint account (solidária or simples) open to anyone 18 or older with up to four holders, each with their own App BB access and, per the blog, their own credit card.",
+          summaryPtBr:
+            "O blog do próprio Banco do Brasil descreve a conta conjunta (solidária ou simples), aberta a maiores de 18 anos, com até quatro titulares. Cada um tem seu acesso ao App BB e, segundo o blog, seu próprio cartão de crédito.",
           citations: [
             {
               url: "https://blog.bb.com.br/conta-conjunta-dez-perguntas-e-respostas-que-voce-precisa-conhecer/",
@@ -756,6 +836,8 @@ export const BANK_PROFILES_DATASET = {
         cardBenefits: {
           status: "insufficient-evidence",
           reason: "No citable source was found; the research left this criterion unscored.",
+          summaryPtBr:
+            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
           reviewedAt: "2026-09-09",
         },
         investmentAccess: {
@@ -763,6 +845,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "CDB (prefixed, Flex, progressive), Tesouro Direto and poupança: mostly own or government paper, no sign of an open platform.",
+          summaryPtBr:
+            "CDB (prefixado, Flex, progressivo), Tesouro Direto e poupança. São, na maioria, papéis próprios ou do governo, sem sinal de plataforma aberta.",
           citations: [
             {
               url: "https://www.caixa.gov.br/investimentos/Paginas/default.aspx",
@@ -778,6 +862,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "A secondary source names Caixa among the worst-rated bank apps on both stores; Caixa Tem users report crashes after updates. No exact rating.",
+          summaryPtBr:
+            "Uma fonte secundária cita a Caixa entre os apps de banco pior avaliados nas duas lojas. Usuários do Caixa Tem relatam travamentos após atualizações. Sem nota exata.",
           citations: [
             {
               url: "https://seucreditodigital.com.br/banrisul-e-caixa-sao-piores-apps-de-banco-no-google-play-store-e-app-store/",
@@ -792,6 +878,8 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence: "Dedicated biometrics page; fingerprint authentication at ATMs.",
+          summaryPtBr:
+            "Página dedicada à biometria e autenticação por impressão digital nos caixas eletrônicos.",
           citations: [
             {
               url: "https://www.caixa.gov.br/seguranca/biometria/Paginas/default.aspx",
@@ -807,6 +895,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Bundled packages from R$ 16.00 to R$ 53.00 a month; TED R$ 13.00 online, R$ 25.00 in person; basic card annuity R$ 156.00.",
+          summaryPtBr:
+            "Pacotes de R$ 16,00 a R$ 53,00 por mês. TED de R$ 13,00 online e R$ 25,00 no atendimento presencial. Anuidade do cartão básico de R$ 156,00.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00360305.asp?idpai=tarifa&frame=1",
@@ -823,6 +913,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Night Pix limit R$ 1,500 and the night window can start at 22h. No portability or closure friction evidence was gathered.",
+          summaryPtBr:
+            "Limite do Pix noturno de R$ 1.500, e o horário noturno pode começar às 22h. Não foram levantadas evidências de dificuldade para portabilidade ou encerramento da conta.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/bancos/quais-sao-os-limites-de-ted-e-pix/",
@@ -838,6 +930,8 @@ export const BANK_PROFILES_DATASET = {
           score: 72,
           evidence:
             "Reclame Aqui: 7.2/10 (March to August 2026), 69.9% resolution, 65.6% would do business again.",
+          summaryPtBr:
+            "Reclame Aqui: 7,2/10 (março a agosto de 2026), 69,9% de solução, 65,6% voltariam a fazer negócio.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/caixa-economica-federal/",
@@ -854,6 +948,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Caixa's account-opening contract defines joint current and savings accounts, solidária (any holder moves alone) or não-solidária (all must act together), each holder with their own app login by CPF.",
+          summaryPtBr:
+            "O contrato de abertura de conta da Caixa define contas correntes e poupanças conjuntas, solidárias (qualquer titular movimenta sozinho) ou não solidárias (todos precisam agir juntos). Cada titular tem seu próprio login no app, pelo CPF.",
           citations: [
             {
               url: "https://www.caixa.gov.br/Downloads/contas-pessoa-fisica/Contrato-Pessoa-Fisica-10-11-2021.pdf",
@@ -880,6 +976,8 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "Only a search snippet said Elite and Unique moved to cashback; no citable page was found.",
+          summaryPtBr:
+            "Não há evidência suficiente. Só um trecho de busca dizia que Elite e Unique passaram para cashback, e nenhuma página citável foi encontrada.",
           reviewedAt: "2026-09-09",
         },
         investmentAccess: {
@@ -887,6 +985,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Santander Corretora absorbed Toro: 500+ fixed-income assets, 1,000+ funds including third parties, equities, REITs, ETFs, BDRs, Tesouro Direto and pensions.",
+          summaryPtBr:
+            "A Santander Corretora absorveu a Toro: mais de 500 ativos de renda fixa, mais de 1.000 fundos, inclusive de terceiros, ações, fundos imobiliários, ETFs, BDRs, Tesouro Direto e previdência.",
           citations: [
             {
               url: "https://blog.toroinvestimentos.com.br/institucional/toro-santander-corretora/",
@@ -908,6 +1008,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "The only rating found (4.10, 1.4 million ratings) belongs to Santander Way, removed from Google Play on 2026-06-23; no rating for the main app.",
+          summaryPtBr:
+            "A única nota encontrada (4,10, com 1,4 milhão de avaliações) é do Santander Way, retirado do Google Play em 23 de junho de 2026. Não há nota para o app principal.",
           citations: [
             {
               url: "https://apps.apple.com/br/app/banco-santander-brasil/id613365711",
@@ -921,6 +1023,8 @@ export const BANK_PROFILES_DATASET = {
         security: {
           status: "insufficient-evidence",
           reason: "No citable source was found; the research left this criterion unscored.",
+          summaryPtBr:
+            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -928,6 +1032,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Bundled packages from R$ 16.85 to R$ 57.50 a month, the highest top end among the large banks; TED R$ 14.10 online, R$ 26.70 in person.",
+          summaryPtBr:
+            "Pacotes de R$ 16,85 a R$ 57,50 por mês, o valor máximo mais alto entre os grandes bancos. TED de R$ 14,10 online e R$ 26,70 no atendimento presencial.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/90400888.asp?idpai=tarifa&frame=1",
@@ -944,6 +1050,8 @@ export const BANK_PROFILES_DATASET = {
           score: 20,
           evidence:
             "Package fee zeroed only with R$ 50,000 to R$ 80,000 invested or salary portability; several complaints about unilateral account closure and obstructed portability.",
+          summaryPtBr:
+            "A tarifa do pacote só é zerada com R$ 50.000 a R$ 80.000 investidos ou com portabilidade de salário. Há várias reclamações sobre encerramento de conta feito pelo banco por conta própria e sobre portabilidade dificultada.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/santander/encerramento-unilateral-de-conta-salario-e-dificuldade-para-receber-salario_G8b-M8HBKb55CxV3/",
@@ -965,6 +1073,8 @@ export const BANK_PROFILES_DATASET = {
           score: 57,
           evidence:
             "Reclame Aqui: 5.7/10 (March to August 2026), 52.6% resolution, 44.3% would do business again.",
+          summaryPtBr:
+            "Reclame Aqui: 5,7/10 (março a agosto de 2026), 52,6% de solução, 44,3% voltariam a fazer negócio.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/santander/",
@@ -981,6 +1091,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Santander's current-account terms define joint accounts of type 'OU' (either holder moves alone) or 'E' (all act together), with one debit card issued per holder.",
+          summaryPtBr:
+            "Os termos de conta corrente do Santander definem contas conjuntas do tipo 'OU' (qualquer titular movimenta sozinho) ou 'E' (todos agem juntos), com um cartão de débito emitido para cada titular.",
           citations: [
             {
               url: "https://cms.santander.com.br/sites/WPS/documentos/arq-condicoes-gerais-conta-corrente/25-11-07_143048_condicoes-gerais-conta-corrente-nov25.pdf",
@@ -1002,6 +1114,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "C6 Carbon: annuity waived at R$ 8,000 monthly spend or R$ 50,000 in C6 CDBs; up to 3.5 points per US$ or 1.7% cashback; 4 lounge visits a year.",
+          summaryPtBr:
+            "C6 Carbon: anuidade isenta com R$ 8.000 de gastos por mês ou R$ 50.000 em CDBs do C6. Até 3,5 pontos por US$ ou 1,7% de cashback. 4 acessos a salas VIP por ano.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/06/10/anuidade-zero-e-ate-35-pontos-por-dolar-conheca-os-beneficios-do-c6-carbon-mastercard-black/",
@@ -1022,6 +1136,8 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence: "C6 Invest offers fixed income for all profiles; no product count found.",
+          summaryPtBr:
+            "O C6 Invest oferece renda fixa para todos os perfis. Não foi encontrado o número de produtos.",
           citations: [
             {
               url: "https://www.c6bank.com.br/c6-invest/renda-fixa/",
@@ -1036,6 +1152,8 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "Sources disagree (Google Play 4.8 versus 3.6) and no citable page pinned the rating.",
+          summaryPtBr:
+            "Não há evidência suficiente. As fontes divergem (Google Play 4,8 contra 3,6) e nenhuma página citável confirmou a nota.",
           reviewedAt: "2026-09-09",
         },
         security: {
@@ -1043,6 +1161,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "New devices need password plus facial recognition, and the app disables itself on a device if another face is detected; hardware-bound in-app token.",
+          summaryPtBr:
+            "Dispositivos novos exigem senha e reconhecimento facial, e o app se desativa no aparelho se outro rosto for detectado. O token dentro do app é vinculado ao hardware.",
           citations: [
             {
               url: "https://www.c6bank.com.br/blog/6-recursos-de-seguranca-que-o-c6-bank-usa-para-proteger-o-cliente",
@@ -1064,6 +1184,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "TED R$ 4.00 and basic card annuity R$ 98.00 in the registry; most everyday items free.",
+          summaryPtBr:
+            "TED de R$ 4,00 e anuidade do cartão básico de R$ 98,00 no cadastro. A maior parte dos itens do dia a dia é gratuita.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/31872495.asp?idpai=tarifa&frame=1",
@@ -1080,6 +1202,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Card annuity waiver tied to R$ 50,000 in C6 CDBs; daily-liquidity CDB redeems only on business days 07:30 to 19:00, credited within 24 business hours.",
+          summaryPtBr:
+            "A isenção da anuidade do cartão depende de R$ 50.000 em CDBs do C6. O CDB com liquidez diária só é resgatado em dias úteis, das 7h30 às 19h, com crédito em até 24 horas úteis.",
           citations: [
             {
               url: "https://seucreditodigital.com.br/c6-bank-aumenta-remuneracao-do-cdb-liquidez-diaria-confira-quanto/",
@@ -1095,6 +1219,8 @@ export const BANK_PROFILES_DATASET = {
           score: 72,
           evidence:
             "Reclame Aqui: 7.2/10, 76.8% resolution and 59.6% would do business again (January to June 2026).",
+          summaryPtBr:
+            "Reclame Aqui: 7,2/10, 76,8% de solução e 59,6% voltariam a fazer negócio (janeiro a junho de 2026).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/c6-bank/",
@@ -1111,6 +1237,8 @@ export const BANK_PROFILES_DATASET = {
           score: 65,
           evidence:
             "C6 has no joint account, as its own blog states, and instead offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder.",
+          summaryPtBr:
+            "Como diz o próprio blog, o C6 não tem conta conjunta. Oferece no lugar a Conta Compartilhada: o titular convida outro cliente do C6 como procurador, que movimenta a conta de forma independente, com o próprio login, sem se tornar cotitular.",
           citations: [
             {
               url: "https://ajuda.c6bank.com.br/s/article/O-que-%C3%A9-conta-compartilhada",
@@ -1132,6 +1260,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "BTG Black: 2.2 points per US$ or 1% cashback, LoungeKey, reduced IOF abroad; annuity waived only above R$ 120,000 invested or R$ 10,000 invested plus R$ 1,000 monthly spend.",
+          summaryPtBr:
+            "BTG Black: 2,2 pontos por US$ ou 1% de cashback, LoungeKey e IOF reduzido no exterior. A anuidade só é isenta acima de R$ 120.000 investidos ou com R$ 10.000 investidos mais R$ 1.000 de gastos por mês.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-black-btg-pactual/",
@@ -1153,6 +1283,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Investment bank at the core; its app lists 1,000+ products (not checked against a BTG page).",
+          summaryPtBr:
+            "Banco de investimentos no centro do negócio. O app lista mais de 1.000 produtos (não conferido em página do BTG).",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.btg.pactual.digital.mobile",
@@ -1167,11 +1299,15 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "Only one search snippet (4.7 App Store, 4.6 Google Play) and BTG splits across several apps.",
+          summaryPtBr:
+            "Não há evidência suficiente. Há só um trecho de busca (4,7 na App Store, 4,6 no Google Play), e o BTG se divide em vários apps.",
           reviewedAt: "2026-09-09",
         },
         security: {
           status: "insufficient-evidence",
           reason: "No citable source was found; the research left this criterion unscored.",
+          summaryPtBr:
+            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -1179,6 +1315,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Every item BTG reports to the Central Bank registry is R$ 0.00 (account opening, statements, TED, internal transfers) except an administrative cheque at R$ 40.00; it lists no packages or card annuity.",
+          summaryPtBr:
+            "Todos os itens que o BTG informa ao cadastro do Banco Central são R$ 0,00 (abertura de conta, extratos, TED, transferências internas), exceto um cheque administrativo a R$ 40,00. Não lista pacotes nem anuidade de cartão.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/30306294.asp?idpai=tarifa&frame=1",
@@ -1195,6 +1333,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Card annuity waiver needs R$ 120,000 invested, the steepest asset pull among the large banks. Pix limit and closure friction were not researched.",
+          summaryPtBr:
+            "A isenção da anuidade do cartão exige R$ 120.000 investidos, a maior exigência de patrimônio entre os grandes bancos. Limite do Pix e dificuldade para encerrar a conta não foram pesquisados.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-black-btg-pactual/",
@@ -1210,6 +1350,8 @@ export const BANK_PROFILES_DATASET = {
           score: 74,
           evidence:
             "Reclame Aqui is split by entity: BTG+ banking 7.39/10 (87.6% resolution), BTG Pactual Investimentos 8.6/10 (90.9% resolution).",
+          summaryPtBr:
+            "O Reclame Aqui separa por empresa: BTG+ banking 7,39/10 (87,6% de solução) e BTG Pactual Investimentos 8,6/10 (90,9% de solução).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/btg-mais/",
@@ -1233,6 +1375,8 @@ export const BANK_PROFILES_DATASET = {
           score: 65,
           evidence:
             "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead: the holder invites one other BTG client as a representative who switches into the account from their own login with full access except Investments and Financing, without co-ownership.",
+          summaryPtBr:
+            "O FAQ do BTG Pactual Banking diz que conta corrente conjunta 'não é possível' e oferece a Conta Compartilhada: o titular convida outro cliente do BTG como representante, que entra na conta com o próprio login e tem acesso total, exceto a Investimentos e Financiamentos, sem ser cotitular.",
           citations: [
             {
               url: "https://banking.btgpactual.com/services/api/faq",
@@ -1254,6 +1398,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "XP Visa Infinite: permanent zero annuity, DragonPass, Investback up to 1% of spend, points for miles; full benefits need R$ 50,000 invested or R$ 3,000 monthly spend.",
+          summaryPtBr:
+            "XP Visa Infinite: anuidade zero permanente, DragonPass, Investback de até 1% dos gastos e pontos para milhas. Os benefícios completos exigem R$ 50.000 investidos ou R$ 3.000 de gastos por mês.",
           citations: [
             {
               url: "https://www.melhorescartoes.com.br/cartao-xp-visa-infinite.html",
@@ -1275,6 +1421,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Full investment platform in one app: fixed income, Tesouro, funds, equities and structured products.",
+          summaryPtBr:
+            "Plataforma de investimentos completa em um só app: renda fixa, Tesouro, fundos, ações e produtos estruturados.",
           citations: [
             {
               url: "https://www.xpi.com.br/",
@@ -1288,11 +1436,15 @@ export const BANK_PROFILES_DATASET = {
         appQuality: {
           status: "insufficient-evidence",
           reason: "No store rating was gathered for the XP app.",
+          summaryPtBr:
+            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app da XP.",
           reviewedAt: "2026-09-09",
         },
         security: {
           status: "insufficient-evidence",
           reason: "XP security features were not researched.",
+          summaryPtBr:
+            "Não há evidência suficiente. Os recursos de segurança da XP não foram pesquisados.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -1300,6 +1452,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "TED R$ 0.00 in the registry, but bundled packages run R$ 36.00 to R$ 82.00 and the card annuity ceiling is R$ 18,000 (premium card). The digital account is free.",
+          summaryPtBr:
+            "TED de R$ 0,00 no cadastro, mas os pacotes custam de R$ 36,00 a R$ 82,00 e o teto da anuidade do cartão é R$ 18.000 (cartão premium). A conta digital é gratuita.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/33264668.asp?idpai=tarifa&frame=1",
@@ -1322,6 +1476,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Card benefits (lounges, Investback rate) depend on R$ 50,000 invested at XP or R$ 3,000 monthly spend; no exit friction found for the account itself.",
+          summaryPtBr:
+            "Os benefícios do cartão (salas VIP, taxa do Investback) dependem de R$ 50.000 investidos na XP ou R$ 3.000 de gastos por mês. Não foi encontrada dificuldade para sair da conta em si.",
           citations: [
             {
               url: "https://guiadoinvestidor.com.br/guias/cartao-xp-visa-infinite/",
@@ -1337,6 +1493,8 @@ export const BANK_PROFILES_DATASET = {
           score: 79,
           evidence:
             "Reclame Aqui: 7.9/10, 83% resolution, 67.6% would do business again; recurring complaint about advisors pushing commissioned products.",
+          summaryPtBr:
+            "Reclame Aqui: 7,9/10, 83% de solução, 67,6% voltariam a fazer negócio. Há uma reclamação recorrente sobre assessores que empurram produtos com comissão.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/xp-investimentos/",
@@ -1353,6 +1511,8 @@ export const BANK_PROFILES_DATASET = {
           score: 30,
           evidence:
             "XP's joint option exists only for the investment account, Conta Conjunta Investimento, linking exactly one co-holder requested through an advisor; the Conta Digital, XP's everyday account, explicitly has no joint option.",
+          summaryPtBr:
+            "A XP só oferece conta conjunta na conta de investimentos, a Conta Conjunta Investimento, que vincula exatamente um cotitular, solicitado por meio de um assessor. A Conta Digital, a conta do dia a dia da XP, não tem opção conjunta, e isso é dito de forma explícita.",
           citations: [
             {
               url: "https://atendimento.xpi.com.br/categoria/minha-conta-e-login/conta-investimento-conjunta",
@@ -1381,6 +1541,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Sicoobcard annuity R$ 90 (Clássico) or R$ 150 (Gold), waivable by spend; Coopera points for products, miles, bill credit or pension.",
+          summaryPtBr:
+            "Anuidade do Sicoobcard de R$ 90 (Clássico) ou R$ 150 (Gold), com isenção possível por gastos. Pontos Coopera para produtos, milhas, crédito na fatura ou previdência.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-sicoob/",
@@ -1402,6 +1564,8 @@ export const BANK_PROFILES_DATASET = {
           score: 40,
           evidence:
             "Poupança and cooperative-issued fixed income; no open investment platform found (not researched exhaustively).",
+          summaryPtBr:
+            "Poupança e renda fixa emitida pelas cooperativas. Não foi encontrada plataforma de investimentos aberta (pesquisa não exaustiva).",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/contas-voce/-/asset_publisher/LMoNGCDcFEXS/content/id/1164656",
@@ -1417,6 +1581,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "App Store rating 4.9; Sicoob reports second place in an app-satisfaction ranking across both stores.",
+          summaryPtBr:
+            "Nota 4,9 na App Store. O Sicoob informa o segundo lugar em um ranking de satisfação de apps nas duas lojas.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/noticias/-/asset_publisher/xAioIawpOI5S/content/id/48620204",
@@ -1430,12 +1596,16 @@ export const BANK_PROFILES_DATASET = {
         security: {
           status: "insufficient-evidence",
           reason: "Sicoob security features were not researched.",
+          summaryPtBr:
+            "Não há evidência suficiente. Os recursos de segurança do Sicoob não foram pesquisados.",
           reviewedAt: "2026-09-09",
         },
         fees: {
           status: "insufficient-evidence",
           reason:
             "Each cooperative publishes its own tariff table. The Central Bank registry entry for Banco Sicoob (packages R$ 4.00 to R$ 24.00, TED R$ 12.00) is not the table a member pays.",
+          summaryPtBr:
+            "Não há evidência suficiente. Cada cooperativa publica a própria tabela de tarifas. O registro do Banco Central para o Banco Sicoob (pacotes de R$ 4,00 a R$ 24,00, TED de R$ 12,00) não é a tabela que o associado paga.",
           reviewedAt: "2026-10-02",
           citations: [
             {
@@ -1452,6 +1622,8 @@ export const BANK_PROFILES_DATASET = {
           score: 20,
           evidence:
             "Membership requires buying capital quotas, built up over up to 17 monthly instalments; capital is returned only after the fiscal-year assessment, and Reclame Aqui has a complaint category for capital not returned after closing the account.",
+          summaryPtBr:
+            "Para se associar, é preciso comprar cotas de capital, pagas em até 17 parcelas mensais. O capital só é devolvido após a apuração do exercício, e o Reclame Aqui tem uma categoria de reclamação para capital não devolvido após o encerramento da conta.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/contas-voce/-/asset_publisher/LMoNGCDcFEXS/content/id/1164397",
@@ -1473,6 +1645,8 @@ export const BANK_PROFILES_DATASET = {
           score: 66,
           evidence:
             "Reclame Aqui: 6.6/10 over the last six months (6.8 overall), 96.3% response, consumer average 5.51/10.",
+          summaryPtBr:
+            "Reclame Aqui: 6,6/10 nos últimos seis meses (6,8 no geral), 96,3% de respostas, nota média dos consumidores 5,51/10.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/sicoob/",
@@ -1489,6 +1663,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "Sicoob lists conta conjunta among its personal account types, and its FAQ describes opening one by both people going in person to a cooperative with proof of residence, income and ID; branch-only opening does not lower this score.",
+          summaryPtBr:
+            "O Sicoob lista a conta conjunta entre os tipos de conta de pessoa física, e o FAQ descreve a abertura com as duas pessoas indo a uma cooperativa, com comprovante de residência, renda e documento de identidade. A abertura só presencial não reduz esta nota.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/faq-contas/-/most_viewed_assets/i44fjP4SVO9M/content/id/1197104",
@@ -1510,6 +1686,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Zero-annuity cards; cashback 0.5% (Platinum) to 1.2% (Black); free additional card for children from 10; Cofrinho balance raises the card limit.",
+          summaryPtBr:
+            "Cartões sem anuidade. Cashback de 0,5% (Platinum) a 1,2% (Black). Cartão adicional gratuito para crianças a partir de 10 anos. O saldo do Cofrinho aumenta o limite do cartão.",
           citations: [
             {
               url: "https://www.serasa.com.br/credito/blog/cartao-picpay/",
@@ -1531,6 +1709,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "CDBs through Cofrinho at 100% CDI or more; no broker-style access to stocks, funds or Tesouro found.",
+          summaryPtBr:
+            "CDBs pelo Cofrinho a 100% do CDI ou mais. Não foi encontrado acesso a ações, fundos ou Tesouro como numa corretora.",
           citations: [
             {
               url: "https://meajuda.picpay.com/hc/pt-br/articles/7141763591571-O-que-%C3%A9-CDB-e-como-ele-funciona-no-PicPay",
@@ -1544,11 +1724,15 @@ export const BANK_PROFILES_DATASET = {
         appQuality: {
           status: "insufficient-evidence",
           reason: "No store rating was gathered for the PicPay app.",
+          summaryPtBr:
+            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app do PicPay.",
           reviewedAt: "2026-09-09",
         },
         security: {
           status: "insufficient-evidence",
           reason: "PicPay security features were not researched.",
+          summaryPtBr:
+            "Não há evidência suficiente. Os recursos de segurança do PicPay não foram pesquisados.",
           reviewedAt: "2026-09-09",
         },
         fees: {
@@ -1556,6 +1740,8 @@ export const BANK_PROFILES_DATASET = {
           score: 100,
           evidence:
             "PicPay Bank declares R$ 0.00 for TED, every standard package and both card annuities; the only charges are registration (R$ 200.00) and two paper-statement items. PicPay's payment institution reports no table.",
+          summaryPtBr:
+            "O PicPay Bank declara R$ 0,00 para TED, todos os pacotes padrão e as duas anuidades de cartão. As únicas cobranças são o cadastro (R$ 200,00) e dois itens de extrato em papel. A instituição de pagamento do PicPay não informa tabela.",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/09516419.asp?idpai=tarifa&frame=1",
@@ -1578,6 +1764,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Night Pix limit R$ 1,000 with 24 to 48 hours to raise and a complaint about refused increases; since July 2025 each deposit must sit through a rolling 30-day cycle to earn the account yield.",
+          summaryPtBr:
+            "Limite do Pix noturno de R$ 1.000, com 24 a 48 horas para aumentar, e há uma reclamação sobre aumentos recusados. Desde julho de 2025, cada depósito precisa ficar parado por um ciclo móvel de 30 dias para render na conta.",
           citations: [
             {
               url: "https://exame.com/invest/minhas-financas/picpay-muda-rendimento-automatico-da-conta-corrente-veja-como-funcionara/",
@@ -1599,6 +1787,8 @@ export const BANK_PROFILES_DATASET = {
           score: 86,
           evidence:
             "Reclame Aqui: 8.6/10 with the RA1000 seal, 97.6% response, 91.3% resolution, 76.6% would do business again; won the 2025 Reclame Aqui award.",
+          summaryPtBr:
+            "Reclame Aqui: 8,6/10 com o selo RA1000, 97,6% de respostas, 91,3% de solução, 76,6% voltariam a fazer negócio. Venceu o prêmio Reclame Aqui 2025.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/picpay/",
@@ -1621,6 +1811,8 @@ export const BANK_PROFILES_DATASET = {
           score: 0,
           evidence:
             "PicPay's help center says PicPay Empresas has no joint-account option and that, as in PF, only one account is allowed per CPF; no PF joint-account product was found.",
+          summaryPtBr:
+            "A central de ajuda do PicPay diz que o PicPay Empresas não tem opção de conta conjunta e que, como na pessoa física, só é permitida uma conta por CPF. Não foi encontrado produto de conta conjunta para pessoa física.",
           citations: [
             {
               url: "https://meajuda.picpay.com/hc/pt-br/articles/42718886279955-Posso-ter-conta-conjunta-PJ",
@@ -1642,6 +1834,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Permanent zero annuity with no minimum spend; cashback up to 3% on Mercado Livre, 0.5% elsewhere, paid as Meli Dólar; up to 18 interest-free instalments on Mercado Livre.",
+          summaryPtBr:
+            "Anuidade zero permanente, sem gasto mínimo. Cashback de até 3% no Mercado Livre e de 0,5% nas demais compras, pago em Meli Dólar. Até 18 parcelas sem juros no Mercado Livre.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/cartao-com-cashback",
@@ -1663,6 +1857,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Cofrinho CDB tiers (100%, 120% with Meli+, 140% campaigns); no access to stocks, funds or Tesouro found.",
+          summaryPtBr:
+            "Faixas de CDB no Cofrinho (100%, 120% com Meli+ e 140% em campanhas). Não foi encontrado acesso a ações, fundos ou Tesouro.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/promocao-rendimento-CDB-mercado-pago",
@@ -1676,6 +1872,8 @@ export const BANK_PROFILES_DATASET = {
         appQuality: {
           status: "insufficient-evidence",
           reason: "No store rating was gathered for the Mercado Pago app.",
+          summaryPtBr:
+            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app do Mercado Pago.",
           reviewedAt: "2026-09-09",
         },
         security: {
@@ -1683,6 +1881,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Mandatory 2FA (facial recognition, cross-device QR code, SMS or WhatsApp codes); recurring complaints that 2FA is forced or inconvenient.",
+          summaryPtBr:
+            "2FA obrigatório (reconhecimento facial, QR code entre dispositivos, códigos por SMS ou WhatsApp). Há reclamações recorrentes de que o 2FA é forçado ou incômodo.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/o-que-e-autenticacao-de-dois-fatores",
@@ -1697,6 +1897,8 @@ export const BANK_PROFILES_DATASET = {
           status: "insufficient-evidence",
           reason:
             "Mercado Pago's payment institution reports no tariff table to the Central Bank registry and no full fee schedule was found.",
+          summaryPtBr:
+            "Não há evidência suficiente. A instituição de pagamento do Mercado Pago não informa tabela de tarifas ao cadastro do Banco Central, e não foi encontrada uma tabela completa.",
           reviewedAt: "2026-10-02",
           citations: [
             {
@@ -1712,6 +1914,8 @@ export const BANK_PROFILES_DATASET = {
           score: 60,
           evidence:
             "Night Pix limit R$ 1,000, increases in 24 to 48 hours, decreases immediate. The default account balance is not FGC-covered.",
+          summaryPtBr:
+            "Limite do Pix noturno de R$ 1.000, com aumento em 24 a 48 horas e redução imediata. O saldo padrão da conta não é coberto pelo FGC.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/como-funciona-limite-pix-mercado-pago",
@@ -1727,6 +1931,8 @@ export const BANK_PROFILES_DATASET = {
           score: 80,
           evidence:
             "Reclame Aqui: 8.0/10, 96.8% response, 81.3% resolution, 75.9% would do business again.",
+          summaryPtBr:
+            "Reclame Aqui: 8,0/10, 96,8% de respostas, 81,3% de solução, 75,9% voltariam a fazer negócio.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/mercado-pago/",
@@ -1743,6 +1949,8 @@ export const BANK_PROFILES_DATASET = {
           score: 0,
           evidence:
             "Mercado Pago's own blog presents only alternatives to a joint account (Dividir Gastos for personal expenses, Colaboradores for seller accounts), 'sem o compromisso de um contrato bancário'; it does not open joint accounts for personal customers.",
+          summaryPtBr:
+            "O blog do próprio Mercado Pago apresenta apenas alternativas à conta conjunta (Dividir Gastos para despesas pessoais e Colaboradores para contas de vendedores), 'sem o compromisso de um contrato bancário'. Não abre contas conjuntas para clientes pessoa física.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/como-funciona-conta-conjunta",

@@ -22,7 +22,14 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 
 import { initialActionState } from "@/lib/action-state";
 import type { Database } from "@/platform/db/client";
-import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "./actions";
+import {
+  resetCriteriaWeightsAction,
+  resolveCriterionOverrideAction,
+  saveCriterionOverrideAction,
+  updateComparisonSettingsAction,
+} from "./actions";
+import { getBankDetailPageProps } from "./bank-detail-props";
+import { bankCriterionOverride } from "./schema";
 import { BANK_PROFILES } from "./bank-profiles";
 import { getBanksPageProps } from "./page-props";
 import { t } from "./strings";
@@ -52,6 +59,28 @@ function settingsForm(
   }
   formData.set("candidateCount", String(overrides.candidateCount ?? 3));
   formData.set("proConMinDifference", String(overrides.proConMinDifference ?? 10));
+  return formData;
+}
+
+function reviewedAtOf(institutionId: string, criterion: string): string {
+  const reviewedAt = BANK_PROFILES.find((profile) => profile.institutionId === institutionId)
+    ?.criteria[criterion as keyof (typeof BANK_PROFILES)[number]["criteria"]].reviewedAt;
+  if (reviewedAt === undefined) throw new Error(`no profile for ${institutionId}`);
+  return reviewedAt;
+}
+
+function overrideForm(fields: {
+  institutionId: string;
+  criterion: string;
+  score: string;
+}): FormData {
+  const formData = new FormData();
+  formData.set("institutionId", fields.institutionId);
+  formData.set("criterion", fields.criterion);
+  formData.set("seenReviewedAt", reviewedAtOf(fields.institutionId, fields.criterion));
+  formData.set("score", fields.score);
+  formData.set("note", "Conferido no site do banco.");
+  formData.set("sourceUrl", "");
   return formData;
 }
 
@@ -196,6 +225,173 @@ describe("Bancos server boundary (integration)", () => {
           props.reviewed.find((row) => row.institutionId === candidate.institutionId)?.unmetLabel,
         ).toBeNull();
       }
+    });
+  });
+
+  it("keeps an owner's correction to their own household and scores with it", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      signInAs(userA.session);
+
+      const result = await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "nubank", criterion: "jointBanking", score: "0" }),
+      );
+
+      expect(result).toEqual({ status: "success", message: t.override.saved });
+      const detailA = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      const jointA = detailA?.criteria.find((item) => item.criterion === "jointBanking");
+      expect(jointA?.scoreLabel).toBe("0");
+      expect(jointA?.referenceScoreLabel).toBe("65");
+      expect(jointA?.override?.outdatedHint).toBeNull();
+      const detailB = await getBankDetailPageProps(userB.session, "nubank", NOW);
+      expect(
+        detailB?.criteria.find((item) => item.criterion === "jointBanking")?.override,
+      ).toBeNull();
+      expect(detailA?.stats[0]?.value).not.toBe(detailB?.stats[0]?.value);
+
+      const [row] = await db.select().from(bankCriterionOverride);
+      const reference = BANK_PROFILES.find((profile) => profile.institutionId === "nubank");
+      expect(row?.baseReviewedAt).toBe(reference?.criteria.jointBanking.reviewedAt);
+    });
+  });
+
+  it("offers a newer reference review and either drops or keeps the household's correction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      signInAs(userA.session);
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "nubank", criterion: "fees", score: "50" }),
+      );
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "nubank", criterion: "lockIn", score: "20" }),
+      );
+      await db.update(bankCriterionOverride).set({ baseReviewedAt: "2026-01-01" });
+
+      const before = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      const fees = before?.criteria.find((item) => item.criterion === "fees");
+      expect(fees?.override?.outdatedHint).toContain("Tarifas");
+      expect((await getBanksPageProps(userA.session, NOW)).overridesNotice).toContain("Nubank");
+
+      expect(
+        await resolveCriterionOverrideAction(
+          "nubank",
+          "fees",
+          "useReference",
+          reviewedAtOf("nubank", "fees"),
+        ),
+      ).toEqual({
+        status: "success",
+        message: t.override.removed,
+      });
+      expect(
+        await resolveCriterionOverrideAction(
+          "nubank",
+          "lockIn",
+          "keepOwn",
+          reviewedAtOf("nubank", "lockIn"),
+        ),
+      ).toEqual({
+        status: "success",
+        message: t.override.kept,
+      });
+
+      const after = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      expect(after?.criteria.find((item) => item.criterion === "fees")?.override).toBeNull();
+      const lockIn = after?.criteria.find((item) => item.criterion === "lockIn");
+      expect(lockIn?.scoreLabel).toBe("20");
+      expect(lockIn?.override?.outdatedHint).toBeNull();
+      expect((await getBanksPageProps(userA.session, NOW)).overridesNotice).toBeNull();
+    });
+  });
+
+  it("refuses a member's correction and a member's answer to the hint, without writing", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA }) => {
+      signInAs(userA.session);
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "itau", criterion: "fees", score: "10" }),
+      );
+      await joinHousehold(db, userB.id, householdA, "member");
+      const memberSession = { ...userB.session, householdId: householdA };
+      signInAs(memberSession);
+
+      expect(
+        await saveCriterionOverrideAction(
+          initialActionState,
+          overrideForm({ institutionId: "itau", criterion: "fees", score: "99" }),
+        ),
+      ).toEqual({ status: "error", message: t.errors.notAllowed });
+      expect(
+        await resolveCriterionOverrideAction(
+          "itau",
+          "fees",
+          "useReference",
+          reviewedAtOf("itau", "fees"),
+        ),
+      ).toEqual({
+        status: "error",
+        message: t.errors.notAllowed,
+      });
+
+      const rows = await db.select().from(bankCriterionOverride);
+      expect(rows.map((row) => row.score)).toEqual([10]);
+      const detail = await getBankDetailPageProps(memberSession, "itau", NOW);
+      expect(detail?.canManage).toBe(false);
+      expect(detail?.criteria.find((item) => item.criterion === "fees")?.scoreLabel).toBe("10");
+    });
+  });
+
+  it("never touches another household's correction when answering the hint", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      signInAs(userB.session);
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "c6", criterion: "fees", score: "10" }),
+      );
+      signInAs(userA.session);
+
+      await resolveCriterionOverrideAction(
+        "c6",
+        "fees",
+        "useReference",
+        reviewedAtOf("c6", "fees"),
+      );
+
+      expect(await db.select().from(bankCriterionOverride)).toHaveLength(1);
+    });
+  });
+
+  it("has no page for an institution Feudo does not profile", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      expect(await getBankDetailPageProps(userA.session, "banco-inexistente", NOW)).toBeNull();
+    });
+  });
+
+  it("keeps asking when the household answers from a page that showed an older review", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      signInAs(userA.session);
+      await saveCriterionOverrideAction(
+        initialActionState,
+        overrideForm({ institutionId: "nubank", criterion: "fees", score: "50" }),
+      );
+      await db.update(bankCriterionOverride).set({ baseReviewedAt: "2026-01-01" });
+
+      expect(
+        await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2026-02-01"),
+      ).toEqual({ status: "success", message: t.override.kept });
+      expect(
+        await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2999-01-01"),
+      ).toEqual({ status: "success", message: t.override.kept });
+
+      const [row] = await db.select().from(bankCriterionOverride);
+      expect(row?.baseReviewedAt).toBe(reviewedAtOf("nubank", "fees"));
+      await db.update(bankCriterionOverride).set({ baseReviewedAt: "2026-01-01" });
+      await resolveCriterionOverrideAction("nubank", "fees", "keepOwn", "2026-02-01");
+      const detail = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      expect(
+        detail?.criteria.find((item) => item.criterion === "fees")?.override?.outdatedHint,
+      ).not.toBeNull();
     });
   });
 });

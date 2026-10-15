@@ -67,6 +67,7 @@
 | Average fixed cost                          | custo fixo médio                               |                                                                              |
 | Bank profile                                | perfil do banco                                | scores "nota de 0 a 100"                                                     |
 | Insufficient evidence                       | evidência insuficiente                         | a criterion with no citable source; shown without a score                    |
+| Bank data correction                        | correção da casa                               | "Corrigir", "corrigido pela casa"; hint "Usar a do Feudo" / "Manter a nossa" |
 | Bank comparison                             | comparação de bancos                           | full list "Todos os bancos avaliados"; tags "vocês usam", "candidato"        |
 | Joint banking                               | dinheiro a dois                                | "conta conjunta ou conta compartilhada para os dois"                         |
 | Criteria weights                            | pesos dos critérios                            | levels "Não conta" .. "Muito alto", "Essencial", "Obrigatório"               |

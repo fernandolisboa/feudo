@@ -17,6 +17,7 @@ function scored(score: unknown) {
     status: "scored",
     score,
     evidence: "Evidence.",
+    summaryPtBr: "Evidência.",
     citations: [citation],
     reviewedAt: "2026-10-02",
   };
@@ -51,6 +52,7 @@ describe("parseBankProfilesDataset", () => {
     first(raw).criteria.security = {
       status: "insufficient-evidence",
       reason: "No citable source.",
+      summaryPtBr: "Sem fonte citável.",
       reviewedAt: "2026-10-02",
     };
     expect(parseBankProfilesDataset(raw)[0]?.criteria.security.status).toBe(
@@ -73,10 +75,23 @@ describe("parseBankProfilesDataset", () => {
     first(empty).criteria.security = {
       status: "insufficient-evidence",
       reason: "No citable source.",
+      summaryPtBr: "Sem fonte citável.",
       citations: [],
       reviewedAt: "2026-10-02",
     };
     expect(() => parseBankProfilesDataset(empty)).toThrow();
+  });
+
+  it("fails when a criterion has no pt-BR summary for the bank page", () => {
+    const raw = dataset();
+    const withoutSummary: Record<string, unknown> = scored(60);
+    delete withoutSummary.summaryPtBr;
+    first(raw).criteria.fees = withoutSummary;
+    expect(() => parseBankProfilesDataset(raw)).toThrow();
+
+    const blank = dataset();
+    first(blank).criteria.fees = { ...scored(60), summaryPtBr: "  " };
+    expect(() => parseBankProfilesDataset(blank)).toThrow();
   });
 
   it("fails on a score outside 0 to 100 or with decimals", () => {

@@ -59,6 +59,17 @@ export function banksAnalysisFacts(props: BanksPageProps): AnalysisFact[] {
     });
   }
 
+  const corrected = props.reviewed.filter(
+    (row): row is typeof row & { overriddenLabel: string } => row.overriddenLabel !== null,
+  );
+  if (corrected.length > 0) {
+    facts.push({
+      key: "banks.household_corrections",
+      label: strings.corrections,
+      value: corrected.map((row) => `${row.name} (${row.overriddenLabel})`).join("; "),
+    });
+  }
+
   props.currentRows.forEach((row, index) => {
     facts.push({
       key: `banks.current.${String(index + 1)}`,

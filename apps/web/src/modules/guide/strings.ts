@@ -198,6 +198,10 @@ const en = {
           title: "Criteria weights",
           body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the score, and can go back to Feudo's defaults at any time. At least one criterion has to count. Essential and Required both weigh more: together they always carry exactly half the score, however many there are of each. The difference is the gate: Essential (Joint banking's default) only weighs more, while Required also sets a minimum score, and a bank that falls short of it is left out of the candidates entirely, even with a good overall score.",
         },
+        {
+          title: "A bank's page and corrections",
+          body: "Click a bank's name to open its page: the score and place with your weights, the deposit guarantee and, for each criterion, what Feudo found, the sources and the review date. Feudo reviews the banks' data from time to time. If something changed before that, the owner or an admin can use Correct to give a criterion the household's own score, with what changed and, optionally, a link. The correction applies only to your household and counts in its comparison; Feudo's updates never overwrite it. When Feudo reviews that criterion after your correction, the page asks whether to use the new version or keep yours.",
+        },
       ],
     },
     privacy: {
@@ -448,6 +452,10 @@ const ptBR = {
         {
           title: "Pesos dos critérios",
           body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar. Essencial e Obrigatório pesam mais: juntos, eles sempre valem exatamente metade da nota, por mais critérios que sejam dos dois tipos. A diferença está no filtro: o Essencial (o padrão de Dinheiro a dois) só pesa mais, enquanto o Obrigatório também define uma nota mínima, e um banco que fica abaixo dela sai da lista de candidatos, mesmo com uma nota geral boa.",
+        },
+        {
+          title: "Página do banco e correções",
+          body: "Clique no nome de um banco para abrir a página dele: a nota e a posição com os pesos da casa, a garantia dos depósitos e, em cada critério, o que o Feudo encontrou, as fontes e a data da revisão. O Feudo revisa os dados dos bancos de tempos em tempos. Se algo mudou antes disso, o responsável ou um administrador pode usar Corrigir para dar ao critério uma nota da casa, com o que mudou e, se quiser, um link. A correção vale só para a sua casa e conta na comparação dela; as atualizações do Feudo nunca a sobrescrevem. Quando o Feudo revisar esse critério depois da correção, a página pergunta se vocês querem usar a versão nova ou manter a de vocês.",
         },
       ],
     },

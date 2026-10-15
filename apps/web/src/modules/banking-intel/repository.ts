@@ -1,13 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
-import { bankCriteriaWeights } from "./schema";
+import { bankCriteriaWeights, bankCriterionOverride } from "./schema";
 import {
   isReadableComparisonOptions,
   parseStoredComparisonOptions,
+  storedOverrideSchema,
   storedWeightLevelsSchema,
+  type OverrideTarget,
   type StoredComparisonOptions,
+  type StoredOverride,
   type StoredWeightLevels,
 } from "./validation";
 
@@ -79,6 +82,89 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       await db
         .delete(bankCriteriaWeights)
         .where(eq(bankCriteriaWeights.householdId, scope.householdId));
+    },
+  };
+}
+
+export type OverrideWrite = OverrideTarget & {
+  score: number;
+  note: string;
+  sourceUrl: string | null;
+  baseReviewedAt: string;
+};
+
+// Every method is bound to the household taken from the session (ADR-0001):
+// none accepts a household id.
+export function createCriterionOverridesRepository(scope: HouseholdScope) {
+  const ofTarget = (target: OverrideTarget) =>
+    and(
+      eq(bankCriterionOverride.householdId, scope.householdId),
+      eq(bankCriterionOverride.institutionId, target.institutionId),
+      eq(bankCriterionOverride.criterion, target.criterion),
+    );
+
+  return {
+    async list(db: Database): Promise<{ overrides: StoredOverride[]; skipped: number }> {
+      const rows = await db
+        .select({
+          institutionId: bankCriterionOverride.institutionId,
+          criterion: bankCriterionOverride.criterion,
+          score: bankCriterionOverride.score,
+          note: bankCriterionOverride.note,
+          sourceUrl: bankCriterionOverride.sourceUrl,
+          baseReviewedAt: bankCriterionOverride.baseReviewedAt,
+          updatedAt: bankCriterionOverride.updatedAt,
+        })
+        .from(bankCriterionOverride)
+        .where(eq(bankCriterionOverride.householdId, scope.householdId))
+        .orderBy(bankCriterionOverride.institutionId, bankCriterionOverride.criterion);
+      const overrides: StoredOverride[] = [];
+      for (const row of rows) {
+        const parsed = storedOverrideSchema.safeParse(row);
+        if (parsed.success) overrides.push(parsed.data);
+      }
+      return { overrides, skipped: rows.length - overrides.length };
+    },
+
+    async save(db: Database, override: OverrideWrite): Promise<void> {
+      const values = {
+        score: override.score,
+        note: override.note,
+        sourceUrl: override.sourceUrl,
+        baseReviewedAt: override.baseReviewedAt,
+      };
+      await db
+        .insert(bankCriterionOverride)
+        .values({
+          householdId: scope.householdId,
+          institutionId: override.institutionId,
+          criterion: override.criterion,
+          ...values,
+        })
+        .onConflictDoUpdate({
+          target: [
+            bankCriterionOverride.householdId,
+            bankCriterionOverride.institutionId,
+            bankCriterionOverride.criterion,
+          ],
+          set: { ...values, updatedAt: new Date() },
+        });
+    },
+
+    async remove(db: Database, target: OverrideTarget): Promise<void> {
+      await db.delete(bankCriterionOverride).where(ofTarget(target));
+    },
+
+    // Moves only the reference date the override answers to, so keeping the
+    // household's value after a reference update silences the hint until the
+    // next one; the household's score, note and date are untouched.
+    async rebase(db: Database, target: OverrideTarget, baseReviewedAt: string): Promise<boolean> {
+      const updated = await db
+        .update(bankCriterionOverride)
+        .set({ baseReviewedAt })
+        .where(ofTarget(target))
+        .returning({ criterion: bankCriterionOverride.criterion });
+      return updated.length > 0;
     },
   };
 }

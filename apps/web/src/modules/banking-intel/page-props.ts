@@ -1,9 +1,11 @@
 import {
+  applyScoreOverrides,
   BANK_PROFILE_CRITERIA,
   compareBanks,
   criterionShares,
   effectiveWeights,
   localDateOf,
+  referenceRevisedSinceOverride,
   type BankCandidate,
   type BankComparison,
   type BankProfileCriterion,
@@ -28,10 +30,17 @@ import {
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
-import { BANK_PROFILES } from "./bank-profiles";
+import { BANK_PROFILES, referenceProfileOf } from "./bank-profiles";
 import { levelLabel } from "./level-label";
-import { getHouseholdCriteriaWeights, getHouseholdInstitutions } from "./service";
+import {
+  getHouseholdCriteriaWeights,
+  getHouseholdInstitutions,
+  getHouseholdOverrides,
+  type HouseholdComparisonSettings,
+  type HouseholdInstitutions,
+} from "./service";
 import { t } from "./strings";
+import type { StoredOverride } from "./validation";
 
 export type CriterionWeightView = {
   criterion: BankProfileCriterion;
@@ -61,9 +70,11 @@ export type CurrentBankRow = {
 
 export type ReviewedBankRow = {
   institutionId: string;
+  href: string;
   positionLabel: string;
   name: string;
   tag: string | null;
+  overriddenLabel: string | null;
   unmetLabel: string | null;
   scoreLabel: string;
   review: ReviewView;
@@ -71,6 +82,7 @@ export type ReviewedBankRow = {
 
 export type CandidateView = {
   institutionId: string;
+  href: string;
   rankLabel: string;
   name: string;
   scoreLabel: string;
@@ -92,23 +104,28 @@ export type BanksPageProps = {
   currentRows: CurrentBankRow[];
   baselineNotice: string | null;
   unrecognizedNotice: string | null;
+  overridesNotice: string | null;
   candidates: CandidateView[];
   reviewed: ReviewedBankRow[];
 };
+
+export function bankHref(institutionId: string): string {
+  return `/bancos/${institutionId}`;
+}
 
 function institutionName(institutionId: string): string {
   return institutionById(institutionId)?.name ?? institutionId;
 }
 
-function criterionLabel(criterion: BankProfileCriterion): string {
+export function criterionLabel(criterion: BankProfileCriterion): string {
   return t.criteria[criterion].label;
 }
 
-function scoreLabel(score: number | null): string {
+export function scoreLabel(score: number | null): string {
   return score === null ? t.candidates.noScore : String(score);
 }
 
-function reviewView(reviewedAt: string, today: string): ReviewView {
+export function reviewView(reviewedAt: string, today: string): ReviewView {
   return {
     label: interpolate(t.candidates.reviewedAt, "{date}", formatIsoDate(reviewedAt)),
     stale: isStale(reviewedAt, today),
@@ -127,7 +144,10 @@ function comparisonLine(item: CriterionComparison): string {
   });
 }
 
-function weightViews(levels: WeightLevels, options: ComparisonSettings): CriterionWeightView[] {
+export function weightViews(
+  levels: WeightLevels,
+  options: ComparisonSettings,
+): CriterionWeightView[] {
   const shares = criterionShares(effectiveWeights(levels));
   return BANK_PROFILE_CRITERIA.map((criterion) => {
     const level = levels[criterion];
@@ -145,7 +165,7 @@ function weightViews(levels: WeightLevels, options: ComparisonSettings): Criteri
   });
 }
 
-function unmetLabel(unmetRequirements: readonly BankProfileCriterion[]): string | null {
+export function unmetLabel(unmetRequirements: readonly BankProfileCriterion[]): string | null {
   return unmetRequirements.length === 0
     ? null
     : interpolate(t.reviewed.unmet, "{criteria}", unmetRequirements.map(criterionLabel).join(", "));
@@ -160,21 +180,46 @@ function currentRow(score: BankScore, today: string): CurrentBankRow {
   };
 }
 
-function reviewedRows(comparison: BankComparison, today: string): ReviewedBankRow[] {
-  const currentIds = new Set(comparison.current.map((score) => score.institutionId));
-  const candidateIds = new Set(comparison.candidates.map((score) => score.institutionId));
-  return comparison.reviewed.map((score, index) => ({
+export function positionLabel(comparison: BankComparison, institutionId: string): string {
+  const index = comparison.reviewed.findIndex((score) => score.institutionId === institutionId);
+  const score = comparison.reviewed[index];
+  return score === undefined || score.score === null
+    ? t.reviewed.noPosition
+    : interpolate(t.candidates.rank, "{rank}", String(index + 1));
+}
+
+export function bankTag(comparison: BankComparison, institutionId: string): string | null {
+  if (comparison.current.some((score) => score.institutionId === institutionId)) {
+    return t.reviewed.current;
+  }
+  return comparison.candidates.some((score) => score.institutionId === institutionId)
+    ? t.reviewed.candidate
+    : null;
+}
+
+function overriddenLabel(criteria: readonly string[] | undefined): string | null {
+  return criteria === undefined
+    ? null
+    : interpolate(t.reviewed.overridden, "{criteria}", criteria.join(", "));
+}
+
+function reviewedRows(
+  comparison: BankComparison,
+  overrides: readonly StoredOverride[],
+  today: string,
+): ReviewedBankRow[] {
+  const corrected = new Map<string, string[]>();
+  for (const override of overrides) {
+    const labels = corrected.get(override.institutionId) ?? [];
+    corrected.set(override.institutionId, [...labels, criterionLabel(override.criterion)]);
+  }
+  return comparison.reviewed.map((score) => ({
     institutionId: score.institutionId,
-    positionLabel:
-      score.score === null
-        ? t.reviewed.noPosition
-        : interpolate(t.candidates.rank, "{rank}", String(index + 1)),
+    href: bankHref(score.institutionId),
+    positionLabel: positionLabel(comparison, score.institutionId),
     name: institutionName(score.institutionId),
-    tag: currentIds.has(score.institutionId)
-      ? t.reviewed.current
-      : candidateIds.has(score.institutionId)
-        ? t.reviewed.candidate
-        : null,
+    tag: bankTag(comparison, score.institutionId),
+    overriddenLabel: overriddenLabel(corrected.get(score.institutionId)),
     unmetLabel: unmetLabel(score.unmetRequirements),
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
@@ -191,6 +236,7 @@ function candidateView(
   const threshold = String(proConMinDifference);
   return {
     institutionId: candidate.institutionId,
+    href: bankHref(candidate.institutionId),
     rankLabel: interpolate(t.candidates.rank, "{rank}", String(index + 1)),
     name: institutionName(candidate.institutionId),
     scoreLabel: scoreLabel(candidate.score),
@@ -232,26 +278,77 @@ export async function getBanksPageProps(
   });
 }
 
-export async function buildBanksPageProps(
-  scope: HouseholdScope,
-  options: { now: Date; canManage: boolean },
-): Promise<BanksPageProps> {
-  const db = getDb();
-  const { now, canManage } = options;
+function outdatedOverrides(overrides: readonly StoredOverride[]): StoredOverride[] {
+  return overrides.filter((override) => {
+    const reviewedAt = referenceProfileOf(override.institutionId)?.criteria[override.criterion]
+      .reviewedAt;
+    return (
+      reviewedAt !== undefined && referenceRevisedSinceOverride(reviewedAt, override.baseReviewedAt)
+    );
+  });
+}
 
-  const [settings, stored, institutions] = await Promise.all([
+function overridesNotice(overrides: readonly StoredOverride[]): string | null {
+  const outdated = outdatedOverrides(overrides);
+  if (outdated.length === 0) return null;
+  const banks = [...new Set(outdated.map((override) => institutionName(override.institutionId)))];
+  return outdated.length === 1
+    ? interpolate(t.overridesNotice.one, "{banks}", banks.join(", "))
+    : interpolateAll(t.overridesNotice.many, {
+        count: String(outdated.length),
+        banks: banks.join(", "),
+      });
+}
+
+export type HouseholdBankComparison = {
+  today: string;
+  timeZone: string;
+  stored: HouseholdComparisonSettings;
+  institutions: HouseholdInstitutions;
+  overrides: StoredOverride[];
+  comparison: BankComparison;
+};
+
+// The household's comparison runs over the shipped profiles with its own
+// corrections applied (ADR-0006, 2026-10-14), so the Bancos page, a bank's
+// own page and the analyst's facts all see the same scores.
+export async function loadHouseholdBankComparison(
+  scope: HouseholdScope,
+  now: Date,
+): Promise<HouseholdBankComparison> {
+  const db = getDb();
+  const [settings, stored, institutions, overrides] = await Promise.all([
     getHouseholdSettings(scope, db),
     getHouseholdCriteriaWeights(scope, db),
     getHouseholdInstitutions(scope, db),
+    getHouseholdOverrides(scope, db),
   ]);
-  const today = localDateOf(now, settings?.timeZone ?? DEFAULT_TIME_ZONE);
-
   const comparison = compareBanks({
-    profiles: BANK_PROFILES,
+    profiles: applyScoreOverrides(BANK_PROFILES, overrides),
     levels: stored.levels,
     currentInstitutionIds: institutions.institutionIds,
     settings: stored.options,
   });
+  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
+  return {
+    today: localDateOf(now, timeZone),
+    timeZone,
+    stored,
+    institutions,
+    overrides,
+    comparison,
+  };
+}
+
+export async function buildBanksPageProps(
+  scope: HouseholdScope,
+  options: { now: Date; canManage: boolean },
+): Promise<BanksPageProps> {
+  const { canManage } = options;
+  const { today, stored, institutions, overrides, comparison } = await loadHouseholdBankComparison(
+    scope,
+    options.now,
+  );
   const [top] = comparison.candidates;
 
   return {
@@ -283,6 +380,7 @@ export async function buildBanksPageProps(
             "{labels}",
             institutions.unrecognizedLabels.join(", "),
           ),
+    overridesNotice: overridesNotice(overrides),
     candidates: comparison.candidates.map((candidate, index) =>
       candidateView(
         candidate,
@@ -292,6 +390,6 @@ export async function buildBanksPageProps(
         today,
       ),
     ),
-    reviewed: reviewedRows(comparison, today),
+    reviewed: reviewedRows(comparison, overrides, today),
   };
 }

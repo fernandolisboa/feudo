@@ -176,6 +176,8 @@ export {
   PRO_CON_MIN_DIFFERENCE_STEP,
   resolveComparisonSettings,
 } from "./banking-intel/scoring";
+export type { CriterionScoreOverride } from "./banking-intel/overrides";
+export { applyScoreOverrides, referenceRevisedSinceOverride } from "./banking-intel/overrides";
 
 export type {
   LiquidityMark,

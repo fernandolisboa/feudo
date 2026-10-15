@@ -56,9 +56,11 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     ],
     baselineNotice: null,
     unrecognizedNotice: "Não reconhecemos: Conta da Maria.",
+    overridesNotice: null,
     candidates: [
       {
         institutionId: "nubank",
+        href: "/bancos/nubank",
         rankLabel: "1º",
         name: "Nubank",
         scoreLabel: "77",
@@ -71,6 +73,7 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
       },
       {
         institutionId: "c6",
+        href: "/bancos/c6",
         rankLabel: "2º",
         name: "C6 Bank",
         scoreLabel: t.candidates.noScore,
@@ -169,10 +172,12 @@ describe("banksAnalysisFacts", () => {
         reviewed: [
           {
             institutionId: "nubank",
+            href: "/bancos/nubank",
             positionLabel: "4º",
             name: "Nubank",
             tag: null,
             unmetLabel: "não atende: Dinheiro a dois",
+            overriddenLabel: null,
             scoreLabel: "77",
             review: { label: "", stale: false },
           },
@@ -185,6 +190,35 @@ describe("banksAnalysisFacts", () => {
       label: "Bancos que não atendem a um critério obrigatório",
       value: "Nubank (não atende: Dinheiro a dois)",
     });
+  });
+
+  it("tells the analyst which scores the household corrected itself, without the household's note", () => {
+    const facts = banksAnalysisFacts(
+      props({
+        reviewed: [
+          {
+            institutionId: "nubank",
+            href: "/bancos/nubank",
+            positionLabel: "1º",
+            name: "Nubank",
+            tag: "candidato",
+            unmetLabel: null,
+            overriddenLabel: "corrigido pela casa: Dinheiro a dois",
+            scoreLabel: "90",
+            review: { label: "", stale: false },
+          },
+        ],
+      }),
+    );
+
+    expect(facts.find((fact) => fact.key === "banks.household_corrections")).toEqual({
+      key: "banks.household_corrections",
+      label: "Notas corrigidas pela própria casa (não são do Feudo)",
+      value: "Nubank (corrigido pela casa: Dinheiro a dois)",
+    });
+    expect(banksAnalysisFacts(props()).map((fact) => fact.key)).not.toContain(
+      "banks.household_corrections",
+    );
   });
 
   it("omits the required-minimums and unmet-requirements facts when nothing is required", () => {

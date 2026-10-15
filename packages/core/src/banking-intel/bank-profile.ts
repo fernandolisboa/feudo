@@ -11,18 +11,22 @@ import {
   type BankProfileCriterion,
 } from "./criteria";
 
+// evidence and reason are the English review record; summaryPtBr says the
+// same in the shipped locale, for the bank page, and changes with them.
 const criterionSchema = z
   .discriminatedUnion("status", [
     z.object({
       status: z.literal("scored"),
       score: z.int().min(BANK_PROFILE_SCORE_MIN).max(BANK_PROFILE_SCORE_MAX),
       evidence: z.string().trim().min(1),
+      summaryPtBr: z.string().trim().min(1),
       citations: z.array(citationSchema).min(1),
       reviewedAt: isoDateSchema,
     }),
     z.object({
       status: z.literal("insufficient-evidence"),
       reason: z.string().trim().min(1),
+      summaryPtBr: z.string().trim().min(1),
       citations: z.array(citationSchema).min(1).optional(),
       reviewedAt: isoDateSchema,
     }),

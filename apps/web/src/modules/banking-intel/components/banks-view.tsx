@@ -15,6 +15,9 @@ import { CriteriaWeightsEditor } from "./criteria-weights-editor";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
+const BANK_LINK_CLASS =
+  "decoration-border hover:text-brand hover:decoration-current underline underline-offset-4";
+
 const CANDIDATE_GRID_COLS: Record<number, string> = {
   1: "",
   2: "md:grid-cols-2",
@@ -62,7 +65,11 @@ function CandidateCard({ candidate }: { candidate: CandidateView }) {
         <p className="text-muted-foreground text-[11px] tracking-wide uppercase">
           {candidate.rankLabel}
         </p>
-        <h3 className="font-heading text-[18px]">{candidate.name}</h3>
+        <h3 className="font-heading text-[18px]">
+          <Link href={candidate.href} className={BANK_LINK_CLASS}>
+            {candidate.name}
+          </Link>
+        </h3>
         <p className="flex items-baseline gap-1">
           <span className="font-heading text-[26px] tabular-nums">{candidate.scoreLabel}</span>
           <span className="text-muted-foreground text-[13px]">{t.candidates.scoreOf}</span>
@@ -96,6 +103,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
     hasAccounts,
     baselineNotice,
     unrecognizedNotice,
+    overridesNotice,
     candidates,
     reviewed,
     analystNote,
@@ -119,6 +127,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
         </Notice>
       ) : null}
       {unrecognizedNotice ? <Notice>{unrecognizedNotice}</Notice> : null}
+      {overridesNotice ? <Notice>{overridesNotice}</Notice> : null}
 
       <section className="mb-8">
         <SectionHeader
@@ -162,8 +171,13 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
                 </TableCell>
                 <TableCell>
                   <span className="flex flex-wrap items-center gap-2">
-                    {row.name}
+                    <Link href={row.href} className={BANK_LINK_CLASS}>
+                      {row.name}
+                    </Link>
                     {row.tag ? <Badge variant="secondary">{row.tag}</Badge> : null}
+                    {row.overriddenLabel ? (
+                      <Badge variant="outline">{row.overriddenLabel}</Badge>
+                    ) : null}
                     {row.unmetLabel ? <Badge variant="outline">{row.unmetLabel}</Badge> : null}
                   </span>
                 </TableCell>
