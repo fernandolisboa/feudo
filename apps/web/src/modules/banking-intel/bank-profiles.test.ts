@@ -26,11 +26,20 @@ describe("bank profiles dataset", () => {
   });
 
   it("lists criteria whose review is older than the threshold", () => {
-    const profile = BANK_PROFILES[0] as BankProfile;
-    expect(staleCriteria([profile], "2026-10-02")).toEqual([]);
-    const stale = staleCriteria([profile], "2027-04-01");
-    expect(stale.map((entry) => entry.criterion)).toContain("cardBenefits");
-    expect(stale.every((entry) => entry.institutionId === profile.institutionId)).toBe(true);
+    const reference = BANK_PROFILES[0] as BankProfile;
+    const profile: BankProfile = {
+      ...reference,
+      criteria: Object.fromEntries(
+        Object.entries(reference.criteria).map(([criterion, entry]) => [
+          criterion,
+          { ...entry, reviewedAt: criterion === "cardBenefits" ? "2026-01-01" : "2026-06-01" },
+        ]),
+      ) as BankProfile["criteria"],
+    };
+    expect(staleCriteria([profile], "2026-06-29")).toEqual([]);
+    expect(staleCriteria([profile], "2026-07-01")).toEqual([
+      { institutionId: profile.institutionId, criterion: "cardBenefits", reviewedAt: "2026-01-01" },
+    ]);
   });
 
   it("reports stale reference data without failing", () => {

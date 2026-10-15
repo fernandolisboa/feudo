@@ -9,9 +9,9 @@
     "./agents/bank-data-refresh/agent.md": {
       "kind": "agent",
       "id": "agent_01UCEvDQqEp7Mw15XAwY1D5t",
-      "version": "1",
-      "hash": "f0043a40ee024e5570ffc8409a03517f",
-      "remote_hash": "484a4db0276d6267a0487e72221c6b46"
+      "version": "3",
+      "hash": "7eb628cc90308be32200dc6f14a4b62a",
+      "remote_hash": "60cfd1e633ef5defb6fe874796353127"
     },
     "./agents/bank-data-refresh/environment.yaml": {
       "kind": "environment",
