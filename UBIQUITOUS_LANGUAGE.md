@@ -78,4 +78,6 @@
 | Lock-in                                     | aprisionamento                                 | "quanto o banco te prende"; 100 = mais fácil de sair                         |
 | Guided tour                                 | tour                                           | the per-screen walkthrough; "tutoriais" in settings, "Pular tour" to skip    |
 | Analyst reading                             | leitura do analista                            | "Gerar nova leitura"; "Leitura mensal de {mês}"; "Números usados"            |
+| Model family                                | família de modelo                              | Haiku, Sonnet or Opus; chosen per reading kind, never a pinned version       |
+| Household Anthropic key                     | chave da Anthropic da casa                     | "Chave atual: •••• {last4}"; "Nenhuma chave registrada"; owner/admin only    |
 | Financial-data access (audit log)           | acesso a dados financeiros                     | Casa page: "Seus acessos recentes"                                           |
