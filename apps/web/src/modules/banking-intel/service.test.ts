@@ -71,6 +71,34 @@ describe("getHouseholdCriteriaWeights", () => {
     expect(result.isCustom).toBe(true);
   });
 
+  it("is not custom when only the account-type filter was ever saved, with no weights or weights-panel options", async () => {
+    getMock.mockResolvedValue({
+      status: "found",
+      levels: {},
+      options: {
+        status: "found",
+        value: { accountTypeFilter: { jointBanking: "required" } },
+        droppedFields: [],
+      },
+    });
+
+    const result = await getHouseholdCriteriaWeights(scope, db);
+
+    expect(result.isCustom).toBe(false);
+  });
+
+  it("is custom when the weights-panel options were saved, even with no weights of its own", async () => {
+    getMock.mockResolvedValue({
+      status: "found",
+      levels: {},
+      options: { status: "found", value: { candidateCount: 2 }, droppedFields: [] },
+    });
+
+    const result = await getHouseholdCriteriaWeights(scope, db);
+
+    expect(result.isCustom).toBe(true);
+  });
+
   it("warns once for unreadable options, without also reporting dropped fields", async () => {
     getMock.mockResolvedValue({
       status: "found",

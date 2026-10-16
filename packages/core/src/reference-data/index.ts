@@ -7,6 +7,7 @@ export { matchInstitutionByLabel } from "../institutions/match";
 
 export type {
   BankProfile,
+  BankProfileAccountTypeEntry,
   BankProfileCriterionEntry,
   BankProfilesDatasetInput,
 } from "../banking-intel/bank-profile";
