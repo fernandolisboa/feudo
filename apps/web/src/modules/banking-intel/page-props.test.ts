@@ -69,7 +69,7 @@ vi.mock("./bank-profiles", () => ({
 scorable.push(scorableProfile("bank-a", "offered"), scorableProfile("bank-b", "not-offered"));
 full.push(fullProfile("bank-a", "offered"), fullProfile("bank-b", "not-offered"));
 
-import { buildBanksPageProps } from "./page-props";
+import { accountTypeFilterSummary, buildBanksPageProps } from "./page-props";
 import { t } from "./strings";
 
 function accountTypeOverride(institutionId: string, offered: boolean, baseReviewedAt: string) {
@@ -157,6 +157,18 @@ describe("buildBanksPageProps", () => {
 
     expect(props.accountTypeFilterSummary).toBe(
       "Mostrando 1 de 2 bancos: os que têm conta conjunta.",
+    );
+  });
+
+  it("joins three or more required account types with Portuguese list grammar (comma, then 'e' before the last)", () => {
+    const summary = accountTypeFilterSummary(
+      { jointBanking: "required", jointOnly: true, jointInvestment: "required", mei: "required" },
+      13,
+      1,
+    );
+
+    expect(summary).toBe(
+      "Mostrando 1 de 13 bancos: os que têm conta conjunta, conta de investimento conjunta e conta MEI.",
     );
   });
 

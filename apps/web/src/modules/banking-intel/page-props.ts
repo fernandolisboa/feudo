@@ -186,6 +186,16 @@ export function unmetLabel(unmetRequirements: readonly AccountTypeRequirement[])
       );
 }
 
+// Brazilian Portuguese list grammar: a comma between every item but the
+// last, "e" only before the last one ("A, B e C"), not "e" repeated between
+// every pair.
+function joinWithAnd(items: readonly string[]): string {
+  if (items.length <= 1) return items.join("");
+  const rest = items.slice(0, -1).join(", ");
+  const last = items[items.length - 1] ?? "";
+  return `${rest} ${t.accountTypes.summary.and} ${last}`;
+}
+
 // What the household's filter requires, in plain words, for the summary
 // sentence above the candidates ("Mostrando 9 de 13 bancos: os que têm
 // conta conjunta e conta MEI.") and for the analyst's facts.
@@ -198,7 +208,7 @@ export function accountTypeFilterSummary(
   if (requirements.length === 0) {
     return interpolate(t.accountTypes.summary.all, "{total}", String(total));
   }
-  const types = requirements.map(requirementLabel).join(` ${t.accountTypes.summary.and} `);
+  const types = joinWithAnd(requirements.map(requirementLabel));
   return interpolateAll(t.accountTypes.summary.filtered, {
     meeting: String(meeting),
     total: String(total),

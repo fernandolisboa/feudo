@@ -5,6 +5,7 @@ import type { AccountTypeFilter } from "@feudo/core";
 
 import { Checkbox } from "@/ui/checkbox";
 import { Label } from "@/ui/label";
+import { SectionHeader } from "@/ui/section-header";
 import { ToggleGroup, ToggleGroupItem } from "@/ui/toggle-group";
 import { initialActionState } from "@/lib/action-state";
 import { useActionInTransition } from "@/lib/use-action-in-transition";
@@ -77,8 +78,8 @@ export function AccountTypeFilterPanel({ filter }: { filter: AccountTypeFilter }
   }
 
   return (
-    <section className="mb-6 flex flex-col gap-3">
-      <h2 className="font-heading text-[18px]">{t.accountTypes.panelTitle}</h2>
+    <section className="mb-6">
+      <SectionHeader title={t.accountTypes.panelTitle} />
       <ul className="divide-border flex flex-col divide-y border-y">
         {ROWS.map((row) => (
           <li key={row.key} className="flex flex-col gap-2 py-2">
@@ -112,7 +113,7 @@ export function AccountTypeFilterPanel({ filter }: { filter: AccountTypeFilter }
         ))}
       </ul>
       {errorMessage ? (
-        <span role="alert" className="text-destructive text-[13px]">
+        <span role="alert" className="text-destructive mt-3 block text-[13px]">
           {errorMessage}
         </span>
       ) : null}
@@ -122,8 +123,8 @@ export function AccountTypeFilterPanel({ filter }: { filter: AccountTypeFilter }
 
 export function AccountTypeFilterReadOnly({ filter }: { filter: AccountTypeFilter }) {
   return (
-    <section className="mb-6 flex flex-col gap-3">
-      <h2 className="font-heading text-[18px]">{t.accountTypes.panelTitle}</h2>
+    <section className="mb-6">
+      <SectionHeader title={t.accountTypes.panelTitle} />
       <ul className="divide-border flex flex-col divide-y border-y">
         {ROWS.map((row) => (
           <li key={row.key} className="flex flex-col gap-1 py-2">
@@ -146,7 +147,7 @@ export function AccountTypeFilterReadOnly({ filter }: { filter: AccountTypeFilte
           </li>
         ))}
       </ul>
-      <p className="text-muted-foreground text-[13px]">{t.accountTypes.readOnly}</p>
+      <p className="text-muted-foreground mt-3 text-[13px]">{t.accountTypes.readOnly}</p>
     </section>
   );
 }

@@ -340,7 +340,10 @@ const ptBR = {
     types: {
       joint: { label: "Conta conjunta", shortLabel: "conjunta" },
       shared: { label: "Conta compartilhada", shortLabel: "compartilhada" },
-      jointInvestment: { label: "Investimento em conjunto", shortLabel: "investimento conjunto" },
+      jointInvestment: {
+        label: "Conta de investimento conjunta",
+        shortLabel: "investimento conjunto",
+      },
       mei: { label: "Conta MEI", shortLabel: "MEI" },
     },
     status: {
@@ -351,13 +354,13 @@ const ptBR = {
     requirementLabel: {
       jointOrShared: "conta conjunta ou conta compartilhada",
       joint: "conta conjunta",
-      jointInvestment: "investimentos em conjunto",
+      jointInvestment: "conta de investimento conjunta",
       mei: "conta MEI",
     },
     unmetLabel: {
       jointOrShared: "conta conjunta ou compartilhada",
       joint: "conta conjunta",
-      jointInvestment: "investimentos em conjunto",
+      jointInvestment: "conta de investimento conjunta",
       mei: "conta MEI",
     },
     summary: {
