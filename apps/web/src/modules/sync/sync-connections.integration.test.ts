@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
 
-import { encryptSecret } from "@/platform/crypto";
+import { encryptSecret, PROVIDER_CREDENTIALS_PURPOSE } from "@/platform/crypto";
 import { createDocumentHasher } from "./document-hash";
 import { FAKE_INVALID_CLIENT_SECRET, FAKE_ITEM_BANCO_FIXTURE } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";
@@ -60,7 +60,11 @@ async function saveCredentials(
 ): Promise<void> {
   await createSyncUserRepository(user.scope).saveCredential(db, {
     provider: "pluggy",
-    ciphertext: encryptSecret(JSON.stringify({ clientId: "id", clientSecret }), ENCRYPTION_KEY),
+    ciphertext: encryptSecret(
+      JSON.stringify({ clientId: "id", clientSecret }),
+      ENCRYPTION_KEY,
+      PROVIDER_CREDENTIALS_PURPOSE,
+    ),
     validatedAt: NOW,
   });
 }

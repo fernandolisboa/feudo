@@ -5,9 +5,18 @@ const ENVELOPE_VERSION = "v1";
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12;
 const KEY_BYTES = 32;
-const HKDF_INFO = "feudo:provider-credentials";
 const KEY_ID_PREFIX = "feudo:key-id:";
 const KEY_ID_LENGTH = 8;
+
+// Every caller names its own purpose (HKDF's `info`), so the same
+// ENCRYPTION_KEY derives a different AES key per use: a ciphertext meant for
+// one purpose fails to decrypt (an auth-tag mismatch, read as
+// MalformedCiphertextError) if read back under another, even with the right
+// key and no tampering. Defined here, not at each call site, so every
+// purpose in use is visible in one place and two slices can never collide by
+// picking the same label without meaning to.
+export const PROVIDER_CREDENTIALS_PURPOSE = "feudo:provider-credentials";
+export const HOUSEHOLD_AI_KEY_PURPOSE = "feudo:household-ai-key";
 
 export class EncryptionKeyMismatchError extends Error {
   readonly ciphertextKeyId: string;
@@ -36,13 +45,13 @@ export function keyIdFor(encryptionKey: string): string {
     .slice(0, KEY_ID_LENGTH);
 }
 
-function deriveAesKey(encryptionKey: string): Buffer {
-  return Buffer.from(hkdfSync("sha256", encryptionKey, "", HKDF_INFO, KEY_BYTES));
+function deriveAesKey(encryptionKey: string, purpose: string): Buffer {
+  return Buffer.from(hkdfSync("sha256", encryptionKey, "", purpose, KEY_BYTES));
 }
 
-export function encryptSecret(plaintext: string, encryptionKey: string): string {
+export function encryptSecret(plaintext: string, encryptionKey: string, purpose: string): string {
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv(ALGORITHM, deriveAesKey(encryptionKey), iv);
+  const cipher = createCipheriv(ALGORITHM, deriveAesKey(encryptionKey, purpose), iv);
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [
@@ -55,7 +64,7 @@ export function encryptSecret(plaintext: string, encryptionKey: string): string 
   ].join(":");
 }
 
-export function decryptSecret(envelope: string, encryptionKey: string): string {
+export function decryptSecret(envelope: string, encryptionKey: string, purpose: string): string {
   const parts = envelope.split(":");
   if (parts.length !== 6 || parts[0] !== ENVELOPE_PREFIX || parts[1] !== ENVELOPE_VERSION) {
     throw new MalformedCiphertextError();
@@ -75,7 +84,7 @@ export function decryptSecret(envelope: string, encryptionKey: string): string {
   try {
     const decipher = createDecipheriv(
       ALGORITHM,
-      deriveAesKey(encryptionKey),
+      deriveAesKey(encryptionKey, purpose),
       Buffer.from(ivEncoded, "base64url"),
     );
     decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
