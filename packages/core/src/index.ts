@@ -137,18 +137,34 @@ export {
   BANK_PROFILE_SCORE_MIN,
 } from "./banking-intel/criteria";
 
-export type { CriteriaWeights, CriterionWeightLevel, WeightLevels } from "./banking-intel/weights";
+export type {
+  CriteriaWeights,
+  CriterionNumericWeight,
+  WeightLevels,
+} from "./banking-intel/weights";
 export {
   criterionShares,
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
   DEFAULT_WEIGHT_LEVELS,
-  effectiveWeights,
   hasActiveLevel,
-  isValidWeightLevel,
-  requiredCriteriaOf,
+  isValidCriterionWeight,
   resolveCriteriaWeights,
 } from "./banking-intel/weights";
+export type {
+  AccountType,
+  AccountTypeFilter,
+  AccountTypeRequirement,
+  AccountTypeStatus,
+  StoredAccountTypeFilter,
+} from "./banking-intel/account-types";
+export {
+  ACCOUNT_TYPES,
+  accountTypeRequirementsOf,
+  DEFAULT_ACCOUNT_TYPE_FILTER,
+  resolveAccountTypeFilter,
+  unmetAccountTypeRequirements,
+} from "./banking-intel/account-types";
 export type {
   BankCandidate,
   BankComparison,
@@ -163,21 +179,20 @@ export {
   compareBanks,
   DEFAULT_CANDIDATE_COUNT,
   DEFAULT_COMPARISON_SETTINGS,
-  DEFAULT_MINIMUM_SCORES,
   DEFAULT_PRO_CON_MIN_DIFFERENCE,
   isValidCandidateCount,
-  isValidMinimumScore,
   isValidProConMinDifference,
-  MINIMUM_SCORE_MAX,
-  MINIMUM_SCORE_MIN,
-  MINIMUM_SCORE_STEP,
   PRO_CON_MIN_DIFFERENCE_MAX,
   PRO_CON_MIN_DIFFERENCE_MIN,
   PRO_CON_MIN_DIFFERENCE_STEP,
   resolveComparisonSettings,
 } from "./banking-intel/scoring";
-export type { CriterionScoreOverride } from "./banking-intel/overrides";
-export { applyScoreOverrides, referenceRevisedSinceOverride } from "./banking-intel/overrides";
+export type { AccountTypeOverride, CriterionScoreOverride } from "./banking-intel/overrides";
+export {
+  applyAccountTypeOverrides,
+  applyScoreOverrides,
+  referenceRevisedSinceOverride,
+} from "./banking-intel/overrides";
 
 export type {
   LiquidityMark,

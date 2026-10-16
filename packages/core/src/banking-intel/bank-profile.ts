@@ -4,6 +4,7 @@ import { institutionIdSchema } from "../institutions/institution";
 import { INSTITUTIONS } from "../institutions/institutions";
 import { citationSchema, isoDateSchema, reviewPredatesEvidence } from "../reference-data/review";
 
+import { ACCOUNT_TYPES, type AccountType } from "./account-types";
 import {
   BANK_PROFILE_CRITERIA,
   BANK_PROFILE_SCORE_MAX,
@@ -40,9 +41,51 @@ const criteriaShape = Object.fromEntries(
   BANK_PROFILE_CRITERIA.map((criterion) => [criterion, criterionSchema]),
 ) as Record<BankProfileCriterion, typeof criterionSchema>;
 
+// Account types (ADR-0006 amendment 2026-10-16): a household filter, not a
+// quality score, so each entry carries no score, only whether the bank
+// offers the type. evidence/summaryPtBr/citations/reviewedAt follow the
+// same review-record rules as a criterion; conditionPtBr is an optional
+// short chip for a condition worth flagging on the bank page.
+const accountTypeEntrySchema = z
+  .discriminatedUnion("status", [
+    z.object({
+      status: z.literal("offered"),
+      conditionPtBr: z.string().trim().min(1).optional(),
+      evidence: z.string().trim().min(1),
+      summaryPtBr: z.string().trim().min(1),
+      citations: z.array(citationSchema).min(1),
+      reviewedAt: isoDateSchema,
+    }),
+    z.object({
+      status: z.literal("not-offered"),
+      conditionPtBr: z.string().trim().min(1).optional(),
+      evidence: z.string().trim().min(1),
+      summaryPtBr: z.string().trim().min(1),
+      citations: z.array(citationSchema).min(1),
+      reviewedAt: isoDateSchema,
+    }),
+    z.object({
+      status: z.literal("not-found"),
+      conditionPtBr: z.string().trim().min(1).optional(),
+      evidence: z.string().trim().min(1),
+      summaryPtBr: z.string().trim().min(1),
+      citations: z.array(citationSchema).min(1).optional(),
+      reviewedAt: isoDateSchema,
+    }),
+  ])
+  .refine((entry) => !reviewPredatesEvidence(entry.reviewedAt, entry.citations), {
+    message: "reviewedAt is earlier than a citation's checkedAt",
+    path: ["reviewedAt"],
+  });
+
+const accountTypesShape = Object.fromEntries(
+  ACCOUNT_TYPES.map((type) => [type, accountTypeEntrySchema]),
+) as Record<AccountType, typeof accountTypeEntrySchema>;
+
 export const bankProfileSchema = z.object({
   institutionId: institutionIdSchema,
   criteria: z.strictObject(criteriaShape),
+  accountTypes: z.strictObject(accountTypesShape),
 });
 
 export const bankProfilesDatasetSchema = z
@@ -84,6 +127,7 @@ export const bankProfilesDatasetSchema = z
 
 export type BankProfile = z.infer<typeof bankProfileSchema>;
 export type BankProfileCriterionEntry = BankProfile["criteria"][BankProfileCriterion];
+export type BankProfileAccountTypeEntry = BankProfile["accountTypes"][AccountType];
 export type BankProfilesDatasetInput = z.input<typeof bankProfilesDatasetSchema>;
 
 export function parseBankProfilesDataset(raw: unknown): readonly BankProfile[] {

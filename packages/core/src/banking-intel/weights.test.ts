@@ -7,13 +7,10 @@ import {
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
   DEFAULT_WEIGHT_LEVELS,
-  effectiveWeights,
   hasActiveCriterion,
   hasActiveLevel,
   InvalidCriteriaWeightsError,
   isValidCriterionWeight,
-  isValidWeightLevel,
-  requiredCriteriaOf,
   resolveCriteriaWeights,
   type CriteriaWeights,
   type WeightLevels,
@@ -23,12 +20,9 @@ const ALL_ZERO = Object.fromEntries(
   BANK_PROFILE_CRITERIA.map((criterion) => [criterion, 0]),
 ) as Record<(typeof BANK_PROFILE_CRITERIA)[number], number>;
 
-const ALL_ZERO_LEVELS = ALL_ZERO as unknown as WeightLevels;
-
 describe("criteria weight levels", () => {
-  it("ships a valid default for every criterion, jointBanking essential", () => {
+  it("ships a valid default for every criterion", () => {
     expect(Object.keys(DEFAULT_WEIGHT_LEVELS).sort()).toEqual([...BANK_PROFILE_CRITERIA].sort());
-    expect(DEFAULT_WEIGHT_LEVELS.jointBanking).toBe("essential");
     expect(hasActiveLevel(DEFAULT_WEIGHT_LEVELS)).toBe(true);
   });
 
@@ -39,25 +33,14 @@ describe("criteria weight levels", () => {
     expect(isValidCriterionWeight(CRITERION_WEIGHT_MAX + 1)).toBe(false);
     expect(isValidCriterionWeight(2.5)).toBe(false);
     expect(isValidCriterionWeight(Number.NaN)).toBe(false);
+    expect(isValidCriterionWeight("essential")).toBe(false);
+    expect(isValidCriterionWeight(null)).toBe(false);
+    expect(isValidCriterionWeight(undefined)).toBe(false);
   });
 
-  it("recognises a numeric level or essential/required, and nothing else", () => {
-    expect(isValidWeightLevel(0)).toBe(true);
-    expect(isValidWeightLevel(5)).toBe(true);
-    expect(isValidWeightLevel("essential")).toBe(true);
-    expect(isValidWeightLevel("required")).toBe(true);
-    expect(isValidWeightLevel(6)).toBe(false);
-    expect(isValidWeightLevel(-1)).toBe(false);
-    expect(isValidWeightLevel("obligatory")).toBe(false);
-    expect(isValidWeightLevel(null)).toBe(false);
-    expect(isValidWeightLevel(undefined)).toBe(false);
-  });
-
-  it("counts a level active when some numeric weight is above zero or any level is essential/required", () => {
-    expect(hasActiveLevel(ALL_ZERO_LEVELS)).toBe(false);
-    expect(hasActiveLevel({ ...ALL_ZERO_LEVELS, fees: 1 })).toBe(true);
-    expect(hasActiveLevel({ ...ALL_ZERO_LEVELS, jointBanking: "essential" })).toBe(true);
-    expect(hasActiveLevel({ ...ALL_ZERO_LEVELS, jointBanking: "required" })).toBe(true);
+  it("counts a level active only when some numeric weight is above zero", () => {
+    expect(hasActiveLevel(ALL_ZERO)).toBe(false);
+    expect(hasActiveLevel({ ...ALL_ZERO, fees: 1 })).toBe(true);
   });
 
   it("fills a criterion the household never set with the product default", () => {
@@ -69,106 +52,28 @@ describe("criteria weight levels", () => {
   });
 
   it("replaces an invalid stored level with the default", () => {
-    expect(resolveCriteriaWeights({ fees: 7, security: -2, jointBanking: "obligatory" })).toEqual(
-      DEFAULT_WEIGHT_LEVELS,
-    );
+    expect(resolveCriteriaWeights({ fees: 7, security: -2 })).toEqual(DEFAULT_WEIGHT_LEVELS);
   });
 
-  it("accepts a stored essential or required level", () => {
-    expect(resolveCriteriaWeights({ jointBanking: "required", fees: 1 })).toEqual({
+  it("maps a legacy essential or required level to 5, the top of the numeric scale", () => {
+    expect(resolveCriteriaWeights({ fees: "essential", security: "required" })).toEqual({
       ...DEFAULT_WEIGHT_LEVELS,
-      jointBanking: "required",
+      fees: 5,
+      security: 5,
+    });
+  });
+
+  it("ignores a stored key for a criterion the product no longer has, like jointBanking", () => {
+    expect(
+      resolveCriteriaWeights({ jointBanking: "required", fees: 1 } as Record<string, unknown>),
+    ).toEqual({
+      ...DEFAULT_WEIGHT_LEVELS,
       fees: 1,
     });
   });
 
   it("falls back to the defaults when the stored set leaves nothing to weigh", () => {
     expect(resolveCriteriaWeights(ALL_ZERO)).toEqual(DEFAULT_WEIGHT_LEVELS);
-  });
-});
-
-describe("requiredCriteriaOf", () => {
-  it("names nothing when no criterion is required", () => {
-    expect(requiredCriteriaOf(ALL_ZERO_LEVELS)).toEqual([]);
-  });
-
-  it("names nothing for the product defaults: jointBanking is essential, not required", () => {
-    expect(requiredCriteriaOf(DEFAULT_WEIGHT_LEVELS)).toEqual([]);
-  });
-
-  it("never counts an essential criterion as required: essential carries weight, not a gate", () => {
-    const levels: WeightLevels = { ...ALL_ZERO_LEVELS, jointBanking: "essential" };
-
-    expect(requiredCriteriaOf(levels)).toEqual([]);
-  });
-
-  it("names every criterion set to required, in BANK_PROFILE_CRITERIA order", () => {
-    const levels: WeightLevels = {
-      ...ALL_ZERO_LEVELS,
-      jointBanking: "required",
-      security: "required",
-      fees: 2,
-    };
-
-    expect(requiredCriteriaOf(levels)).toEqual(["security", "jointBanking"]);
-  });
-});
-
-describe("effectiveWeights", () => {
-  it("leaves numeric weights unchanged when nothing is essential or required", () => {
-    const levels: WeightLevels = { ...ALL_ZERO_LEVELS, fees: 5, lockIn: 2 };
-
-    expect(effectiveWeights(levels)).toEqual({ ...ALL_ZERO, fees: 5, lockIn: 2 });
-  });
-
-  it("scales numeric weights by the essential-or-required count and gives each of those the numeric sum", () => {
-    const levels: WeightLevels = {
-      ...ALL_ZERO_LEVELS,
-      fees: 2,
-      lockIn: 3,
-      jointBanking: "essential",
-    };
-
-    // E = 1, N = 5: numeric weights scale ×1, jointBanking gets N = 5.
-    expect(effectiveWeights(levels)).toEqual({
-      ...ALL_ZERO,
-      fees: 2,
-      lockIn: 3,
-      jointBanking: 5,
-    });
-  });
-
-  it("scales numeric weights by the count of essential-or-required criteria", () => {
-    const levels: WeightLevels = {
-      ...ALL_ZERO_LEVELS,
-      fees: 2,
-      lockIn: 3,
-      jointBanking: "essential",
-      security: "required",
-    };
-
-    // E = 2, N = 5: numeric weights scale ×2, each of the two gets N = 5.
-    expect(effectiveWeights(levels)).toEqual({
-      ...ALL_ZERO,
-      fees: 4,
-      lockIn: 6,
-      jointBanking: 5,
-      security: 5,
-    });
-  });
-
-  it("gives every essential-or-required criterion weight 1 when nothing numeric counts", () => {
-    const levels: WeightLevels = {
-      ...ALL_ZERO_LEVELS,
-      jointBanking: "essential",
-      security: "required",
-    };
-
-    expect(effectiveWeights(levels)).toEqual({
-      ...ALL_ZERO,
-      jointBanking: 1,
-      security: 1,
-    });
   });
 });
 
@@ -192,22 +97,17 @@ describe("criterionShares", () => {
     expect(criterionShares(ALL_ZERO)).toEqual(ALL_ZERO);
   });
 
-  it("gives essential-or-required exactly half the note when mixed with numeric weights", () => {
-    const weights = effectiveWeights({
-      ...ALL_ZERO_LEVELS,
-      fees: 2,
-      lockIn: 3,
-      jointBanking: "essential",
-    });
+  it("gives a criterion weighted 5 among others at 1 its exact share", () => {
+    const weights: WeightLevels = { ...ALL_ZERO, fees: 1, security: 5 };
 
-    expect(shareOf(weights, "jointBanking")).toBe(50);
+    expect(shareOf(weights, "security")).toBe(83);
   });
 });
 
-describe("scorable weights (effective, numeric)", () => {
-  it("ships a valid default once resolved to effective weights", () => {
+describe("scorable weights", () => {
+  it("ships a valid default", () => {
     expect(() => {
-      assertScorableWeights(effectiveWeights(DEFAULT_WEIGHT_LEVELS));
+      assertScorableWeights(DEFAULT_WEIGHT_LEVELS);
     }).not.toThrow();
   });
 
@@ -215,12 +115,6 @@ describe("scorable weights (effective, numeric)", () => {
     expect(() => {
       assertScorableWeights(ALL_ZERO);
     }).toThrow(InvalidCriteriaWeightsError);
-  });
-
-  it("scores with any non-negative integer weights, since scoring normalises them", () => {
-    expect(() => {
-      assertScorableWeights({ ...ALL_ZERO, fees: 50 });
-    }).not.toThrow();
   });
 
   it("refuses a negative or fractional weight", () => {

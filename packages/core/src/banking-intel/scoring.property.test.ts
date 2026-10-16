@@ -1,13 +1,12 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { ACCOUNT_TYPES, type AccountType, type AccountTypeStatus } from "./account-types";
 import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
 import {
   compareBanks,
   DEFAULT_CANDIDATE_COUNT,
   DEFAULT_COMPARISON_SETTINGS,
-  MINIMUM_SCORE_MAX,
-  MINIMUM_SCORE_MIN,
   rankBankProfiles,
   type ScorableBankProfile,
 } from "./scoring";
@@ -37,12 +36,28 @@ const criteriaArb = fc.record(
   >,
 );
 
-const profilesArb = fc.array(criteriaArb, { minLength: 1, maxLength: 13 }).map((all) =>
-  all.map((criteria, index): ScorableBankProfile => ({
-    institutionId: `bank-${String(index)}`,
-    criteria,
-  })),
+const accountTypeStatusArb = fc.constantFrom<AccountTypeStatus>(
+  "offered",
+  "not-offered",
+  "not-found",
 );
+
+const accountTypesArb = fc.record(
+  Object.fromEntries(ACCOUNT_TYPES.map((type) => [type, accountTypeStatusArb])) as Record<
+    AccountType,
+    typeof accountTypeStatusArb
+  >,
+);
+
+const profilesArb = fc
+  .array(fc.tuple(criteriaArb, accountTypesArb), { minLength: 1, maxLength: 13 })
+  .map((all) =>
+    all.map(([criteria, accountTypes], index): ScorableBankProfile => ({
+      institutionId: `bank-${String(index)}`,
+      criteria,
+      accountTypes,
+    })),
+  );
 
 const weightsArb = fc
   .record(
@@ -57,16 +72,14 @@ const weightsArb = fc
 
 const criterionArb = fc.constantFrom(...BANK_PROFILE_CRITERIA);
 
-const requiredCriteriaArb = fc.uniqueArray(criterionArb, { maxLength: 3 });
+const requirementLevelArb = fc.constantFrom("optional" as const, "required" as const);
 
-const minimumScoresArb = fc.record(
-  Object.fromEntries(
-    BANK_PROFILE_CRITERIA.map((criterion) => [
-      criterion,
-      fc.integer({ min: MINIMUM_SCORE_MIN, max: MINIMUM_SCORE_MAX }),
-    ]),
-  ) as Record<BankProfileCriterion, fc.Arbitrary<number>>,
-);
+const accountTypeFilterArb = fc.record({
+  jointBanking: requirementLevelArb,
+  jointOnly: fc.boolean(),
+  jointInvestment: requirementLevelArb,
+  mei: requirementLevelArb,
+});
 
 function scale(weights: CriteriaWeights, factor: number): CriteriaWeights {
   return Object.fromEntries(
@@ -140,12 +153,14 @@ describe("bank scoring properties", () => {
     fc.assert(
       fc.property(
         criteriaArb,
+        accountTypesArb,
         fc.integer({ min: 2, max: 6 }),
         weightsArb,
-        (criteria, copies, weights) => {
+        (criteria, accountTypes, copies, weights) => {
           const profiles = Array.from({ length: copies }, (_, index) => ({
             institutionId: `twin-${String(index)}`,
             criteria,
+            accountTypes,
           }));
 
           expect(rankBankProfiles(profiles, weights).map((score) => score.institutionId)).toEqual(
@@ -199,40 +214,41 @@ describe("bank scoring properties", () => {
     );
   });
 
-  // ADR-0006, 2026-10-14: a required criterion gates candidacy, whatever the
-  // household's minimum and whichever criteria it picked as required. The
-  // picked criteria become "required" levels, not a separate parameter, since
-  // compareBanks now derives both the required set and the effective weights
-  // from the household's own weight levels.
-  it("never yields a candidate that misses a required criterion", () => {
+  // ADR-0006 amendment 2026-10-16: whichever account-type filter the
+  // household sets, a candidate never misses one of the requirements it
+  // implies.
+  it("never yields a candidate that misses an account-type requirement", () => {
     fc.assert(
       fc.property(
         profilesArb,
         weightsArb,
-        requiredCriteriaArb,
-        minimumScoresArb,
-        (profiles, weights, requiredCriteria, minimumScores) => {
-          const levels = Object.fromEntries(
-            BANK_PROFILE_CRITERIA.map((criterion) => [
-              criterion,
-              requiredCriteria.includes(criterion) ? "required" : weights[criterion],
-            ]),
-          ) as WeightLevels;
+        accountTypeFilterArb,
+        (profiles, weights, accountTypeFilter) => {
+          const levels = weights as unknown as WeightLevels;
           const { candidates } = compareBanks({
             profiles,
             levels,
             currentInstitutionIds: [],
-            settings: { minimumScores, candidateCount: 5, proConMinDifference: 10 },
+            settings: { ...DEFAULT_COMPARISON_SETTINGS, candidateCount: 13, accountTypeFilter },
           });
 
           for (const candidate of candidates) {
             const profile = profiles.find((p) => p.institutionId === candidate.institutionId);
-            for (const criterion of requiredCriteria) {
-              const entry = profile?.criteria[criterion];
-              expect(entry?.status).toBe("scored");
-              if (entry?.status === "scored") {
-                expect(entry.score).toBeGreaterThanOrEqual(minimumScores[criterion]);
+            if (accountTypeFilter.jointBanking === "required") {
+              if (accountTypeFilter.jointOnly) {
+                expect(profile?.accountTypes.joint).toBe("offered");
+              } else {
+                expect(
+                  profile?.accountTypes.joint === "offered" ||
+                    profile?.accountTypes.shared === "offered",
+                ).toBe(true);
               }
+            }
+            if (accountTypeFilter.jointInvestment === "required") {
+              expect(profile?.accountTypes.jointInvestment).toBe("offered");
+            }
+            if (accountTypeFilter.mei === "required") {
+              expect(profile?.accountTypes.mei).toBe("offered");
             }
           }
         },
