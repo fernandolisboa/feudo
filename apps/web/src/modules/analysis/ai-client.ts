@@ -1,17 +1,48 @@
 import type { AnalysisInput } from "@feudo/core";
 
-// Sonnet by default, Opus only for the monthly deep analysis (CLAUDE.md, AI).
-export const AI_MODELS = {
-  standard: "claude-sonnet-5-5",
-  deep: "claude-opus-5-5",
-} as const;
+export type AiTier = "standard" | "deep";
 
-export type AiTier = keyof typeof AI_MODELS;
+// The household picks one of these per reading kind (ADR-0013); the
+// validation schema's z.enum reads this tuple directly.
+export const AI_FAMILIES = ["haiku", "sonnet", "opus"] as const;
+
+export type AiFamily = (typeof AI_FAMILIES)[number];
+
+// The one default per reading kind (ADR-0013): the column defaults in
+// schema.ts and the no-row fallback in ai-settings-repository.ts both read
+// these, so the two can never drift apart.
+export const DEFAULT_MONTHLY_FAMILY: AiFamily = "opus";
+export const DEFAULT_ON_DEMAND_FAMILY: AiFamily = "sonnet";
+
+// The newest qualifying version of the household's family is resolved at
+// call time (model-resolution.ts). These three ids are the safety net:
+// known-good, used whenever resolution fails or returns nothing, and
+// retried once whenever a freshly resolved id is itself rejected by the API.
+export const PINNED_MODEL_IDS: Record<AiFamily, string> = {
+  haiku: "claude-haiku-5-5",
+  sonnet: "claude-sonnet-5-5",
+  opus: "claude-opus-5-5",
+};
+
+// Effort stays a function of the reading's depth, never of the family: the
+// monthly reading is always "deep" (high effort), the on-demand one always
+// "standard" (medium effort), whichever family the household picked for it.
+export const EFFORT: Record<AiTier, "medium" | "high"> = { standard: "medium", deep: "high" };
+
+// Below this a call is unlikely to finish; it is better skipped than cut off.
+// Shared by service.ts (whether to even start an attempt) and
+// anthropic-client.ts (whether the pinned-id retry still has a fair shot).
+export const MIN_ATTEMPT_MS: Record<AiTier, number> = { standard: 15_000, deep: 45_000 };
 
 export type AiUsage = { inputTokens: number; outputTokens: number };
 
 export type AiRequest = {
   tier: AiTier;
+  family: AiFamily;
+  // Resolved once per reading attempt (model-resolution.ts); the client
+  // tries this id first and falls back to the family's pinned id on a 400
+  // or 404 from the API, never on any other failure.
+  model: string;
   system: string;
   user: string;
   input: AnalysisInput;
@@ -25,5 +56,8 @@ export type AiResult =
   | { status: AiFailure; model: string | null; usage: AiUsage | null };
 
 export interface AiClient {
+  // Callers store the result as the reading's requested_model before asking
+  // the model anything.
+  resolveModel(family: AiFamily, tier: AiTier): Promise<string>;
   complete(request: AiRequest): Promise<AiResult>;
 }

@@ -1,4 +1,5 @@
 import type { HouseholdSession } from "@/modules/households";
+import { getAiSettingsForExport } from "@/modules/analysis";
 import { listFinancialDataAccessForExport } from "@/modules/audit";
 import { getHouseholdMembershipsForExport } from "@/modules/households";
 import { getLedgerExportAnnotations } from "@/modules/ledger";
@@ -126,6 +127,13 @@ export type ExportDocument = {
   };
   financialDataAccess: Array<{ householdId: string; kind: string; accessedAt: string }>;
   pushSubscriptions: Array<{ pushService: string; createdAt: string }>;
+  aiSettings: Array<{
+    householdId: string;
+    monthlyFamily: string;
+    onDemandFamily: string;
+    hasKey: boolean;
+    updatedAt: string;
+  }>;
 };
 
 export class ExportUserMissingError extends Error {
@@ -156,6 +164,7 @@ export async function buildExportDocument(
     reserveMarks,
     financialDataAccess,
     pushSubscriptions,
+    aiSettings,
   ] = await Promise.all([
     getExportUser(getDb(), session.userId),
     listExportSessions(getDb(), session.userId),
@@ -166,6 +175,7 @@ export async function buildExportDocument(
     getReserveMarksForExport(session),
     listFinancialDataAccessForExport(session),
     getPushSubscriptionsForExport(session),
+    getAiSettingsForExport(session),
   ]);
 
   if (!userRow) {
@@ -299,6 +309,13 @@ export async function buildExportDocument(
     pushSubscriptions: pushSubscriptions.map((subscription) => ({
       pushService: subscription.pushService,
       createdAt: subscription.createdAt.toISOString(),
+    })),
+    aiSettings: aiSettings.map((row) => ({
+      householdId: row.householdId,
+      monthlyFamily: row.monthlyFamily,
+      onDemandFamily: row.onDemandFamily,
+      hasKey: row.hasKey,
+      updatedAt: row.updatedAt.toISOString(),
     })),
   };
 }

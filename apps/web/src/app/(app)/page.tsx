@@ -79,6 +79,7 @@ export default async function Home({
 }) {
   const session = await requireHouseholdSession();
   const params = await searchParams;
+  const analysisEnabled = await isAnalysisEnabled(session);
 
   return (
     <>
@@ -105,7 +106,7 @@ export default async function Home({
           </OverviewErrorBoundary>
         }
         reading={
-          isAnalysisEnabled() ? (
+          analysisEnabled ? (
             <AnalystReadingErrorBoundary>
               <Suspense fallback={null}>
                 <AnalystReadingContent session={session} />

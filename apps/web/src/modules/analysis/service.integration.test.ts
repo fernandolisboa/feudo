@@ -15,30 +15,46 @@ import {
 } from "@/modules/notifications/test/fake-push-sender";
 
 import type { Database } from "@/platform/db/client";
-import { AI_MODELS, type AiClient, type AiFailure } from "./ai-client";
+import { saveAiSettings } from "./ai-settings";
+import { PINNED_MODEL_IDS, type AiClient, type AiFailure } from "./ai-client";
 import { createFakeAiClient } from "./fake-client";
+import { HOUSEHOLD_HOURLY_LIMIT } from "./key-verification-attempts";
 import { CURRENT_ANALYST_PROMPT } from "./prompts";
+import type { AiProvider } from "./provider";
 import { createAnalysisRepository } from "./repository";
 import { householdAnalysis } from "./schema";
 import {
+  isAnalysisEnabled,
   requestOnDemandAnalysis,
   runMonthlyAnalysis,
+  runMonthlyAnalysisForHousehold,
   RUNNING_STALE_MS,
   type AnalysisDeps,
 } from "./service";
 import { FIXTURE_INPUT } from "./test/fixtures";
 
+function providerFor(client: AiClient): AiProvider {
+  return { verifyKey: () => Promise.resolve({ status: "ok" }), clientFor: () => client };
+}
+
 const fakeDeps: AnalysisDeps = {
-  client: createFakeAiClient(),
+  provider: providerFor(createFakeAiClient()),
+  encryptionKey: null,
   prompt: CURRENT_ANALYST_PROMPT,
   notifier: silentNotifier,
 };
 
 function failingDeps(status: AiFailure): AnalysisDeps {
   const client: AiClient = {
+    resolveModel: () => Promise.resolve(PINNED_MODEL_IDS.sonnet),
     complete: () => Promise.resolve({ status, model: null, usage: null }),
   };
-  return { client, prompt: CURRENT_ANALYST_PROMPT, notifier: silentNotifier };
+  return {
+    provider: providerFor(client),
+    encryptionKey: null,
+    prompt: CURRENT_ANALYST_PROMPT,
+    notifier: silentNotifier,
+  };
 }
 
 function options(now: Date = new Date()) {
@@ -90,7 +106,7 @@ function reservation(localDay: string) {
       period: FIXTURE_INPUT.month,
       localDay,
       promptVersion: CURRENT_ANALYST_PROMPT.version,
-      requestedModel: AI_MODELS.standard,
+      requestedModel: PINNED_MODEL_IDS.sonnet,
       input: FIXTURE_INPUT,
       requestedByUserId: null,
     },
@@ -177,8 +193,8 @@ describe("requestOnDemandAnalysis (integration)", () => {
         kind: "on_demand",
         status: "succeeded",
         promptVersion: CURRENT_ANALYST_PROMPT.version,
-        requestedModel: AI_MODELS.standard,
-        model: `fake-${AI_MODELS.standard}`,
+        requestedModel: PINNED_MODEL_IDS.sonnet,
+        model: `fake-${PINNED_MODEL_IDS.sonnet}`,
         requestedByUserId: userA.id,
         failureReason: null,
       });
@@ -250,7 +266,8 @@ describe("requestOnDemandAnalysis (integration)", () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
       const off: AnalysisDeps = {
-        client: null,
+        provider: null,
+        encryptionKey: null,
         prompt: CURRENT_ANALYST_PROMPT,
         notifier: silentNotifier,
       };
@@ -258,6 +275,22 @@ describe("requestOnDemandAnalysis (integration)", () => {
         status: "disabled",
       });
       expect(await rowsOf(db, householdA)).toEqual([]);
+    });
+  });
+
+  it("spends no quota slot when too little time is left right after resolving the model", async () => {
+    await withTwoUsers(async ({ db, userA, householdA }) => {
+      await seedLedger(db, userA, householdA);
+      const now = new Date();
+      const almostUp = { now, deadline: new Date(now.getTime() + 1_000) };
+
+      expect(await requestOnDemandAnalysis(userA.session, db, fakeDeps, almostUp)).toEqual({
+        status: "no_time",
+      });
+      expect(await rowsOf(db, householdA)).toEqual([]);
+      expect(await requestOnDemandAnalysis(userA.session, db, fakeDeps, options())).toEqual({
+        status: "ok",
+      });
     });
   });
 });
@@ -287,7 +320,7 @@ describe("runMonthlyAnalysis (integration)", () => {
         expect(rows[0]).toMatchObject({
           kind: "monthly",
           status: "succeeded",
-          requestedModel: AI_MODELS.deep,
+          requestedModel: PINNED_MODEL_IDS.opus,
           requestedByUserId: null,
         });
       }
@@ -344,12 +377,186 @@ describe("runMonthlyAnalysis (integration)", () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
       const off: AnalysisDeps = {
-        client: null,
+        provider: null,
+        encryptionKey: null,
         prompt: CURRENT_ANALYST_PROMPT,
         notifier: silentNotifier,
       };
       expect(await runMonthlyAnalysis(db, off, options())).toMatchObject({ disabled: true });
       expect(await rowsOf(db, householdA)).toEqual([]);
+    });
+  });
+
+  it("skips a household, without counting a failure, when too little time is left right after resolving the model", async () => {
+    await withTwoUsers(async ({ db, userA, householdA }) => {
+      await seedLedger(db, userA, householdA);
+      const now = new Date();
+      const almostUp = { now, deadline: new Date(now.getTime() + 1_000) };
+
+      expect(
+        await runMonthlyAnalysisForHousehold(
+          db,
+          { householdId: householdA },
+          fakeDeps as AnalysisDeps & { provider: AiProvider },
+          almostUp,
+        ),
+      ).toEqual({ status: "skipped" });
+      expect(await rowsOf(db, householdA)).toEqual([]);
+    });
+  });
+});
+
+const ENCRYPTION_KEY = "integration-test-encryption-key-32-chars-ok";
+
+function recordingAnthropicProvider(): AiProvider & {
+  receivedKeys: (string | null)[];
+  verifyKeyCalls: number;
+} {
+  const receivedKeys: (string | null)[] = [];
+  const recorder = {
+    receivedKeys,
+    verifyKeyCalls: 0,
+    verifyKey() {
+      recorder.verifyKeyCalls += 1;
+      return Promise.resolve({ status: "ok" as const });
+    },
+    clientFor(apiKey: string | null) {
+      receivedKeys.push(apiKey);
+      return apiKey === null ? null : createFakeAiClient();
+    },
+  };
+  return recorder;
+}
+
+function anthropicDeps(provider: AiProvider): AnalysisDeps & { provider: AiProvider } {
+  return {
+    provider,
+    encryptionKey: ENCRYPTION_KEY,
+    prompt: CURRENT_ANALYST_PROMPT,
+    notifier: silentNotifier,
+  };
+}
+
+async function registerKey(db: Database, user: SeededUser, apiKey: string): Promise<void> {
+  const outcome = await saveAiSettings(
+    householdScope(user.session),
+    db,
+    recordingAnthropicProvider(),
+    ENCRYPTION_KEY,
+    { apiKey, monthlyFamily: "opus", onDemandFamily: "sonnet", updatedByUserId: user.id },
+  );
+  expect(outcome).toEqual({ status: "ok" });
+}
+
+describe("the household's own Anthropic key (integration)", () => {
+  it("decrypts and passes each household's own key, never the other's, for both the cron and on demand", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      await seedLedger(db, userA, householdA);
+      await seedLedger(db, userB, householdB);
+      await registerKey(db, userA, "sk-ant-household-a");
+      await registerKey(db, userB, "sk-ant-household-b");
+
+      const providerA = recordingAnthropicProvider();
+      const providerB = recordingAnthropicProvider();
+      expect(
+        await runMonthlyAnalysisForHousehold(
+          db,
+          { householdId: householdA },
+          anthropicDeps(providerA),
+          options(),
+        ),
+      ).toEqual({ status: "succeeded" });
+      expect(
+        await runMonthlyAnalysisForHousehold(
+          db,
+          { householdId: householdB },
+          anthropicDeps(providerB),
+          options(),
+        ),
+      ).toEqual({ status: "succeeded" });
+      expect(providerA.receivedKeys).toEqual(["sk-ant-household-a"]);
+      expect(providerB.receivedKeys).toEqual(["sk-ant-household-b"]);
+
+      const onDemandProvider = recordingAnthropicProvider();
+      expect(
+        await requestOnDemandAnalysis(
+          userA.session,
+          db,
+          anthropicDeps(onDemandProvider),
+          options(),
+        ),
+      ).toEqual({ status: "ok" });
+      expect(onDemandProvider.receivedKeys).toEqual(["sk-ant-household-a"]);
+    });
+  });
+
+  it("skips the monthly reading and disables the on-demand one for a household with no key", async () => {
+    await withTwoUsers(async ({ db, userA, householdA }) => {
+      await seedLedger(db, userA, householdA);
+      const monthlyProvider = recordingAnthropicProvider();
+      const onDemandProvider = recordingAnthropicProvider();
+
+      expect(
+        await runMonthlyAnalysisForHousehold(
+          db,
+          { householdId: householdA },
+          anthropicDeps(monthlyProvider),
+          options(),
+        ),
+      ).toEqual({ status: "skipped" });
+      expect(
+        await requestOnDemandAnalysis(
+          userA.session,
+          db,
+          anthropicDeps(onDemandProvider),
+          options(),
+        ),
+      ).toEqual({ status: "disabled" });
+      expect(monthlyProvider.receivedKeys).toEqual([null]);
+      expect(onDemandProvider.receivedKeys).toEqual([null]);
+      expect(await rowsOf(db, householdA)).toEqual([]);
+    });
+  });
+
+  it("is false for a keyless household under anthropic, true once a key this deploy can open is registered", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const env = { AI_PROVIDER: "anthropic", ENCRYPTION_KEY };
+      expect(await isAnalysisEnabled(userA.session, env)).toBe(false);
+
+      await registerKey(db, userA, "sk-ant-household-a");
+
+      expect(await isAnalysisEnabled(userA.session, env)).toBe(true);
+    });
+  });
+});
+
+describe("saveAiSettings key-verification rate limit (integration)", () => {
+  it("never reaches the provider on the (N+1)th key attempt in the same hour", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const scope = householdScope(userA.session);
+      const provider = recordingAnthropicProvider();
+
+      for (let attempt = 0; attempt < HOUSEHOLD_HOURLY_LIMIT; attempt += 1) {
+        const outcome = await saveAiSettings(scope, db, provider, ENCRYPTION_KEY, {
+          apiKey: `sk-ant-attempt-${String(attempt)}`,
+          monthlyFamily: "opus",
+          onDemandFamily: "sonnet",
+          updatedByUserId: userA.id,
+        });
+        expect(outcome).toEqual({ status: "ok" });
+      }
+      expect(provider.verifyKeyCalls).toBe(HOUSEHOLD_HOURLY_LIMIT);
+
+      const verifyKeyCallsBefore = provider.verifyKeyCalls;
+      const blocked = await saveAiSettings(scope, db, provider, ENCRYPTION_KEY, {
+        apiKey: "sk-ant-one-too-many",
+        monthlyFamily: "opus",
+        onDemandFamily: "sonnet",
+        updatedByUserId: userA.id,
+      });
+
+      expect(blocked).toEqual({ status: "rate_limited" });
+      expect(provider.verifyKeyCalls).toBe(verifyKeyCallsBefore);
     });
   });
 });

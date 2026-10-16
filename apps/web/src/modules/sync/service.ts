@@ -20,7 +20,8 @@ import {
   encryptSecret,
   EncryptionKeyMismatchError,
   MalformedCiphertextError,
-} from "./crypto";
+  PROVIDER_CREDENTIALS_PURPOSE,
+} from "@/platform/crypto";
 import { readEncryptionKey, type SyncEnv } from "./env";
 import type {
   DataProvider,
@@ -85,11 +86,13 @@ const storedCredentialsSchema = z.object({
 });
 
 function serializeCredentials(credentials: ProviderCredentials, encryptionKey: string): string {
-  return encryptSecret(JSON.stringify(credentials), encryptionKey);
+  return encryptSecret(JSON.stringify(credentials), encryptionKey, PROVIDER_CREDENTIALS_PURPOSE);
 }
 
 function deserializeCredentials(ciphertext: string, encryptionKey: string): ProviderCredentials {
-  return storedCredentialsSchema.parse(JSON.parse(decryptSecret(ciphertext, encryptionKey)));
+  return storedCredentialsSchema.parse(
+    JSON.parse(decryptSecret(ciphertext, encryptionKey, PROVIDER_CREDENTIALS_PURPOSE)),
+  );
 }
 
 // The provider's own status and endpoint are the two facts that say whether a

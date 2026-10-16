@@ -13,7 +13,7 @@ function props(overrides: Partial<AnalystReadingProps> = {}): AnalystReadingProp
       title: "Leitura mensal de setembro de 2026",
       summary: "Setembro fechou no azul e a reserva segue no caminho.",
       counterArgument: "Concentrar tem risco.",
-      meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5"],
+      meta: ["gerada em 01/10/2026, 08:12", "Opus 5.5"],
       href: "/analises",
     },
     limit: 3,
@@ -36,7 +36,7 @@ describe("AnalystReading", () => {
     expect(screen.getByText("Setembro fechou no azul e a reserva segue no caminho.")).toBeDefined();
     expect(screen.getByRole("heading", { name: "Contra-argumento" })).toBeDefined();
     expect(screen.getByText("Concentrar tem risco.")).toBeDefined();
-    expect(screen.getByText("gerada em 01/10/2026, 08:12 · Claude Opus 5.5")).toBeDefined();
+    expect(screen.getByText("gerada em 01/10/2026, 08:12 · Opus 5.5")).toBeDefined();
     expect(screen.getByText(/Não é recomendação de investimento/)).toBeDefined();
     expect(screen.getByRole("link", { name: "Ver a leitura completa" }).getAttribute("href")).toBe(
       "/analises",

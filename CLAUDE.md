@@ -60,9 +60,11 @@ Handlers.
   CPFs. No Pluggy Connect widget. The provider sits behind a small `DataProvider` interface.
   Pluggy's paid plan (R$ 2,500/month) and a written OK from Pluggy support gate the closed beta
   and public launch (ADR-0005). Bacen SGS API for CDI/Selic/IPCA.
-- **AI**: `@anthropic-ai/sdk`, analysis layer only. Sonnet by default; Opus only for the monthly
-  deep analysis. Prompts versioned under `prompts/` with fixture tests. Every AI call is attributed
-  to a household.
+- **AI**: `@anthropic-ai/sdk`, analysis layer only. Each household brings its own Anthropic key
+  (encrypted at rest) and picks a model family per reading kind: Opus for the monthly reading and
+  Sonnet on demand by default; the newest version of the family is resolved at runtime, pinned to
+  the 5.5 ids as fallback (ADR-0013). Prompts versioned under `prompts/` with fixture tests. Every
+  AI call is attributed to a household.
 - **Hosting**: Vercel free tier, default `*.vercel.app` domain.
 - **Money**: integer centavos + currency code, never floats. Dates in UTC, displayed in the
   household's time zone (default `America/Sao_Paulo`).

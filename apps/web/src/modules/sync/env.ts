@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  MissingEncryptionKeyError,
+  readEncryptionKey as readSharedEncryptionKey,
+} from "@/platform/encryption-key";
+
 export interface SyncEnv {
   DATA_PROVIDER?: string;
   ENCRYPTION_KEY?: string;
@@ -60,7 +65,7 @@ export function readDataProviderName(env: SyncEnv = process.env): DataProviderNa
 }
 
 // 32 characters is the floor for a key pasted from a password manager's
-// generator; the actual AES key is derived from it (sync/crypto.ts).
+// generator; the actual AES key is derived from it (platform/crypto.ts).
 const MIN_SECRET_LENGTH = 32;
 
 function readSecret(env: SyncEnv, variable: string): string {
@@ -71,8 +76,18 @@ function readSecret(env: SyncEnv, variable: string): string {
   return raw;
 }
 
+// Delegates the actual read and length check to platform/encryption-key.ts
+// (shared with analysis), translating its error to this slice's own
+// MissingSecretError so every existing call site here keeps working.
 export function readEncryptionKey(env: SyncEnv = process.env): string {
-  return readSecret(env, "ENCRYPTION_KEY");
+  try {
+    return readSharedEncryptionKey(env);
+  } catch (error) {
+    if (error instanceof MissingEncryptionKeyError) {
+      throw new MissingSecretError("ENCRYPTION_KEY");
+    }
+    throw error;
+  }
 }
 
 export function readDocumentHashKey(env: SyncEnv = process.env): string {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
+import { householdAiSettings } from "@/modules/analysis/schema";
 import { financialDataAccess } from "@/modules/audit/schema";
 import { session as sessionTable, user as authUser } from "@/modules/auth/schema";
 import type { HouseholdSession } from "@/modules/households";
@@ -328,6 +329,39 @@ describe("buildExportDocument (integration)", () => {
 
       const unassigned = document.accounts.find((account) => account.id === anaAccountId);
       expect(unassigned?.householdId).toBeNull();
+    });
+  });
+
+  it("isolation: the household's AI settings export only to the user who last changed them, and never carry the key", async () => {
+    await withTestDb(async (db) => {
+      const { householdA, ana, bia } = await seedCasa(db);
+
+      await db.insert(householdAiSettings).values({
+        householdId: householdA,
+        apiKeyCiphertext: "ciphertext-household-a",
+        apiKeyLast4: "wxyz",
+        monthlyFamily: "haiku",
+        onDemandFamily: "opus",
+        updatedByUserId: bia.id,
+        updatedAt: NOW,
+      });
+
+      const anaDocument = await buildExportDocument(sessionInHousehold(ana, householdA), NOW);
+      expect(anaDocument.aiSettings).toEqual([]);
+      expect(JSON.stringify(anaDocument)).not.toContain("ciphertext-household-a");
+      expect(JSON.stringify(anaDocument)).not.toContain("wxyz");
+
+      const biaDocument = await buildExportDocument(sessionInHousehold(bia, householdA), NOW);
+      expect(biaDocument.aiSettings).toEqual([
+        {
+          householdId: householdA,
+          monthlyFamily: "haiku",
+          onDemandFamily: "opus",
+          hasKey: true,
+          updatedAt: NOW.toISOString(),
+        },
+      ]);
+      expect(JSON.stringify(biaDocument)).not.toContain("ciphertext-household-a");
     });
   });
 

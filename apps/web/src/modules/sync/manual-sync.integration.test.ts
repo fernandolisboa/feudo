@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import type { HouseholdSession } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
-import { encryptSecret } from "./crypto";
+import { encryptSecret, PROVIDER_CREDENTIALS_PURPOSE } from "@/platform/crypto";
 import { createDocumentHasher } from "./document-hash";
 import { createFakeProvider } from "./provider/fake-provider";
 import type { AuthenticateOutcome, DataProvider } from "./provider/provider";
@@ -49,6 +49,7 @@ async function saveCredentials(db: Database, user: SeededUser): Promise<void> {
     ciphertext: encryptSecret(
       JSON.stringify({ clientId: "id", clientSecret: "client-secret" }),
       ENCRYPTION_KEY,
+      PROVIDER_CREDENTIALS_PURPOSE,
     ),
     validatedAt: SEEDED_AT,
   });

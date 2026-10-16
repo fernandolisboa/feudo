@@ -37,8 +37,9 @@ vi.mock("@/modules/analysis", () => ({
   AnalystReading: marker("AnalystReading"),
   AnalystReadingErrorBoundary: marker("AnalystReadingErrorBoundary"),
   getAnalystReadingProps: vi.fn().mockResolvedValue(null),
-  isAnalysisEnabled: () => true,
+  isAnalysisEnabled: () => Promise.resolve(true),
 }));
+vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
 
 import { OverviewErrorBoundary, OverviewTabs } from "@/modules/ledger";
 import { AccountsSection } from "@/modules/sync";

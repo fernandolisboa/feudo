@@ -12,6 +12,7 @@ function scriptedClient(results: AiResult[]): AiClient & { requests: AiRequest[]
   const queue = [...results];
   return {
     requests,
+    resolveModel: () => Promise.resolve("claude-sonnet-5-5"),
     complete(request) {
       requests.push(request);
       const next = queue.shift();
@@ -38,6 +39,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       FAR_DEADLINE(),
     );
 
@@ -61,6 +64,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       FAR_DEADLINE(),
     );
 
@@ -79,6 +84,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "deep",
+      "opus",
+      "claude-opus-5-5",
       FAR_DEADLINE(),
     );
 
@@ -95,6 +102,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       FAR_DEADLINE(),
     );
 
@@ -109,6 +118,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       FAR_DEADLINE(),
     );
 
@@ -125,6 +136,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       FAR_DEADLINE(),
     );
 
@@ -142,6 +155,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "deep",
+      "opus",
+      "claude-opus-5-5",
       FAR_DEADLINE(),
     );
 
@@ -157,6 +172,8 @@ describe("generateReading", () => {
         CURRENT_ANALYST_PROMPT,
         FIXTURE_INPUT,
         "standard",
+        "sonnet",
+        "claude-sonnet-5-5",
         FAR_DEADLINE(),
       );
 
@@ -174,6 +191,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "standard",
+      "sonnet",
+      "claude-sonnet-5-5",
       new Date(Date.now() + 1_000),
     );
 
@@ -189,6 +208,8 @@ describe("generateReading", () => {
       CURRENT_ANALYST_PROMPT,
       FIXTURE_INPUT,
       "deep",
+      "opus",
+      "claude-opus-5-5",
       new Date(Date.now() + 60_000),
     );
 
@@ -196,12 +217,23 @@ describe("generateReading", () => {
   });
 });
 
+const SESSION = { householdId: "household-1" } as Parameters<typeof isAnalysisEnabled>[0];
+
 describe("isAnalysisEnabled", () => {
-  it("turns the analyst off, instead of throwing, when AI_PROVIDER is misconfigured", () => {
+  it("turns the analyst off, instead of throwing, when AI_PROVIDER is misconfigured", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    expect(isAnalysisEnabled({ AI_PROVIDER: "openai" })).toBe(false);
-    expect(isAnalysisEnabled({ AI_PROVIDER: "fake", VERCEL_ENV: "production" })).toBe(false);
-    expect(isAnalysisEnabled({ AI_PROVIDER: "fake", VERCEL_ENV: "preview" })).toBe(true);
+    expect(await isAnalysisEnabled(SESSION, { AI_PROVIDER: "openai" })).toBe(false);
+    warn.mockRestore();
+  });
+
+  it("is on for everyone with the fake provider outside production, off in production", async () => {
+    expect(await isAnalysisEnabled(SESSION, { AI_PROVIDER: "fake", VERCEL_ENV: "preview" })).toBe(
+      true,
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(
+      await isAnalysisEnabled(SESSION, { AI_PROVIDER: "fake", VERCEL_ENV: "production" }),
+    ).toBe(false);
     warn.mockRestore();
   });
 });

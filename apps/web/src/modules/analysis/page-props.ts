@@ -12,15 +12,22 @@ import { z } from "zod";
 import { recordFinancialDataAccess } from "@/modules/audit";
 import {
   DEFAULT_TIME_ZONE,
+  canManageHouseholdSettings,
   getHouseholdSettings,
+  getViewerRole,
   householdScope,
   type HouseholdSession,
 } from "@/modules/households";
 
+import { errorName } from "@/lib/error-name";
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
-import { AI_MODELS } from "./ai-client";
+import { hasValidEncryptionKey } from "@/platform/encryption-key";
+import { householdHasUsableKey } from "./ai-settings";
+import { getAiSettings } from "./ai-settings-repository";
+import { AI_FAMILIES, type AiFamily } from "./ai-client";
+import { readAiProviderName, readEncryptionKey, type AnalysisEnv } from "./env";
 import { ANALYSES_PATH, READING_PARAM } from "./paths";
 import {
   createAnalysisRepository,
@@ -34,10 +41,16 @@ const HISTORY_LIMIT = 12;
 
 const readingIdSchema = z.uuid();
 
-const MODEL_NAMES: Readonly<Record<string, string>> = {
-  [AI_MODELS.standard]: "Claude Sonnet 5.5",
-  [AI_MODELS.deep]: "Claude Opus 5.5",
-};
+// Any current or future claude-<family>-X-Y id, with or without the Models
+// API's optional -YYYYMMDD release-date suffix, renders as "Haiku X.Y" /
+// "Sonnet X.Y" / "Opus X.Y" (ADR-0013): the household picks the family, the
+// newest version is resolved at reading time, and the label must keep up
+// without a code change. An id this cannot read stays as-is. The family
+// alternation is derived from AI_FAMILIES so a new family needs no second
+// edit here.
+const MODEL_ID_PATTERN = new RegExp(
+  `^claude-(${AI_FAMILIES.join("|")})-(\\d+)-(\\d+)(?:-\\d{8})?$`,
+);
 
 type ReadingBase = {
   title: string;
@@ -92,11 +105,38 @@ export type AnalystReadingProps = {
   inProgress: boolean;
 };
 
+// "unavailable" is the deploy itself having no analyst at all (AI_PROVIDER=off
+// or no usable ENCRYPTION_KEY): the section shows a read-only notice instead
+// of a form that would only ever answer "try again" (no household action
+// fixes a deploy-level misconfiguration).
+export type AiSettingsSectionProps =
+  | {
+      status: "unavailable";
+      canManage: boolean;
+      monthlyFamily: AiFamily;
+      onDemandFamily: AiFamily;
+    }
+  | {
+      status: "available";
+      canManage: boolean;
+      hasKey: boolean;
+      apiKeyLast4: string | null;
+      monthlyFamily: AiFamily;
+      onDemandFamily: AiFamily;
+    };
+
 function modelName(model: string | null): string | null {
   if (model === null) {
     return null;
   }
-  return MODEL_NAMES[model] ?? model;
+  const match = MODEL_ID_PATTERN.exec(model);
+  if (!match) {
+    return model;
+  }
+  const family = match[1] as AiFamily;
+  const major = match[2] ?? "";
+  const minor = match[3] ?? "";
+  return `${t.aiSettings.familyNames[family]} ${major}.${minor}`;
 }
 
 function splitParagraphs(text: string | undefined): string[] {
@@ -242,10 +282,10 @@ export async function getAnalystReadingProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<AnalystReadingProps | null> {
-  if (!isAnalysisEnabled()) {
+  const context = await householdContext(session);
+  if (!(await isAnalysisEnabled(session))) {
     return null;
   }
-  const context = await householdContext(session);
   const [latest, quota] = await Promise.all([
     context.repository.latestSucceeded(context.db),
     quotaState(context, now),
@@ -265,11 +305,11 @@ export async function getAnalysesPageProps(
   requestedId: unknown,
   now: Date = new Date(),
 ): Promise<AnalysesPageProps | null> {
-  if (!isAnalysisEnabled()) {
-    return null;
-  }
   const context = await householdContext(session);
   const { db, repository, timeZone } = context;
+  if (!(await isAnalysisEnabled(session))) {
+    return null;
+  }
   const id = readingIdSchema.safeParse(requestedId);
   const [requested, history, quota] = await Promise.all([
     id.success ? repository.findSucceeded(db, id.data) : Promise.resolve(null),
@@ -294,10 +334,10 @@ export async function getAnalysesPageProps(
 export async function getAnalystBanksNoteProps(
   session: HouseholdSession,
 ): Promise<AnalystBanksNoteProps | null> {
-  if (!isAnalysisEnabled()) {
+  const { db, repository, timeZone } = await householdContext(session);
+  if (!(await isAnalysisEnabled(session))) {
     return null;
   }
-  const { db, repository, timeZone } = await householdContext(session);
   const latest = await repository.latestSucceeded(db);
   const view = latest === null ? null : analysisDetailView(latest, timeZone);
   if (view === null || view.banks.length === 0) {
@@ -307,5 +347,49 @@ export async function getAnalystBanksNoteProps(
     paragraphs: view.banks,
     source: [view.title, ...generatedAt(latest?.completedAt ?? null, timeZone)].join(" · "),
     href: ANALYSES_PATH,
+  };
+}
+
+// Casa's "Analyst's key and models" section: every member sees the current
+// state (CLAUDE.md's household-settings pattern), only owner/admin can
+// change it (canManage) — the component itself hides the editing controls
+// when canManage is false, this never returns the key itself (only its
+// last 4 characters, already all the repository keeps besides the
+// ciphertext).
+export async function getAiSettingsSectionProps(
+  session: HouseholdSession,
+  env: AnalysisEnv = process.env,
+): Promise<AiSettingsSectionProps> {
+  const db = getDb();
+  const scope = householdScope(session);
+  const [settings, viewerRole] = await Promise.all([
+    getAiSettings(scope, db),
+    getViewerRole(session, db),
+  ]);
+  const canManage = canManageHouseholdSettings(viewerRole);
+  let providerName: ReturnType<typeof readAiProviderName>;
+  try {
+    providerName = readAiProviderName(env);
+  } catch (error) {
+    console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
+    providerName = "off";
+  }
+  if (providerName === "off") {
+    return {
+      status: "unavailable",
+      canManage,
+      monthlyFamily: settings.monthlyFamily,
+      onDemandFamily: settings.onDemandFamily,
+    };
+  }
+  const encryptionKey = hasValidEncryptionKey(env) ? readEncryptionKey(env) : null;
+  const hasKey = householdHasUsableKey(settings, encryptionKey);
+  return {
+    status: "available",
+    canManage,
+    hasKey,
+    apiKeyLast4: hasKey ? settings.apiKeyLast4 : null,
+    monthlyFamily: settings.monthlyFamily,
+    onDemandFamily: settings.onDemandFamily,
   };
 }

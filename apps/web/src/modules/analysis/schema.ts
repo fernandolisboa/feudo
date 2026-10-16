@@ -12,10 +12,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { organization, user } from "../auth/schema.ts";
+import { AI_FAMILIES, DEFAULT_MONTHLY_FAMILY, DEFAULT_ON_DEMAND_FAMILY } from "./ai-client.ts";
 
 export const analysisKind = pgEnum("analysis_kind", ["monthly", "on_demand"]);
 
 export const analysisStatus = pgEnum("analysis_status", ["running", "succeeded", "failed"]);
+
+export const aiModelFamily = pgEnum("ai_model_family", AI_FAMILIES);
 
 // Household-scoped (ADR-0001): one row per analyst reading, stored with the
 // exact input the model saw, the prompt version and the model that answered
@@ -59,3 +62,47 @@ export const householdAnalysis = pgTable(
       .where(sql`${table.kind} = 'monthly' and ${table.status} <> 'failed'`),
   ],
 );
+
+// Household-scoped (ADR-0001, ADR-0013): one row per attempt to register or
+// change the household's Anthropic key, whether verification itself
+// succeeds or not (an attempt is "a key was submitted", never "a key was
+// accepted"). key-verification-attempts.ts rate-limits on this table instead
+// of counting calls to Anthropic directly, so the household's own key
+// verification quota is enforced the same way (and is visible the same way)
+// as every other quota in the codebase.
+export const aiKeyVerificationAttempt = pgTable(
+  "ai_key_verification_attempt",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_key_verification_attempt_household_idx").on(table.householdId, table.attemptedAt),
+    index("ai_key_verification_attempt_user_idx").on(table.userId, table.attemptedAt),
+  ],
+);
+
+// Household-scoped (ADR-0001, ADR-0013): the household's own Anthropic key,
+// encrypted the same way as Meu Pluggy credentials (platform/crypto.ts), and
+// the model family it picked for each reading kind. No row means the
+// household defaults (opus monthly, sonnet on demand) and has no key.
+export const householdAiSettings = pgTable("household_ai_settings", {
+  householdId: text("household_id")
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  apiKeyCiphertext: text("api_key_ciphertext"),
+  apiKeyLast4: text("api_key_last4"),
+  monthlyFamily: aiModelFamily("monthly_family").notNull().default(DEFAULT_MONTHLY_FAMILY),
+  onDemandFamily: aiModelFamily("on_demand_family").notNull().default(DEFAULT_ON_DEMAND_FAMILY),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

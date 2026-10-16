@@ -33,19 +33,37 @@ describe("readingView", () => {
       title: "Leitura mensal de setembro de 2026",
       summary: FIXTURE_OUTPUT.summary,
       counterArgument: FIXTURE_OUTPUT.counterArgument,
-      meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5"],
+      meta: ["gerada em 01/10/2026, 08:12", "Opus 5.5"],
       href: "/analises?leitura=a-1",
     });
   });
 
-  it("names an on-demand reading and an unknown model as they are", () => {
+  it("renders a version this deploy has never pinned as Family X.Y", () => {
     const view = readingView(
       stored({ kind: "on_demand", model: "claude-opus-4-8", completedAt: null }),
       "America/Sao_Paulo",
     );
 
     expect(view?.title).toBe("Leitura pedida sobre setembro de 2026");
-    expect(view?.meta).toEqual(["claude-opus-4-8"]);
+    expect(view?.meta).toEqual(["Opus 4.8"]);
+  });
+
+  it("renders a dated id (claude-<family>-X-Y-YYYYMMDD) as Family X.Y, dropping the date", () => {
+    const view = readingView(
+      stored({ kind: "on_demand", model: "claude-haiku-4-5-20251001", completedAt: null }),
+      "America/Sao_Paulo",
+    );
+
+    expect(view?.meta).toEqual(["Haiku 4.5"]);
+  });
+
+  it("leaves a model id outside the claude-<family>-X-Y shape as it is", () => {
+    const view = readingView(
+      stored({ kind: "on_demand", model: "gpt-4-turbo", completedAt: null }),
+      "America/Sao_Paulo",
+    );
+
+    expect(view?.meta).toEqual(["gpt-4-turbo"]);
   });
 
   it("hides a stored reading that no longer meets the contract", () => {
@@ -100,7 +118,7 @@ describe("historyItem", () => {
     expect(historyItem(row, "America/Sao_Paulo", null)).toEqual({
       id: row.id,
       title: "Leitura pedida sobre setembro de 2026",
-      meta: "gerada em 12/10/2026, 12:30 · Claude Sonnet 5.5",
+      meta: "gerada em 12/10/2026, 12:30 · Sonnet 5.5",
       href: `/analises?leitura=${row.id}`,
       current: false,
     });

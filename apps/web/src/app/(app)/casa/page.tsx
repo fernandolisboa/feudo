@@ -3,6 +3,12 @@ import { Suspense } from "react";
 import { PageHeader } from "@/ui/page-header";
 import { SectionHeader } from "@/ui/section-header";
 import {
+  AiSettingsErrorBoundary,
+  AiSettingsSection,
+  getAiSettingsSectionProps,
+  t as analysisT,
+} from "@/modules/analysis";
+import {
   RecentAccessErrorBoundary,
   RecentAccessTable,
   getRecentAccessPageProps,
@@ -22,6 +28,11 @@ import {
 async function RecentAccessContent({ session }: { session: HouseholdSession }) {
   const recentAccess = await getRecentAccessPageProps(session);
   return <RecentAccessTable entries={recentAccess} />;
+}
+
+async function AiSettingsContent({ session }: { session: HouseholdSession }) {
+  const aiSettings = await getAiSettingsSectionProps(session);
+  return <AiSettingsSection {...aiSettings} />;
 }
 
 export default async function CasaPage() {
@@ -60,6 +71,15 @@ export default async function CasaPage() {
             <RecentAccessContent session={session} />
           </Suspense>
         </RecentAccessErrorBoundary>
+      </section>
+
+      <section className="mt-8">
+        <SectionHeader title={analysisT.aiSettings.sectionTitle} />
+        <AiSettingsErrorBoundary>
+          <Suspense fallback={null}>
+            <AiSettingsContent session={session} />
+          </Suspense>
+        </AiSettingsErrorBoundary>
       </section>
       {deletion ? (
         <section className="mt-8">

@@ -51,6 +51,7 @@ const en = {
     disabled: "The analyst is turned off at the moment.",
     failed:
       "The analyst could not write a reading this time. The attempt counts toward today's limit.",
+    noTime: "There isn't enough time left right now to write a reading. Try again.",
   },
   errors: {
     failed: "Could not reach the server. Check your connection and try again.",
@@ -66,6 +67,47 @@ const en = {
     fgcLimitValue: "{amount} per CPF per financial conglomerate",
     fgcoopLimit: "FGCoop guarantee limit",
     fgcoopLimitValue: "{amount} per CPF per cooperative",
+  },
+  off: {
+    title: "The analyst is off",
+    explanation:
+      "A household owner or admin registers an Anthropic key on the Casa page to turn the analyst on.",
+    link: "Go to Casa",
+  },
+  aiSettings: {
+    sectionTitle: "Analyst's key and models",
+    description:
+      "Readings are written through your own Anthropic account: the key below, which only an owner or admin can register, change or remove.",
+    keyLabel: "Anthropic key",
+    keyPlaceholder: "sk-ant-...",
+    keyHelp: "Never shown again after it is saved; only the last 4 characters stay on screen.",
+    currentKey: "Current key: •••• {last4}",
+    noKey: "No key registered",
+    removeAction: "Remove key",
+    removeDialog: {
+      title: "Remove the Anthropic key?",
+      description:
+        'Without a key the household has no analyst: the monthly reading is skipped and "Gerar nova leitura" is turned off until a new key is registered.',
+      cancel: "Cancel",
+      confirm: "Remove key",
+    },
+    monthlyFamilyLabel: "Monthly reading",
+    onDemandFamilyLabel: 'On-demand reading ("Gerar nova leitura")',
+    familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
+    save: "Save",
+    viewerNote: "Only an owner or admin can change these.",
+    providerUnavailable:
+      "The analyst is off for this deployment. No key can be registered until it is back.",
+    outcomes: {
+      saved: "Settings saved.",
+      removed: "Key removed.",
+      invalidKey: "Anthropic refused this key. Check it and try again.",
+      unavailable: "Could not verify the key with Anthropic right now. Try again.",
+      notAllowed: "Only an owner or admin can change this.",
+      invalidInput: "Check the fields and try again.",
+      failed: "Could not save. Check your connection and try again.",
+      rateLimited: "Too many key attempts recently. Wait a bit and try again.",
+    },
   },
 };
 
@@ -122,6 +164,7 @@ const ptBR = {
     disabled: "O analista está desligado no momento.",
     failed:
       "O analista não conseguiu escrever uma leitura desta vez. A tentativa conta no limite de hoje.",
+    noTime: "Não há tempo suficiente agora para escrever uma leitura. Tente de novo.",
   },
   errors: {
     failed: "Não deu para falar com o servidor. Confira sua conexão e tente de novo.",
@@ -137,6 +180,47 @@ const ptBR = {
     fgcLimitValue: "{amount} por CPF por conglomerado financeiro",
     fgcoopLimit: "Limite da garantia do FGCoop",
     fgcoopLimitValue: "{amount} por CPF por cooperativa",
+  },
+  off: {
+    title: "O analista está desativado",
+    explanation:
+      "Um responsável ou administrador registra uma chave da Anthropic em Casa para ativar o analista.",
+    link: "Ir para Casa",
+  },
+  aiSettings: {
+    sectionTitle: "Chave e modelos do analista",
+    description:
+      "As leituras são escritas com a sua própria conta da Anthropic: a chave abaixo, que só um responsável ou administrador pode registrar, alterar ou remover.",
+    keyLabel: "Chave da Anthropic",
+    keyPlaceholder: "sk-ant-...",
+    keyHelp: "Não é mostrada de novo depois de salva; só os últimos 4 caracteres ficam na tela.",
+    currentKey: "Chave atual: •••• {last4}",
+    noKey: "Nenhuma chave registrada",
+    removeAction: "Remover chave",
+    removeDialog: {
+      title: "Remover a chave da Anthropic?",
+      description:
+        'Sem uma chave a casa fica sem analista: a leitura mensal é pulada e "Gerar nova leitura" fica desligado até que uma chave nova seja registrada.',
+      cancel: "Cancelar",
+      confirm: "Remover chave",
+    },
+    monthlyFamilyLabel: "Leitura mensal",
+    onDemandFamilyLabel: 'Leitura sob demanda ("Gerar nova leitura")',
+    familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
+    save: "Salvar",
+    viewerNote: "Só um responsável ou administrador pode alterar isto.",
+    providerUnavailable:
+      "O analista está desativado neste ambiente. Nenhuma chave pode ser registrada até ele voltar.",
+    outcomes: {
+      saved: "Configurações salvas.",
+      removed: "Chave removida.",
+      invalidKey: "A Anthropic recusou esta chave. Confira e tente de novo.",
+      unavailable: "Não deu para verificar a chave com a Anthropic agora. Tente de novo.",
+      notAllowed: "Só um responsável ou administrador pode alterar isto.",
+      invalidInput: "Confira os campos e tente de novo.",
+      failed: "Não deu para salvar. Confira sua conexão e tente de novo.",
+      rateLimited: "Muitas tentativas de chave recentes. Espere um pouco e tente de novo.",
+    },
   },
 } satisfies typeof en;
 
