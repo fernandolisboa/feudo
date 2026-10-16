@@ -77,4 +77,13 @@ describe("resolveModelId", () => {
 
     expect(resolveModelId(models, "sonnet", "standard")).toBe("claude-sonnet-5-5");
   });
+
+  it("ignores an entry whose created_at cannot be parsed as a date, even listed first", () => {
+    const models = [
+      model("claude-sonnet-5-5", "not-a-date"),
+      model("claude-sonnet-5-9", "2026-09-01T00:00:00Z"),
+    ];
+
+    expect(resolveModelId(models, "sonnet", "standard")).toBe("claude-sonnet-5-9");
+  });
 });

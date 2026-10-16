@@ -22,7 +22,10 @@ const modelCapabilitiesSchema = z.object({
 
 const resolvableModelSchema = z.object({
   id: z.string(),
-  created_at: z.string(),
+  // Rejecting an unparseable date here, not just at the comparison, keeps a
+  // broken entry from ever winning a reduce by never losing one (Date.parse
+  // on an invalid string is NaN, and every comparison against NaN is false).
+  created_at: z.iso.datetime({ offset: true }),
   capabilities: modelCapabilitiesSchema.nullable(),
 });
 

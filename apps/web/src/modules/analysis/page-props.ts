@@ -22,8 +22,11 @@ import {
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
+import { hasValidEncryptionKey } from "@/platform/encryption-key";
+import { householdHasUsableKey } from "./ai-settings";
 import { getAiSettings } from "./ai-settings-repository";
-import type { AiFamily } from "./ai-client";
+import { AI_FAMILIES, type AiFamily } from "./ai-client";
+import { readAiProviderName, readEncryptionKey, type AnalysisEnv } from "./env";
 import { ANALYSES_PATH, READING_PARAM } from "./paths";
 import {
   createAnalysisRepository,
@@ -37,17 +40,16 @@ const HISTORY_LIMIT = 12;
 
 const readingIdSchema = z.uuid();
 
-const FAMILY_LABELS: Readonly<Record<string, string>> = {
-  haiku: "Haiku",
-  sonnet: "Sonnet",
-  opus: "Opus",
-};
-
-// Any current or future claude-(haiku|sonnet|opus)-X-Y id renders as
-// "Haiku X.Y" / "Sonnet X.Y" / "Opus X.Y" (ADR-0013): the household picks
-// the family, the newest version is resolved at reading time, and the label
-// must keep up without a code change. An id this cannot read stays as-is.
-const MODEL_ID_PATTERN = /^claude-(haiku|sonnet|opus)-(\d+)-(\d+)$/;
+// Any current or future claude-<family>-X-Y id, with or without the Models
+// API's optional -YYYYMMDD release-date suffix, renders as "Haiku X.Y" /
+// "Sonnet X.Y" / "Opus X.Y" (ADR-0013): the household picks the family, the
+// newest version is resolved at reading time, and the label must keep up
+// without a code change. An id this cannot read stays as-is. The family
+// alternation is derived from AI_FAMILIES so a new family needs no second
+// edit here.
+const MODEL_ID_PATTERN = new RegExp(
+  `^claude-(${AI_FAMILIES.join("|")})-(\\d+)-(\\d+)(?:-\\d{8})?$`,
+);
 
 type ReadingBase = {
   title: string;
@@ -102,13 +104,25 @@ export type AnalystReadingProps = {
   inProgress: boolean;
 };
 
-export type AiSettingsSectionProps = {
-  canManage: boolean;
-  hasKey: boolean;
-  apiKeyLast4: string | null;
-  monthlyFamily: AiFamily;
-  onDemandFamily: AiFamily;
-};
+// "unavailable" is the deploy itself having no analyst at all (AI_PROVIDER=off
+// or no usable ENCRYPTION_KEY): the section shows a read-only notice instead
+// of a form that would only ever answer "try again" (no household action
+// fixes a deploy-level misconfiguration).
+export type AiSettingsSectionProps =
+  | {
+      status: "unavailable";
+      canManage: boolean;
+      monthlyFamily: AiFamily;
+      onDemandFamily: AiFamily;
+    }
+  | {
+      status: "available";
+      canManage: boolean;
+      hasKey: boolean;
+      apiKeyLast4: string | null;
+      monthlyFamily: AiFamily;
+      onDemandFamily: AiFamily;
+    };
 
 function modelName(model: string | null): string | null {
   if (model === null) {
@@ -118,10 +132,10 @@ function modelName(model: string | null): string | null {
   if (!match) {
     return model;
   }
-  const family = match[1] ?? "";
+  const family = match[1] as AiFamily;
   const major = match[2] ?? "";
   const minor = match[3] ?? "";
-  return `${FAMILY_LABELS[family] ?? family} ${major}.${minor}`;
+  return `${t.aiSettings.familyNames[family]} ${major}.${minor}`;
 }
 
 function splitParagraphs(text: string | undefined): string[] {
@@ -268,7 +282,7 @@ export async function getAnalystReadingProps(
   now: Date = new Date(),
 ): Promise<AnalystReadingProps | null> {
   const context = await householdContext(session);
-  if (!(await isAnalysisEnabled(session, context.db))) {
+  if (!(await isAnalysisEnabled(session))) {
     return null;
   }
   const [latest, quota] = await Promise.all([
@@ -292,7 +306,7 @@ export async function getAnalysesPageProps(
 ): Promise<AnalysesPageProps | null> {
   const context = await householdContext(session);
   const { db, repository, timeZone } = context;
-  if (!(await isAnalysisEnabled(session, db))) {
+  if (!(await isAnalysisEnabled(session))) {
     return null;
   }
   const id = readingIdSchema.safeParse(requestedId);
@@ -320,7 +334,7 @@ export async function getAnalystBanksNoteProps(
   session: HouseholdSession,
 ): Promise<AnalystBanksNoteProps | null> {
   const { db, repository, timeZone } = await householdContext(session);
-  if (!(await isAnalysisEnabled(session, db))) {
+  if (!(await isAnalysisEnabled(session))) {
     return null;
   }
   const latest = await repository.latestSucceeded(db);
@@ -343,6 +357,7 @@ export async function getAnalystBanksNoteProps(
 // ciphertext).
 export async function getAiSettingsSectionProps(
   session: HouseholdSession,
+  env: AnalysisEnv = process.env,
 ): Promise<AiSettingsSectionProps> {
   const db = getDb();
   const scope = householdScope(session);
@@ -350,10 +365,22 @@ export async function getAiSettingsSectionProps(
     getAiSettings(scope, db),
     getViewerRole(session, db),
   ]);
+  const canManage = canManageHouseholdSettings(viewerRole);
+  if (readAiProviderName(env) === "off") {
+    return {
+      status: "unavailable",
+      canManage,
+      monthlyFamily: settings.monthlyFamily,
+      onDemandFamily: settings.onDemandFamily,
+    };
+  }
+  const encryptionKey = hasValidEncryptionKey(env) ? readEncryptionKey(env) : null;
+  const hasKey = householdHasUsableKey(settings, encryptionKey);
   return {
-    canManage: canManageHouseholdSettings(viewerRole),
-    hasKey: settings.apiKeyCiphertext !== null,
-    apiKeyLast4: settings.apiKeyLast4,
+    status: "available",
+    canManage,
+    hasKey,
+    apiKeyLast4: hasKey ? settings.apiKeyLast4 : null,
     monthlyFamily: settings.monthlyFamily,
     onDemandFamily: settings.onDemandFamily,
   };

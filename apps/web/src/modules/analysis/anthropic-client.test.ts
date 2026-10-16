@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const create = vi.fn<(params: unknown, options: unknown) => Promise<unknown>>();
-const list = vi.fn<(params?: unknown) => Iterable<unknown>>();
+const list = vi.fn<(params?: unknown, options?: unknown) => Iterable<unknown>>();
 
 vi.mock("@anthropic-ai/sdk", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@anthropic-ai/sdk")>();
@@ -146,6 +146,39 @@ describe("Anthropic AI client", () => {
     expect(await client.complete(REQUEST)).toMatchObject({ status: "truncated" });
   });
 
+  it("treats model_context_window_exceeded as truncated, same as max_tokens", async () => {
+    create.mockResolvedValue(message({ stop_reason: "model_context_window_exceeded" }));
+
+    expect(await createAnthropicAiClient("sk-ant-test").complete(REQUEST)).toMatchObject({
+      status: "truncated",
+    });
+  });
+
+  it("reads the content for stop_sequence, same as end_turn", async () => {
+    create.mockResolvedValue(message({ stop_reason: "stop_sequence" }));
+
+    expect(await createAnthropicAiClient("sk-ant-test").complete(REQUEST)).toMatchObject({
+      status: "ok",
+      output: FIXTURE_OUTPUT,
+    });
+  });
+
+  it("reports a stop_reason this analyst never asks for (tool_use) as malformed", async () => {
+    create.mockResolvedValue(message({ stop_reason: "tool_use" }));
+
+    expect(await createAnthropicAiClient("sk-ant-test").complete(REQUEST)).toMatchObject({
+      status: "malformed",
+    });
+  });
+
+  it("reports a null stop_reason as malformed", async () => {
+    create.mockResolvedValue(message({ stop_reason: null }));
+
+    expect(await createAnthropicAiClient("sk-ant-test").complete(REQUEST)).toMatchObject({
+      status: "malformed",
+    });
+  });
+
   it("reports text that is not JSON as malformed", async () => {
     create.mockResolvedValue(message({ content: [{ type: "text", text: "não é JSON" }] }));
 
@@ -193,6 +226,39 @@ describe("Anthropic AI client", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("claude-opus-5-9"));
     expect(warn.mock.calls[0]?.[0]).not.toContain("sk-ant-test");
     warn.mockRestore();
+  });
+
+  it("skips the pinned-id retry when too little of the timeout is left for a fair shot", async () => {
+    create.mockRejectedValueOnce(
+      new BadRequestError(400, undefined, "unknown model", new Headers()),
+    );
+
+    const result = await createAnthropicAiClient("sk-ant-test").complete({
+      ...REQUEST,
+      model: "claude-opus-5-9",
+      timeoutMs: 10_000,
+    });
+
+    expect(result).toMatchObject({ status: "unavailable" });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives the pinned-id retry whatever is left of the first attempt's timeout, not a fresh one", async () => {
+    create.mockRejectedValueOnce(
+      new BadRequestError(400, undefined, "unknown model", new Headers()),
+    );
+    create.mockResolvedValueOnce(message({ model: "claude-opus-5-5" }));
+    const now = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(20_000);
+
+    const result = await createAnthropicAiClient("sk-ant-test").complete({
+      ...REQUEST,
+      model: "claude-opus-5-9",
+      timeoutMs: 90_000,
+    });
+
+    expect(result).toMatchObject({ status: "ok" });
+    expect(create.mock.calls[1]?.[1]).toEqual({ timeout: 70_000 });
+    now.mockRestore();
   });
 
   it("never retries a 400 when the model id was already the pinned one", async () => {
@@ -250,5 +316,23 @@ describe("resolveModel", () => {
     const resolved = await createAnthropicAiClient("sk-ant-test").resolveModel("opus", "standard");
 
     expect(resolved).toBe("claude-opus-5-5");
+  });
+
+  it("gives the listing call a short timeout of its own, not the reading's whole budget", async () => {
+    list.mockReturnValue(asyncList([modelInfo("claude-sonnet-5-5", "2026-06-01T00:00:00Z")]));
+
+    await createAnthropicAiClient("sk-ant-test").resolveModel("sonnet", "standard");
+
+    expect(list.mock.calls[0]?.[1]).toMatchObject({ timeout: 5_000 });
+  });
+
+  it("falls back to the pinned id when the listing call times out", async () => {
+    list.mockImplementation(() => {
+      throw new APIConnectionTimeoutError();
+    });
+
+    const resolved = await createAnthropicAiClient("sk-ant-test").resolveModel("haiku", "standard");
+
+    expect(resolved).toBe("claude-haiku-5-5");
   });
 });

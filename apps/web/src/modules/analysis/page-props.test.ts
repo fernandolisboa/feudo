@@ -48,6 +48,15 @@ describe("readingView", () => {
     expect(view?.meta).toEqual(["Opus 4.8"]);
   });
 
+  it("renders a dated id (claude-<family>-X-Y-YYYYMMDD) as Family X.Y, dropping the date", () => {
+    const view = readingView(
+      stored({ kind: "on_demand", model: "claude-haiku-4-5-20251001", completedAt: null }),
+      "America/Sao_Paulo",
+    );
+
+    expect(view?.meta).toEqual(["Haiku 4.5"]);
+  });
+
   it("leaves a model id outside the claude-<family>-X-Y shape as it is", () => {
     const view = readingView(
       stored({ kind: "on_demand", model: "gpt-4-turbo", completedAt: null }),

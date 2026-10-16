@@ -218,22 +218,21 @@ describe("generateReading", () => {
 });
 
 const SESSION = { householdId: "household-1" } as Parameters<typeof isAnalysisEnabled>[0];
-const DB = {} as Parameters<typeof isAnalysisEnabled>[1];
 
 describe("isAnalysisEnabled", () => {
   it("turns the analyst off, instead of throwing, when AI_PROVIDER is misconfigured", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    expect(await isAnalysisEnabled(SESSION, DB, { AI_PROVIDER: "openai" })).toBe(false);
+    expect(await isAnalysisEnabled(SESSION, { AI_PROVIDER: "openai" })).toBe(false);
     warn.mockRestore();
   });
 
   it("is on for everyone with the fake provider outside production, off in production", async () => {
-    expect(
-      await isAnalysisEnabled(SESSION, DB, { AI_PROVIDER: "fake", VERCEL_ENV: "preview" }),
-    ).toBe(true);
+    expect(await isAnalysisEnabled(SESSION, { AI_PROVIDER: "fake", VERCEL_ENV: "preview" })).toBe(
+      true,
+    );
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     expect(
-      await isAnalysisEnabled(SESSION, DB, { AI_PROVIDER: "fake", VERCEL_ENV: "production" }),
+      await isAnalysisEnabled(SESSION, { AI_PROVIDER: "fake", VERCEL_ENV: "production" }),
     ).toBe(false);
     warn.mockRestore();
   });

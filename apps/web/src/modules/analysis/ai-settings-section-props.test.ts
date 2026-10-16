@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { encryptSecret, HOUSEHOLD_AI_KEY_PURPOSE } from "@/platform/crypto";
+
 const getAiSettingsMock = vi.hoisted(() => vi.fn());
 const getViewerRoleMock = vi.hoisted(() => vi.fn());
 
@@ -31,6 +33,9 @@ const SESSION = {
   termsVersion: "test",
 };
 
+const ENCRYPTION_KEY = "unit-test-encryption-key-with-at-least-32-chars";
+const ANTHROPIC_ENV = { AI_PROVIDER: "anthropic", ENCRYPTION_KEY };
+
 function resetAll() {
   getViewerRoleMock.mockReset().mockResolvedValue("member");
   getAiSettingsMock.mockReset().mockResolvedValue({
@@ -45,9 +50,10 @@ describe("getAiSettingsSectionProps", () => {
   it("shows the current state to a member who cannot change it", async () => {
     resetAll();
 
-    const props = await getAiSettingsSectionProps(SESSION);
+    const props = await getAiSettingsSectionProps(SESSION, ANTHROPIC_ENV);
 
     expect(props).toEqual({
+      status: "available",
       canManage: false,
       hasKey: false,
       apiKeyLast4: null,
@@ -62,16 +68,17 @@ describe("getAiSettingsSectionProps", () => {
     getAiSettingsMock.mockResolvedValue({
       monthlyFamily: "haiku",
       onDemandFamily: "opus",
-      apiKeyCiphertext: "encrypted",
-      apiKeyLast4: "abcd",
+      apiKeyCiphertext: encryptSecret("sk-ant-secret", ENCRYPTION_KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyLast4: "cret",
     });
 
-    const props = await getAiSettingsSectionProps(SESSION);
+    const props = await getAiSettingsSectionProps(SESSION, ANTHROPIC_ENV);
 
     expect(props).toEqual({
+      status: "available",
       canManage: true,
       hasKey: true,
-      apiKeyLast4: "abcd",
+      apiKeyLast4: "cret",
       monthlyFamily: "haiku",
       onDemandFamily: "opus",
     });
@@ -81,8 +88,41 @@ describe("getAiSettingsSectionProps", () => {
     resetAll();
     getViewerRoleMock.mockResolvedValue("owner");
 
-    const props = await getAiSettingsSectionProps(SESSION);
+    const props = await getAiSettingsSectionProps(SESSION, ANTHROPIC_ENV);
 
     expect(props.canManage).toBe(true);
+  });
+
+  it("treats a ciphertext this deploy's key cannot open as no key, not the stale last4", async () => {
+    resetAll();
+    getAiSettingsMock.mockResolvedValue({
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+      apiKeyCiphertext: encryptSecret(
+        "sk-ant-secret",
+        "a-different-key-of-32-characters",
+        HOUSEHOLD_AI_KEY_PURPOSE,
+      ),
+      apiKeyLast4: "cret",
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const props = await getAiSettingsSectionProps(SESSION, ANTHROPIC_ENV);
+
+    expect(props).toMatchObject({ status: "available", hasKey: false, apiKeyLast4: null });
+    warn.mockRestore();
+  });
+
+  it("shows the read-only unavailable state when the deploy has no analyst at all", async () => {
+    resetAll();
+
+    const props = await getAiSettingsSectionProps(SESSION, { AI_PROVIDER: "off" });
+
+    expect(props).toEqual({
+      status: "unavailable",
+      canManage: false,
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+    });
   });
 });

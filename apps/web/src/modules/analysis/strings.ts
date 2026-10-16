@@ -51,6 +51,7 @@ const en = {
     disabled: "The analyst is turned off at the moment.",
     failed:
       "The analyst could not write a reading this time. The attempt counts toward today's limit.",
+    noTime: "There isn't enough time left right now to write a reading. Try again.",
   },
   errors: {
     failed: "Could not reach the server. Check your connection and try again.",
@@ -95,6 +96,8 @@ const en = {
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Save",
     viewerNote: "Only an owner or admin can change these.",
+    providerUnavailable:
+      "The analyst is off for this deployment. No key can be registered until it is back.",
     outcomes: {
       saved: "Settings saved.",
       removed: "Key removed.",
@@ -103,6 +106,7 @@ const en = {
       notAllowed: "Only an owner or admin can change this.",
       invalidInput: "Check the fields and try again.",
       failed: "Could not save. Check your connection and try again.",
+      rateLimited: "Too many key attempts recently. Wait a bit and try again.",
     },
   },
 };
@@ -160,6 +164,7 @@ const ptBR = {
     disabled: "O analista está desligado no momento.",
     failed:
       "O analista não conseguiu escrever uma leitura desta vez. A tentativa conta no limite de hoje.",
+    noTime: "Não há tempo suficiente agora para escrever uma leitura. Tente de novo.",
   },
   errors: {
     failed: "Não deu para falar com o servidor. Confira sua conexão e tente de novo.",
@@ -204,6 +209,8 @@ const ptBR = {
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Salvar",
     viewerNote: "Só um responsável ou administrador pode alterar isto.",
+    providerUnavailable:
+      "O analista está desativado neste ambiente. Nenhuma chave pode ser registrada até ele voltar.",
     outcomes: {
       saved: "Configurações salvas.",
       removed: "Chave removida.",
@@ -212,6 +219,7 @@ const ptBR = {
       notAllowed: "Só um responsável ou administrador pode alterar isto.",
       invalidInput: "Confira os campos e tente de novo.",
       failed: "Não deu para salvar. Confira sua conexão e tente de novo.",
+      rateLimited: "Muitas tentativas de chave recentes. Espere um pouco e tente de novo.",
     },
   },
 } satisfies typeof en;

@@ -12,8 +12,11 @@ import type { AiSettingsSectionProps } from "../page-props";
 import { t } from "../strings";
 import { AiSettingsSection } from "./ai-settings-section";
 
-function props(overrides: Partial<AiSettingsSectionProps> = {}): AiSettingsSectionProps {
+function props(
+  overrides: Partial<Extract<AiSettingsSectionProps, { status: "available" }>> = {},
+): AiSettingsSectionProps {
   return {
+    status: "available",
     canManage: true,
     hasKey: false,
     apiKeyLast4: null,
@@ -75,5 +78,20 @@ describe("AiSettingsSection", () => {
     rerender(<AiSettingsSection {...props({ hasKey: true, apiKeyLast4: "9xyz" })} />);
     expect(screen.getByRole("button", { name: "Remover chave" })).toBeDefined();
     expect(screen.getByText("Chave atual: •••• 9xyz")).toBeDefined();
+  });
+
+  it("shows a read-only notice instead of a form when the deploy has no analyst at all", () => {
+    render(
+      <AiSettingsSection
+        status="unavailable"
+        canManage={true}
+        monthlyFamily="opus"
+        onDemandFamily="sonnet"
+      />,
+    );
+
+    expect(screen.getByText(t.aiSettings.providerUnavailable)).toBeDefined();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
   });
 });

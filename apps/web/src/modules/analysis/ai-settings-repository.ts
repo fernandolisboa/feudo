@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import type { HouseholdScope } from "@/modules/households";
 
 import type { Database } from "@/platform/db/client";
-import type { AiFamily } from "./ai-client";
+import { DEFAULT_MONTHLY_FAMILY, DEFAULT_ON_DEMAND_FAMILY, type AiFamily } from "./ai-client";
 import { householdAiSettings } from "./schema";
 
 export type AiSettings = {
@@ -14,8 +14,8 @@ export type AiSettings = {
 };
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
-  monthlyFamily: "opus",
-  onDemandFamily: "sonnet",
+  monthlyFamily: DEFAULT_MONTHLY_FAMILY,
+  onDemandFamily: DEFAULT_ON_DEMAND_FAMILY,
   apiKeyCiphertext: null,
   apiKeyLast4: null,
 };

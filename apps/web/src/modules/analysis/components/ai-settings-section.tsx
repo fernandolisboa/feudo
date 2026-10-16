@@ -120,19 +120,33 @@ function FamilySelect({
 }
 
 // Every member sees the current key state and families (read below); only
-// owner/admin get the form that can change them (CLAUDE.md: "the household
-// brings its own Anthropic API key"). The key itself never comes back from
-// the server (page-props only ever reads its last 4 characters), so there is
-// nothing to prefill here: a blank field submitted means "keep the current
-// key" (validation.ts).
-export function AiSettingsSection({
-  canManage,
-  hasKey,
-  apiKeyLast4,
-  monthlyFamily,
-  onDemandFamily,
-}: AiSettingsSectionProps) {
+// owner/admin get the form that can change them. The key itself never comes
+// back from the server (page-props only ever reads its last 4 characters),
+// so there is nothing to prefill here: a blank field submitted means "keep
+// the current key" (validation.ts).
+export function AiSettingsSection(props: AiSettingsSectionProps) {
   const [state, formAction, isPending] = useActionState(saveAiSettingsAction, initialActionState);
+
+  if (props.status === "unavailable") {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground max-w-prose text-sm">{t.aiSettings.description}</p>
+        <p className="text-sm">{t.aiSettings.providerUnavailable}</p>
+        <dl className="flex flex-col gap-1 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt>{t.aiSettings.monthlyFamilyLabel}</dt>
+            <dd>{t.aiSettings.familyNames[props.monthlyFamily]}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt>{t.aiSettings.onDemandFamilyLabel}</dt>
+            <dd>{t.aiSettings.familyNames[props.onDemandFamily]}</dd>
+          </div>
+        </dl>
+      </div>
+    );
+  }
+
+  const { canManage, hasKey, apiKeyLast4, monthlyFamily, onDemandFamily } = props;
 
   if (!canManage) {
     return (

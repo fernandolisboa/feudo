@@ -53,13 +53,15 @@ export async function requestAnalysisAction(): Promise<ActionState> {
       return { status: "error", message: t.outcomes.noAccounts };
     case "disabled":
       return { status: "error", message: t.outcomes.disabled };
+    case "no_time":
+      return { status: "error", message: t.outcomes.noTime };
   }
 }
 
-// Only owner and admin may change the household's key or model families
-// (CLAUDE.md, "Key/models belong to the household"); a key is verified
-// against Anthropic before it is ever stored (saveAiSettings) and nothing
-// here ever puts the key itself in the response, a log or an error message.
+// Only owner and admin may change the household's key or model families; a
+// key is verified against Anthropic before it is ever stored (saveAiSettings)
+// and nothing here ever puts the key itself in the response, a log or an
+// error message.
 export async function saveAiSettingsAction(
   _prevState: ActionState,
   formData: FormData,
@@ -108,6 +110,8 @@ export async function saveAiSettingsAction(
       return { status: "error", message: t.aiSettings.outcomes.unavailable };
     case "failed":
       return { status: "error", message: t.aiSettings.outcomes.failed };
+    case "rate_limited":
+      return { status: "error", message: t.aiSettings.outcomes.rateLimited };
   }
 }
 

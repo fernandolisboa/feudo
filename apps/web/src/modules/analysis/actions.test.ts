@@ -171,6 +171,18 @@ describe("saveAiSettingsAction", () => {
 
     expect(result).toEqual({ status: "error", message: t.aiSettings.outcomes.failed });
   });
+
+  it("reports the service's own rate_limited outcome", async () => {
+    saveAiSettingsMock.mockResolvedValue({ status: "rate_limited" });
+
+    const result = await saveAiSettingsAction(
+      initialActionState,
+      formDataWith({ ...VALID, apiKey: "sk-ant-new-key" }),
+    );
+
+    expect(result).toEqual({ status: "error", message: t.aiSettings.outcomes.rateLimited });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("removeAiKeyAction", () => {

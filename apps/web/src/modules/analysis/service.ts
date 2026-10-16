@@ -26,9 +26,16 @@ import { createNotifierFromEnv, type Notifier } from "@/modules/notifications";
 import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
-import type { Database } from "@/platform/db/client";
-import { decryptHouseholdApiKey, getAiSettings } from "./ai-settings";
-import type { AiClient, AiFailure, AiFamily, AiTier, AiUsage } from "./ai-client";
+import { getDb, type Database } from "@/platform/db/client";
+import { decryptHouseholdApiKey, getAiSettings, householdHasUsableKey } from "./ai-settings";
+import {
+  MIN_ATTEMPT_MS,
+  type AiClient,
+  type AiFailure,
+  type AiFamily,
+  type AiTier,
+  type AiUsage,
+} from "./ai-client";
 import { readAiProviderName, readEncryptionKey, type AnalysisEnv } from "./env";
 import { CURRENT_ANALYST_PROMPT, type AnalystPrompt } from "./prompts";
 import { createAiProvider, type AiProvider } from "./provider";
@@ -56,9 +63,6 @@ const ATTEMPTS = 2;
 
 const TIMEOUT_MS: Record<AiTier, number> = { standard: 45_000, deep: 150_000 };
 
-// Below this a call is unlikely to finish; it is better skipped than cut off.
-const MIN_ATTEMPT_MS: Record<AiTier, number> = { standard: 15_000, deep: 45_000 };
-
 // The household's own key (ADR-0013), never a deploy-wide one: `provider` is
 // null only when the analyst is off for everyone (AI_PROVIDER=off or no
 // ENCRYPTION_KEY); `encryptionKey` is set whenever `provider` can need one
@@ -83,10 +87,11 @@ export function createAnalysisDeps(env: AnalysisEnv = process.env): AnalysisDeps
 // A misconfigured AI_PROVIDER turns the analyst off instead of breaking the
 // pages that host it; the cron's response reports the error. Anthropic's
 // provider is per-household from here: enabled only once this household has
-// registered its own key.
+// registered a key this deploy can actually decrypt (householdHasUsableKey:
+// a rotated ENCRYPTION_KEY or a tampered row counts as no key, same as every
+// other place that checks).
 export async function isAnalysisEnabled(
   session: HouseholdSession,
-  db: Database,
   env: AnalysisEnv = process.env,
 ): Promise<boolean> {
   try {
@@ -97,8 +102,8 @@ export async function isAnalysisEnabled(
     if (providerName === "fake") {
       return true;
     }
-    const settings = await getAiSettings(householdScope(session), db);
-    return settings.apiKeyCiphertext !== null;
+    const settings = await getAiSettings(householdScope(session), getDb());
+    return householdHasUsableKey(settings, readEncryptionKey(env));
   } catch (error) {
     console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
     return false;
@@ -269,7 +274,9 @@ async function recordGeneration(
 
 export type OnDemandOutcome =
   | { status: "ok" }
-  | { status: "disabled" | "no_accounts" | "quota_exhausted" | "in_progress" | "failed" };
+  | {
+      status: "disabled" | "no_accounts" | "quota_exhausted" | "in_progress" | "failed" | "no_time";
+    };
 
 // A member's "Gerar nova leitura": Sonnet, spending one of the household's
 // readings for its own calendar day whether the reading succeeds or not (the
@@ -303,6 +310,12 @@ export async function requestOnDemandAnalysis(
   }
   const family = familyOf("onDemand");
   const requestedModel = await client.resolveModel(family, "standard");
+  // Resolving the model is itself a network call; re-checking the budget
+  // right after it, before a slot or a failure is ever recorded, keeps a
+  // reading that was already doomed from spending either.
+  if (options.deadline.getTime() - Date.now() < MIN_ATTEMPT_MS.standard) {
+    return { status: "no_time" };
+  }
   const reservation = await repository.reserveOnDemand(db, {
     row: {
       period: input.month,
@@ -335,10 +348,22 @@ export async function runOnDemandAnalysis(
   session: HouseholdSession,
   db: Database,
 ): Promise<OnDemandOutcome> {
-  if (!(await isAnalysisEnabled(session, db))) {
+  if (!(await isAnalysisEnabled(session))) {
     return { status: "disabled" };
   }
-  return requestOnDemandAnalysis(session, db, createAnalysisDeps(), {
+  // isAnalysisEnabled already checked the provider and the household's key
+  // moments ago; createAnalysisDeps re-reads the same env and re-decrypts
+  // nothing itself, so this should never throw. It is wrapped anyway, the
+  // same as runMonthlyAnalysisStep: a Server Action throwing is a 500 for
+  // the member who pressed the button, where "disabled" is a readable state.
+  let deps: AnalysisDeps;
+  try {
+    deps = createAnalysisDeps();
+  } catch (error) {
+    console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
+    return { status: "disabled" };
+  }
+  return requestOnDemandAnalysis(session, db, deps, {
     now: new Date(),
     deadline: new Date(Date.now() + ON_DEMAND_BUDGET_MS - RUN_HEADROOM_MS),
   });
@@ -366,6 +391,12 @@ export async function runMonthlyAnalysisForHousehold(
   }
   const family = familyOf("monthly");
   const requestedModel = await client.resolveModel(family, "deep");
+  // Same re-check as the on-demand path: resolving the model took real time,
+  // so the budget is read again before a failure is ever counted against
+  // this household's three-strikes limit.
+  if (options.deadline.getTime() - Date.now() < MIN_ATTEMPT_MS.deep) {
+    return { status: "skipped" };
+  }
   const id = await createAnalysisRepository(scope).startMonthly(db, {
     row: {
       period: input.month,
