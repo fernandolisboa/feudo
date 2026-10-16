@@ -2,20 +2,21 @@ import type { AnalysisInput } from "@feudo/core";
 
 export type AiTier = "standard" | "deep";
 
-// The household picks the family (ADR-0013); the newest qualifying version
-// of it is resolved at call time (model-resolution.ts). These three ids are
-// the safety net: known-good, used whenever resolution fails or returns
-// nothing, and retried once whenever a freshly resolved id is itself
-// rejected by the API.
-export const PINNED_MODEL_IDS = {
+// The household picks one of these per reading kind (ADR-0013); the
+// validation schema's z.enum reads this tuple directly.
+export const AI_FAMILIES = ["haiku", "sonnet", "opus"] as const;
+
+export type AiFamily = (typeof AI_FAMILIES)[number];
+
+// The newest qualifying version of the household's family is resolved at
+// call time (model-resolution.ts). These three ids are the safety net:
+// known-good, used whenever resolution fails or returns nothing, and
+// retried once whenever a freshly resolved id is itself rejected by the API.
+export const PINNED_MODEL_IDS: Record<AiFamily, string> = {
   haiku: "claude-haiku-5-5",
   sonnet: "claude-sonnet-5-5",
   opus: "claude-opus-5-5",
-} as const;
-
-export type AiFamily = keyof typeof PINNED_MODEL_IDS;
-
-export const AI_FAMILIES = Object.keys(PINNED_MODEL_IDS) as AiFamily[];
+};
 
 // Effort stays a function of the reading's depth, never of the family: the
 // monthly reading is always "deep" (high effort), the on-demand one always
