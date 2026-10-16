@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   integer,
@@ -53,5 +54,33 @@ export const bankCriterionOverride = pgTable(
       columns: [table.householdId, table.institutionId, table.criterion],
     }),
     check("bank_criterion_override_score_check", sql`${table.score} between 0 and 100`),
+  ],
+);
+
+// Household-scoped (ADR-0001): the household's own offered/not-offered call
+// on one account type of one bank (ADR-0006 amendment 2026-10-16), which
+// wins over the shipped reference data in its comparison the same way a
+// criterion override does. base_reviewed_at follows the same rule: the
+// reference account-type review date the household answered to, so a later
+// reference review can be offered to it instead of silently applied.
+export const bankAccountTypeOverride = pgTable(
+  "bank_account_type_override",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    institutionId: text("institution_id").notNull(),
+    accountType: text("account_type").notNull(),
+    offered: boolean("offered").notNull(),
+    note: text("note").notNull(),
+    sourceUrl: text("source_url"),
+    baseReviewedAt: date("base_reviewed_at").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "bank_account_type_override_pk",
+      columns: [table.householdId, table.institutionId, table.accountType],
+    }),
   ],
 );

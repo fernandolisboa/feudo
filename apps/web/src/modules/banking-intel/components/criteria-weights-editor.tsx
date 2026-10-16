@@ -6,15 +6,12 @@ import {
   CANDIDATE_COUNT_MAX,
   CANDIDATE_COUNT_MIN,
   criterionShares,
-  effectiveWeights,
-  MINIMUM_SCORE_MAX,
-  MINIMUM_SCORE_MIN,
-  MINIMUM_SCORE_STEP,
+  isValidCriterionWeight,
   PRO_CON_MIN_DIFFERENCE_MAX,
   PRO_CON_MIN_DIFFERENCE_MIN,
   PRO_CON_MIN_DIFFERENCE_STEP,
   type BankProfileCriterion,
-  type CriterionWeightLevel,
+  type CriterionNumericWeight,
   type WeightLevels,
 } from "@feudo/core";
 
@@ -29,24 +26,25 @@ import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "../a
 import { levelLabel } from "../level-label";
 import type { ComparisonOptionsView, CriterionWeightView } from "../page-props";
 import { t } from "../strings";
-import { minimumScoreFieldName } from "../validation";
 
-type LevelValue = `${number}` | "essential" | "required";
+type LevelValue = `${number}`;
 
-function levelToValue(level: CriterionWeightLevel): LevelValue {
-  return typeof level === "number" ? (String(level) as LevelValue) : level;
+function levelToValue(level: CriterionNumericWeight): LevelValue {
+  return String(level) as LevelValue;
 }
 
-function valueToLevel(value: LevelValue): CriterionWeightLevel {
-  if (value === "essential" || value === "required") return value;
-  return Number(value) as CriterionWeightLevel;
+function valueToLevel(value: LevelValue): CriterionNumericWeight {
+  const level = Number(value);
+  if (!isValidCriterionWeight(level)) {
+    throw new Error(`invalid criterion weight value: ${value}`);
+  }
+  return level;
 }
 
-const LEVEL_VALUES: LevelValue[] = [
-  ...Array.from({ length: 6 }, (_, weight) => String(weight) as LevelValue),
-  "essential",
-  "required",
-];
+const LEVEL_VALUES: LevelValue[] = Array.from(
+  { length: 6 },
+  (_, weight) => String(weight) as LevelValue,
+);
 
 const LEVEL_OPTIONS: { value: LevelValue; label: string }[] = LEVEL_VALUES.map((value) => ({
   value,
@@ -55,7 +53,6 @@ const LEVEL_OPTIONS: { value: LevelValue; label: string }[] = LEVEL_VALUES.map((
 
 type EditorState = {
   levels: Record<BankProfileCriterion, LevelValue>;
-  minimumScores: Record<BankProfileCriterion, number>;
   candidateCount: number;
   proConMinDifference: number;
 };
@@ -68,19 +65,18 @@ function stateFromProps(
     levels: Object.fromEntries(
       weights.map((entry) => [entry.criterion, levelToValue(entry.level)]),
     ) as Record<BankProfileCriterion, LevelValue>,
-    minimumScores: Object.fromEntries(
-      weights.map((entry) => [entry.criterion, entry.minimumScore]),
-    ) as Record<BankProfileCriterion, number>,
     candidateCount: options.candidateCount,
     proConMinDifference: options.proConMinDifference,
   };
 }
 
+// The weights form only ever posts weights and the two comparison options
+// below; the account-type filter saves on its own through a separate action
+// (AccountTypeFilterPanel), so each panel patches only its own setting.
 function toFormData(state: EditorState): FormData {
   const formData = new FormData();
   for (const criterion of BANK_PROFILE_CRITERIA) {
     formData.set(criterion, state.levels[criterion]);
-    formData.set(minimumScoreFieldName(criterion), String(state.minimumScores[criterion]));
   }
   formData.set("candidateCount", String(state.candidateCount));
   formData.set("proConMinDifference", String(state.proConMinDifference));
@@ -129,7 +125,7 @@ export function CriteriaWeightsEditor({
   }
 
   const state = draft ?? serverState;
-  const shares = useMemo(() => criterionShares(effectiveWeights(effectiveLevels(state))), [state]);
+  const shares = useMemo(() => criterionShares(effectiveLevels(state)), [state]);
 
   function save(next: EditorState) {
     setDraft(next);
@@ -141,8 +137,6 @@ export function CriteriaWeightsEditor({
       <ul className="divide-border flex flex-col divide-y border-y">
         {weights.map((entry) => {
           const level = state.levels[entry.criterion];
-          const isRequired = level === "required";
-          const minimumScore = state.minimumScores[entry.criterion];
           return (
             <li key={entry.criterion} className="flex flex-col gap-2 py-2">
               <div className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto_auto] items-center gap-3">
@@ -174,42 +168,6 @@ export function CriteriaWeightsEditor({
                   </SelectContent>
                 </Select>
               </div>
-              {isRequired ? (
-                <div className="flex flex-col gap-1 pb-1">
-                  <span className="text-[13px] tabular-nums">
-                    {interpolate(t.weights.minimumScore, "{score}", String(minimumScore))}
-                  </span>
-                  <Slider
-                    aria-label={interpolate(
-                      t.weights.minimumScore,
-                      "{score}",
-                      String(minimumScore),
-                    )}
-                    min={MINIMUM_SCORE_MIN}
-                    max={MINIMUM_SCORE_MAX}
-                    step={MINIMUM_SCORE_STEP}
-                    value={minimumScore}
-                    disabled={isPending}
-                    onValueChange={(value) => {
-                      setDraft({
-                        ...state,
-                        minimumScores: { ...state.minimumScores, [entry.criterion]: value },
-                      });
-                    }}
-                    onValueCommitted={(value) => {
-                      save({
-                        ...state,
-                        minimumScores: { ...state.minimumScores, [entry.criterion]: value },
-                      });
-                    }}
-                  />
-                  {entry.minimumScoreHint ? (
-                    <span className="text-muted-foreground text-[12px]">
-                      {entry.minimumScoreHint}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </li>
           );
         })}

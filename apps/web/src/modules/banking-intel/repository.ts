@@ -1,20 +1,23 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
-import { bankCriteriaWeights, bankCriterionOverride } from "./schema";
+import { bankAccountTypeOverride, bankCriteriaWeights, bankCriterionOverride } from "./schema";
 import {
   isReadableComparisonOptions,
+  isReadableWeightLevels,
   parseStoredComparisonOptions,
+  storedAccountTypeOverrideSchema,
   storedOverrideSchema,
-  storedWeightLevelsSchema,
+  type AccountTypeOverrideTarget,
   type OverrideTarget,
+  type StoredAccountTypeOverride,
   type StoredComparisonOptions,
   type StoredOverride,
   type StoredWeightLevels,
 } from "./validation";
 
-import type { WeightLevels } from "@feudo/core";
+import type { AccountTypeFilter, WeightLevels } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
@@ -34,7 +37,11 @@ export type StoredSettingsRead =
   | { status: "found"; levels: StoredWeightLevels; options: StoredOptionsRead }
   | { status: "unreadable" };
 
-export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOptions };
+export type WeightsSave = {
+  levels: WeightLevels;
+  candidateCount: number;
+  proConMinDifference: number;
+};
 
 function readOptions(value: unknown): StoredOptionsRead {
   if (value === null) return { status: "absent" };
@@ -44,7 +51,11 @@ function readOptions(value: unknown): StoredOptionsRead {
 }
 
 // Every method is bound to the household taken from the session (ADR-0001):
-// none accepts a household id.
+// none accepts a household id. The weights panel and the account-type filter
+// panel each own their own keys of this one row (CriteriaWeightsEditor,
+// AccountTypeFilterPanel): every write below patches only its own keys in a
+// single statement, never reading the row first, so a stale tab or two quick
+// saves in a row can never revert the other panel's setting.
 export function createCriteriaWeightsRepository(scope: HouseholdScope) {
   return {
     async get(db: Database): Promise<StoredSettingsRead> {
@@ -57,30 +68,68 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       if (!row) {
         return { status: "none" };
       }
-      const levels = storedWeightLevelsSchema.safeParse(row.weights);
-      if (!levels.success) {
+      if (!isReadableWeightLevels(row.weights)) {
         return { status: "unreadable" };
       }
-      return { status: "found", levels: levels.data, options: readOptions(row.options) };
+      return { status: "found", levels: row.weights, options: readOptions(row.options) };
     },
 
-    async save(db: Database, settings: StoredSettings): Promise<void> {
+    // Sets weights and the weights panel's two comparison options
+    // (candidateCount, proConMinDifference); a stored account-type filter is
+    // preserved by the jsonb `||` merge, never read back into application
+    // code first.
+    async saveWeights(db: Database, settings: WeightsSave): Promise<void> {
+      const options = {
+        candidateCount: settings.candidateCount,
+        proConMinDifference: settings.proConMinDifference,
+      };
+      await db
+        .insert(bankCriteriaWeights)
+        .values({ householdId: scope.householdId, weights: settings.levels, options })
+        .onConflictDoUpdate({
+          target: bankCriteriaWeights.householdId,
+          set: {
+            weights: settings.levels,
+            options: sql`(case when jsonb_typeof(${bankCriteriaWeights.options}) = 'object' then ${bankCriteriaWeights.options} else '{}'::jsonb end) || excluded.options`,
+            updatedAt: new Date(),
+          },
+        });
+    },
+
+    // Sets only options.accountTypeFilter; a household with no row yet gets
+    // weights = '{}' (resolves to the product defaults), so a filter-only
+    // save never pins the weights to anything the household did not choose.
+    async saveAccountTypeFilter(db: Database, filter: AccountTypeFilter): Promise<void> {
       await db
         .insert(bankCriteriaWeights)
         .values({
           householdId: scope.householdId,
-          weights: settings.levels,
-          options: settings.options,
+          weights: {},
+          options: { accountTypeFilter: filter },
         })
         .onConflictDoUpdate({
           target: bankCriteriaWeights.householdId,
-          set: { weights: settings.levels, options: settings.options, updatedAt: new Date() },
+          set: {
+            options: sql`(case when jsonb_typeof(${bankCriteriaWeights.options}) = 'object' then ${bankCriteriaWeights.options} else '{}'::jsonb end) || excluded.options`,
+            updatedAt: new Date(),
+          },
         });
     },
 
-    async clear(db: Database): Promise<void> {
+    // "Voltar ao padrão": drops weights and the two weights-panel options
+    // but keeps a stored account-type filter, a patch rather than a row
+    // delete so the other panel's setting survives. A household with
+    // nothing stored yet has no row to update, so this is a no-op for it.
+    async resetWeights(db: Database): Promise<void> {
       await db
-        .delete(bankCriteriaWeights)
+        .update(bankCriteriaWeights)
+        .set({
+          weights: {},
+          options: sql`case when ${bankCriteriaWeights.options} ? 'accountTypeFilter'
+            then jsonb_build_object('accountTypeFilter', ${bankCriteriaWeights.options}->'accountTypeFilter')
+            else null end`,
+          updatedAt: new Date(),
+        })
         .where(eq(bankCriteriaWeights.householdId, scope.householdId));
     },
   };
@@ -119,11 +168,17 @@ export function createCriterionOverridesRepository(scope: HouseholdScope) {
         .where(eq(bankCriterionOverride.householdId, scope.householdId))
         .orderBy(bankCriterionOverride.institutionId, bankCriterionOverride.criterion);
       const overrides: StoredOverride[] = [];
+      let skipped = 0;
       for (const row of rows) {
+        // jointBanking is retired (ADR-0006 amendment 2026-10-16): a row
+        // naming it predates the change and is ignored, not counted as
+        // unreadable, since nothing is actually wrong with it.
+        if (row.criterion === "jointBanking") continue;
         const parsed = storedOverrideSchema.safeParse(row);
         if (parsed.success) overrides.push(parsed.data);
+        else skipped += 1;
       }
-      return { overrides, skipped: rows.length - overrides.length };
+      return { overrides, skipped };
     },
 
     async save(db: Database, override: OverrideWrite): Promise<void> {
@@ -164,6 +219,94 @@ export function createCriterionOverridesRepository(scope: HouseholdScope) {
         .set({ baseReviewedAt })
         .where(ofTarget(target))
         .returning({ criterion: bankCriterionOverride.criterion });
+      return updated.length > 0;
+    },
+  };
+}
+
+export type AccountTypeOverrideWrite = AccountTypeOverrideTarget & {
+  offered: boolean;
+  note: string;
+  sourceUrl: string | null;
+  baseReviewedAt: string;
+};
+
+// Every method is bound to the household taken from the session (ADR-0001):
+// none accepts a household id. Mirrors createCriterionOverridesRepository
+// above for the account-type correction (ADR-0006 amendment 2026-10-16).
+export function createAccountTypeOverridesRepository(scope: HouseholdScope) {
+  const ofTarget = (target: AccountTypeOverrideTarget) =>
+    and(
+      eq(bankAccountTypeOverride.householdId, scope.householdId),
+      eq(bankAccountTypeOverride.institutionId, target.institutionId),
+      eq(bankAccountTypeOverride.accountType, target.accountType),
+    );
+
+  return {
+    async list(db: Database): Promise<{ overrides: StoredAccountTypeOverride[]; skipped: number }> {
+      const rows = await db
+        .select({
+          institutionId: bankAccountTypeOverride.institutionId,
+          accountType: bankAccountTypeOverride.accountType,
+          offered: bankAccountTypeOverride.offered,
+          note: bankAccountTypeOverride.note,
+          sourceUrl: bankAccountTypeOverride.sourceUrl,
+          baseReviewedAt: bankAccountTypeOverride.baseReviewedAt,
+          updatedAt: bankAccountTypeOverride.updatedAt,
+        })
+        .from(bankAccountTypeOverride)
+        .where(eq(bankAccountTypeOverride.householdId, scope.householdId))
+        .orderBy(bankAccountTypeOverride.institutionId, bankAccountTypeOverride.accountType);
+      const overrides: StoredAccountTypeOverride[] = [];
+      for (const row of rows) {
+        const parsed = storedAccountTypeOverrideSchema.safeParse(row);
+        if (parsed.success) overrides.push(parsed.data);
+      }
+      return { overrides, skipped: rows.length - overrides.length };
+    },
+
+    async save(db: Database, override: AccountTypeOverrideWrite): Promise<void> {
+      const values = {
+        offered: override.offered,
+        note: override.note,
+        sourceUrl: override.sourceUrl,
+        baseReviewedAt: override.baseReviewedAt,
+      };
+      await db
+        .insert(bankAccountTypeOverride)
+        .values({
+          householdId: scope.householdId,
+          institutionId: override.institutionId,
+          accountType: override.accountType,
+          ...values,
+        })
+        .onConflictDoUpdate({
+          target: [
+            bankAccountTypeOverride.householdId,
+            bankAccountTypeOverride.institutionId,
+            bankAccountTypeOverride.accountType,
+          ],
+          set: { ...values, updatedAt: new Date() },
+        });
+    },
+
+    async remove(db: Database, target: AccountTypeOverrideTarget): Promise<void> {
+      await db.delete(bankAccountTypeOverride).where(ofTarget(target));
+    },
+
+    // Moves only the reference date the override answers to, so keeping the
+    // household's value after a reference update silences the hint until the
+    // next one; the household's call, note and date are untouched.
+    async rebase(
+      db: Database,
+      target: AccountTypeOverrideTarget,
+      baseReviewedAt: string,
+    ): Promise<boolean> {
+      const updated = await db
+        .update(bankAccountTypeOverride)
+        .set({ baseReviewedAt })
+        .where(ofTarget(target))
+        .returning({ accountType: bankAccountTypeOverride.accountType });
       return updated.length > 0;
     },
   };

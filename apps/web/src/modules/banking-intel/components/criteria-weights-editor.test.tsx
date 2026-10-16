@@ -12,43 +12,42 @@ vi.mock("../actions", () => ({
 
 import type { ComparisonOptionsView, CriterionWeightView } from "../page-props";
 import { t } from "../strings";
-import { minimumScoreFieldName } from "../validation";
 import { CriteriaWeightsEditor } from "./criteria-weights-editor";
 
-function weights(jointBankingMinimum: number): CriterionWeightView[] {
+function weights(feesLevel: 0 | 1 | 2 | 3 | 4 | 5): CriterionWeightView[] {
+  const zero = { level: 0 as const, levelLabel: "Não conta", share: 0 };
   return [
+    { criterion: "cardBenefits", label: "Benefícios do cartão", help: "", ...zero },
+    { criterion: "investmentAccess", label: "Acesso a investimentos", help: "", ...zero },
+    { criterion: "appQuality", label: "Qualidade do app", help: "", ...zero },
+    { criterion: "security", label: "Segurança", help: "", ...zero },
     {
       criterion: "fees",
       label: "Tarifas",
       help: "custo",
-      level: 5,
-      levelLabel: "Muito alto",
-      share: 50,
-      isRequired: false,
-      minimumScore: 60,
-      minimumScoreHint: null,
+      level: feesLevel,
+      levelLabel: feesLevel > 0 ? "Muito alto" : "Não conta",
+      share: 0,
     },
     {
-      criterion: "jointBanking",
-      label: "Dinheiro a dois",
-      help: "conta conjunta",
-      level: "required",
-      levelLabel: "Obrigatório",
-      share: 50,
-      isRequired: true,
-      minimumScore: jointBankingMinimum,
-      minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
+      criterion: "lockIn",
+      label: "Aprisionamento",
+      help: "sair",
+      level: 1,
+      levelLabel: "Muito baixo",
+      share: 0,
     },
-  ];
+    { criterion: "publicReviews", label: "Avaliações de clientes", help: "", ...zero },
+  ] as CriterionWeightView[];
 }
 
-const OPTIONS: ComparisonOptionsView = { candidateCount: 3, proConMinDifference: 10 };
-
-function minimumScoreSlider(): HTMLElement {
+function firstSlider(): HTMLElement {
   const [slider] = screen.getAllByRole("slider", { hidden: true });
   if (!slider) throw new Error("expected at least one slider");
   return slider;
 }
+
+const OPTIONS: ComparisonOptionsView = { candidateCount: 3, proConMinDifference: 10 };
 
 beforeEach(() => {
   updateComparisonSettingsActionMock
@@ -64,44 +63,45 @@ afterEach(() => {
 describe("CriteriaWeightsEditor", () => {
   it("follows new props after a rerender, instead of freezing at what it first mounted with", () => {
     const { rerender } = render(
-      <CriteriaWeightsEditor weights={weights(70)} options={OPTIONS} weightsAreCustom />,
+      <CriteriaWeightsEditor weights={weights(4)} options={OPTIONS} weightsAreCustom />,
     );
 
-    expect(screen.getByText("Nota mínima: 70")).not.toBeNull();
+    expect(screen.getByText("80% da nota")).not.toBeNull();
 
-    rerender(<CriteriaWeightsEditor weights={weights(85)} options={OPTIONS} weightsAreCustom />);
+    rerender(<CriteriaWeightsEditor weights={weights(2)} options={OPTIONS} weightsAreCustom />);
 
-    expect(screen.queryByText("Nota mínima: 70")).toBeNull();
-    expect(screen.getByText("Nota mínima: 85")).not.toBeNull();
+    expect(screen.queryByText("80% da nota")).toBeNull();
+    expect(screen.getByText("67% da nota")).not.toBeNull();
   });
 
-  it("reverts to the server's values after a rejected save, and the next save posts those values", async () => {
+  it("reverts to the server's values after a rejected save, and the next save posts only weights and the two comparison options, never the account-type filter", async () => {
     updateComparisonSettingsActionMock.mockResolvedValueOnce({
       status: "error",
       message: t.errors.failed,
     });
-    render(<CriteriaWeightsEditor weights={weights(70)} options={OPTIONS} weightsAreCustom />);
+    render(<CriteriaWeightsEditor weights={weights(5)} options={OPTIONS} weightsAreCustom />);
 
-    fireEvent.change(minimumScoreSlider(), { target: { value: "75" } });
+    fireEvent.change(firstSlider(), { target: { value: "4" } });
 
     await screen.findByText(t.errors.failed);
-    expect(screen.getByText("Nota mínima: 70")).not.toBeNull();
-    expect(screen.queryByText("Nota mínima: 75")).toBeNull();
 
     updateComparisonSettingsActionMock.mockResolvedValueOnce({
       status: "success",
       message: t.saved,
     });
-    fireEvent.change(minimumScoreSlider(), { target: { value: "80" } });
+    fireEvent.change(firstSlider(), { target: { value: "5" } });
 
     await waitFor(() => {
       expect(updateComparisonSettingsActionMock).toHaveBeenCalledTimes(2);
     });
     const postedForm = updateComparisonSettingsActionMock.mock.calls[1]?.[1] as FormData;
-    expect(postedForm.get(minimumScoreFieldName("jointBanking"))).toBe("80");
+    expect(postedForm.get("candidateCount")).toBe("5");
     expect(postedForm.get("fees")).toBe("5");
-    expect(postedForm.get(minimumScoreFieldName("fees"))).toBe("60");
-    expect(postedForm.get("candidateCount")).toBe("3");
+    expect(postedForm.get("lockIn")).toBe("1");
     expect(postedForm.get("proConMinDifference")).toBe("10");
+    expect(postedForm.get("jointBanking")).toBeNull();
+    expect(postedForm.get("jointOnly")).toBeNull();
+    expect(postedForm.get("jointInvestment")).toBeNull();
+    expect(postedForm.get("mei")).toBeNull();
   });
 });

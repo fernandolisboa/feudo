@@ -188,7 +188,11 @@ const en = {
       topics: [
         {
           title: "Candidates and scores",
-          body: "Banks shows the reviewed banks that best fit your household's weights, among the ones you do not use yet (three by default; the household can show from one to five). Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with insufficient evidence stays out of the average and is shown as such. The review date sits under each bank. A bank that does not meet one of the household's required criteria never shows up as a candidate, even with a good score; All reviewed banks shows it with what it is missing. If no bank meets every requirement, the page says so instead of naming a candidate.",
+          body: "Banks shows the reviewed banks that best fit your household's weights, among the ones you do not use yet (three by default; the household can show from one to five) and that offer the account types the household marked as required. Each criterion gets a score from 0 to 100 from sources Feudo cites and reviews, and the bank's score is the average weighted by the household's weights. A criterion with insufficient evidence stays out of the average and is shown as such. The review date sits under each bank. A bank that lacks a required account type never shows up as a candidate, even with a good score; All reviewed banks shows it with what it is missing. If no bank has every required account type, the page says so instead of naming a candidate.",
+        },
+        {
+          title: "Account types",
+          body: "Above the candidates, the household sets Money together (a joint or a shared account), Investing together and MEI account each to Optional or Required. Required is a filter, not part of the score: a bank without it is simply left out of the candidates, however good its score. Money together set to Required also offers Joint account only, to stop a shared account from counting. The sentence under the panel always says how many of the reviewed banks are shown.",
         },
         {
           title: "For and against",
@@ -196,11 +200,11 @@ const en = {
         },
         {
           title: "Criteria weights",
-          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the score, and can go back to Feudo's defaults at any time. At least one criterion has to count. Essential and Required both weigh more: together they always carry exactly half the score, however many there are of each. The difference is the gate: Essential (Joint banking's default) only weighs more, while Required also sets a minimum score, and a bank that falls short of it is left out of the candidates entirely, even with a good overall score.",
+          body: "The owner and the admins choose how much each criterion counts, from Doesn't count to Very high, shown live as a percentage of the score, and can go back to Feudo's defaults at any time. At least one criterion has to count.",
         },
         {
           title: "A bank's page and corrections",
-          body: "Click a bank's name to open its page: the score and place with your weights, the deposit guarantee and, for each criterion, what Feudo found, the sources and the review date. Feudo reviews the banks' data from time to time. If something changed before that, the owner or an admin can use Correct to give a criterion the household's own score, with what changed and, optionally, a link. The correction applies only to your household and counts in its comparison; Feudo's updates never overwrite it. When Feudo reviews that criterion after your correction, the page asks whether to use the new version or keep yours.",
+          body: "Click a bank's name to open its page: the score and place with your weights, the deposit guarantee, the account types it offers and, for each criterion, what Feudo found, the sources and the review date. Feudo reviews this data from time to time. If something changed before that, the owner or an admin can use Correct to give a criterion the household's own score, or an account type the household's own Has it/Doesn't have it answer, with what changed and, optionally, a link. The correction applies only to your household and counts in its comparison; Feudo's updates never overwrite it. When Feudo reviews that criterion or account type after your correction, the page asks whether to use the new version or keep yours.",
         },
       ],
     },
@@ -443,7 +447,11 @@ const ptBR = {
       topics: [
         {
           title: "Candidatos e notas",
-          body: "Bancos mostra os bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam (três por padrão; a casa pode mostrar de um a cinco). Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco. Um banco que não atende a um critério obrigatório da casa nunca entra na lista de candidatos, mesmo com boa nota; Todos os bancos avaliados mostra esse banco e o que falta. Se nenhum banco atende a todos os critérios obrigatórios, a página avisa em vez de indicar um candidato.",
+          body: "Bancos mostra os bancos avaliados que mais combinam com os pesos da casa, entre os que vocês ainda não usam (três por padrão; a casa pode mostrar de um a cinco) e que têm os tipos de conta que a casa marcou como obrigatórios. Cada critério recebe uma nota de 0 a 100 com base em fontes citadas e revisadas pelo Feudo, e a nota do banco é a média ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. A data da revisão aparece embaixo de cada banco. Um banco que não tem um tipo de conta obrigatório nunca entra na lista de candidatos, mesmo com boa nota; Todos os bancos avaliados mostra esse banco e o que falta. Se nenhum banco tem todos os tipos de conta obrigatórios, a página avisa em vez de indicar um candidato.",
+        },
+        {
+          title: "Tipos de conta",
+          body: "Acima dos candidatos, a casa marca Dinheiro a dois (conta conjunta ou conta compartilhada), Investimentos em conjunto e Conta MEI como Opcional ou Obrigatório. Obrigatório é um filtro, não entra na nota: um banco sem aquele tipo de conta simplesmente sai da lista de candidatos, por melhor que seja a nota dele. Dinheiro a dois em Obrigatório também libera Só conta conjunta, para a conta compartilhada não valer. A frase embaixo do painel sempre diz quantos dos bancos avaliados estão sendo mostrados.",
         },
         {
           title: "A favor e contra",
@@ -451,11 +459,11 @@ const ptBR = {
         },
         {
           title: "Pesos dos critérios",
-          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar. Essencial e Obrigatório pesam mais: juntos, eles sempre valem exatamente metade da nota, por mais critérios que sejam dos dois tipos. A diferença está no filtro: o Essencial (o padrão de Dinheiro a dois) só pesa mais, enquanto o Obrigatório também define uma nota mínima, e um banco que fica abaixo dela sai da lista de candidatos, mesmo com uma nota geral boa.",
+          body: "O responsável e os administradores escolhem quanto cada critério conta, de Não conta a Muito alto, com o percentual da nota atualizado na hora, e podem voltar ao padrão do Feudo quando quiserem. Pelo menos um critério precisa contar.",
         },
         {
           title: "Página do banco e correções",
-          body: "Clique no nome de um banco para abrir a página dele: a nota e a posição com os pesos da casa, a garantia dos depósitos e, em cada critério, o que o Feudo encontrou, as fontes e a data da revisão. O Feudo revisa os dados dos bancos de tempos em tempos. Se algo mudou antes disso, o responsável ou um administrador pode usar Corrigir para dar ao critério uma nota da casa, com o que mudou e, se quiser, um link. A correção vale só para a sua casa e conta na comparação dela; as atualizações do Feudo nunca a sobrescrevem. Quando o Feudo revisar esse critério depois da correção, a página pergunta se vocês querem usar a versão nova ou manter a de vocês.",
+          body: "Clique no nome de um banco para abrir a página dele: a nota e a posição com os pesos da casa, a garantia dos depósitos, os tipos de conta que ele oferece e, em cada critério, o que o Feudo encontrou, as fontes e a data da revisão. O Feudo revisa esses dados de tempos em tempos. Se algo mudou antes disso, o responsável ou um administrador pode usar Corrigir para dar ao critério uma nota da casa, ou a um tipo de conta a resposta Tem/Não tem da casa, com o que mudou e, se quiser, um link. A correção vale só para a sua casa e conta na comparação dela; as atualizações do Feudo nunca a sobrescrevem. Quando o Feudo revisar esse critério ou tipo de conta depois da correção, a página pergunta se vocês querem usar a versão nova ou manter a de vocês.",
         },
       ],
     },

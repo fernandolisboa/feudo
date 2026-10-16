@@ -1,3 +1,4 @@
+import type { AccountType, AccountTypeStatus } from "./account-types";
 import type { BankProfileCriterion } from "./criteria";
 import type { ScorableBankProfile } from "./scoring";
 
@@ -5,6 +6,12 @@ export type CriterionScoreOverride = {
   institutionId: string;
   criterion: BankProfileCriterion;
   score: number;
+};
+
+export type AccountTypeOverride = {
+  institutionId: string;
+  accountType: AccountType;
+  offered: boolean;
 };
 
 // A household's own score for one criterion of one bank (ADR-0006,
@@ -28,6 +35,25 @@ export function applyScoreOverrides(
       };
     }
     return { ...profile, criteria };
+  });
+}
+
+// A household's own offered/not-offered call on one account type of one
+// bank (ADR-0006 amendment 2026-10-16) replaces the reference status in
+// that household's comparison only; reference account types the household
+// never touched are passed through unchanged.
+export function applyAccountTypeOverrides(
+  profiles: readonly ScorableBankProfile[],
+  overrides: readonly AccountTypeOverride[],
+): ScorableBankProfile[] {
+  return profiles.map((profile) => {
+    const own = overrides.filter((override) => override.institutionId === profile.institutionId);
+    if (own.length === 0) return profile;
+    const accountTypes: Record<AccountType, AccountTypeStatus> = { ...profile.accountTypes };
+    for (const override of own) {
+      accountTypes[override.accountType] = override.offered ? "offered" : "not-offered";
+    }
+    return { ...profile, accountTypes };
   });
 }
 

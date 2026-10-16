@@ -1,15 +1,17 @@
-import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
 import {
-  assertScorableWeights,
-  effectiveWeights,
-  requiredCriteriaOf,
-  type CriteriaWeights,
-  type WeightLevels,
-} from "./weights";
+  accountTypeRequirementsOf,
+  DEFAULT_ACCOUNT_TYPE_FILTER,
+  resolveAccountTypeFilter,
+  unmetAccountTypeRequirements,
+  type AccountType,
+  type AccountTypeFilter,
+  type AccountTypeRequirement,
+  type AccountTypeStatus,
+  type StoredAccountTypeFilter,
+} from "./account-types";
+import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
+import { assertScorableWeights, type WeightLevels } from "./weights";
 
-export const MINIMUM_SCORE_MIN = 0;
-export const MINIMUM_SCORE_MAX = 100;
-export const MINIMUM_SCORE_STEP = 5;
 export const CANDIDATE_COUNT_MIN = 1;
 export const CANDIDATE_COUNT_MAX = 5;
 export const PRO_CON_MIN_DIFFERENCE_MIN = 5;
@@ -19,37 +21,20 @@ export const PRO_CON_MIN_DIFFERENCE_STEP = 5;
 export const DEFAULT_CANDIDATE_COUNT = 3;
 export const DEFAULT_PRO_CON_MIN_DIFFERENCE = 10;
 
-// A required jointBanking score of 100 means only a true joint account
-// meets it; every other criterion defaults to a middling 60.
-export const DEFAULT_MINIMUM_SCORES: Readonly<Record<BankProfileCriterion, number>> =
-  Object.fromEntries(
-    BANK_PROFILE_CRITERIA.map((criterion) => [criterion, criterion === "jointBanking" ? 100 : 60]),
-  ) as Record<BankProfileCriterion, number>;
-
 export type ComparisonSettings = {
-  minimumScores: Readonly<Record<BankProfileCriterion, number>>;
   candidateCount: number;
   proConMinDifference: number;
+  accountTypeFilter: AccountTypeFilter;
 };
 
 export const DEFAULT_COMPARISON_SETTINGS: ComparisonSettings = {
-  minimumScores: DEFAULT_MINIMUM_SCORES,
   candidateCount: DEFAULT_CANDIDATE_COUNT,
   proConMinDifference: DEFAULT_PRO_CON_MIN_DIFFERENCE,
+  accountTypeFilter: DEFAULT_ACCOUNT_TYPE_FILTER,
 };
 
 function isStep(value: number, step: number): boolean {
   return value % step === 0;
-}
-
-export function isValidMinimumScore(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= MINIMUM_SCORE_MIN &&
-    value <= MINIMUM_SCORE_MAX &&
-    isStep(value, MINIMUM_SCORE_STEP)
-  );
 }
 
 export function isValidCandidateCount(value: unknown): value is number {
@@ -72,9 +57,9 @@ export function isValidProConMinDifference(value: unknown): value is number {
 }
 
 export type StoredComparisonSettings = {
-  minimumScores?: Partial<Record<BankProfileCriterion, unknown>>;
   candidateCount?: unknown;
   proConMinDifference?: unknown;
+  accountTypeFilter?: StoredAccountTypeFilter;
 };
 
 // Stored settings are household data that may predate a field added to the
@@ -82,20 +67,14 @@ export type StoredComparisonSettings = {
 // its own product default independently, the same policy as
 // resolveCriteriaWeights.
 export function resolveComparisonSettings(stored: StoredComparisonSettings): ComparisonSettings {
-  const minimumScores = Object.fromEntries(
-    BANK_PROFILE_CRITERIA.map((criterion) => {
-      const value = stored.minimumScores?.[criterion];
-      return [criterion, isValidMinimumScore(value) ? value : DEFAULT_MINIMUM_SCORES[criterion]];
-    }),
-  ) as Record<BankProfileCriterion, number>;
   return {
-    minimumScores,
     candidateCount: isValidCandidateCount(stored.candidateCount)
       ? stored.candidateCount
       : DEFAULT_CANDIDATE_COUNT,
     proConMinDifference: isValidProConMinDifference(stored.proConMinDifference)
       ? stored.proConMinDifference
       : DEFAULT_PRO_CON_MIN_DIFFERENCE,
+    accountTypeFilter: resolveAccountTypeFilter(stored.accountTypeFilter ?? {}),
   };
 }
 
@@ -106,6 +85,7 @@ export type ScorableCriterionEntry =
 export type ScorableBankProfile = {
   institutionId: string;
   criteria: Readonly<Record<BankProfileCriterion, ScorableCriterionEntry>>;
+  accountTypes: Readonly<Record<AccountType, AccountTypeStatus>>;
 };
 
 export type BankScore = {
@@ -113,7 +93,7 @@ export type BankScore = {
   score: number | null;
   reviewedAt: string;
   missingEvidence: BankProfileCriterion[];
-  unmetRequirements: BankProfileCriterion[];
+  unmetRequirements: AccountTypeRequirement[];
 };
 
 export type CriterionComparison = {
@@ -137,7 +117,11 @@ export type BankComparison = {
   noneMeetsRequirements: boolean;
 };
 
-type WeightedScore = BankScore & {
+type WeightedScore = {
+  institutionId: string;
+  score: number | null;
+  reviewedAt: string;
+  missingEvidence: BankProfileCriterion[];
   profile: ScorableBankProfile;
   weightedSum: number;
   evidencedWeight: number;
@@ -153,26 +137,10 @@ function roundedRatio(numerator: number, denominator: number): number {
   return Math.floor((2 * numerator + denominator) / (2 * denominator));
 }
 
-function unmetRequirementsOf(
-  profile: ScorableBankProfile,
-  requiredCriteria: readonly BankProfileCriterion[],
-  minimumScores: Readonly<Record<BankProfileCriterion, number>>,
-): BankProfileCriterion[] {
-  return requiredCriteria.filter((criterion) => {
-    const entry = profile.criteria[criterion];
-    return entry.status !== "scored" || entry.score < minimumScores[criterion];
-  });
-}
-
 // A criterion without evidence is left out and the remaining weights are
 // renormalised over what is evidenced, because ADR-0006 forbids standing in a
 // guessed score; missingEvidence says which weighted criteria were dropped.
-function weightedScore(
-  profile: ScorableBankProfile,
-  weights: CriteriaWeights,
-  requiredCriteria: readonly BankProfileCriterion[],
-  minimumScores: Readonly<Record<BankProfileCriterion, number>>,
-): WeightedScore {
+function weightedScore(profile: ScorableBankProfile, weights: WeightLevels): WeightedScore {
   let weightedSum = 0;
   let evidencedWeight = 0;
   const missingEvidence: BankProfileCriterion[] = [];
@@ -192,7 +160,6 @@ function weightedScore(
     score: evidencedWeight === 0 ? null : roundedRatio(weightedSum, evidencedWeight),
     reviewedAt: oldestReview(profile),
     missingEvidence,
-    unmetRequirements: unmetRequirementsOf(profile, requiredCriteria, minimumScores),
     profile,
     weightedSum,
     evidencedWeight,
@@ -208,44 +175,29 @@ function byScoreDescending(a: WeightedScore, b: WeightedScore): number {
   return b.weightedSum * a.evidencedWeight - a.weightedSum * b.evidencedWeight;
 }
 
-// Banks meeting every required criterion rank before banks that miss one or
-// more, each group then ordered as above; a bank with no required criteria
-// configured meets them vacuously, which keeps this the same as plain score
-// ordering when the household sets no required criterion.
-function byRequirementsThenScore(a: WeightedScore, b: WeightedScore): number {
-  const aMisses = a.unmetRequirements.length > 0 ? 1 : 0;
-  const bMisses = b.unmetRequirements.length > 0 ? 1 : 0;
-  return aMisses - bMisses || byScoreDescending(a, b);
-}
-
-function withoutInternals({
-  institutionId,
-  score,
-  reviewedAt,
-  missingEvidence,
-  unmetRequirements,
-}: WeightedScore): BankScore {
-  return { institutionId, score, reviewedAt, missingEvidence, unmetRequirements };
+function withoutInternals(
+  score: WeightedScore,
+  unmetRequirements: AccountTypeRequirement[],
+): BankScore {
+  const { institutionId, score: value, reviewedAt, missingEvidence } = score;
+  return { institutionId, score: value, reviewedAt, missingEvidence, unmetRequirements };
 }
 
 function rankWeighted(
   profiles: readonly ScorableBankProfile[],
-  weights: CriteriaWeights,
-  requiredCriteria: readonly BankProfileCriterion[],
-  minimumScores: Readonly<Record<BankProfileCriterion, number>>,
+  weights: WeightLevels,
 ): WeightedScore[] {
   assertScorableWeights(weights);
-  return profiles
-    .map((profile) => weightedScore(profile, weights, requiredCriteria, minimumScores))
-    .sort(byScoreDescending);
+  return profiles.map((profile) => weightedScore(profile, weights)).sort(byScoreDescending);
 }
 
-// Ties keep the input order: Array.prototype.sort is stable.
+// Ties keep the input order: Array.prototype.sort is stable. No account-type
+// filter applies here, so every bank meets its (empty) requirements.
 export function rankBankProfiles(
   profiles: readonly ScorableBankProfile[],
-  weights: CriteriaWeights,
+  weights: WeightLevels,
 ): BankScore[] {
-  return rankWeighted(profiles, weights, [], DEFAULT_MINIMUM_SCORES).map(withoutInternals);
+  return rankWeighted(profiles, weights).map((score) => withoutInternals(score, []));
 }
 
 type Baseline = { score: number; institutionId: string | null };
@@ -285,7 +237,7 @@ function lowerMedian(
 function prosAndCons(
   candidate: ScorableBankProfile,
   baselines: ReadonlyMap<BankProfileCriterion, Baseline>,
-  weights: CriteriaWeights,
+  weights: WeightLevels,
   proConMinDifference: number,
 ): Pick<BankCandidate, "pros" | "cons"> {
   const comparisons: CriterionComparison[] = [];
@@ -313,19 +265,28 @@ function prosAndCons(
   };
 }
 
-// The bank comparison of ADR-0006: every profiled institution in score order,
-// banks that miss a required criterion (ADR-0006, 2026-10-14) ranked after
-// the ones that meet every requirement, and the top candidates the household
-// does not use yet among those that meet every requirement, each set against
-// the best score the household's own institutions already reach on every
-// weighted criterion. A household whose institutions are all unrecognised is
-// compared against the median bank instead. Takes the household's weight
-// levels directly, rather than a caller-derived weights-and-required-criteria
-// pair, so effectiveWeights and requiredCriteriaOf (the ADR-0006 amendment,
-// 2026-10-14) can never drift from what the household actually stored.
-// noneMeetsRequirements is true only when the household set at least one
-// required criterion and no reviewed bank meets every one of them, so a
-// caller never has to re-derive it from the required criteria itself.
+type Ranked = WeightedScore & { unmetRequirements: AccountTypeRequirement[] };
+
+// Banks meeting every account-type requirement rank before banks that miss
+// one or more, each group then ordered by score; a bank with no requirement
+// set (the product default) meets it vacuously, which keeps this the same
+// as plain score ordering when the household sets no requirement.
+function byRequirementsThenScore(a: Ranked, b: Ranked): number {
+  const aMisses = a.unmetRequirements.length > 0 ? 1 : 0;
+  const bMisses = b.unmetRequirements.length > 0 ? 1 : 0;
+  return aMisses - bMisses || byScoreDescending(a, b);
+}
+
+// The bank comparison of ADR-0006: every profiled institution in score
+// order, banks that miss an account-type requirement (ADR-0006 amendment
+// 2026-10-16, "Dinheiro a dois" is a filter, not a criterion) ranked after
+// the ones that meet every requirement, and the top candidates the
+// household does not use yet among those that meet every requirement, each
+// set against the best score the household's own institutions already
+// reach on every weighted criterion. A household whose institutions are all
+// unrecognised is compared against the median bank instead. noneMeetsRequirements
+// is true only when the household set at least one requirement and no
+// reviewed bank meets every one of them.
 export function compareBanks(input: {
   profiles: readonly ScorableBankProfile[];
   levels: WeightLevels;
@@ -333,10 +294,12 @@ export function compareBanks(input: {
   settings: ComparisonSettings;
 }): BankComparison {
   const { profiles, levels, settings } = input;
-  const weights = effectiveWeights(levels);
-  const requiredCriteria = requiredCriteriaOf(levels);
   const currentIds = new Set(input.currentInstitutionIds);
-  const ranked = rankWeighted(profiles, weights, requiredCriteria, settings.minimumScores);
+  const requirements = accountTypeRequirementsOf(settings.accountTypeFilter);
+  const ranked: Ranked[] = rankWeighted(profiles, levels).map((score) => ({
+    ...score,
+    unmetRequirements: unmetAccountTypeRequirements(score.profile.accountTypes, requirements),
+  }));
   const current = ranked.filter((score) => currentIds.has(score.institutionId));
   const currentProfiles = current.map((score) => score.profile);
   const baseline = currentProfiles.length > 0 ? "current" : "median";
@@ -359,16 +322,18 @@ export function compareBanks(input: {
     )
     .slice(0, settings.candidateCount)
     .map((score) => ({
-      ...withoutInternals(score),
-      ...prosAndCons(score.profile, baselines, weights, settings.proConMinDifference),
+      ...withoutInternals(score, score.unmetRequirements),
+      ...prosAndCons(score.profile, baselines, levels, settings.proConMinDifference),
     }));
 
   return {
     baseline,
-    reviewed: [...ranked].sort(byRequirementsThenScore).map(withoutInternals),
-    current: current.map(withoutInternals),
+    reviewed: [...ranked]
+      .sort(byRequirementsThenScore)
+      .map((score) => withoutInternals(score, score.unmetRequirements)),
+    current: current.map((score) => withoutInternals(score, score.unmetRequirements)),
     candidates,
     noneMeetsRequirements:
-      requiredCriteria.length > 0 && ranked.every((score) => score.unmetRequirements.length > 0),
+      requirements.length > 0 && ranked.every((score) => score.unmetRequirements.length > 0),
   };
 }

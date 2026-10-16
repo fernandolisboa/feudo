@@ -3,6 +3,7 @@ import {
   DEFAULT_WEIGHT_LEVELS,
   resolveComparisonSettings,
   resolveCriteriaWeights,
+  type AccountTypeFilter,
   type ComparisonSettings,
   type WeightLevels,
 } from "@feudo/core";
@@ -15,12 +16,20 @@ import type { SimpleOutcome } from "@/lib/outcome";
 import type { Database } from "@/platform/db/client";
 import { referenceProfileOf } from "./bank-profiles";
 import {
+  createAccountTypeOverridesRepository,
   createCriteriaWeightsRepository,
   createCriterionOverridesRepository,
   listHouseholdInstitutionLabels,
 } from "./repository";
-import type { StoredSettings } from "./repository";
-import type { OverrideForm, OverrideTarget, StoredOverride } from "./validation";
+import type { WeightsSave } from "./repository";
+import type {
+  AccountTypeOverrideForm,
+  AccountTypeOverrideTarget,
+  OverrideForm,
+  OverrideTarget,
+  StoredAccountTypeOverride,
+  StoredOverride,
+} from "./validation";
 
 export type HouseholdComparisonSettings = {
   levels: WeightLevels;
@@ -56,10 +65,13 @@ export async function getHouseholdCriteriaWeights(
         );
       }
       const options = stored.options.status === "found" ? stored.options.value : {};
+      const hasOwnWeights = Object.keys(stored.levels).length > 0;
+      const hasOwnOptions =
+        options.candidateCount !== undefined || options.proConMinDifference !== undefined;
       return {
         levels: resolveCriteriaWeights(stored.levels),
         options: resolveComparisonSettings(options),
-        isCustom: true,
+        isCustom: hasOwnWeights || hasOwnOptions,
       };
     }
   }
@@ -69,14 +81,31 @@ export type SaveCriteriaWeightsOutcome = SimpleOutcome<"ok" | "failed">;
 
 export async function setHouseholdCriteriaWeights(
   scope: HouseholdScope,
-  settings: StoredSettings,
+  settings: WeightsSave,
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
   try {
-    await createCriteriaWeightsRepository(scope).save(db, settings);
+    await createCriteriaWeightsRepository(scope).saveWeights(db, settings);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: saving criteria weights failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+// Patches only options.accountTypeFilter in one statement (repository.ts,
+// saveAccountTypeFilter): it never reads or rewrites the household's stored
+// weights, so this can never revert a weights save made at the same time.
+export async function setHouseholdAccountTypeFilter(
+  scope: HouseholdScope,
+  filter: AccountTypeFilter,
+  db: Database,
+): Promise<SaveCriteriaWeightsOutcome> {
+  try {
+    await createCriteriaWeightsRepository(scope).saveAccountTypeFilter(db, filter);
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`banking-intel: saving the account-type filter failed (${errorName(error)})`);
     return { status: "failed" };
   }
 }
@@ -86,7 +115,7 @@ export async function resetHouseholdCriteriaWeights(
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
   try {
-    await createCriteriaWeightsRepository(scope).clear(db);
+    await createCriteriaWeightsRepository(scope).resetWeights(db);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: resetting criteria weights failed (${errorName(error)})`);
@@ -199,6 +228,87 @@ export async function keepCriterionOverride(
     return { status: found ? "ok" : "failed" };
   } catch (error) {
     console.warn(`banking-intel: keeping a criterion override failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export async function getHouseholdAccountTypeOverrides(
+  scope: HouseholdScope,
+  db: Database,
+): Promise<StoredAccountTypeOverride[]> {
+  const { overrides, skipped } = await createAccountTypeOverridesRepository(scope).list(db);
+  if (skipped > 0) {
+    console.warn(`banking-intel: skipped ${String(skipped)} unreadable account-type corrections`);
+  }
+  return overrides;
+}
+
+// The reference date an account-type correction answers to follows the same
+// rule as a criterion override's (baseReviewedAtFor above).
+function baseReviewedAtForAccountType(
+  target: AccountTypeOverrideTarget,
+  seenReviewedAt: string,
+): string | null {
+  const current = referenceProfileOf(target.institutionId)?.accountTypes[target.accountType]
+    .reviewedAt;
+  if (current === undefined) return null;
+  return seenReviewedAt < current ? seenReviewedAt : current;
+}
+
+export async function saveAccountTypeOverride(
+  scope: HouseholdScope,
+  form: AccountTypeOverrideForm,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  const baseReviewedAt = baseReviewedAtForAccountType(form, form.seenReviewedAt);
+  if (baseReviewedAt === null) return { status: "failed" };
+  try {
+    await createAccountTypeOverridesRepository(scope).save(db, {
+      institutionId: form.institutionId,
+      accountType: form.accountType,
+      offered: form.offered,
+      note: form.note,
+      sourceUrl: form.sourceUrl,
+      baseReviewedAt,
+    });
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`banking-intel: saving an account-type correction failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export async function removeAccountTypeOverride(
+  scope: HouseholdScope,
+  target: AccountTypeOverrideTarget,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  try {
+    await createAccountTypeOverridesRepository(scope).remove(db, target);
+    return { status: "ok" };
+  } catch (error) {
+    console.warn(`banking-intel: removing an account-type correction failed (${errorName(error)})`);
+    return { status: "failed" };
+  }
+}
+
+export async function keepAccountTypeOverride(
+  scope: HouseholdScope,
+  target: AccountTypeOverrideTarget,
+  seenReviewedAt: string,
+  db: Database,
+): Promise<OverrideWriteOutcome> {
+  const baseReviewedAt = baseReviewedAtForAccountType(target, seenReviewedAt);
+  if (baseReviewedAt === null) return { status: "failed" };
+  try {
+    const found = await createAccountTypeOverridesRepository(scope).rebase(
+      db,
+      target,
+      baseReviewedAt,
+    );
+    return { status: found ? "ok" : "failed" };
+  } catch (error) {
+    console.warn(`banking-intel: keeping an account-type correction failed (${errorName(error)})`);
     return { status: "failed" };
   }
 }

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BANK_PROFILE_CRITERIA,
   DEFAULT_CANDIDATE_COUNT,
-  DEFAULT_MINIMUM_SCORES,
+  DEFAULT_WEIGHT_LEVELS,
   type WeightLevels,
 } from "@feudo/core";
 
@@ -24,16 +24,18 @@ import { initialActionState } from "@/lib/action-state";
 import type { Database } from "@/platform/db/client";
 import {
   resetCriteriaWeightsAction,
+  resolveAccountTypeOverrideAction,
   resolveCriterionOverrideAction,
+  saveAccountTypeOverrideAction,
   saveCriterionOverrideAction,
+  updateAccountTypeFilterAction,
   updateComparisonSettingsAction,
 } from "./actions";
 import { getBankDetailPageProps } from "./bank-detail-props";
-import { bankCriterionOverride } from "./schema";
+import { bankAccountTypeOverride, bankCriterionOverride } from "./schema";
 import { BANK_PROFILES } from "./bank-profiles";
 import { getBanksPageProps } from "./page-props";
 import { t } from "./strings";
-import { minimumScoreFieldName } from "./validation";
 
 const NOW = new Date("2026-10-02T12:00:00.000Z");
 
@@ -45,7 +47,6 @@ const ONLY_CARDS: WeightLevels = {
   fees: 0,
   lockIn: 0,
   publicReviews: 0,
-  jointBanking: 0,
 };
 
 function settingsForm(
@@ -55,16 +56,34 @@ function settingsForm(
   const formData = new FormData();
   for (const criterion of BANK_PROFILE_CRITERIA) {
     formData.set(criterion, String(levels[criterion]));
-    formData.set(minimumScoreFieldName(criterion), String(DEFAULT_MINIMUM_SCORES[criterion]));
   }
   formData.set("candidateCount", String(overrides.candidateCount ?? 3));
   formData.set("proConMinDifference", String(overrides.proConMinDifference ?? 10));
   return formData;
 }
 
+function accountTypeFilterForm(
+  jointBanking: "optional" | "required",
+  jointOnly: boolean,
+): FormData {
+  const formData = new FormData();
+  formData.set("jointBanking", jointBanking);
+  formData.set("jointOnly", jointOnly ? "true" : "false");
+  formData.set("jointInvestment", "optional");
+  formData.set("mei", "optional");
+  return formData;
+}
+
 function reviewedAtOf(institutionId: string, criterion: string): string {
   const reviewedAt = BANK_PROFILES.find((profile) => profile.institutionId === institutionId)
     ?.criteria[criterion as keyof (typeof BANK_PROFILES)[number]["criteria"]].reviewedAt;
+  if (reviewedAt === undefined) throw new Error(`no profile for ${institutionId}`);
+  return reviewedAt;
+}
+
+function accountTypeReviewedAtOf(institutionId: string, accountType: string): string {
+  const reviewedAt = BANK_PROFILES.find((profile) => profile.institutionId === institutionId)
+    ?.accountTypes[accountType as keyof (typeof BANK_PROFILES)[number]["accountTypes"]].reviewedAt;
   if (reviewedAt === undefined) throw new Error(`no profile for ${institutionId}`);
   return reviewedAt;
 }
@@ -79,6 +98,21 @@ function overrideForm(fields: {
   formData.set("criterion", fields.criterion);
   formData.set("seenReviewedAt", reviewedAtOf(fields.institutionId, fields.criterion));
   formData.set("score", fields.score);
+  formData.set("note", "Conferido no site do banco.");
+  formData.set("sourceUrl", "");
+  return formData;
+}
+
+function accountTypeOverrideForm(fields: {
+  institutionId: string;
+  accountType: string;
+  offered: boolean;
+}): FormData {
+  const formData = new FormData();
+  formData.set("institutionId", fields.institutionId);
+  formData.set("accountType", fields.accountType);
+  formData.set("seenReviewedAt", accountTypeReviewedAtOf(fields.institutionId, fields.accountType));
+  formData.set("offered", fields.offered ? "true" : "false");
   formData.set("note", "Conferido no site do banco.");
   formData.set("sourceUrl", "");
   return formData;
@@ -105,9 +139,7 @@ describe("Bancos server boundary (integration)", () => {
       const props = await getBanksPageProps(userA.session, NOW);
 
       expect(props.weightsAreCustom).toBe(false);
-      expect(props.weights.find((entry) => entry.criterion === "jointBanking")?.levelLabel).toBe(
-        "Essencial",
-      );
+      expect(props.accountTypeFilter.jointBanking).toBe("optional");
       expect(props.hasAccounts).toBe(false);
       expect(props.baselineNotice).toBe(t.current.noAccounts);
       expect(props.currentRows).toEqual([]);
@@ -211,47 +243,118 @@ describe("Bancos server boundary (integration)", () => {
     });
   });
 
-  it("gates candidates on a required criterion's minimum score", async () => {
-    await withTwoUsers(async ({ userA }) => {
+  it("gates candidates on the account-type filter without touching the household's weights", async () => {
+    await withTwoUsers(async ({ userA, userB }) => {
       signInAs(userA.session);
-      const formData = settingsForm({ ...ONLY_CARDS, jointBanking: "required" });
-      formData.set(minimumScoreFieldName("jointBanking"), "100");
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
 
-      await updateComparisonSettingsAction(initialActionState, formData);
+      const result = await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", true),
+      );
       const props = await getBanksPageProps(userA.session, NOW);
 
+      expect(result).toEqual({ status: "success", message: t.saved });
+      expect(props.accountTypeFilter).toEqual({
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "optional",
+      });
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(5);
       for (const candidate of props.candidates) {
         expect(
           props.reviewed.find((row) => row.institutionId === candidate.institutionId)?.unmetLabel,
         ).toBeNull();
       }
+      const propsB = await getBanksPageProps(userB.session, NOW);
+      expect(propsB.accountTypeFilter.jointBanking).toBe("optional");
     });
   });
 
-  it("keeps an owner's correction to their own household and scores with it", async () => {
+  it("keeps the household's account-type filter when it saves its weights afterwards", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", true),
+      );
+
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
+
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.accountTypeFilter).toEqual({
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "optional",
+      });
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(5);
+    });
+  });
+
+  it("keeps the household's account-type filter after resetting its weights", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", true),
+      );
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
+
+      const result = await resetCriteriaWeightsAction();
+
+      expect(result).toEqual({ status: "success", message: t.resetDone });
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.weightsAreCustom).toBe(false);
+      expect(props.accountTypeFilter).toEqual({
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "optional",
+      });
+    });
+  });
+
+  it("does not mark the weights as custom when only the account-type filter was ever saved", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", false),
+      );
+
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.weightsAreCustom).toBe(false);
+      expect(props.accountTypeFilter.jointBanking).toBe("required");
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(
+        DEFAULT_WEIGHT_LEVELS.cardBenefits,
+      );
+    });
+  });
+
+  it("keeps an owner's account-type correction to their own household and scores with it", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       signInAs(userA.session);
 
-      const result = await saveCriterionOverrideAction(
+      const result = await saveAccountTypeOverrideAction(
         initialActionState,
-        overrideForm({ institutionId: "nubank", criterion: "jointBanking", score: "0" }),
+        accountTypeOverrideForm({ institutionId: "nubank", accountType: "joint", offered: true }),
       );
 
-      expect(result).toEqual({ status: "success", message: t.override.saved });
+      expect(result).toEqual({ status: "success", message: t.accountTypes.saved });
       const detailA = await getBankDetailPageProps(userA.session, "nubank", NOW);
-      const jointA = detailA?.criteria.find((item) => item.criterion === "jointBanking");
-      expect(jointA?.scoreLabel).toBe("0");
-      expect(jointA?.referenceScoreLabel).toBe("65");
+      const jointA = detailA?.accountTypes.find((item) => item.type === "joint");
+      expect(jointA?.statusLabel).toBe(t.accountTypes.status.offered);
+      expect(jointA?.referenceStatusLabel).toBe(t.accountTypes.status.notOffered);
       expect(jointA?.override?.outdatedHint).toBeNull();
       const detailB = await getBankDetailPageProps(userB.session, "nubank", NOW);
-      expect(
-        detailB?.criteria.find((item) => item.criterion === "jointBanking")?.override,
-      ).toBeNull();
-      expect(detailA?.stats[0]?.value).not.toBe(detailB?.stats[0]?.value);
+      expect(detailB?.accountTypes.find((item) => item.type === "joint")?.override).toBeNull();
 
-      const [row] = await db.select().from(bankCriterionOverride);
+      const [row] = await db.select().from(bankAccountTypeOverride);
       const reference = BANK_PROFILES.find((profile) => profile.institutionId === "nubank");
-      expect(row?.baseReviewedAt).toBe(reference?.criteria.jointBanking.reviewedAt);
+      expect(row?.baseReviewedAt).toBe(reference?.accountTypes.joint.reviewedAt);
     });
   });
 
@@ -305,6 +408,33 @@ describe("Bancos server boundary (integration)", () => {
     });
   });
 
+  it("offers a newer reference review and either drops or keeps the household's account-type correction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      signInAs(userA.session);
+      await saveAccountTypeOverrideAction(
+        initialActionState,
+        accountTypeOverrideForm({ institutionId: "nubank", accountType: "joint", offered: true }),
+      );
+      await db.update(bankAccountTypeOverride).set({ baseReviewedAt: "2026-01-01" });
+
+      const before = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      const joint = before?.accountTypes.find((item) => item.type === "joint");
+      expect(joint?.override?.outdatedHint).toContain("Conta conjunta");
+
+      expect(
+        await resolveAccountTypeOverrideAction(
+          "nubank",
+          "joint",
+          "useReference",
+          accountTypeReviewedAtOf("nubank", "joint"),
+        ),
+      ).toEqual({ status: "success", message: t.accountTypes.removed });
+
+      const after = await getBankDetailPageProps(userA.session, "nubank", NOW);
+      expect(after?.accountTypes.find((item) => item.type === "joint")?.override).toBeNull();
+    });
+  });
+
   it("refuses a member's correction and a member's answer to the hint, without writing", async () => {
     await withTwoUsers(async ({ db, userA, userB, householdA }) => {
       signInAs(userA.session);
@@ -342,6 +472,23 @@ describe("Bancos server boundary (integration)", () => {
     });
   });
 
+  it("refuses a member's account-type correction without writing", async () => {
+    await withTwoUsers(async ({ db, userB, householdA }) => {
+      await joinHousehold(db, userB.id, householdA, "member");
+      const memberSession = { ...userB.session, householdId: householdA };
+      signInAs(memberSession);
+
+      expect(
+        await saveAccountTypeOverrideAction(
+          initialActionState,
+          accountTypeOverrideForm({ institutionId: "itau", accountType: "joint", offered: true }),
+        ),
+      ).toEqual({ status: "error", message: t.errors.notAllowed });
+
+      expect(await db.select().from(bankAccountTypeOverride)).toHaveLength(0);
+    });
+  });
+
   it("never touches another household's correction when answering the hint", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       signInAs(userB.session);
@@ -359,6 +506,26 @@ describe("Bancos server boundary (integration)", () => {
       );
 
       expect(await db.select().from(bankCriterionOverride)).toHaveLength(1);
+    });
+  });
+
+  it("never touches another household's account-type correction when answering the hint", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      signInAs(userB.session);
+      await saveAccountTypeOverrideAction(
+        initialActionState,
+        accountTypeOverrideForm({ institutionId: "c6", accountType: "joint", offered: true }),
+      );
+      signInAs(userA.session);
+
+      await resolveAccountTypeOverrideAction(
+        "c6",
+        "joint",
+        "useReference",
+        accountTypeReviewedAtOf("c6", "joint"),
+      );
+
+      expect(await db.select().from(bankAccountTypeOverride)).toHaveLength(1);
     });
   });
 

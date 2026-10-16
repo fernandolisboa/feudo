@@ -3,7 +3,7 @@ const en = {
   headline: {
     candidate: "{bank} is the bank that best fits the household's weights.",
     noCandidate: "No bank outside the ones you already use has a score with these weights.",
-    noneMeetsRequirements: "No bank meets the household's required criteria.",
+    noneMeetsRequirements: "No bank has the account types you marked.",
   },
   criteria: {
     cardBenefits: { label: "Card benefits", help: "points, cashback, annual fee and perks" },
@@ -19,10 +19,6 @@ const en = {
       help: "how much the bank holds you back; 100 is the easiest to leave",
     },
     publicReviews: { label: "Customer reviews", help: "Reclame Aqui and consumidor.gov.br" },
-    jointBanking: {
-      label: "Joint banking",
-      help: "a joint account or a shared account for the two of you",
-    },
   },
   current: {
     noAccounts:
@@ -61,8 +57,9 @@ const en = {
     current: "you use it",
     candidate: "candidate",
     noPosition: "—",
-    unmet: "doesn't meet: {criteria}",
-    overridden: "corrected by the household: {criteria}",
+    unmet: "doesn't have: {types}",
+    overridden: "corrected by the household: {items}",
+    notMetHeading: "Don't have what you marked ({count})",
   },
   weights: {
     title: "Criteria weights",
@@ -77,12 +74,8 @@ const en = {
       3: "Medium",
       4: "High",
       5: "Very high",
-      essential: "Essential",
-      required: "Required",
     },
     share: "{share}% of the score",
-    minimumScore: "Minimum score: {score}",
-    jointBankingHint: "100: only a joint account · 65: a shared account counts",
   },
   options: {
     title: "Comparison settings",
@@ -90,13 +83,78 @@ const en = {
     proConMinDifference: "Minimum difference to count as for or against",
     pointsSuffix: "points",
   },
+  accountTypes: {
+    panelTitle: "Account types",
+    filters: {
+      jointBanking: { label: "Money together", help: "a joint account or a shared account" },
+      jointInvestment: { label: "Investing together", help: "a joint investment account" },
+      mei: { label: "MEI account", help: "a business account for a sole proprietor (MEI)" },
+    },
+    levelOptional: "Optional",
+    levelRequired: "Required",
+    jointOnly: "Joint account only",
+    readOnly: "Only the household's owner or admin can change the account-type filter.",
+    types: {
+      joint: { label: "Joint account", shortLabel: "joint" },
+      shared: { label: "Shared account", shortLabel: "shared" },
+      jointInvestment: { label: "Joint investment account", shortLabel: "joint investments" },
+      mei: { label: "MEI account", shortLabel: "MEI" },
+    },
+    status: {
+      offered: "Has it",
+      notOffered: "Doesn't have it",
+      notFound: "Not found",
+    },
+    requirementLabel: {
+      jointOrShared: "a joint or a shared account",
+      joint: "a joint account",
+      jointInvestment: "a joint investment account",
+      mei: "an MEI account",
+    },
+    unmetLabel: {
+      jointOrShared: "a joint or shared account",
+      joint: "a joint account",
+      jointInvestment: "a joint investment account",
+      mei: "an MEI account",
+    },
+    summary: {
+      all: "Showing all {total} banks.",
+      filtered: "Showing {meeting} of {total} banks: the ones that have {types}.",
+      and: "and",
+    },
+    sectionTitle: "Account types",
+    sectionMeta: "what Feudo found and where",
+    correct: "Correct",
+    editOwn: "Edit change",
+    undo: "Undo change",
+    dialog: {
+      title: "Correct {type} · {bank}",
+      description:
+        "Applies to your household only. Feudo's updates never overwrite it; when Feudo reviews this account type again, you'll be asked whether to switch.",
+      offered: "Does the bank offer it?",
+      offeredYes: "Yes",
+      offeredNo: "No",
+      note: "What changed",
+      notePlaceholder: "e.g. it now opens a joint account for new customers",
+      sourceUrl: "Source link (optional)",
+      cancel: "Cancel",
+      submit: "Save",
+    },
+    saved: "Correction saved.",
+    removed: "Back to Feudo's data.",
+    kept: "Kept the household's correction.",
+    invalidSource: "The source link must start with https://.",
+    referenceStatus: "Feudo's answer: {status}",
+    householdNote: "The household changed it to {status} on {date}: {note}",
+    outdated:
+      "Feudo reviewed {type} on {date}, after your change (now: {status}). Use the new version?",
+  },
   method:
-    "The score is the average of each criterion's score, weighted by the household's weights. A criterion with insufficient evidence is left out of the average and shown as such. Essential and Required criteria together always count for half the score, split equally among them; a Required one also sets a minimum score the bank must meet to become a candidate. Scores come from sources Feudo cites and reviews, and they are not a recommendation.",
+    "The score is the weighted mean of the household's seven criteria; a criterion with insufficient evidence is left out of the mean and shown as such. Account types are a filter, not part of the score: a bank missing a type the household marked as required is listed after the others and never becomes a candidate, even with a good score. A type Feudo could not find a source for counts as not having it. Scores and account types come from sources Feudo cites and reviews, and they are not a recommendation.",
   analysisFacts: {
     weights: "Household criteria weights",
     weight: "{criterion} {level} ({share}%)",
-    requiredMinimums: "Required minimum scores",
-    requiredMinimum: "{criterion} needs at least {score}",
+    accountTypeFilter: "Account-type filter",
     current: "Bank the household uses: {bank}",
     score: "score {score} out of 100",
     baseline: "Comparison baseline",
@@ -104,8 +162,8 @@ const en = {
     pros: "In favour of {bank}",
     cons: "Against {bank}",
     missingEvidence: "Evidence gaps for {bank}",
-    unmetRequirements: "Banks that don't meet a required criterion",
-    corrections: "Scores the household corrected itself (not Feudo's)",
+    unmetRequirements: "Banks that don't have an account type the household marked as required",
+    corrections: "Data the household corrected itself (not Feudo's)",
   },
   detail: {
     back: "All banks",
@@ -178,7 +236,7 @@ const ptBR = {
   headline: {
     candidate: "{bank} é o banco que mais combina com os pesos da casa.",
     noCandidate: "Nenhum banco além dos que vocês já usam tem nota com esses pesos.",
-    noneMeetsRequirements: "Nenhum banco atende aos critérios obrigatórios da casa.",
+    noneMeetsRequirements: "Nenhum banco tem os tipos de conta que vocês marcaram.",
   },
   criteria: {
     cardBenefits: {
@@ -199,10 +257,6 @@ const ptBR = {
     publicReviews: {
       label: "Avaliações de clientes",
       help: "Reclame Aqui e consumidor.gov.br",
-    },
-    jointBanking: {
-      label: "Dinheiro a dois",
-      help: "conta conjunta ou conta compartilhada para os dois",
     },
   },
   current: {
@@ -242,8 +296,9 @@ const ptBR = {
     current: "vocês usam",
     candidate: "candidato",
     noPosition: "—",
-    unmet: "não atende: {criteria}",
-    overridden: "corrigido pela casa: {criteria}",
+    unmet: "não tem: {types}",
+    overridden: "corrigido pela casa: {items}",
+    notMetHeading: "Não têm o que vocês marcaram ({count})",
   },
   weights: {
     title: "Pesos dos critérios",
@@ -258,12 +313,8 @@ const ptBR = {
       3: "Médio",
       4: "Alto",
       5: "Muito alto",
-      essential: "Essencial",
-      required: "Obrigatório",
     },
     share: "{share}% da nota",
-    minimumScore: "Nota mínima: {score}",
-    jointBankingHint: "100: só conta conjunta · 65: aceita conta compartilhada",
   },
   options: {
     title: "Ajustes da comparação",
@@ -271,13 +322,85 @@ const ptBR = {
     proConMinDifference: "Diferença mínima para contar como a favor ou contra",
     pointsSuffix: "pontos",
   },
+  accountTypes: {
+    panelTitle: "Tipos de conta",
+    filters: {
+      jointBanking: { label: "Dinheiro a dois", help: "conta conjunta ou conta compartilhada" },
+      jointInvestment: {
+        label: "Investimentos em conjunto",
+        help: "conta de investimento conjunta",
+      },
+      mei: { label: "Conta MEI", help: "conta para microempreendedor individual" },
+    },
+    levelOptional: "Opcional",
+    levelRequired: "Obrigatório",
+    jointOnly: "Só conta conjunta",
+    readOnly:
+      "Só o responsável pela casa ou um administrador pode mudar o filtro de tipos de conta.",
+    types: {
+      joint: { label: "Conta conjunta", shortLabel: "conjunta" },
+      shared: { label: "Conta compartilhada", shortLabel: "compartilhada" },
+      jointInvestment: {
+        label: "Conta de investimento conjunta",
+        shortLabel: "investimento conjunto",
+      },
+      mei: { label: "Conta MEI", shortLabel: "MEI" },
+    },
+    status: {
+      offered: "Tem",
+      notOffered: "Não tem",
+      notFound: "Não encontrado",
+    },
+    requirementLabel: {
+      jointOrShared: "conta conjunta ou conta compartilhada",
+      joint: "conta conjunta",
+      jointInvestment: "conta de investimento conjunta",
+      mei: "conta MEI",
+    },
+    unmetLabel: {
+      jointOrShared: "conta conjunta ou compartilhada",
+      joint: "conta conjunta",
+      jointInvestment: "conta de investimento conjunta",
+      mei: "conta MEI",
+    },
+    summary: {
+      all: "Mostrando todos os {total} bancos.",
+      filtered: "Mostrando {meeting} de {total} bancos: os que têm {types}.",
+      and: "e",
+    },
+    sectionTitle: "Tipos de conta",
+    sectionMeta: "o que o Feudo encontrou e onde",
+    correct: "Corrigir",
+    editOwn: "Editar alteração",
+    undo: "Desfazer alteração",
+    dialog: {
+      title: "Corrigir {type} · {bank}",
+      description:
+        "Vale só para a sua casa. As atualizações do Feudo não sobrescrevem a correção; quando o Feudo revisar este tipo de conta de novo, vocês decidem se trocam.",
+      offered: "O banco oferece?",
+      offeredYes: "Sim",
+      offeredNo: "Não",
+      note: "O que mudou",
+      notePlaceholder: "ex.: agora abre conta conjunta para novos clientes",
+      sourceUrl: "Link da fonte (opcional)",
+      cancel: "Cancelar",
+      submit: "Salvar",
+    },
+    saved: "Correção salva.",
+    removed: "Voltou para os dados do Feudo.",
+    kept: "A correção da casa foi mantida.",
+    invalidSource: "O link da fonte precisa começar com https://.",
+    referenceStatus: "Resposta do Feudo: {status}",
+    householdNote: "A casa mudou para {status} em {date}: {note}",
+    outdated:
+      "O Feudo revisou {type} em {date}, depois da alteração de vocês (agora: {status}). Quer usar a versão nova?",
+  },
   method:
-    "A nota é a média das notas de cada critério, ponderada pelos pesos da casa. Critério com evidência insuficiente fica fora da média e aparece indicado. Os critérios Essenciais e Obrigatórios, juntos, valem metade da nota, dividida igualmente entre eles; o Obrigatório ainda exige uma nota mínima para o banco ser candidato. As notas vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+    "A nota é a média ponderada dos sete critérios da casa; um critério com evidência insuficiente fica fora da média e aparece indicado. Tipos de conta são um filtro, não fazem parte da nota: um banco sem um tipo que a casa marcou como obrigatório entra depois dos outros na lista e nunca é candidato, mesmo com uma nota boa. Um tipo que o Feudo não encontrou fonte para conta como não tendo. As notas e os tipos de conta vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
   analysisFacts: {
     weights: "Pesos dos critérios da casa",
     weight: "{criterion} {level} ({share}%)",
-    requiredMinimums: "Notas mínimas obrigatórias",
-    requiredMinimum: "{criterion} precisa de pelo menos {score}",
+    accountTypeFilter: "Filtro de tipos de conta",
     current: "Banco que a casa usa: {bank}",
     score: "nota {score} de 100",
     baseline: "Base da comparação",
@@ -285,8 +408,8 @@ const ptBR = {
     pros: "A favor de {bank}",
     cons: "Contra {bank}",
     missingEvidence: "Evidência insuficiente sobre {bank}",
-    unmetRequirements: "Bancos que não atendem a um critério obrigatório",
-    corrections: "Notas corrigidas pela própria casa (não são do Feudo)",
+    unmetRequirements: "Bancos que não têm um tipo de conta marcado como obrigatório",
+    corrections: "Dados corrigidos pela própria casa (não são do Feudo)",
   },
   detail: {
     back: "Todos os bancos",

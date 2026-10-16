@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BANK_PROFILE_CRITERIA,
+  DEFAULT_ACCOUNT_TYPE_FILTER,
   DEFAULT_COMPARISON_SETTINGS,
   DEFAULT_WEIGHT_LEVELS,
+  type AccountTypeStatus,
   type BankProfileCriterion,
 } from "@feudo/core";
 
@@ -10,6 +12,7 @@ const getHouseholdSettingsMock = vi.hoisted(() => vi.fn());
 const getHouseholdCriteriaWeightsMock = vi.hoisted(() => vi.fn());
 const getHouseholdInstitutionsMock = vi.hoisted(() => vi.fn());
 const getHouseholdOverridesMock = vi.hoisted(() => vi.fn());
+const getHouseholdAccountTypeOverridesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
 vi.mock("@/modules/households", async (importOriginal) => ({
@@ -20,41 +23,60 @@ vi.mock("./service", () => ({
   getHouseholdCriteriaWeights: getHouseholdCriteriaWeightsMock,
   getHouseholdInstitutions: getHouseholdInstitutionsMock,
   getHouseholdOverrides: getHouseholdOverridesMock,
+  getHouseholdAccountTypeOverrides: getHouseholdAccountTypeOverridesMock,
 }));
 
-function scoredProfile(institutionId: string, jointBankingScore: number) {
+function scorableProfile(institutionId: string, jointStatus: AccountTypeStatus) {
   return {
     institutionId,
     criteria: Object.fromEntries(
       BANK_PROFILE_CRITERIA.map((criterion) => [
         criterion,
-        {
-          status: "scored" as const,
-          score: criterion === "jointBanking" ? jointBankingScore : 60,
-          reviewedAt: "2026-10-01",
-        },
+        { status: "scored" as const, score: 60, reviewedAt: "2026-10-01" },
       ]),
     ) as Record<BankProfileCriterion, { status: "scored"; score: number; reviewedAt: string }>,
+    accountTypes: {
+      joint: jointStatus,
+      shared: "not-offered" as AccountTypeStatus,
+      jointInvestment: "not-offered" as AccountTypeStatus,
+      mei: "not-offered" as AccountTypeStatus,
+    },
   };
 }
 
-const profiles = vi.hoisted(() => [] as ReturnType<typeof scoredProfile>[]);
+function fullProfile(institutionId: string, jointStatus: AccountTypeStatus) {
+  const { accountTypes, ...rest } = scorableProfile(institutionId, jointStatus);
+  return {
+    ...rest,
+    accountTypes: Object.fromEntries(
+      Object.entries(accountTypes).map(([type, status]) => [
+        type,
+        { status, reviewedAt: "2026-10-01" },
+      ]),
+    ),
+  };
+}
+
+const scorable = vi.hoisted(() => [] as ReturnType<typeof scorableProfile>[]);
+const full = vi.hoisted(() => [] as ReturnType<typeof fullProfile>[]);
 
 vi.mock("./bank-profiles", () => ({
-  BANK_PROFILES: profiles,
+  BANK_PROFILES: full,
   referenceProfileOf: (institutionId: string) =>
-    profiles.find((profile) => profile.institutionId === institutionId),
+    full.find((profile) => profile.institutionId === institutionId),
+  scorableProfiles: () => scorable,
 }));
-profiles.push(scoredProfile("bank-a", 65), scoredProfile("bank-b", 30));
+scorable.push(scorableProfile("bank-a", "offered"), scorableProfile("bank-b", "not-offered"));
+full.push(fullProfile("bank-a", "offered"), fullProfile("bank-b", "not-offered"));
 
-import { buildBanksPageProps } from "./page-props";
+import { accountTypeFilterSummary, buildBanksPageProps } from "./page-props";
 import { t } from "./strings";
 
-function override(institutionId: string, score: number, baseReviewedAt: string) {
+function accountTypeOverride(institutionId: string, offered: boolean, baseReviewedAt: string) {
   return {
     institutionId,
-    criterion: "jointBanking" as const,
-    score,
+    accountType: "joint" as const,
+    offered,
     note: "Conta conjunta nova.",
     sourceUrl: null,
     baseReviewedAt,
@@ -65,18 +87,19 @@ function override(institutionId: string, score: number, baseReviewedAt: string) 
 beforeEach(() => {
   getHouseholdSettingsMock.mockReset().mockResolvedValue(null);
   getHouseholdOverridesMock.mockReset().mockResolvedValue([]);
+  getHouseholdAccountTypeOverridesMock.mockReset().mockResolvedValue([]);
   getHouseholdInstitutionsMock
     .mockReset()
     .mockResolvedValue({ hasAccounts: false, institutionIds: [], unrecognizedLabels: [] });
 });
 
 describe("buildBanksPageProps", () => {
-  it("says no bank meets the household's required criteria, with no candidates, when a required minimum is above every bank's score", async () => {
+  it("says no bank has the account types the household marked as required, with no candidates, when neither bank offers it", async () => {
     getHouseholdCriteriaWeightsMock.mockResolvedValue({
-      levels: { ...DEFAULT_WEIGHT_LEVELS, jointBanking: "required" },
+      levels: DEFAULT_WEIGHT_LEVELS,
       options: {
         ...DEFAULT_COMPARISON_SETTINGS,
-        minimumScores: { ...DEFAULT_COMPARISON_SETTINGS.minimumScores, jointBanking: 100 },
+        accountTypeFilter: { ...DEFAULT_ACCOUNT_TYPE_FILTER, mei: "required" },
       },
       isCustom: true,
     });
@@ -90,12 +113,16 @@ describe("buildBanksPageProps", () => {
     expect(props.candidates).toEqual([]);
   });
 
-  it("names a candidate when at least one bank meets the household's requirements", async () => {
+  it("names a candidate when at least one bank meets the household's account-type filter", async () => {
     getHouseholdCriteriaWeightsMock.mockResolvedValue({
-      levels: { ...DEFAULT_WEIGHT_LEVELS, jointBanking: "required" },
+      levels: DEFAULT_WEIGHT_LEVELS,
       options: {
         ...DEFAULT_COMPARISON_SETTINGS,
-        minimumScores: { ...DEFAULT_COMPARISON_SETTINGS.minimumScores, jointBanking: 65 },
+        accountTypeFilter: {
+          ...DEFAULT_ACCOUNT_TYPE_FILTER,
+          jointBanking: "required",
+          jointOnly: true,
+        },
       },
       isCustom: true,
     });
@@ -106,45 +133,100 @@ describe("buildBanksPageProps", () => {
     );
 
     expect(props.headline).not.toBe(t.headline.noneMeetsRequirements);
-    expect(props.candidates.length).toBeGreaterThan(0);
+    expect(props.candidates.map((candidate) => candidate.institutionId)).toEqual(["bank-a"]);
   });
 
-  it("scores with the household's corrections, marks the corrected bank and links every bank to its page", async () => {
+  it("describes the filter in the summary sentence, counting the banks that meet it", async () => {
     getHouseholdCriteriaWeightsMock.mockResolvedValue({
-      levels: { ...DEFAULT_WEIGHT_LEVELS, jointBanking: "required" },
+      levels: DEFAULT_WEIGHT_LEVELS,
       options: {
         ...DEFAULT_COMPARISON_SETTINGS,
-        minimumScores: { ...DEFAULT_COMPARISON_SETTINGS.minimumScores, jointBanking: 100 },
+        accountTypeFilter: {
+          ...DEFAULT_ACCOUNT_TYPE_FILTER,
+          jointBanking: "required",
+          jointOnly: true,
+        },
       },
       isCustom: true,
     });
-    getHouseholdOverridesMock.mockResolvedValue([override("bank-b", 100, "2026-10-01")]);
 
     const props = await buildBanksPageProps(
       { householdId: "household-1" },
       { now: new Date("2026-10-14T12:00:00.000Z"), canManage: true },
     );
 
-    expect(props.candidates.map((candidate) => candidate.institutionId)).toEqual(["bank-b"]);
-    expect(props.candidates[0]?.href).toBe("/bancos/bank-b");
-    expect(props.reviewed.map((row) => [row.institutionId, row.href, row.overriddenLabel])).toEqual(
-      [
-        ["bank-b", "/bancos/bank-b", "corrigido pela casa: Dinheiro a dois"],
-        ["bank-a", "/bancos/bank-a", null],
-      ],
+    expect(props.accountTypeFilterSummary).toBe(
+      "Mostrando 1 de 2 bancos: os que têm conta conjunta.",
     );
-    expect(props.overridesNotice).toBeNull();
   });
 
-  it("tells the household when the reference was reviewed after one of its corrections", async () => {
+  it("joins three or more required account types with Portuguese list grammar (comma, then 'e' before the last)", () => {
+    const summary = accountTypeFilterSummary(
+      { jointBanking: "required", jointOnly: true, jointInvestment: "required", mei: "required" },
+      13,
+      1,
+    );
+
+    expect(summary).toBe(
+      "Mostrando 1 de 13 bancos: os que têm conta conjunta, conta de investimento conjunta e conta MEI.",
+    );
+  });
+
+  it("says every bank is shown when the household sets no requirement", async () => {
     getHouseholdCriteriaWeightsMock.mockResolvedValue({
       levels: DEFAULT_WEIGHT_LEVELS,
       options: DEFAULT_COMPARISON_SETTINGS,
       isCustom: false,
     });
-    getHouseholdOverridesMock.mockResolvedValue([
-      override("bank-a", 100, "2026-09-09"),
-      override("bank-b", 100, "2026-10-01"),
+
+    const props = await buildBanksPageProps(
+      { householdId: "household-1" },
+      { now: new Date("2026-10-14T12:00:00.000Z"), canManage: true },
+    );
+
+    expect(props.accountTypeFilterSummary).toBe("Mostrando todos os 2 bancos.");
+  });
+
+  it("scores with the household's account-type corrections, marks the corrected bank and links every bank to its page", async () => {
+    getHouseholdCriteriaWeightsMock.mockResolvedValue({
+      levels: DEFAULT_WEIGHT_LEVELS,
+      options: {
+        ...DEFAULT_COMPARISON_SETTINGS,
+        accountTypeFilter: {
+          ...DEFAULT_ACCOUNT_TYPE_FILTER,
+          jointBanking: "required",
+          jointOnly: true,
+        },
+      },
+      isCustom: true,
+    });
+    getHouseholdAccountTypeOverridesMock.mockResolvedValue([
+      accountTypeOverride("bank-b", true, "2026-10-01"),
+    ]);
+
+    const props = await buildBanksPageProps(
+      { householdId: "household-1" },
+      { now: new Date("2026-10-14T12:00:00.000Z"), canManage: true },
+    );
+
+    expect(props.candidates.map((candidate) => candidate.institutionId)).toEqual(
+      expect.arrayContaining(["bank-b"]),
+    );
+    expect(props.reviewed.find((row) => row.institutionId === "bank-b")?.overriddenLabel).toBe(
+      "corrigido pela casa: Conta conjunta",
+    );
+    expect(props.reviewed.every((row) => row.href === `/bancos/${row.institutionId}`)).toBe(true);
+    expect(props.overridesNotice).toBeNull();
+  });
+
+  it("tells the household when the reference was reviewed after one of its account-type corrections", async () => {
+    getHouseholdCriteriaWeightsMock.mockResolvedValue({
+      levels: DEFAULT_WEIGHT_LEVELS,
+      options: DEFAULT_COMPARISON_SETTINGS,
+      isCustom: false,
+    });
+    getHouseholdAccountTypeOverridesMock.mockResolvedValue([
+      accountTypeOverride("bank-a", true, "2026-09-09"),
     ]);
 
     const props = await buildBanksPageProps(
@@ -153,5 +235,25 @@ describe("buildBanksPageProps", () => {
     );
 
     expect(props.overridesNotice).toBe(t.overridesNotice.one.replace("{banks}", "bank-a"));
+  });
+
+  it("shows what a bank offers next to the reviewed row", async () => {
+    getHouseholdCriteriaWeightsMock.mockResolvedValue({
+      levels: DEFAULT_WEIGHT_LEVELS,
+      options: DEFAULT_COMPARISON_SETTINGS,
+      isCustom: false,
+    });
+
+    const props = await buildBanksPageProps(
+      { householdId: "household-1" },
+      { now: new Date("2026-10-14T12:00:00.000Z"), canManage: true },
+    );
+
+    expect(props.reviewed.find((row) => row.institutionId === "bank-a")?.offeredTypesLine).toBe(
+      "conjunta",
+    );
+    expect(
+      props.reviewed.find((row) => row.institutionId === "bank-b")?.offeredTypesLine,
+    ).toBeNull();
   });
 });

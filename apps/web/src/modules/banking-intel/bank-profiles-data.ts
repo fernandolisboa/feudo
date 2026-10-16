@@ -229,13 +229,13 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-10-15",
         },
-        jointBanking: {
-          status: "scored",
-          score: 65,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
           evidence:
-            "Nubank has no joint account by its own account: the blog says 'o Nubank não oferece conta conjunta'. Ultravioleta clients get Saldo Compartilhado inside Espaço Família, where administrators share one balance from their own logins and spending is attributed pro rata to each person's deposits.",
-          summaryPtBr:
-            "O próprio blog do Nubank diz que 'o Nubank não oferece conta conjunta'. Clientes Ultravioleta têm o Saldo Compartilhado no Espaço Família: os administradores dividem um mesmo saldo, cada um com seu login, e os gastos são atribuídos a cada pessoa na proporção do que depositou.",
+            "Nubank's own blog states it does not offer a joint account: 'o Nubank não oferece conta conjunta'.",
+          summaryPtBr: "O próprio blog do Nubank diz que 'o Nubank não oferece conta conjunta'.",
           citations: [
             {
               url: "https://blog.nubank.com.br/conta-conjunta/",
@@ -243,12 +243,48 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding: "Blog states 'o Nubank não oferece conta conjunta', updated 28 Jul 2026.",
             },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "offered",
+          conditionPtBr: "só no Ultravioleta",
+          evidence:
+            "Ultravioleta clients get Saldo Compartilhado inside Espaço Família, where administrators share one balance from their own logins and spending is attributed pro rata to each person's deposits.",
+          summaryPtBr:
+            "Clientes Ultravioleta têm o Saldo Compartilhado no Espaço Família: os administradores dividem um mesmo saldo, cada um com seu login, e os gastos são atribuídos a cada pessoa na proporção do que depositou.",
+          citations: [
             {
               url: "https://nu.com/pt/sala-de-imprensa/consumidores/espaco-familia-nubank-ultravioleta-lanca-recurso-de-saldo-compartilhado",
               kind: "primary",
               checkedAt: "2026-10-13",
               finding:
                 "Press release: Espaço Família (Ultravioleta) shares one balance among the client and up to four others from their own logins; both administrators are notified and spending is attributed pro rata to each person's deposits.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence:
+            "No source was found describing a joint investment account inside NuInvest; Nubank's investment pages describe only individual holdings.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta dentro da NuInvest; as páginas de investimentos do Nubank descrevem apenas posições individuais.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "Nubank's Conta PJ is available to MEI, with 'zero taxas de manutenção' and free unlimited Pix.",
+          summaryPtBr:
+            "A Conta PJ do Nubank está disponível para MEI, com 'zero taxas de manutenção' e Pix ilimitado grátis.",
+          citations: [
+            {
+              url: "https://nubank.com.br/conta-pj/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta PJ: 'Zero taxas de manutenção', free unlimited Pix, available to MEI; withdrawals R$ 6,50.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -410,9 +446,11 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 0,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
+          conditionPtBr: "parou de abrir",
           evidence:
             "Inter's help center says 'Atualmente, não é possível ter uma conta conjunta no Inter' and that it only offers individual accounts tied to a CPF; it no longer opens joint accounts for new customers.",
           summaryPtBr:
@@ -424,6 +462,38 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "'Atualmente, não é possível ter uma conta conjunta no Inter. A instituição oferece apenas contas individuais vinculadas ao CPF.'",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access or shared-balance product was found; Inter offers only a cartão adicional (additional credit card) for a partner, which shares the card limit, not the account.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso ou saldo compartilhado; o Inter oferece apenas um cartão adicional para o parceiro, que compartilha o limite do cartão, não a conta.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Inter.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Inter.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "Inter's blog describes the MEI account as '100% digital e gratuita' and 'livre de tarifas', opened from the PF app.",
+          summaryPtBr:
+            "O blog do Inter descreve a conta MEI como '100% digital e gratuita' e 'livre de tarifas', aberta a partir do app de pessoa física.",
+          citations: [
+            {
+              url: "https://blog.inter.co/abrir-conta-mei",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "MEI account '100% digital e gratuita', 'livre de tarifas', opened from PF Super App. Updated 11/07/2023.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -556,13 +626,15 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
+          conditionPtBr: "só na agência",
           evidence:
-            "Itaú's Conta Universal terms define a joint account ('E/OU' or 'E'), and the account FAQ confirms every holder opens one by going to a branch with documents; branch-only opening does not lower this score.",
+            "Itaú's Conta Universal terms define a joint account ('E/OU' or 'E'), and the account FAQ confirms every holder opens one by going to a branch with documents; branch-only opening does not lower this status.",
           summaryPtBr:
-            "Os termos da Conta Universal do Itaú definem a conta conjunta ('E/OU' ou 'E'), e o FAQ da conta confirma que cada titular a abre indo a uma agência com os documentos. A abertura só em agência não reduz esta nota.",
+            "Os termos da Conta Universal do Itaú definem a conta conjunta ('E/OU' ou 'E'), e o FAQ da conta confirma que cada titular a abre indo a uma agência com os documentos. A abertura só em agência não reduz este status.",
           citations: [
             {
               url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-corrente/como-faco-para-abrir-uma-conta-corrente-no-itau",
@@ -577,6 +649,39 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "Conta Universal terms define joint 'E/OU' (one signature suffices) and 'E' (all holders must sign) accounts, with every holder jointly liable.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product such as a procurador or a shared balance was found; Itaú's cofrinhos can receive Pix contributions from other people, but that is not a shared account.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado, como procurador ou saldo compartilhado; os cofrinhos do Itaú podem receber contribuições via Pix de outras pessoas, mas isso não é uma conta compartilhada.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Itaú.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Itaú.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "not-found",
+          conditionPtBr: "Emps ainda não é para MEI",
+          evidence:
+            "Itaú Emps, the free digital PJ account, says 'Por enquanto o Emps é para pequenas empresas que não sejam MEI' and 'Ainda não [para MEI], mas estamos trabalhando'; no other current source confirms or rules out a MEI account at Itaú.",
+          summaryPtBr:
+            "O Itaú Emps, a conta PJ digital gratuita, diz 'Por enquanto o Emps é para pequenas empresas que não sejam MEI' e 'Ainda não [para MEI], mas estamos trabalhando'; nenhuma outra fonte atual confirma ou descarta uma conta MEI no Itaú.",
+          citations: [
+            {
+              url: "https://www.itau.com.br/emps",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Itaú Emps is a free digital PJ account, but 'Por enquanto o Emps é para pequenas empresas que não sejam MEI'.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -731,9 +836,10 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
           evidence:
             "Bradesco's account-opening regulation defines Conta Conjunta Simples ('e') and Conta Conjunta Solidária ('e/ou') for new personal accounts, with every holder jointly liable, including for credit.",
           summaryPtBr:
@@ -745,6 +851,39 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "Regulation 1.408-7E (04/2026) 2.4.2 defines joint types 'e' (simples) and 'e/ou' (solidária); holders are jointly liable for credit limits.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found; Bradesco offers additional credit cards and nextJoy for minors, neither of which shares access to the holder's own current account.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado; o Bradesco oferece cartões adicionais e o nextJoy para menores, nenhum dos quais compartilha o acesso à conta corrente do titular.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Bradesco.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Bradesco.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          conditionPtBr: "grátis por 12 meses",
+          evidence:
+            "The MEI account opens in the Bradesco Empresas e Negócios app without visiting a branch; the 'Cesta de serviços MEI' is free for 12 months, then charged.",
+          summaryPtBr:
+            "A conta MEI é aberta no app Bradesco Empresas e Negócios, sem visitar uma agência; a 'Cesta de serviços MEI' é grátis por 12 meses e depois passa a ser cobrada.",
+          citations: [
+            {
+              url: "https://banco.bradesco/mei/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "MEI account opened in the app without a branch; MEI service basket free for 12 months; first annual card fee free.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -877,9 +1016,11 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
+          conditionPtBr: "até 4 titulares",
           evidence:
             "Banco do Brasil's own blog describes a joint account (solidária or simples) open to anyone 18 or older with up to four holders, each with their own App BB access and, per the blog, their own credit card.",
           summaryPtBr:
@@ -891,6 +1032,38 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "Anyone 18+, no family tie needed, up to 4 holders; each holder can have their own credit card and accesses the account individually via App BB or Internet Banking.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found; BB's Cofrinho lets the owner share a Pix link so others contribute to a pot, but that is not shared access to the account itself.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado; o Cofrinho do BB permite que o titular compartilhe um link de Pix para que outras pessoas contribuam para uma meta, mas isso não é acesso compartilhado à conta em si.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Banco do Brasil.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Banco do Brasil.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "Conta PJ Digital for MEI, EI and single-member SLU opens in App BB, with the 'Plano Digital' advertised as 'Mensalidade grátis', unlimited Pix, 4 free withdrawals a month and 10 payment links.",
+          summaryPtBr:
+            "A Conta PJ Digital para MEI, EI e SLU unipessoal é aberta no App BB, com o 'Plano Digital' anunciado como 'Mensalidade grátis', Pix ilimitado, 4 saques grátis por mês e 10 links de cobrança.",
+          citations: [
+            {
+              url: "https://www.bb.com.br/site/pro-seu-negocio/contas/conta-pj-digital/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta PJ Digital for MEI/EI/SLU opened in app; Plano Digital without monthly fee.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1010,9 +1183,11 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
+          conditionPtBr: "corrente ou poupança",
           evidence:
             "Caixa's account-opening contract defines joint current and savings accounts, solidária (any holder moves alone) or não-solidária (all must act together), each holder with their own app login by CPF.",
           summaryPtBr:
@@ -1030,6 +1205,38 @@ export const BANK_PROFILES_DATASET = {
               kind: "primary",
               checkedAt: "2026-10-13",
               finding: "Each joint holder registers their own user and access password by CPF.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found in App CAIXA beyond additional credit cards, which share a card limit, not account access.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado no App CAIXA além dos cartões adicionais, que compartilham o limite do cartão, não o acesso à conta.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Caixa.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta na Caixa.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "Conta Digital MEI through the CAIXA Tem app has no maintenance fee when opened digitally and offers unlimited free Pix; it requires a CAIXA Tem PF digital savings account and an active MEI CNPJ.",
+          summaryPtBr:
+            "A Conta Digital MEI pelo app CAIXA Tem não tem taxa de manutenção quando aberta digitalmente e tem Pix ilimitado grátis; exige uma conta poupança digital CAIXA Tem de pessoa física e um CNPJ MEI ativo.",
+          citations: [
+            {
+              url: "https://www.caixa.gov.br/empresa/contas/conta-mei/Paginas/default.aspx",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta Digital MEI CAIXA Tem: no maintenance fee when opened digitally; free Pix; requires CAIXA Tem PF savings and active MEI; one per CNPJ.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1153,9 +1360,10 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
           evidence:
             "Santander's current-account terms define joint accounts of type 'OU' (either holder moves alone) or 'E' (all act together), with one debit card issued per holder.",
           summaryPtBr:
@@ -1167,6 +1375,49 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "Terms 1614-S06 (10/2025) define joint 'OU'/'E' types; clause 7.2: one debit card issued per holder.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found beyond the joint account itself and an additional credit card, which shares a card limit, not account access.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado além da própria conta conjunta e de um cartão adicional, que compartilha o limite do cartão, não o acesso à conta.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-offered",
+          evidence:
+            "Santander's current-account terms restrict investment and financial-application information in a joint account to one holder, so the account cannot be a shared, two-person investment account.",
+          summaryPtBr:
+            "Os termos de conta corrente do Santander restringem a um único titular as informações de investimento ou aplicação financeira em uma conta conjunta, de modo que ela não pode ser uma conta de investimento compartilhada entre as duas pessoas.",
+          citations: [
+            {
+              url: "https://cms.santander.com.br/sites/WPS/documentos/arq-condicoes-gerais-conta-corrente/25-11-07_143048_condicoes-gerais-conta-corrente-nov25.pdf",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Terms 1614-S06 (10/2025) clause 3.9.1: 'As informações relacionadas à Conta Conjunta serão acessadas e conhecidas por qualquer um dos titulares, com exceção de investimento ou aplicação financeira que fica restrito a um dos titulares.'",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          conditionPtBr: "R$ 69, isentável",
+          evidence:
+            "Conta MEI+ is opened in the app or site without a branch, with a monthly fee of R$ 69,00 that can be fully waived by registering the CNPJ as a Pix key plus 5 payments a month, and R$ 1.000/month billed on a Getnet card machine.",
+          summaryPtBr:
+            "A Conta MEI+ é aberta no app ou no site, sem agência, com mensalidade de R$ 69,00 que pode ser totalmente isenta ao cadastrar o CNPJ como chave Pix e fazer 5 pagamentos por mês, mais R$ 1.000 por mês faturados em uma maquininha Getnet.",
+          citations: [
+            {
+              url: "https://www.santander.com.br/empresas/contas/mei/",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta MEI+ opened via app/site; R$ 69,00 monthly fee, waivable 100% under Pix-key, payments and Getnet criteria.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1299,13 +1550,32 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 65,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
           evidence:
-            "C6 has no joint account, as its own blog states, and instead offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder.",
+            "C6 has no joint account, as its own blog states, offering Conta Compartilhada instead.",
           summaryPtBr:
-            "Como diz o próprio blog, o C6 não tem conta conjunta. Oferece no lugar a Conta Compartilhada: o titular convida outro cliente do C6 como procurador, que movimenta a conta de forma independente, com o próprio login, sem se tornar cotitular.",
+            "Como diz o próprio blog, o C6 não tem conta conjunta. Oferece no lugar a Conta Compartilhada.",
+          citations: [
+            {
+              url: "https://www.c6bank.com.br/blog/conta-conjunta",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Fetch blocked (403); search snippet: C6 has no conta conjunta, offers conta compartilhada; transactions made in the titular's name; invitee must be a C6 client.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "offered",
+          conditionPtBr: "uma pessoa convidada",
+          evidence:
+            "C6 offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder.",
+          summaryPtBr:
+            "O C6 oferece a Conta Compartilhada: o titular convida outro cliente do C6 como procurador, que movimenta a conta de forma independente, com o próprio login, sem se tornar cotitular.",
           citations: [
             {
               url: "https://ajuda.c6bank.com.br/s/article/O-que-%C3%A9-conta-compartilhada",
@@ -1313,6 +1583,31 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "'A Conta Compartilhada é quando uma pessoa física compartilha sua conta corrente com uma outra pessoa... convidado, com poderes de procurador... movimentação de crédito, débito... de forma independente.'",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at C6.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no C6.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          conditionPtBr: "R$ 12, isentável",
+          evidence:
+            "C6 MEI costs R$ 12/month, waivable by receiving R$ 500 via Pix, keeping R$ 3.000 in C6 CDBs, R$ 1.000 in card spend, or keeping CNPJ and phone as Pix keys.",
+          summaryPtBr:
+            "A conta C6 MEI custa R$ 12 por mês, isentável ao receber R$ 500 via Pix, manter R$ 3.000 em CDBs do C6, R$ 1.000 em gastos no cartão, ou manter o CNPJ e o telefone como chaves Pix.",
+          citations: [
+            {
+              url: "https://ajuda.c6bank.com.br/s/article/%C3%89-poss%C3%ADvel-ser-isento-da-tarifa-da-conta-C6-MEI",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "MEI R$ 12/month with waiver criteria (Pix receipts, investments, card spend, Pix keys, etc.).",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1437,13 +1732,14 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 65,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
           evidence:
-            "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead: the holder invites one other BTG client as a representative who switches into the account from their own login with full access except Investments and Financing, without co-ownership.",
+            "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead.",
           summaryPtBr:
-            "O FAQ do BTG Pactual Banking diz que conta corrente conjunta 'não é possível' e oferece a Conta Compartilhada: o titular convida outro cliente do BTG como representante, que entra na conta com o próprio login e tem acesso total, exceto a Investimentos e Financiamentos, sem ser cotitular.",
+            "O FAQ do BTG Pactual Banking diz que conta corrente conjunta 'não é possível' e oferece a Conta Compartilhada em seu lugar.",
           citations: [
             {
               url: "https://banking.btgpactual.com/services/api/faq",
@@ -1451,6 +1747,58 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "'Por enquanto, não é possível abrir uma conta conjunta pelo BTG Pactual Banking'; Conta Compartilhada gives an invited representative full access except Investments and Financing, not co-ownership.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "offered",
+          conditionPtBr: "sem acesso aos investimentos",
+          evidence:
+            "BTG offers Conta Compartilhada: the holder invites one other BTG client as a representative who switches into the account from their own login with full access except Investments and Financing, without co-ownership.",
+          summaryPtBr:
+            "O BTG oferece a Conta Compartilhada: o titular convida outro cliente do BTG como representante, que entra na conta com o próprio login e tem acesso total, exceto a Investimentos e Financiamentos, sem ser cotitular.",
+          citations: [
+            {
+              url: "https://banking.btgpactual.com/services/api/faq",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Representative has full access except Investments/Financing menus; not co-ownership; invite flow by CPF, name, email, phone; either side can revoke at any time.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence:
+            "Whether a joint investment account exists at BTG Pactual Investimentos is not verified: the Banking FAQ hints that some legacy or advisor joint investment accounts may exist, while a secondary guide from September 2025 says BTG does not offer one.",
+          summaryPtBr:
+            "Não está verificado se existe uma conta de investimento conjunta na BTG Pactual Investimentos: o FAQ do Banking sugere que contas conjuntas de investimento legadas ou via assessor podem existir, enquanto um guia secundário de setembro de 2025 diz que a BTG não oferece essa opção.",
+          citations: [
+            {
+              url: "https://guiadoinvestidor.com.br/guias/conta-conjunta-btg-pactual/",
+              kind: "secondary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Guide dated 2025-09-23: no traditional joint account; Conta Compartilhada; no joint investment account ('No momento, a resposta é não').",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "BTG Pactual Empresas is 'disponível para todos os tipos de empresas (MEI, LTDA, S.A. e outros)', with zero maintenance fee and unlimited free Pix.",
+          summaryPtBr:
+            "A BTG Pactual Empresas está 'disponível para todos os tipos de empresas (MEI, LTDA, S.A. e outros)', com tarifa zero de manutenção e Pix ilimitado grátis.",
+          citations: [
+            {
+              url: "https://www.btgpactual.com/empresas",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Conta Digital PJ 'livre de taxas', available to MEI, LTDA, S.A.; 'Tarifa zero de manutenção'; FAQ confirms MEI and 'isenta de tarifas de manutenção'.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1580,13 +1928,41 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 30,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
+          conditionPtBr: "Conta Digital não tem opção conjunta",
           evidence:
-            "XP's joint option exists only for the investment account, Conta Conjunta Investimento, linking exactly one co-holder requested through an advisor; the Conta Digital, XP's everyday account, explicitly has no joint option.",
+            "The Conta Digital, XP's everyday account, explicitly has no joint option; XP's only joint product is the investment account.",
           summaryPtBr:
-            "A XP só oferece conta conjunta na conta de investimentos, a Conta Conjunta Investimento, que vincula exatamente um cotitular, solicitado por meio de um assessor. A Conta Digital, a conta do dia a dia da XP, não tem opção conjunta, e isso é dito de forma explícita.",
+            "A Conta Digital, a conta do dia a dia da XP, não tem opção conjunta, e isso é dito de forma explícita; o único produto conjunto da XP é a conta de investimentos.",
+          citations: [
+            {
+              url: "https://atendimento.xpi.com.br/categoria/conta-digital/duvidas-gerais",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Article 2499: 'A Conta digital permitirá conta conjunta?' answered not available.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found beyond the joint investment account and additional cards, which share a card limit, not account access.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado além da conta de investimento conjunta e dos cartões adicionais, que compartilham o limite do cartão, não o acesso à conta.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "offered",
+          conditionPtBr: "pedida ao assessor",
+          evidence:
+            "XP's joint option exists only for the investment account, Conta Conjunta Investimento, linking exactly one co-holder requested through an advisor.",
+          summaryPtBr:
+            "A XP só oferece conta conjunta na conta de investimentos, a Conta Conjunta Investimento, que vincula exatamente um cotitular, solicitado por meio de um assessor.",
           citations: [
             {
               url: "https://atendimento.xpi.com.br/categoria/minha-conta-e-login/conta-investimento-conjunta",
@@ -1595,12 +1971,22 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Conta Investimento Conjunta links two people to one investment account, PF only, one co-holder maximum, requested through the advisor.",
             },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "not-found",
+          evidence:
+            "MEI eligibility for XP Empresas Conta Digital PJ is not stated in the sources found; a September 2026 review says MEI is not explicitly mentioned in XP's FAQ.",
+          summaryPtBr:
+            "A elegibilidade de MEI para a Conta Digital PJ da XP Empresas não é indicada nas fontes encontradas; uma análise de setembro de 2026 diz que o MEI não é mencionado de forma explícita no FAQ da XP.",
+          citations: [
             {
-              url: "https://atendimento.xpi.com.br/categoria/conta-digital/duvidas-gerais",
-              kind: "primary",
+              url: "https://altarendablog.com.br/2026/09/29/xp-libera-nova-conta-para-empresas-que-nao-cobra-mensalidade-e-ainda-da-acesso-a-um-visa-infinite-sem-anuidade-analise-definitiva/",
+              kind: "secondary",
               checkedAt: "2026-10-13",
               finding:
-                "Article 2499: 'A Conta digital permitirá conta conjunta?' answered not available.",
+                "2026-09-29 review: no opening/monthly fee, no minimum; boletos and cash withdrawals charged; opens via cadastro.xpempresas.com.br or app; MEI not explicitly mentioned in XP FAQ.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1732,13 +2118,15 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 100,
+      },
+      accountTypes: {
+        joint: {
+          status: "offered",
+          conditionPtBr: "presencial, regras por cooperativa",
           evidence:
-            "Sicoob lists conta conjunta among its personal account types, and its FAQ describes opening one by both people going in person to a cooperative with proof of residence, income and ID; branch-only opening does not lower this score.",
+            "Sicoob lists conta conjunta among its personal account types, and its FAQ describes opening one by both people going in person to a cooperative with proof of residence, income and ID; branch-only opening does not lower this status. Sicoob is a system of independent cooperatives, so exact rules can vary by cooperative.",
           summaryPtBr:
-            "O Sicoob lista a conta conjunta entre os tipos de conta de pessoa física, e o FAQ descreve a abertura com as duas pessoas indo a uma cooperativa, com comprovante de residência, renda e documento de identidade. A abertura só presencial não reduz esta nota.",
+            "O Sicoob lista a conta conjunta entre os tipos de conta de pessoa física, e o FAQ descreve a abertura com as duas pessoas indo a uma cooperativa, com comprovante de residência, renda e documento de identidade. A abertura só presencial não reduz este status. O Sicoob é um sistema de cooperativas independentes, então as regras exatas podem variar por cooperativa.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/faq-contas/-/most_viewed_assets/i44fjP4SVO9M/content/id/1197104",
@@ -1746,6 +2134,39 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "'Como faço para abrir uma conta conjunta?': both must go in person to a cooperative with proof of residence, income, ID and CPF.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "No shared-access product was found on the national site beyond additional Sicoobcard cards, which share a card limit, not account access.",
+          summaryPtBr:
+            "Não foi encontrado produto de acesso compartilhado no site nacional além dos cartões adicionais Sicoobcard, que compartilham o limite do cartão, não o acesso à conta.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Sicoob.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Sicoob.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          conditionPtBr: "preço por cooperativa",
+          evidence:
+            "Sicoob lists MEI among its account types and offers a fully digital opening flow in App Sicoob; cost depends on the tariff package set by each cooperative.",
+          summaryPtBr:
+            "O Sicoob lista a conta MEI entre os seus tipos de conta e oferece abertura totalmente digital pelo App Sicoob; o custo depende do pacote de tarifas definido por cada cooperativa.",
+          citations: [
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/faq-geral/-/most_viewed_assets/lZeezSQ9cmrj/content/como-faco-para-abrir-uma-conta-para-minha-empresa-pessoa-juridic-2/20128",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Lists account types 'PF, PJ, MEI, poupança e conjunta'; opening 'pode ser feito de maneira totalmente digital' via App Sicoob or at a cooperative.",
             },
           ],
           reviewedAt: "2026-10-13",
@@ -1880,9 +2301,10 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 0,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
           evidence:
             "PicPay's help center says PicPay Empresas has no joint-account option and that, as in PF, only one account is allowed per CPF; no PF joint-account product was found.",
           summaryPtBr:
@@ -1896,6 +2318,38 @@ export const BANK_PROFILES_DATASET = {
                 "'No PicPay Empresas não existe a opção de conta conjunta'; one account per CNPJ, 'assim como em PF que é permitido apenas uma conta por CPF'.",
             },
           ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "Saldo Compartilhado do PicPay Benefícios only shares a corporate-benefits balance (meal, food and similar) with family members, not the regular wallet balance; no shared access to the everyday account was found.",
+          summaryPtBr:
+            "O Saldo Compartilhado do PicPay Benefícios só compartilha um saldo de benefícios corporativos (como alimentação), não o saldo comum da conta; não foi encontrado acesso compartilhado à conta do dia a dia.",
+          citations: [
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/16044961167507-Como-funciona-o-Saldo-Compartilhado-do-PicPay-Benef%C3%ADcios",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "Saldo Compartilhado shares the total benefits balance with any number of people; used by QR code; no adicional card.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at PicPay.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no PicPay.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "not-found",
+          evidence:
+            "PicPay Empresas' PJ account has no fetched source confirming MEI eligibility; third-party sources say MEI is accepted, but this was not verified against PicPay's own pages.",
+          summaryPtBr:
+            "Não há fonte verificada do próprio PicPay confirmando a elegibilidade de MEI na conta PJ do PicPay Empresas; fontes de terceiros dizem que MEI é aceito, mas isso não foi confirmado nas páginas oficiais.",
           reviewedAt: "2026-10-13",
         },
       },
@@ -2033,9 +2487,10 @@ export const BANK_PROFILES_DATASET = {
           ],
           reviewedAt: "2026-09-09",
         },
-        jointBanking: {
-          status: "scored",
-          score: 0,
+      },
+      accountTypes: {
+        joint: {
+          status: "not-offered",
           evidence:
             "Mercado Pago's own blog presents only alternatives to a joint account (Dividir Gastos for personal expenses, Colaboradores for seller accounts), 'sem o compromisso de um contrato bancário'; it does not open joint accounts for personal customers.",
           summaryPtBr:
@@ -2047,6 +2502,38 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding:
                 "Section 'Alternativas digitais à conta conjunta no Mercado Pago': Dividir Gastos for personal life, Colaboradores for PJ seller accounts, 'sem o compromisso de um contrato bancário'.",
+            },
+          ],
+          reviewedAt: "2026-10-13",
+        },
+        shared: {
+          status: "not-found",
+          evidence:
+            "Dividir Gastos splits bills among a group and sends payment requests, but it does not give anyone shared access to another person's account; no shared-access product was found.",
+          summaryPtBr:
+            "O Dividir Gastos reparte contas entre um grupo e envia cobranças, mas não dá a ninguém acesso compartilhado à conta de outra pessoa; não foi encontrado produto de acesso compartilhado.",
+          reviewedAt: "2026-10-13",
+        },
+        jointInvestment: {
+          status: "not-found",
+          evidence: "No source was found describing a joint investment account at Mercado Pago.",
+          summaryPtBr:
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Mercado Pago.",
+          reviewedAt: "2026-10-13",
+        },
+        mei: {
+          status: "offered",
+          evidence:
+            "Mercado Pago's blog describes the MEI account as 100% digital, 'sem anuidade, sem taxa de manutenção'.",
+          summaryPtBr:
+            "O blog do Mercado Pago descreve a conta MEI como 100% digital, 'sem anuidade, sem taxa de manutenção'.",
+          citations: [
+            {
+              url: "https://www.mercadopago.com.br/blog/como-abrir-conta-pj-gratuita-para-mei",
+              kind: "primary",
+              checkedAt: "2026-10-13",
+              finding:
+                "12 Sep 2026: MEI account 100% digital, 'sem anuidade, sem taxa de manutenção'.",
             },
           ],
           reviewedAt: "2026-10-13",

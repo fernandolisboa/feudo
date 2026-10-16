@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { BANK_PROFILE_CRITERIA, DEFAULT_MINIMUM_SCORES, DEFAULT_WEIGHT_LEVELS } from "@feudo/core";
+import { BANK_PROFILE_CRITERIA, DEFAULT_WEIGHT_LEVELS, resolveCriteriaWeights } from "@feudo/core";
 
 import {
   isReadableComparisonOptions,
-  minimumScoreFieldName,
+  isReadableWeightLevels,
+  parseAccountTypeFilterForm,
+  parseAccountTypeOverrideForm,
   parseComparisonSettingsForm,
   parseOverrideForm,
   parseStoredComparisonOptions,
-  storedWeightLevelsSchema,
 } from "./validation";
 
 function form(entries: Record<string, string>): FormData {
@@ -25,40 +26,27 @@ function baseEntries(level: string): Record<string, string> {
   };
   for (const criterion of BANK_PROFILE_CRITERIA) {
     entries[criterion] = level;
-    entries[minimumScoreFieldName(criterion)] = String(DEFAULT_MINIMUM_SCORES[criterion]);
   }
   return entries;
 }
 
 describe("parseComparisonSettingsForm", () => {
-  it("accepts a numeric level per criterion plus the comparison settings", () => {
+  it("accepts a numeric level per criterion plus the comparison settings, never the account-type filter", () => {
     const result = parseComparisonSettingsForm(form({ ...baseEntries("3"), fees: "5" }));
 
     expect(result.status).toBe("ok");
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.levels.fees).toBe(5);
     expect(result.levels.cardBenefits).toBe(3);
-    expect(result.options.candidateCount).toBe(3);
-    expect(result.options.proConMinDifference).toBe(10);
-    expect(result.options.minimumScores).toEqual(DEFAULT_MINIMUM_SCORES);
-  });
-
-  it("accepts essential or required as a level", () => {
-    const result = parseComparisonSettingsForm(
-      form({ ...baseEntries("0"), jointBanking: "essential", fees: "required" }),
-    );
-
-    expect(result.status).toBe("ok");
-    if (result.status !== "ok") throw new Error("expected ok");
-    expect(result.levels.jointBanking).toBe("essential");
-    expect(result.levels.fees).toBe("required");
+    expect(result.options).toEqual({ candidateCount: 3, proConMinDifference: 10 });
+    expect(result.options).not.toHaveProperty("accountTypeFilter");
   });
 
   it("refuses a set where every level is doesn't-count", () => {
     expect(parseComparisonSettingsForm(form(baseEntries("0")))).toEqual({ status: "all_zero" });
   });
 
-  it.each([["6"], ["-1"], ["2.5"], [""], ["abc"], ["obligatory"]])(
+  it.each([["6"], ["-1"], ["2.5"], [""], ["abc"], ["essential"], ["required"]])(
     "refuses the level %j",
     (value) => {
       expect(parseComparisonSettingsForm(form({ ...baseEntries("3"), fees: value })).status).toBe(
@@ -74,12 +62,12 @@ describe("parseComparisonSettingsForm", () => {
     expect(parseComparisonSettingsForm(formData)).toEqual({ status: "invalid" });
   });
 
-  it("refuses a minimum score outside the 0-100 step-5 range", () => {
-    expect(
-      parseComparisonSettingsForm(
-        form({ ...baseEntries("3"), [minimumScoreFieldName("fees")]: "61" }),
-      ).status,
-    ).toBe("invalid");
+  it("ignores any account-type filter fields a stale form still posts, rather than failing or reading them", () => {
+    const result = parseComparisonSettingsForm(
+      form({ ...baseEntries("3"), jointBanking: "essential" }),
+    );
+
+    expect(result.status).toBe("ok");
   });
 
   it("refuses a candidate count outside 1-5", () => {
@@ -95,21 +83,28 @@ describe("parseComparisonSettingsForm", () => {
   });
 });
 
-describe("storedWeightLevelsSchema", () => {
-  it("accepts a partial set mixing numbers and gate levels", () => {
-    expect(storedWeightLevelsSchema.parse({ fees: 1, jointBanking: "required" })).toEqual({
-      fees: 1,
-      jointBanking: "required",
+describe("isReadableWeightLevels", () => {
+  it("accepts a plain object, even a legacy row carrying the retired jointBanking key", () => {
+    expect(isReadableWeightLevels(DEFAULT_WEIGHT_LEVELS)).toBe(true);
+    expect(isReadableWeightLevels({ fees: 1, jointBanking: "required" })).toBe(true);
+    expect(isReadableWeightLevels({ fees: "essential" })).toBe(true);
+  });
+
+  it("refuses null, an array or a non-object value", () => {
+    expect(isReadableWeightLevels(null)).toBe(false);
+    expect(isReadableWeightLevels([1, 2, 3])).toBe(false);
+    expect(isReadableWeightLevels("garbage")).toBe(false);
+    expect(isReadableWeightLevels(42)).toBe(false);
+  });
+
+  it("lets resolveCriteriaWeights (packages/core) map a legacy row leniently once it is readable", () => {
+    const legacy = { fees: "essential", jointBanking: "required", cardBenefits: 2 };
+    expect(isReadableWeightLevels(legacy)).toBe(true);
+    expect(resolveCriteriaWeights(legacy)).toEqual({
+      ...DEFAULT_WEIGHT_LEVELS,
+      fees: 5,
+      cardBenefits: 2,
     });
-  });
-
-  it("accepts the full default set", () => {
-    expect(storedWeightLevelsSchema.parse(DEFAULT_WEIGHT_LEVELS)).toEqual(DEFAULT_WEIGHT_LEVELS);
-  });
-
-  it("refuses an out-of-range or unknown level", () => {
-    expect(storedWeightLevelsSchema.safeParse({ fees: 99 }).success).toBe(false);
-    expect(storedWeightLevelsSchema.safeParse({ fees: "obligatory" }).success).toBe(false);
   });
 });
 
@@ -134,10 +129,6 @@ describe("parseStoredComparisonOptions", () => {
       value: {},
       droppedFields: ["candidateCount"],
     });
-    expect(parseStoredComparisonOptions({ minimumScores: { fees: 61 } })).toEqual({
-      value: {},
-      droppedFields: ["minimumScores.fees"],
-    });
   });
 
   it("keeps the fields that are valid and drops only the one that fails, instead of failing the whole object", () => {
@@ -147,18 +138,46 @@ describe("parseStoredComparisonOptions", () => {
     });
   });
 
-  it("keeps the valid criteria of a partially invalid minimumScores object", () => {
+  it("drops minimumScores silently, since it is retired data, never a warning", () => {
     expect(
-      parseStoredComparisonOptions({ minimumScores: { fees: 65, jointBanking: 999 } }),
+      parseStoredComparisonOptions({ candidateCount: 2, minimumScores: { fees: 65 } }),
     ).toEqual({
-      value: { minimumScores: { fees: 65 } },
-      droppedFields: ["minimumScores.jointBanking"],
+      value: { candidateCount: 2 },
+      droppedFields: [],
     });
   });
 
-  it("never names a field the household simply never set", () => {
-    expect(parseStoredComparisonOptions({ minimumScores: { fees: 60 } })).toEqual({
-      value: { minimumScores: { fees: 60 } },
+  it("parses accountTypeFilter field by field, dropping only an invalid field present", () => {
+    expect(
+      parseStoredComparisonOptions({
+        accountTypeFilter: { jointBanking: "required", jointOnly: "yes", mei: "optional" },
+      }),
+    ).toEqual({
+      value: { accountTypeFilter: { jointBanking: "required", mei: "optional" } },
+      droppedFields: ["accountTypeFilter.jointOnly"],
+    });
+  });
+
+  it("names accountTypeFilter itself when it is present but not object-shaped", () => {
+    expect(parseStoredComparisonOptions({ accountTypeFilter: "garbage" })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
+    });
+    expect(parseStoredComparisonOptions({ accountTypeFilter: [1, 2, 3] })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
+    });
+    expect(parseStoredComparisonOptions({ accountTypeFilter: null })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
+    });
+  });
+
+  it("never names a filter field the household simply never set", () => {
+    expect(
+      parseStoredComparisonOptions({ accountTypeFilter: { jointBanking: "required" } }),
+    ).toEqual({
+      value: { accountTypeFilter: { jointBanking: "required" } },
       droppedFields: [],
     });
   });
@@ -181,6 +200,44 @@ describe("isReadableComparisonOptions", () => {
     expect(isReadableComparisonOptions([1, 2, 3])).toBe(false);
     expect(isReadableComparisonOptions("garbage")).toBe(false);
     expect(isReadableComparisonOptions(42)).toBe(false);
+  });
+});
+
+describe("parseAccountTypeFilterForm", () => {
+  it("accepts the four filter fields", () => {
+    expect(
+      parseAccountTypeFilterForm(
+        form({
+          jointBanking: "required",
+          jointOnly: "true",
+          jointInvestment: "optional",
+          mei: "required",
+        }),
+      ),
+    ).toEqual({
+      status: "ok",
+      value: {
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "required",
+      },
+    });
+  });
+
+  it("refuses a missing or invalid field", () => {
+    expect(
+      parseAccountTypeFilterForm(
+        form({
+          jointBanking: "essential",
+          jointOnly: "false",
+          jointInvestment: "optional",
+          mei: "optional",
+        }),
+      ).status,
+    ).toBe("invalid");
+    const missing = form({ jointOnly: "false", jointInvestment: "optional", mei: "optional" });
+    expect(parseAccountTypeFilterForm(missing).status).toBe("invalid");
   });
 });
 
@@ -211,10 +268,11 @@ describe("parseOverrideForm", () => {
     ).toMatchObject({ status: "ok", value: { sourceUrl: "https://nubank.com.br/tarifas" } });
   });
 
-  it("refuses an unknown bank or criterion, a score outside 0 to 100 and an empty note", () => {
+  it("refuses an unknown bank or criterion, the retired jointBanking criterion, a score outside 0 to 100 and an empty note", () => {
     for (const entries of [
       { ...valid, institutionId: "banco-inexistente" },
       { ...valid, criterion: "vibes" },
+      { ...valid, criterion: "jointBanking" },
       { ...valid, seenReviewedAt: "" },
       { ...valid, score: "101" },
       { ...valid, score: "-1" },
@@ -234,5 +292,49 @@ describe("parseOverrideForm", () => {
         status: "invalid_source",
       });
     }
+  });
+});
+
+describe("parseAccountTypeOverrideForm", () => {
+  const valid = {
+    institutionId: "nubank",
+    accountType: "joint",
+    seenReviewedAt: "2026-10-02",
+    offered: "true",
+    note: "  Agora abre conta conjunta.  ",
+    sourceUrl: "",
+  };
+
+  it("accepts a correction to a profiled bank's account type, trims the note and treats an empty link as none", () => {
+    expect(parseAccountTypeOverrideForm(form(valid))).toEqual({
+      status: "ok",
+      value: {
+        institutionId: "nubank",
+        accountType: "joint",
+        seenReviewedAt: "2026-10-02",
+        offered: true,
+        note: "Agora abre conta conjunta.",
+        sourceUrl: null,
+      },
+    });
+  });
+
+  it("refuses an unknown bank or account type and an empty note", () => {
+    for (const entries of [
+      { ...valid, institutionId: "banco-inexistente" },
+      { ...valid, accountType: "poupanca" },
+      { ...valid, note: "   " },
+      { ...valid, note: "x".repeat(501) },
+    ]) {
+      expect(parseAccountTypeOverrideForm(form(entries)), JSON.stringify(entries)).toEqual({
+        status: "invalid",
+      });
+    }
+  });
+
+  it("asks for an https link when the source is anything else", () => {
+    expect(
+      parseAccountTypeOverrideForm(form({ ...valid, sourceUrl: "http://nubank.com.br" })),
+    ).toEqual({ status: "invalid_source" });
   });
 });
