@@ -16,10 +16,7 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         help: "",
         level: 5,
         levelLabel: "Muito alto",
-        share: 25,
-        isRequired: false,
-        minimumScore: 60,
-        minimumScoreHint: null,
+        share: 55,
       },
       {
         criterion: "lockIn",
@@ -27,24 +24,17 @@ function props(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         help: "",
         level: 4,
         levelLabel: "Alto",
-        share: 20,
-        isRequired: false,
-        minimumScore: 60,
-        minimumScoreHint: null,
-      },
-      {
-        criterion: "jointBanking",
-        label: "Dinheiro a dois",
-        help: "",
-        level: "essential",
-        levelLabel: "Essencial",
-        share: 50,
-        isRequired: false,
-        minimumScore: 100,
-        minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
+        share: 45,
       },
     ],
     options: { candidateCount: 3, proConMinDifference: 10 },
+    accountTypeFilter: {
+      jointBanking: "optional",
+      jointOnly: false,
+      jointInvestment: "optional",
+      mei: "optional",
+    },
+    accountTypeFilterSummary: "Mostrando todos os 13 bancos.",
     hasAccounts: true,
     currentRows: [
       {
@@ -96,8 +86,12 @@ describe("banksAnalysisFacts", () => {
       {
         key: "banks.weights",
         label: "Pesos dos critérios da casa",
-        value:
-          "Tarifas Muito alto (25%); Aprisionamento Alto (20%); Dinheiro a dois Essencial (50%)",
+        value: "Tarifas Muito alto (55%); Aprisionamento Alto (45%)",
+      },
+      {
+        key: "banks.account_type_filter",
+        label: "Filtro de tipos de conta",
+        value: "Mostrando todos os 13 bancos.",
       },
       { key: "banks.current.1", label: "Banco que a casa usa: Itaú", value: "nota 60 de 100" },
       { key: "banks.candidate.1", label: "Banco candidato 1º: Nubank", value: "nota 77 de 100" },
@@ -140,33 +134,19 @@ describe("banksAnalysisFacts", () => {
     );
   });
 
-  it("lists a required criterion's minimum score", () => {
+  it("states the account-type filter in plain words", () => {
     const facts = banksAnalysisFacts(
-      props({
-        weights: [
-          {
-            criterion: "jointBanking",
-            label: "Dinheiro a dois",
-            help: "",
-            level: "required",
-            levelLabel: "Obrigatório",
-            share: 50,
-            isRequired: true,
-            minimumScore: 100,
-            minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
-          },
-        ],
-      }),
+      props({ accountTypeFilterSummary: "Mostrando 9 de 13 bancos: os que têm conta MEI." }),
     );
 
-    expect(facts.find((fact) => fact.key === "banks.required_minimums")).toEqual({
-      key: "banks.required_minimums",
-      label: "Notas mínimas obrigatórias",
-      value: "Dinheiro a dois precisa de pelo menos 100",
+    expect(facts.find((fact) => fact.key === "banks.account_type_filter")).toEqual({
+      key: "banks.account_type_filter",
+      label: "Filtro de tipos de conta",
+      value: "Mostrando 9 de 13 bancos: os que têm conta MEI.",
     });
   });
 
-  it("lists the banks that miss a required criterion, when any does", () => {
+  it("lists the banks that miss an account type the household marked as required, when any does", () => {
     const facts = banksAnalysisFacts(
       props({
         reviewed: [
@@ -176,8 +156,9 @@ describe("banksAnalysisFacts", () => {
             positionLabel: "4º",
             name: "Nubank",
             tag: null,
-            unmetLabel: "não atende: Dinheiro a dois",
+            unmetLabel: "não tem: conta MEI",
             overriddenLabel: null,
+            offeredTypesLine: null,
             scoreLabel: "77",
             review: { label: "", stale: false },
           },
@@ -187,12 +168,12 @@ describe("banksAnalysisFacts", () => {
 
     expect(facts.find((fact) => fact.key === "banks.unmet_requirements")).toEqual({
       key: "banks.unmet_requirements",
-      label: "Bancos que não atendem a um critério obrigatório",
-      value: "Nubank (não atende: Dinheiro a dois)",
+      label: "Bancos que não têm um tipo de conta marcado como obrigatório",
+      value: "Nubank (não tem: conta MEI)",
     });
   });
 
-  it("tells the analyst which scores the household corrected itself, without the household's note", () => {
+  it("tells the analyst which data the household corrected itself, without the household's note", () => {
     const facts = banksAnalysisFacts(
       props({
         reviewed: [
@@ -203,7 +184,8 @@ describe("banksAnalysisFacts", () => {
             name: "Nubank",
             tag: "candidato",
             unmetLabel: null,
-            overriddenLabel: "corrigido pela casa: Dinheiro a dois",
+            overriddenLabel: "corrigido pela casa: Tarifas, Conta MEI",
+            offeredTypesLine: null,
             scoreLabel: "90",
             review: { label: "", stale: false },
           },
@@ -213,18 +195,17 @@ describe("banksAnalysisFacts", () => {
 
     expect(facts.find((fact) => fact.key === "banks.household_corrections")).toEqual({
       key: "banks.household_corrections",
-      label: "Notas corrigidas pela própria casa (não são do Feudo)",
-      value: "Nubank (corrigido pela casa: Dinheiro a dois)",
+      label: "Dados corrigidos pela própria casa (não são do Feudo)",
+      value: "Nubank (corrigido pela casa: Tarifas, Conta MEI)",
     });
     expect(banksAnalysisFacts(props()).map((fact) => fact.key)).not.toContain(
       "banks.household_corrections",
     );
   });
 
-  it("omits the required-minimums and unmet-requirements facts when nothing is required", () => {
+  it("omits the unmet-requirements fact when nothing fails the filter", () => {
     const keys = banksAnalysisFacts(props()).map((fact) => fact.key);
 
-    expect(keys).not.toContain("banks.required_minimums");
     expect(keys).not.toContain("banks.unmet_requirements");
   });
 });

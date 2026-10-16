@@ -8,8 +8,14 @@ import { SectionHeader } from "@/ui/section-header";
 import { StatTile } from "@/ui/stat-tile";
 import { interpolate } from "@/lib/interpolate";
 
-import type { BankDetailPageProps, CriterionDetailView } from "../bank-detail-props";
+import type {
+  AccountTypeDetailView,
+  BankDetailPageProps,
+  CriterionDetailView,
+} from "../bank-detail-props";
 import { t } from "../strings";
+import { AccountTypeCorrectionDialog } from "./account-type-correction-dialog";
+import { AccountTypeOverrideActions } from "./account-type-override-actions";
 import { CriterionOverrideDialog } from "./criterion-override-dialog";
 import { OverrideActions } from "./override-actions";
 
@@ -129,6 +135,115 @@ function CriterionBlock({
   );
 }
 
+function AccountTypeBlock({
+  item,
+  institutionId,
+  bankName,
+  canManage,
+}: {
+  item: AccountTypeDetailView;
+  institutionId: string;
+  bankName: string;
+  canManage: boolean;
+}) {
+  const { override } = item;
+  return (
+    <li className="flex flex-col gap-3 py-5" aria-label={item.label}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h3 className="font-heading text-[18px]">{item.label}</h3>
+          {item.condition ? (
+            <p className="text-muted-foreground text-[12px]">{item.condition}</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="font-heading text-[18px] leading-none">{item.statusLabel}</span>
+          {override ? <Badge variant="secondary">{t.detail.householdScore}</Badge> : null}
+        </div>
+      </div>
+
+      {override ? (
+        <div className="border-border flex max-w-[68ch] flex-col gap-2 border-l-2 pl-3">
+          <p className="text-[14px]">{override.summary}</p>
+          {override.sourceUrl ? (
+            <a
+              href={override.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className={`${LINK_CLASS} self-start text-[13px]`}
+            >
+              {t.detail.householdSource}
+            </a>
+          ) : null}
+          {override.outdatedHint ? <Notice>{override.outdatedHint}</Notice> : null}
+          {canManage ? (
+            <AccountTypeOverrideActions
+              institutionId={institutionId}
+              accountType={item.type}
+              seenReviewedAt={item.referenceReviewedAt}
+              outdated={override.outdatedHint !== null}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      <p
+        className={
+          override ? "text-muted-foreground max-w-[68ch] text-[13px]" : "max-w-[68ch] text-[14px]"
+        }
+      >
+        {override
+          ? `${interpolate(t.accountTypes.referenceStatus, "{status}", item.referenceStatusLabel)}. `
+          : null}
+        {item.summary}
+      </p>
+
+      {item.sources.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <h4 className="text-muted-foreground text-[11px] tracking-wide uppercase">
+            {t.detail.sources}
+          </h4>
+          <ul className="flex flex-col gap-1 text-[13px]">
+            {item.sources.map((source) => (
+              <li key={source.url} className="flex flex-wrap items-baseline gap-x-2">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${LINK_CLASS} break-all`}
+                >
+                  {source.host}
+                </a>
+                <span className="text-muted-foreground text-[12px] tabular-nums">
+                  {source.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-[12px] tabular-nums">
+          {item.review.label}
+          {item.review.stale ? <Badge variant="outline">{t.candidates.stale}</Badge> : null}
+        </span>
+        {canManage ? (
+          <AccountTypeCorrectionDialog
+            institutionId={institutionId}
+            bankName={bankName}
+            accountType={item.type}
+            seenReviewedAt={item.referenceReviewedAt}
+            typeLabel={item.label}
+            triggerLabel={override ? t.accountTypes.editOwn : t.accountTypes.correct}
+            defaults={item.formDefaults}
+          />
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 export function BankDetailView(props: BankDetailPageProps) {
   const { institutionId, name, tag, unmetLabel, stats, paymentInstitutionNotice, canManage } =
     props;
@@ -182,6 +297,29 @@ export function BankDetailView(props: BankDetailPageProps) {
         </ul>
         {canManage ? null : (
           <p className="text-muted-foreground mt-3 text-[13px]">{t.detail.readOnly}</p>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <SectionHeader
+          title={t.accountTypes.sectionTitle}
+          actions={
+            <span className="text-muted-foreground text-[12px]">{t.accountTypes.sectionMeta}</span>
+          }
+        />
+        <ul className="divide-border flex flex-col divide-y border-y">
+          {props.accountTypes.map((item) => (
+            <AccountTypeBlock
+              key={item.type}
+              item={item}
+              institutionId={institutionId}
+              bankName={name}
+              canManage={canManage}
+            />
+          ))}
+        </ul>
+        {canManage ? null : (
+          <p className="text-muted-foreground mt-3 text-[13px]">{t.accountTypes.readOnly}</p>
         )}
       </section>
 

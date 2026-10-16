@@ -1,10 +1,14 @@
 import {
+  ACCOUNT_TYPES,
   BANK_PROFILE_CRITERIA,
   referenceRevisedSinceOverride,
+  type AccountType,
+  type AccountTypeStatus,
   type BankProfileCriterion,
 } from "@feudo/core";
 import {
   institutionById,
+  type BankProfileAccountTypeEntry,
   type BankProfileCriterionEntry,
   type Citation,
   type Institution,
@@ -23,6 +27,7 @@ import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import { referenceProfileOf } from "./bank-profiles";
 import {
+  accountTypeLabel,
   bankTag,
   criterionLabel,
   loadHouseholdBankComparison,
@@ -34,7 +39,7 @@ import {
   type ReviewView,
 } from "./page-props";
 import { t } from "./strings";
-import type { StoredOverride } from "./validation";
+import type { StoredAccountTypeOverride, StoredOverride } from "./validation";
 
 export type StatView = { label: string; value: string; meta: string | null };
 
@@ -65,6 +70,33 @@ export type CriterionDetailView = {
   formDefaults: OverrideFormDefaults;
 };
 
+export type AccountTypeOverrideView = {
+  statusLabel: string;
+  summary: string;
+  sourceUrl: string | null;
+  outdatedHint: string | null;
+};
+
+export type AccountTypeOverrideFormDefaults = {
+  offered: boolean | null;
+  note: string;
+  sourceUrl: string;
+};
+
+export type AccountTypeDetailView = {
+  type: AccountType;
+  label: string;
+  statusLabel: string;
+  referenceStatusLabel: string;
+  condition: string | null;
+  summary: string;
+  sources: SourceView[];
+  review: ReviewView;
+  referenceReviewedAt: string;
+  override: AccountTypeOverrideView | null;
+  formDefaults: AccountTypeOverrideFormDefaults;
+};
+
 export type BankDetailPageProps = {
   institutionId: string;
   name: string;
@@ -74,6 +106,7 @@ export type BankDetailPageProps = {
   paymentInstitutionNotice: string | null;
   canManage: boolean;
   criteria: CriterionDetailView[];
+  accountTypes: AccountTypeDetailView[];
 };
 
 function guaranteeStat(institution: Institution): StatView {
@@ -138,10 +171,60 @@ function overrideView(
   };
 }
 
-// A bank's own page (ADR-0006, 2026-10-14): the reference evidence for every
-// criterion with its sources and review date, the household's corrections on
-// top, and the same score and place the Bancos page shows. Returns null for
-// an institution Feudo has no profile for, so the route can 404.
+function accountTypeStatusLabel(status: AccountTypeStatus): string {
+  switch (status) {
+    case "offered":
+      return t.accountTypes.status.offered;
+    case "not-offered":
+      return t.accountTypes.status.notOffered;
+    case "not-found":
+      return t.accountTypes.status.notFound;
+  }
+}
+
+function accountTypeOverrideView(
+  type: AccountType,
+  entry: BankProfileAccountTypeEntry,
+  override: StoredAccountTypeOverride,
+  timeZone: string,
+): AccountTypeOverrideView {
+  const statusLabel = override.offered
+    ? t.accountTypes.status.offered
+    : t.accountTypes.status.notOffered;
+  return {
+    statusLabel,
+    summary: interpolateAll(t.accountTypes.householdNote, {
+      status: statusLabel,
+      date: formatShortDate(override.updatedAt, timeZone),
+      note: override.note,
+    }),
+    sourceUrl: override.sourceUrl,
+    outdatedHint: referenceRevisedSinceOverride(entry.reviewedAt, override.baseReviewedAt)
+      ? interpolateAll(t.accountTypes.outdated, {
+          type: accountTypeLabel(type),
+          date: formatIsoDate(entry.reviewedAt),
+          status: accountTypeStatusLabel(entry.status),
+        })
+      : null,
+  };
+}
+
+function accountTypeFormOffered(status: AccountTypeStatus): boolean | null {
+  switch (status) {
+    case "offered":
+      return true;
+    case "not-offered":
+      return false;
+    case "not-found":
+      return null;
+  }
+}
+
+// A bank's own page (ADR-0006): the reference evidence for every criterion
+// and every account type with their sources and review date, the
+// household's corrections on top, and the same score, place and unmet
+// account types the Bancos page shows. Returns null for an institution
+// Feudo has no profile for, so the route can 404.
 export async function getBankDetailPageProps(
   session: HouseholdSession,
   institutionId: string,
@@ -164,18 +247,19 @@ async function buildBankDetailPageProps(
   const reference = referenceProfileOf(institutionId);
   if (institution === undefined || reference === undefined) return null;
 
-  const { today, timeZone, stored, overrides, comparison } = await loadHouseholdBankComparison(
-    scope,
-    options.now,
-  );
+  const { today, timeZone, stored, overrides, accountTypeOverrides, comparison } =
+    await loadHouseholdBankComparison(scope, options.now);
   const score = comparison.reviewed.find((entry) => entry.institutionId === institutionId);
-  const weights = new Map(
-    weightViews(stored.levels, stored.options).map((view) => [view.criterion, view]),
-  );
+  const weights = new Map(weightViews(stored.levels).map((view) => [view.criterion, view]));
   const ownOverrides = new Map(
     overrides
       .filter((override) => override.institutionId === institutionId)
       .map((override) => [override.criterion, override]),
+  );
+  const ownAccountTypeOverrides = new Map(
+    accountTypeOverrides
+      .filter((override) => override.institutionId === institutionId)
+      .map((override) => [override.accountType, override]),
   );
 
   return {
@@ -223,6 +307,30 @@ async function buildBankDetailPageProps(
         formDefaults: override
           ? { score: override.score, note: override.note, sourceUrl: override.sourceUrl ?? "" }
           : { score: referenceScoreOf(entry), note: "", sourceUrl: "" },
+      };
+    }),
+    accountTypes: ACCOUNT_TYPES.map((type) => {
+      const entry = reference.accountTypes[type];
+      const override = ownAccountTypeOverrides.get(type);
+      const referenceStatusLabel = accountTypeStatusLabel(entry.status);
+      return {
+        type,
+        label: accountTypeLabel(type),
+        statusLabel: override
+          ? override.offered
+            ? t.accountTypes.status.offered
+            : t.accountTypes.status.notOffered
+          : referenceStatusLabel,
+        referenceStatusLabel,
+        condition: entry.conditionPtBr ?? null,
+        summary: entry.summaryPtBr,
+        sources: (entry.citations ?? []).map(sourceView),
+        review: reviewView(entry.reviewedAt, today),
+        referenceReviewedAt: entry.reviewedAt,
+        override: override ? accountTypeOverrideView(type, entry, override, timeZone) : null,
+        formDefaults: override
+          ? { offered: override.offered, note: override.note, sourceUrl: override.sourceUrl ?? "" }
+          : { offered: accountTypeFormOffered(entry.status), note: "", sourceUrl: "" },
       };
     }),
   };

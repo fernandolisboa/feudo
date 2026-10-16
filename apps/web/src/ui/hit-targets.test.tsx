@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog";
 import { Input } from "./input";
 import { Select, SelectTrigger, SelectValue } from "./select";
+import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 // DESIGN.md "Spacing and layout": hit targets ≥ 44px under 768px (h-11), ≥ 36px above (md:h-9).
 function sizeTokens(className: string): string[] {
@@ -62,6 +63,19 @@ describe("shared control hit targets", () => {
     render(<Input aria-label="Busca" />);
 
     expect(sizeTokens(screen.getByRole("textbox").className)).toEqual(["h-11", "md:h-9"]);
+  });
+
+  it("ToggleGroupItem is 44px on mobile and 36px from md up", () => {
+    render(
+      <ToggleGroup value="a" aria-label="Opção">
+        <ToggleGroupItem value="a">A</ToggleGroupItem>
+        <ToggleGroupItem value="b">B</ToggleGroupItem>
+      </ToggleGroup>,
+    );
+
+    for (const button of screen.getAllByRole("button")) {
+      expect(sizeTokens(button.className)).toEqual(["h-11", "md:h-9"]);
+    }
   });
 
   it("Dialog keeps its header clear of the 44px close button", () => {

@@ -12,8 +12,9 @@ function scoreValue(scoreLabel: string): string {
     : scoreLabel;
 }
 
-// Built from the same view the Bancos page renders, so every score and every
-// pro or con the analyst can quote is one the household sees there.
+// Built from the same view the Bancos page renders, so every score, every
+// account-type status and every pro or con the analyst can quote is one the
+// household sees there.
 export function banksAnalysisFacts(props: BanksPageProps): AnalysisFact[] {
   const strings = t.analysisFacts;
   const facts: AnalysisFact[] = [
@@ -30,23 +31,12 @@ export function banksAnalysisFacts(props: BanksPageProps): AnalysisFact[] {
         )
         .join("; "),
     },
+    {
+      key: "banks.account_type_filter",
+      label: strings.accountTypeFilter,
+      value: props.accountTypeFilterSummary,
+    },
   ];
-
-  const required = props.weights.filter((weight) => weight.isRequired);
-  if (required.length > 0) {
-    facts.push({
-      key: "banks.required_minimums",
-      label: strings.requiredMinimums,
-      value: required
-        .map((weight) =>
-          interpolateAll(strings.requiredMinimum, {
-            criterion: weight.label,
-            score: String(weight.minimumScore),
-          }),
-        )
-        .join("; "),
-    });
-  }
 
   const unmet = props.reviewed.filter(
     (row): row is typeof row & { unmetLabel: string } => row.unmetLabel !== null,

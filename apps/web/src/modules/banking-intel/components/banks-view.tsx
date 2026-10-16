@@ -9,8 +9,9 @@ import { SectionHeader } from "@/ui/section-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { interpolate } from "@/lib/interpolate";
 
-import type { BanksPageProps, CandidateView, ReviewView } from "../page-props";
+import type { BanksPageProps, CandidateView, ReviewedBankRow, ReviewView } from "../page-props";
 import { t } from "../strings";
+import { AccountTypeFilterPanel, AccountTypeFilterReadOnly } from "./account-type-filter-panel";
 import { CriteriaWeightsEditor } from "./criteria-weights-editor";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
@@ -93,6 +94,35 @@ function CandidateCard({ candidate }: { candidate: CandidateView }) {
   );
 }
 
+function ReviewedRow({ row }: { row: ReviewedBankRow }) {
+  return (
+    <TableRow className="h-[var(--density-row)]">
+      <TableCell className="text-muted-foreground text-right tabular-nums">
+        {row.positionLabel}
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col gap-0.5 py-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <Link href={row.href} className={BANK_LINK_CLASS}>
+              {row.name}
+            </Link>
+            {row.tag ? <Badge variant="secondary">{row.tag}</Badge> : null}
+            {row.overriddenLabel ? <Badge variant="outline">{row.overriddenLabel}</Badge> : null}
+            {row.unmetLabel ? <Badge variant="outline">{row.unmetLabel}</Badge> : null}
+          </span>
+          {row.offeredTypesLine ? (
+            <span className="text-muted-foreground text-[12px]">{row.offeredTypesLine}</span>
+          ) : null}
+        </div>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
+      <TableCell>
+        <Review review={row.review} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
   const {
     headline,
@@ -100,6 +130,8 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
     weightsAreCustom,
     weights,
     options,
+    accountTypeFilter,
+    accountTypeFilterSummary,
     hasAccounts,
     baselineNotice,
     unrecognizedNotice,
@@ -109,9 +141,19 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
     analystNote,
   } = props;
 
+  const metRows = reviewed.filter((row) => row.unmetLabel === null);
+  const unmetRows = reviewed.filter((row) => row.unmetLabel !== null);
+
   return (
     <>
       <PageHeader overline={t.overline} title={headline} />
+
+      {canManage ? (
+        <AccountTypeFilterPanel filter={accountTypeFilter} />
+      ) : (
+        <AccountTypeFilterReadOnly filter={accountTypeFilter} />
+      )}
+      <p className="text-muted-foreground mb-6 text-[13px]">{accountTypeFilterSummary}</p>
 
       {baselineNotice ? (
         <Notice
@@ -164,28 +206,18 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {reviewed.map((row) => (
-              <TableRow key={row.institutionId} className="h-[var(--density-row)]">
-                <TableCell className="text-muted-foreground text-right tabular-nums">
-                  {row.positionLabel}
-                </TableCell>
-                <TableCell>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <Link href={row.href} className={BANK_LINK_CLASS}>
-                      {row.name}
-                    </Link>
-                    {row.tag ? <Badge variant="secondary">{row.tag}</Badge> : null}
-                    {row.overriddenLabel ? (
-                      <Badge variant="outline">{row.overriddenLabel}</Badge>
-                    ) : null}
-                    {row.unmetLabel ? <Badge variant="outline">{row.unmetLabel}</Badge> : null}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
-                <TableCell>
-                  <Review review={row.review} />
+            {metRows.map((row) => (
+              <ReviewedRow key={row.institutionId} row={row} />
+            ))}
+            {unmetRows.length > 0 ? (
+              <TableRow className="bg-muted/40 h-[var(--density-row)]">
+                <TableCell colSpan={4} className="text-muted-foreground text-[12px] font-medium">
+                  {interpolate(t.reviewed.notMetHeading, "{count}", String(unmetRows.length))}
                 </TableCell>
               </TableRow>
+            ) : null}
+            {unmetRows.map((row) => (
+              <ReviewedRow key={row.institutionId} row={row} />
             ))}
           </TableBody>
         </Table>
@@ -204,6 +236,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
           <CriteriaWeightsEditor
             weights={weights}
             options={options}
+            accountTypeFilter={accountTypeFilter}
             weightsAreCustom={weightsAreCustom}
           />
         ) : (
@@ -221,11 +254,6 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
                     </span>
                     <span className="text-[14px]">{entry.levelLabel}</span>
                   </div>
-                  {entry.isRequired ? (
-                    <span className="text-muted-foreground text-[12px] tabular-nums">
-                      {interpolate(t.weights.minimumScore, "{score}", String(entry.minimumScore))}
-                    </span>
-                  ) : null}
                 </li>
               ))}
             </ul>

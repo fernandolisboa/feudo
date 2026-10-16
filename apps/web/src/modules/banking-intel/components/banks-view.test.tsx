@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateComparisonSettingsActionMock = vi.hoisted(() => vi.fn());
 const resetCriteriaWeightsActionMock = vi.hoisted(() => vi.fn());
+const updateAccountTypeFilterActionMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("../actions", () => ({
   updateComparisonSettingsAction: updateComparisonSettingsActionMock,
   resetCriteriaWeightsAction: resetCriteriaWeightsActionMock,
+  updateAccountTypeFilterAction: updateAccountTypeFilterActionMock,
 }));
 
 import type { BanksPageProps, CriterionWeightView } from "../page-props";
@@ -24,9 +26,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 2,
     levelLabel: "Baixo",
     share: 7,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "investmentAccess",
@@ -35,9 +34,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 3,
     levelLabel: "Médio",
     share: 10,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "appQuality",
@@ -46,9 +42,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 3,
     levelLabel: "Médio",
     share: 10,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "security",
@@ -57,9 +50,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 4,
     levelLabel: "Alto",
     share: 13,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "fees",
@@ -68,9 +58,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 5,
     levelLabel: "Muito alto",
     share: 17,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "lockIn",
@@ -79,9 +66,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 4,
     levelLabel: "Alto",
     share: 13,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
   },
   {
     criterion: "publicReviews",
@@ -90,20 +74,6 @@ const WEIGHTS: CriterionWeightView[] = [
     level: 4,
     levelLabel: "Alto",
     share: 13,
-    isRequired: false,
-    minimumScore: 60,
-    minimumScoreHint: null,
-  },
-  {
-    criterion: "jointBanking",
-    label: "Dinheiro a dois",
-    help: "conta conjunta ou conta compartilhada para os dois",
-    level: "essential",
-    levelLabel: "Essencial",
-    share: 50,
-    isRequired: false,
-    minimumScore: 100,
-    minimumScoreHint: "100: só conta conjunta · 65: aceita conta compartilhada",
   },
 ];
 
@@ -114,6 +84,13 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
     weightsAreCustom: false,
     weights: WEIGHTS,
     options: { candidateCount: 3, proConMinDifference: 10 },
+    accountTypeFilter: {
+      jointBanking: "optional",
+      jointOnly: false,
+      jointInvestment: "optional",
+      mei: "optional",
+    },
+    accountTypeFilterSummary: "Mostrando todos os 13 bancos.",
     hasAccounts: true,
     currentRows: [
       {
@@ -163,6 +140,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         tag: t.reviewed.candidate,
         unmetLabel: null,
         overriddenLabel: null,
+        offeredTypesLine: "conjunta · compartilhada (só no Ultravioleta)",
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -174,6 +152,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         tag: t.reviewed.candidate,
         unmetLabel: null,
         overriddenLabel: null,
+        offeredTypesLine: null,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
       },
@@ -185,6 +164,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         tag: t.reviewed.current,
         unmetLabel: null,
         overriddenLabel: null,
+        offeredTypesLine: null,
         scoreLabel: "60",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -194,8 +174,9 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         positionLabel: "4º",
         name: "Bradesco",
         tag: null,
-        unmetLabel: "não atende: Dinheiro a dois",
+        unmetLabel: "não tem: conta MEI",
         overriddenLabel: null,
+        offeredTypesLine: "conjunta",
         scoreLabel: "53",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -211,6 +192,9 @@ beforeEach(() => {
   resetCriteriaWeightsActionMock
     .mockReset()
     .mockResolvedValue({ status: "success", message: t.resetDone });
+  updateAccountTypeFilterActionMock
+    .mockReset()
+    .mockResolvedValue({ status: "success", message: t.saved });
 });
 
 afterEach(() => {
@@ -229,6 +213,12 @@ describe("BanksView", () => {
     ).not.toBeNull();
   });
 
+  it("shows the account-type filter summary under the panel", () => {
+    render(<BanksView {...buildProps()} />);
+
+    expect(screen.getByText("Mostrando todos os 13 bancos.")).not.toBeNull();
+  });
+
   it("shows each candidate with its score, review date, pros, cons and missing evidence", () => {
     render(<BanksView {...buildProps()} />);
 
@@ -244,17 +234,20 @@ describe("BanksView", () => {
     expect(btg.getByText("Evidência insuficiente em: Qualidade do app, Segurança.")).not.toBeNull();
   });
 
-  it("lists every reviewed bank in score order, marking the household's, the candidates and a bank that misses a requirement", () => {
+  it("lists every reviewed bank, with those that don't meet the filter under their own sub-heading", () => {
     render(<BanksView {...buildProps()} />);
 
     const table = within(screen.getByRole("table"));
     const rows = table.getAllByRole("row").slice(1);
-    expect(rows.map((row) => within(row).getAllByRole("cell")[1]?.textContent)).toEqual([
-      `Nubank${t.reviewed.candidate}`,
+    const names = rows.map((row) => within(row).queryAllByRole("cell")[1]?.textContent ?? "");
+    expect(names.slice(0, 3)).toEqual([
+      `Nubank${t.reviewed.candidate}conjunta · compartilhada (só no Ultravioleta)`,
       `BTG Pactual${t.reviewed.candidate}`,
       `Itaú${t.reviewed.current}`,
-      "Bradesconão atende: Dinheiro a dois",
     ]);
+    expect(screen.getByText(interpolate(t.reviewed.notMetHeading, "{count}", "1"))).not.toBeNull();
+    expect(names.at(-1)).toBe("Bradesconão tem: conta MEIconjunta");
+    expect(screen.getByText("conjunta · compartilhada (só no Ultravioleta)")).not.toBeNull();
 
     const itau = table.getByRole("row", { name: /Itaú/ });
     expect(within(itau).getByText("3º")).not.toBeNull();
@@ -313,13 +306,14 @@ describe("BanksView", () => {
     expect(screen.getByText("O Feudo tem uma revisão mais nova (Nubank).")).not.toBeNull();
   });
 
-  it("shows the weights read-only to a member who cannot manage the household, with shares and minimums", () => {
+  it("shows the weights and the filter read-only to a member who cannot manage the household", () => {
     render(<BanksView {...buildProps({ canManage: false })} />);
 
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.getByText("Muito alto")).not.toBeNull();
-    expect(screen.getByText("50% da nota")).not.toBeNull();
+    expect(screen.getByText("17% da nota")).not.toBeNull();
     expect(screen.getByText(t.weights.readOnly)).not.toBeNull();
+    expect(screen.getByText(t.accountTypes.readOnly)).not.toBeNull();
   });
 
   it("gives an owner or admin one level control per criterion, plus the comparison settings sliders", () => {
@@ -351,5 +345,13 @@ describe("BanksView", () => {
     fireEvent.click(screen.getByRole("button", { name: t.weights.reset }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(t.errors.failed);
+  });
+
+  it("headlines that no bank has the marked account types", () => {
+    render(<BanksView {...buildProps({ headline: t.headline.noneMeetsRequirements })} />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: t.headline.noneMeetsRequirements }),
+    ).not.toBeNull();
   });
 });

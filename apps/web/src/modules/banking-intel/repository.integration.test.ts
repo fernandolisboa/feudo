@@ -10,12 +10,13 @@ import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import type { Database } from "@/platform/db/client";
 import {
+  createAccountTypeOverridesRepository,
   createCriteriaWeightsRepository,
   createCriterionOverridesRepository,
   listHouseholdInstitutionLabels,
   type StoredSettings,
 } from "./repository";
-import { bankCriteriaWeights, bankCriterionOverride } from "./schema";
+import { bankAccountTypeOverride, bankCriteriaWeights, bankCriterionOverride } from "./schema";
 
 const FEES_FIRST: StoredSettings = {
   levels: { ...DEFAULT_WEIGHT_LEVELS, fees: 5, cardBenefits: 0 },
@@ -87,14 +88,29 @@ describe("criteria weights repository isolation (integration)", () => {
     });
   });
 
-  it("reports a stored weights set that fails validation instead of trusting it", async () => {
+  it("reports a stored weights set that is not even object-shaped instead of trusting it", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       await db
         .insert(bankCriteriaWeights)
-        .values({ householdId: householdA.id, weights: { fees: 99 } });
+        .values({ householdId: householdA.id, weights: "garbage" });
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "unreadable",
+      });
+    });
+  });
+
+  it("reads a legacy row carrying the retired jointBanking key and an essential/required level, leaving them for resolveCriteriaWeights to map", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(bankCriteriaWeights).values({
+        householdId: householdA.id,
+        weights: { fees: "essential", jointBanking: "required", cardBenefits: 2 },
+      });
+
+      expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
+        status: "found",
+        levels: { fees: "essential", jointBanking: "required", cardBenefits: 2 },
+        options: { status: "absent" },
       });
     });
   });
@@ -184,23 +200,23 @@ describe("listHouseholdInstitutionLabels (integration)", () => {
   });
 });
 
-const NUBANK_JOINT = {
+const NUBANK_FEES = {
   institutionId: "nubank",
-  criterion: "jointBanking" as const,
+  criterion: "fees" as const,
   score: 30,
-  note: "Saldo compartilhado só no Ultravioleta.",
-  sourceUrl: "https://nubank.com.br/ultravioleta",
+  note: "A tarifa subiu.",
+  sourceUrl: "https://nubank.com.br/tarifas",
   baseReviewedAt: "2026-10-13",
 };
 
 describe("criterion overrides repository isolation (integration)", () => {
   it("lists only the scoped household's own corrections", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
-      await createCriterionOverridesRepository(householdA.scope).save(db, NUBANK_JOINT);
+      await createCriterionOverridesRepository(householdA.scope).save(db, NUBANK_FEES);
 
       const listA = await createCriterionOverridesRepository(householdA.scope).list(db);
       expect(listA.skipped).toBe(0);
-      expect(listA.overrides).toEqual([{ ...NUBANK_JOINT, updatedAt: expect.any(Date) as Date }]);
+      expect(listA.overrides).toEqual([{ ...NUBANK_FEES, updatedAt: expect.any(Date) as Date }]);
       expect(await createCriterionOverridesRepository(householdB.scope).list(db)).toEqual({
         overrides: [],
         skipped: 0,
@@ -212,19 +228,19 @@ describe("criterion overrides repository isolation (integration)", () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
       const repositoryA = createCriterionOverridesRepository(householdA.scope);
       const repositoryB = createCriterionOverridesRepository(householdB.scope);
-      await repositoryA.save(db, NUBANK_JOINT);
-      await repositoryB.save(db, { ...NUBANK_JOINT, score: 90, sourceUrl: null });
-      await repositoryB.save(db, { ...NUBANK_JOINT, score: 80, sourceUrl: null });
+      await repositoryA.save(db, NUBANK_FEES);
+      await repositoryB.save(db, { ...NUBANK_FEES, score: 90, sourceUrl: null });
+      await repositoryB.save(db, { ...NUBANK_FEES, score: 80, sourceUrl: null });
 
-      expect(await repositoryB.rebase(db, NUBANK_JOINT, "2026-11-01")).toBe(true);
-      await repositoryB.remove(db, NUBANK_JOINT);
+      expect(await repositoryB.rebase(db, NUBANK_FEES, "2026-11-01")).toBe(true);
+      await repositoryB.remove(db, NUBANK_FEES);
 
       const listA = await repositoryA.list(db);
       expect(listA.overrides.map((row) => [row.score, row.baseReviewedAt])).toEqual([
         [30, "2026-10-13"],
       ]);
       expect((await repositoryB.list(db)).overrides).toEqual([]);
-      expect(await repositoryB.rebase(db, NUBANK_JOINT, "2026-11-01")).toBe(false);
+      expect(await repositoryB.rebase(db, NUBANK_FEES, "2026-11-01")).toBe(false);
       expect(await db.select().from(bankCriterionOverride)).toHaveLength(1);
     });
   });
@@ -232,8 +248,8 @@ describe("criterion overrides repository isolation (integration)", () => {
   it("skips a row naming an institution or a criterion Feudo no longer profiles", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       await db.insert(bankCriterionOverride).values([
-        { householdId: householdA.id, ...NUBANK_JOINT, institutionId: "banco-extinto" },
-        { householdId: householdA.id, ...NUBANK_JOINT, criterion: "criterioAntigo" },
+        { householdId: householdA.id, ...NUBANK_FEES, institutionId: "banco-extinto" },
+        { householdId: householdA.id, ...NUBANK_FEES, criterion: "criterioAntigo" },
       ]);
 
       expect(await createCriterionOverridesRepository(householdA.scope).list(db)).toEqual({
@@ -243,14 +259,87 @@ describe("criterion overrides repository isolation (integration)", () => {
     });
   });
 
+  it("ignores a row naming the retired jointBanking criterion silently, not counted as unreadable", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db
+        .insert(bankCriterionOverride)
+        .values([{ householdId: householdA.id, ...NUBANK_FEES, criterion: "jointBanking" }]);
+
+      expect(await createCriterionOverridesRepository(householdA.scope).list(db)).toEqual({
+        overrides: [],
+        skipped: 0,
+      });
+    });
+  });
+
   it("refuses a score outside 0 to 100 at the database", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       await expect(
         createCriterionOverridesRepository(householdA.scope).save(db, {
-          ...NUBANK_JOINT,
+          ...NUBANK_FEES,
           score: 101,
         }),
       ).rejects.toThrow();
+    });
+  });
+});
+
+const NUBANK_JOINT = {
+  institutionId: "nubank",
+  accountType: "joint" as const,
+  offered: true,
+  note: "Agora abre conta conjunta para novos clientes.",
+  sourceUrl: "https://nubank.com.br/conta-conjunta",
+  baseReviewedAt: "2026-10-13",
+};
+
+describe("account-type overrides repository isolation (integration)", () => {
+  it("lists only the scoped household's own corrections", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      await createAccountTypeOverridesRepository(householdA.scope).save(db, NUBANK_JOINT);
+
+      const listA = await createAccountTypeOverridesRepository(householdA.scope).list(db);
+      expect(listA.skipped).toBe(0);
+      expect(listA.overrides).toEqual([{ ...NUBANK_JOINT, updatedAt: expect.any(Date) as Date }]);
+      expect(await createAccountTypeOverridesRepository(householdB.scope).list(db)).toEqual({
+        overrides: [],
+        skipped: 0,
+      });
+    });
+  });
+
+  it("never overwrites, removes or rebases another household's correction of the same account type", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const repositoryA = createAccountTypeOverridesRepository(householdA.scope);
+      const repositoryB = createAccountTypeOverridesRepository(householdB.scope);
+      await repositoryA.save(db, NUBANK_JOINT);
+      await repositoryB.save(db, { ...NUBANK_JOINT, offered: false, sourceUrl: null });
+      await repositoryB.save(db, { ...NUBANK_JOINT, offered: false, note: "Confirmado de novo." });
+
+      expect(await repositoryB.rebase(db, NUBANK_JOINT, "2026-11-01")).toBe(true);
+      await repositoryB.remove(db, NUBANK_JOINT);
+
+      const listA = await repositoryA.list(db);
+      expect(listA.overrides.map((row) => [row.offered, row.baseReviewedAt])).toEqual([
+        [true, "2026-10-13"],
+      ]);
+      expect((await repositoryB.list(db)).overrides).toEqual([]);
+      expect(await repositoryB.rebase(db, NUBANK_JOINT, "2026-11-01")).toBe(false);
+      expect(await db.select().from(bankAccountTypeOverride)).toHaveLength(1);
+    });
+  });
+
+  it("skips a row naming an institution or an account type Feudo no longer profiles", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(bankAccountTypeOverride).values([
+        { householdId: householdA.id, ...NUBANK_JOINT, institutionId: "banco-extinto" },
+        { householdId: householdA.id, ...NUBANK_JOINT, accountType: "poupanca" },
+      ]);
+
+      expect(await createAccountTypeOverridesRepository(householdA.scope).list(db)).toEqual({
+        overrides: [],
+        skipped: 2,
+      });
     });
   });
 });

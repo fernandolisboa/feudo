@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ACCOUNT_TYPES,
   BANK_PROFILE_CRITERIA,
   BANK_PROFILE_SCORE_MAX,
   BANK_PROFILE_SCORE_MIN,
@@ -8,85 +9,88 @@ import {
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
   hasActiveLevel,
-  MINIMUM_SCORE_MAX,
-  MINIMUM_SCORE_MIN,
-  MINIMUM_SCORE_STEP,
   PRO_CON_MIN_DIFFERENCE_MAX,
   PRO_CON_MIN_DIFFERENCE_MIN,
   PRO_CON_MIN_DIFFERENCE_STEP,
+  type AccountTypeFilter,
   type BankProfileCriterion,
   type ComparisonSettings,
   type WeightLevels,
 } from "@feudo/core";
 import { institutionById, isoDateSchema } from "@feudo/core/reference-data";
 
+// The stored weights column is household data that may predate a criterion
+// dropped from the product (jointBanking) or hold its retired "essential"/
+// "required" special levels (ADR-0006 amendment 2026-10-16): resolveCriteriaWeights
+// (packages/core) reads only the current criteria and maps a legacy level to
+// its numeric equivalent on its own, so neither ever fails the row. Only a
+// column that is not even object-shaped is unreadable.
+export type StoredWeightLevels = Partial<Record<BankProfileCriterion, unknown>>;
+
+export function isReadableWeightLevels(value: unknown): value is StoredWeightLevels {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 const numericLevelSchema = z.int().min(CRITERION_WEIGHT_MIN).max(CRITERION_WEIGHT_MAX);
-const weightLevelSchema = z.union([
-  numericLevelSchema,
-  z.literal("essential"),
-  z.literal("required"),
-]);
-
-// What the table may hold: a criterion missing from the object is tolerated
-// and filled with its product default by resolveCriteriaWeights.
-export const storedWeightLevelsSchema = z.partialRecord(
-  z.enum(BANK_PROFILE_CRITERIA),
-  weightLevelSchema,
-);
-export type StoredWeightLevels = z.infer<typeof storedWeightLevelsSchema>;
-
-const minimumScoreSchema = z
-  .int()
-  .min(MINIMUM_SCORE_MIN)
-  .max(MINIMUM_SCORE_MAX)
-  .multipleOf(MINIMUM_SCORE_STEP);
 const candidateCountSchema = z.int().min(CANDIDATE_COUNT_MIN).max(CANDIDATE_COUNT_MAX);
 const proConMinDifferenceSchema = z
   .int()
   .min(PRO_CON_MIN_DIFFERENCE_MIN)
   .max(PRO_CON_MIN_DIFFERENCE_MAX)
   .multipleOf(PRO_CON_MIN_DIFFERENCE_STEP);
+const requirementLevelSchema = z.enum(["optional", "required"]);
 
 // What the table may hold for comparison options: every field is optional,
 // the same "missing or invalid falls back to the default" policy as weights
 // (resolveComparisonSettings, packages/core). Parsed field by field below
 // (parseStoredComparisonOptions), not through a single zod object schema, so
-// one invalid field never discards the others.
+// one invalid field never discards the others. `minimumScores` is retired
+// (ADR-0006 amendment 2026-10-16) and dropped on read without comment: it is
+// legacy data, not a mistake worth a warning.
 export type StoredComparisonOptions = {
-  minimumScores?: Partial<Record<BankProfileCriterion, number>>;
   candidateCount?: number;
   proConMinDifference?: number;
+  accountTypeFilter?: Partial<AccountTypeFilter>;
 };
 
-type ParsedMinimumScores = {
-  minimumScores: Partial<Record<BankProfileCriterion, number>> | undefined;
+type ParsedAccountTypeFilter = {
+  accountTypeFilter: Partial<AccountTypeFilter> | undefined;
   droppedFields: string[];
 };
 
-// A criterion missing from the object is the normal "never set" case, not a
-// drop; only a criterion that is present but fails validation is reported, so
-// the service only warns about data that was actually wrong.
-function parseStoredMinimumScores(value: unknown): ParsedMinimumScores {
+// Each field falls back to its own default independently, same as the rest
+// of the stored options; only a field that is present and fails validation
+// is named, never one the household simply never set.
+function parseStoredAccountTypeFilter(value: unknown): ParsedAccountTypeFilter {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return {
-      minimumScores: undefined,
-      droppedFields: value === undefined ? [] : ["minimumScores"],
-    };
+    return { accountTypeFilter: undefined, droppedFields: [] };
   }
   const record = value as Record<string, unknown>;
-  const minimumScores: Partial<Record<BankProfileCriterion, number>> = {};
+  const accountTypeFilter: Partial<AccountTypeFilter> = {};
   const droppedFields: string[] = [];
-  for (const criterion of BANK_PROFILE_CRITERIA) {
-    if (!(criterion in record)) continue;
-    const parsed = minimumScoreSchema.safeParse(record[criterion]);
-    if (parsed.success) {
-      minimumScores[criterion] = parsed.data;
-    } else {
-      droppedFields.push(`minimumScores.${criterion}`);
-    }
+
+  if ("jointBanking" in record) {
+    const parsed = requirementLevelSchema.safeParse(record.jointBanking);
+    if (parsed.success) accountTypeFilter.jointBanking = parsed.data;
+    else droppedFields.push("accountTypeFilter.jointBanking");
   }
+  if ("jointOnly" in record) {
+    if (typeof record.jointOnly === "boolean") accountTypeFilter.jointOnly = record.jointOnly;
+    else droppedFields.push("accountTypeFilter.jointOnly");
+  }
+  if ("jointInvestment" in record) {
+    const parsed = requirementLevelSchema.safeParse(record.jointInvestment);
+    if (parsed.success) accountTypeFilter.jointInvestment = parsed.data;
+    else droppedFields.push("accountTypeFilter.jointInvestment");
+  }
+  if ("mei" in record) {
+    const parsed = requirementLevelSchema.safeParse(record.mei);
+    if (parsed.success) accountTypeFilter.mei = parsed.data;
+    else droppedFields.push("accountTypeFilter.mei");
+  }
+
   return {
-    minimumScores: Object.keys(minimumScores).length === 0 ? undefined : minimumScores,
+    accountTypeFilter: Object.keys(accountTypeFilter).length === 0 ? undefined : accountTypeFilter,
     droppedFields,
   };
 }
@@ -98,20 +102,20 @@ export type ParsedComparisonOptions = {
 
 // Every field falls back to its own default independently (ADR-0006,
 // 2026-10-14): one bad field (an out-of-range candidateCount, say) never
-// discards an otherwise valid minimumScores or proConMinDifference next to
-// it, so this never fails outright, unlike storedWeightLevelsSchema above.
+// discards an otherwise valid accountTypeFilter or proConMinDifference next
+// to it, so this never fails outright, unlike a strict object schema would.
 // droppedFields names only the fields that were present and invalid, for the
 // service to warn about (repository.ts); a field the household never set is
-// not a drop.
+// not a drop, and `minimumScores` (retired) is never reported either way.
 export function parseStoredComparisonOptions(value: unknown): ParsedComparisonOptions {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return { value: {}, droppedFields: [] };
   }
   const record = value as Record<string, unknown>;
-  const { minimumScores, droppedFields: minimumScoreDrops } = parseStoredMinimumScores(
-    record.minimumScores,
+  const { accountTypeFilter, droppedFields: filterDrops } = parseStoredAccountTypeFilter(
+    record.accountTypeFilter,
   );
-  const droppedFields = [...minimumScoreDrops];
+  const droppedFields = [...filterDrops];
 
   let candidateCount: number | undefined;
   if ("candidateCount" in record) {
@@ -129,7 +133,7 @@ export function parseStoredComparisonOptions(value: unknown): ParsedComparisonOp
 
   return {
     value: {
-      ...(minimumScores ? { minimumScores } : {}),
+      ...(accountTypeFilter ? { accountTypeFilter } : {}),
       ...(candidateCount !== undefined ? { candidateCount } : {}),
       ...(proConMinDifference !== undefined ? { proConMinDifference } : {}),
     },
@@ -149,16 +153,6 @@ const formNumericLevelSchema = z
   .regex(/^[0-9]+$/)
   .transform(Number)
   .pipe(numericLevelSchema);
-const formWeightLevelSchema = z.union([
-  formNumericLevelSchema,
-  z.literal("essential"),
-  z.literal("required"),
-]);
-const formMinimumScoreSchema = z
-  .string()
-  .regex(/^[0-9]+$/)
-  .transform(Number)
-  .pipe(minimumScoreSchema);
 const formCandidateCountSchema = z
   .string()
   .regex(/^[0-9]+$/)
@@ -169,42 +163,77 @@ const formProConMinDifferenceSchema = z
   .regex(/^[0-9]+$/)
   .transform(Number)
   .pipe(proConMinDifferenceSchema);
+const formBooleanSchema = z.enum(["true", "false"]).transform((value) => value === "true");
 
 export const comparisonSettingsFormSchema = z.object({
   levels: z.object(
     Object.fromEntries(
-      BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formWeightLevelSchema]),
-    ) as Record<BankProfileCriterion, typeof formWeightLevelSchema>,
+      BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formNumericLevelSchema]),
+    ) as Record<BankProfileCriterion, typeof formNumericLevelSchema>,
   ),
-  minimumScores: z.object(
-    Object.fromEntries(
-      BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formMinimumScoreSchema]),
-    ) as Record<BankProfileCriterion, typeof formMinimumScoreSchema>,
-  ),
+  accountTypeFilter: z.object({
+    jointBanking: requirementLevelSchema,
+    jointOnly: formBooleanSchema,
+    jointInvestment: requirementLevelSchema,
+    mei: requirementLevelSchema,
+  }),
   candidateCount: formCandidateCountSchema,
   proConMinDifference: formProConMinDifferenceSchema,
 });
+
+// The account-type filter panel saves on its own, separate from the weights
+// form below: it only ever changes accountTypeFilter, merged server-side
+// with whatever levels and other options the household already has
+// (service.ts, setHouseholdAccountTypeFilter), so this schema only ever
+// needs the filter's own four fields.
+export const accountTypeFilterFormSchema = z.object({
+  jointBanking: requirementLevelSchema,
+  jointOnly: formBooleanSchema,
+  jointInvestment: requirementLevelSchema,
+  mei: requirementLevelSchema,
+});
+
+// The inverse of the schema above: turns a filter back into the form
+// fields the weights editor also needs to post, since updateComparisonSettingsAction
+// takes the whole comparison settings in one request (CriteriaWeightsEditor).
+export function accountTypeFilterFormEntries(filter: AccountTypeFilter): Record<string, string> {
+  return {
+    jointBanking: filter.jointBanking,
+    jointOnly: filter.jointOnly ? "true" : "false",
+    jointInvestment: filter.jointInvestment,
+    mei: filter.mei,
+  };
+}
+
+export type AccountTypeFilterFormResult =
+  { status: "ok"; value: AccountTypeFilter } | { status: "invalid" };
+
+export function parseAccountTypeFilterForm(formData: FormData): AccountTypeFilterFormResult {
+  const parsed = accountTypeFilterFormSchema.safeParse({
+    jointBanking: formData.get("jointBanking"),
+    jointOnly: formData.get("jointOnly"),
+    jointInvestment: formData.get("jointInvestment"),
+    mei: formData.get("mei"),
+  });
+  return parsed.success ? { status: "ok", value: parsed.data } : { status: "invalid" };
+}
 
 export type ComparisonSettingsFormResult =
   | { status: "ok"; levels: WeightLevels; options: ComparisonSettings }
   | { status: "invalid" }
   | { status: "all_zero" };
 
-export function minimumScoreFieldName(criterion: BankProfileCriterion): string {
-  return `min_${criterion}`;
-}
-
 export function parseComparisonSettingsForm(formData: FormData): ComparisonSettingsFormResult {
   const raw = {
     levels: Object.fromEntries(
       BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formData.get(criterion)]),
     ),
-    minimumScores: Object.fromEntries(
-      BANK_PROFILE_CRITERIA.map((criterion) => [
-        criterion,
-        formData.get(minimumScoreFieldName(criterion)),
-      ]),
-    ),
+    accountTypeFilter: {
+      jointBanking: formData.get("jointBanking"),
+      jointOnly: formData.get("jointOnly"),
+      jointInvestment: formData.get("jointInvestment"),
+      mei: formData.get("mei"),
+    },
     candidateCount: formData.get("candidateCount"),
     proConMinDifference: formData.get("proConMinDifference"),
   };
@@ -212,9 +241,7 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
   if (!parsed.success) {
     return { status: "invalid" };
   }
-  // The schema already restricted every numeric level to 0-5 at runtime;
-  // Zod just cannot carry that range as a literal type.
-  const levels = parsed.data.levels as unknown as WeightLevels;
+  const levels = parsed.data.levels;
   if (!hasActiveLevel(levels)) {
     return { status: "all_zero" };
   }
@@ -222,9 +249,9 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
     status: "ok",
     levels,
     options: {
-      minimumScores: parsed.data.minimumScores,
       candidateCount: parsed.data.candidateCount,
       proConMinDifference: parsed.data.proConMinDifference,
+      accountTypeFilter: parsed.data.accountTypeFilter,
     },
   };
 }
@@ -283,6 +310,57 @@ export function parseOverrideForm(formData: FormData): OverrideFormResult {
     criterion: formData.get("criterion"),
     seenReviewedAt: formData.get("seenReviewedAt"),
     score: formData.get("score"),
+    note: formData.get("note"),
+    sourceUrl: formData.get("sourceUrl") ?? "",
+  });
+  if (parsed.success) return { status: "ok", value: parsed.data };
+  return parsed.error.issues.some((issue) => issue.path[0] === "sourceUrl")
+    ? { status: "invalid_source" }
+    : { status: "invalid" };
+}
+
+export const accountTypeOverrideTargetSchema = z.object({
+  institutionId: institutionIdSchema,
+  accountType: z.enum(ACCOUNT_TYPES),
+});
+export type AccountTypeOverrideTarget = z.infer<typeof accountTypeOverrideTargetSchema>;
+
+// What the table may hold: an institution or an account type Feudo no
+// longer profiles leaves a row that no longer names anything; the
+// repository skips it rather than failing the household's whole comparison,
+// mirroring storedOverrideSchema above.
+export const storedAccountTypeOverrideSchema = accountTypeOverrideTargetSchema.extend({
+  offered: z.boolean(),
+  note: overrideNoteSchema,
+  sourceUrl: overrideSourceUrlSchema.nullable(),
+  baseReviewedAt: isoDateSchema,
+  updatedAt: z.date(),
+});
+export type StoredAccountTypeOverride = z.infer<typeof storedAccountTypeOverrideSchema>;
+
+const accountTypeOverrideFormSchema = accountTypeOverrideTargetSchema.extend({
+  seenReviewedAt: isoDateSchema,
+  offered: formBooleanSchema,
+  note: overrideNoteSchema,
+  sourceUrl: z
+    .string()
+    .trim()
+    .transform((value) => (value === "" ? null : value))
+    .pipe(overrideSourceUrlSchema.nullable()),
+});
+export type AccountTypeOverrideForm = z.infer<typeof accountTypeOverrideFormSchema>;
+
+export type AccountTypeOverrideFormResult =
+  | { status: "ok"; value: AccountTypeOverrideForm }
+  | { status: "invalid_source" }
+  | { status: "invalid" };
+
+export function parseAccountTypeOverrideForm(formData: FormData): AccountTypeOverrideFormResult {
+  const parsed = accountTypeOverrideFormSchema.safeParse({
+    institutionId: formData.get("institutionId"),
+    accountType: formData.get("accountType"),
+    seenReviewedAt: formData.get("seenReviewedAt"),
+    offered: formData.get("offered"),
     note: formData.get("note"),
     sourceUrl: formData.get("sourceUrl") ?? "",
   });
