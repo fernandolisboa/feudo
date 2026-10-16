@@ -174,6 +174,24 @@ describe("saveAiSettings", () => {
     expect(saveMock).not.toHaveBeenCalled();
   });
 
+  it("reports failed instead of throwing when the rate limit check itself fails (e.g. lock_timeout)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    reserveMock.mockRejectedValue(new Error("lock_timeout"));
+    const verifyKey = vi.fn();
+
+    const outcome = await saveAiSettings(SCOPE, DB, provider(verifyKey), KEY, {
+      apiKey: "sk-ant-test-key",
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+      updatedByUserId: "user-1",
+    });
+
+    expect(outcome).toEqual({ status: "failed" });
+    expect(verifyKey).not.toHaveBeenCalled();
+    expect(saveMock).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("reserves a verification attempt for the submitting user before verifying a new key", async () => {
     const verifyKey = vi.fn().mockResolvedValue({ status: "ok" });
 

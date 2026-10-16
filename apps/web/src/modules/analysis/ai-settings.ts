@@ -43,7 +43,10 @@ export type SaveAiSettingsCommand = {
   apiKey: string | null;
   monthlyFamily: AiFamily;
   onDemandFamily: AiFamily;
-  updatedByUserId: string | null;
+  // Never null: the member submitting the change is also who the
+  // verification attempt is rate-limited by (key-verification-attempts.ts).
+  // A caller with no session-derived user has no business saving a key.
+  updatedByUserId: string;
 };
 
 export type SaveAiSettingsOutcome =
@@ -68,14 +71,17 @@ export async function saveAiSettings(
 ): Promise<SaveAiSettingsOutcome> {
   let apiKey: { ciphertext: string; last4: string } | undefined;
   if (input.apiKey !== null) {
-    if (input.updatedByUserId !== null) {
-      const reservation = await createKeyVerificationAttemptRepository(scope).reserve(db, {
-        userId: input.updatedByUserId,
-        now: new Date(),
+    const reservation = await createKeyVerificationAttemptRepository(scope)
+      .reserve(db, { userId: input.updatedByUserId, now: new Date() })
+      .catch((error: unknown) => {
+        console.warn(`analysis: key verification rate limit check failed (${errorName(error)})`);
+        return { status: "failed" as const };
       });
-      if (reservation.status === "rate_limited") {
-        return { status: "rate_limited" };
-      }
+    if (reservation.status === "rate_limited") {
+      return { status: "rate_limited" };
+    }
+    if (reservation.status === "failed") {
+      return { status: "failed" };
     }
     const verified = await provider.verifyKey(input.apiKey);
     if (verified.status === "invalid") {

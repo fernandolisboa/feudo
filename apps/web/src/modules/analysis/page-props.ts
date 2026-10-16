@@ -19,6 +19,7 @@ import {
   type HouseholdSession,
 } from "@/modules/households";
 
+import { errorName } from "@/lib/error-name";
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
@@ -366,7 +367,14 @@ export async function getAiSettingsSectionProps(
     getViewerRole(session, db),
   ]);
   const canManage = canManageHouseholdSettings(viewerRole);
-  if (readAiProviderName(env) === "off") {
+  let providerName: ReturnType<typeof readAiProviderName>;
+  try {
+    providerName = readAiProviderName(env);
+  } catch (error) {
+    console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
+    providerName = "off";
+  }
+  if (providerName === "off") {
     return {
       status: "unavailable",
       canManage,

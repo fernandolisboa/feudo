@@ -125,4 +125,33 @@ describe("getAiSettingsSectionProps", () => {
       onDemandFamily: "sonnet",
     });
   });
+
+  it("shows the read-only unavailable state when AI_PROVIDER is misconfigured, same as off", async () => {
+    resetAll();
+
+    const props = await getAiSettingsSectionProps(SESSION, { AI_PROVIDER: "not-a-real-provider" });
+
+    expect(props).toEqual({
+      status: "unavailable",
+      canManage: false,
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+    });
+  });
+
+  it("shows the read-only unavailable state for the fake provider in production, same as off", async () => {
+    resetAll();
+
+    const props = await getAiSettingsSectionProps(SESSION, {
+      AI_PROVIDER: "fake",
+      VERCEL_ENV: "production",
+    });
+
+    expect(props).toEqual({
+      status: "unavailable",
+      canManage: false,
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+    });
+  });
 });
