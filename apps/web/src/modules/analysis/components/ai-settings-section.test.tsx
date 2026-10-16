@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../actions", () => ({
@@ -7,7 +7,9 @@ vi.mock("../actions", () => ({
   removeAiKeyAction: vi.fn(),
 }));
 
+import { saveAiSettingsAction } from "../actions";
 import type { AiSettingsSectionProps } from "../page-props";
+import { t } from "../strings";
 import { AiSettingsSection } from "./ai-settings-section";
 
 function props(overrides: Partial<AiSettingsSectionProps> = {}): AiSettingsSectionProps {
@@ -52,6 +54,18 @@ describe("AiSettingsSection", () => {
     expect(screen.getByLabelText("Chave da Anthropic")).toBeDefined();
     expect(screen.getAllByRole("combobox")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDefined();
+  });
+
+  it("confirms a successful save, not just the absence of an error", async () => {
+    vi.mocked(saveAiSettingsAction).mockResolvedValue({
+      status: "success",
+      message: t.aiSettings.outcomes.saved,
+    });
+
+    render(<AiSettingsSection {...props()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect((await screen.findByRole("status")).textContent).toBe(t.aiSettings.outcomes.saved);
   });
 
   it("offers to remove the key only once one is registered", () => {

@@ -163,6 +163,11 @@ export function AiSettingsSection({
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       ) : null}
+      {state.status === "success" ? (
+        <p className="text-muted-foreground text-sm" role="status">
+          {state.message}
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <CurrentKeyLine hasKey={hasKey} apiKeyLast4={apiKeyLast4} />

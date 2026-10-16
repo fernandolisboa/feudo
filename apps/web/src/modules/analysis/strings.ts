@@ -179,13 +179,13 @@ const ptBR = {
   off: {
     title: "O analista está desativado",
     explanation:
-      "Um responsável ou administrador da casa registra uma chave da Anthropic em Casa para ativar o analista.",
+      "Um responsável ou administrador registra uma chave da Anthropic em Casa para ativar o analista.",
     link: "Ir para Casa",
   },
   aiSettings: {
     sectionTitle: "Chave e modelos do analista",
     description:
-      "As leituras são escritas com a sua própria conta da Anthropic: a chave abaixo, que só um responsável ou administrador pode registrar, trocar ou remover.",
+      "As leituras são escritas com a sua própria conta da Anthropic: a chave abaixo, que só um responsável ou administrador pode registrar, alterar ou remover.",
     keyLabel: "Chave da Anthropic",
     keyPlaceholder: "sk-ant-...",
     keyHelp: "Não é mostrada de novo depois de salva; só os últimos 4 caracteres ficam na tela.",
@@ -195,7 +195,7 @@ const ptBR = {
     removeDialog: {
       title: "Remover a chave da Anthropic?",
       description:
-        'Sem uma chave a casa fica sem analista: a leitura mensal é pulada e "Gerar nova leitura" fica desligado até uma chave nova ser registrada.',
+        'Sem uma chave a casa fica sem analista: a leitura mensal é pulada e "Gerar nova leitura" fica desligado até que uma chave nova seja registrada.',
       cancel: "Cancelar",
       confirm: "Remover chave",
     },
