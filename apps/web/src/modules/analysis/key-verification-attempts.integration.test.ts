@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { joinHousehold, seedHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users";
@@ -7,6 +8,8 @@ import {
   HOUSEHOLD_HOURLY_LIMIT,
   USER_DAILY_LIMIT,
 } from "./key-verification-attempts";
+import { runDailyPruneStep } from "./prune";
+import { aiKeyVerificationAttempt } from "./schema";
 
 describe("ai_key_verification_attempt isolation (integration)", () => {
   it("never lets household A's attempts count toward household B's hourly limit", async () => {
@@ -85,6 +88,33 @@ describe("createKeyVerificationAttemptRepository (integration)", () => {
       expect(await thirdHouseholdRepository.reserve(db, { userId: userA.id, now })).toEqual({
         status: "rate_limited",
       });
+    });
+  });
+
+  it("prunes rows older than 24h across every household, not only the one that last reserved", async () => {
+    await withTwoUsers(async ({ db, userA, userB, householdA, householdB }) => {
+      const now = new Date("2026-10-16T12:00:00.000Z");
+      const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60_000);
+      const oneHourAgo = new Date(now.getTime() - 60 * 60_000);
+      await db.insert(aiKeyVerificationAttempt).values([
+        { householdId: householdA, userId: userA.id, attemptedAt: twoDaysAgo },
+        { householdId: householdA, userId: userA.id, attemptedAt: oneHourAgo },
+        { householdId: householdB, userId: userB.id, attemptedAt: twoDaysAgo },
+        { householdId: householdB, userId: userB.id, attemptedAt: oneHourAgo },
+      ]);
+
+      expect(await runDailyPruneStep(db, now)).toEqual({ deleted: 2 });
+
+      const remaining = await db
+        .select({ householdId: aiKeyVerificationAttempt.householdId })
+        .from(aiKeyVerificationAttempt)
+        .where(eq(aiKeyVerificationAttempt.attemptedAt, oneHourAgo));
+      expect(remaining).toHaveLength(2);
+      const stale = await db
+        .select({ householdId: aiKeyVerificationAttempt.householdId })
+        .from(aiKeyVerificationAttempt)
+        .where(eq(aiKeyVerificationAttempt.attemptedAt, twoDaysAgo));
+      expect(stale).toHaveLength(0);
     });
   });
 

@@ -17,9 +17,23 @@ const HOUSEHOLD_WINDOW_MS = 60 * 60_000;
 // so no single member can exhaust the household's hour on their own without
 // also tripping their own daily one first.
 export const USER_DAILY_LIMIT = 10;
-const USER_WINDOW_MS = 24 * 60 * 60_000;
+// Exported for prune.ts: the daily cron's cross-household sweep uses the
+// same 24h cutoff as the user window, since no attempt still counts toward
+// either limit past it (ADR-0008).
+export const USER_WINDOW_MS = 24 * 60 * 60_000;
 
 export type KeyVerificationReservation = { status: "reserved" } | { status: "rate_limited" };
+
+// Used by prune.ts for the daily cron's cross-household sweep; the
+// opportunistic delete inside reserve() above only ever touches the
+// submitting household's own rows, so a household that attempts once and
+// never again would otherwise keep its rows past their retention window.
+export async function deleteAttemptsOlderThan(db: Database, cutoff: Date): Promise<number> {
+  const result = await db
+    .delete(aiKeyVerificationAttempt)
+    .where(lt(aiKeyVerificationAttempt.attemptedAt, cutoff));
+  return result.rowCount ?? 0;
+}
 
 // Every method is bound to the household taken from the session (ADR-0001):
 // none accepts a household id.
