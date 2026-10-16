@@ -21,7 +21,7 @@ import {
   createCriterionOverridesRepository,
   listHouseholdInstitutionLabels,
 } from "./repository";
-import type { StoredSettings } from "./repository";
+import type { WeightsSave } from "./repository";
 import type {
   AccountTypeOverrideForm,
   AccountTypeOverrideTarget,
@@ -65,10 +65,13 @@ export async function getHouseholdCriteriaWeights(
         );
       }
       const options = stored.options.status === "found" ? stored.options.value : {};
+      const hasOwnWeights = Object.keys(stored.levels).length > 0;
+      const hasOwnOptions =
+        options.candidateCount !== undefined || options.proConMinDifference !== undefined;
       return {
         levels: resolveCriteriaWeights(stored.levels),
         options: resolveComparisonSettings(options),
-        isCustom: true,
+        isCustom: hasOwnWeights || hasOwnOptions,
       };
     }
   }
@@ -78,11 +81,11 @@ export type SaveCriteriaWeightsOutcome = SimpleOutcome<"ok" | "failed">;
 
 export async function setHouseholdCriteriaWeights(
   scope: HouseholdScope,
-  settings: StoredSettings,
+  settings: WeightsSave,
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
   try {
-    await createCriteriaWeightsRepository(scope).save(db, settings);
+    await createCriteriaWeightsRepository(scope).saveWeights(db, settings);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: saving criteria weights failed (${errorName(error)})`);
@@ -90,21 +93,16 @@ export async function setHouseholdCriteriaWeights(
   }
 }
 
-// The account-type filter panel saves on its own (validation.ts,
-// parseAccountTypeFilterForm): it merges the new filter into whatever
-// levels and other options the household already has, rather than
-// requiring every weights field on every filter change.
+// Patches only options.accountTypeFilter in one statement (repository.ts,
+// saveAccountTypeFilter): it never reads or rewrites the household's stored
+// weights, so this can never revert a weights save made at the same time.
 export async function setHouseholdAccountTypeFilter(
   scope: HouseholdScope,
   filter: AccountTypeFilter,
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
-  const current = await getHouseholdCriteriaWeights(scope, db);
   try {
-    await createCriteriaWeightsRepository(scope).save(db, {
-      levels: current.levels,
-      options: { ...current.options, accountTypeFilter: filter },
-    });
+    await createCriteriaWeightsRepository(scope).saveAccountTypeFilter(db, filter);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: saving the account-type filter failed (${errorName(error)})`);
@@ -117,7 +115,7 @@ export async function resetHouseholdCriteriaWeights(
   db: Database,
 ): Promise<SaveCriteriaWeightsOutcome> {
   try {
-    await createCriteriaWeightsRepository(scope).clear(db);
+    await createCriteriaWeightsRepository(scope).resetWeights(db);
     return { status: "ok" };
   } catch (error) {
     console.warn(`banking-intel: resetting criteria weights failed (${errorName(error)})`);

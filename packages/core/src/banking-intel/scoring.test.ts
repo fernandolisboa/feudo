@@ -12,7 +12,7 @@ import {
   type ScorableBankProfile,
   type ScorableCriterionEntry,
 } from "./scoring";
-import { InvalidCriteriaWeightsError, type CriteriaWeights, type WeightLevels } from "./weights";
+import { InvalidCriteriaWeightsError, type WeightLevels } from "./weights";
 
 const REVIEWED = "2026-09-09";
 
@@ -47,7 +47,7 @@ function profile(
   };
 }
 
-const BASE_WEIGHTS: CriteriaWeights = {
+const BASE_WEIGHTS: WeightLevels = {
   cardBenefits: 2,
   investmentAccess: 3,
   appQuality: 3,
@@ -136,7 +136,7 @@ const SANTANDER = profile(
 
 const PROFILES = [NUBANK, INTER, ITAU, C6, BTG, SANTANDER];
 
-const ONLY_FEES: CriteriaWeights = {
+const ONLY_FEES: WeightLevels = {
   cardBenefits: 0,
   investmentAccess: 0,
   appQuality: 0,
@@ -160,7 +160,7 @@ describe("rankBankProfiles", () => {
   it("ranks by the exact weighted mean, not the rounded one", () => {
     const a = profile("a", { ...nulls(), fees: 61, lockIn: 60 });
     const b = profile("b", { ...nulls(), fees: 60, lockIn: 62 });
-    const weights = { ...ONLY_FEES, fees: 3, lockIn: 2 };
+    const weights: WeightLevels = { ...ONLY_FEES, fees: 3, lockIn: 2 };
 
     const ranked = rankBankProfiles([a, b], weights);
 

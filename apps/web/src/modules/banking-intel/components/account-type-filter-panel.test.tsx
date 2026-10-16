@@ -92,6 +92,23 @@ describe("AccountTypeFilterPanel", () => {
 
     expect((await screen.findByRole("alert")).textContent).toBe(t.errors.failed);
   });
+
+  it("reverts to the server's filter after a rejected save, instead of keeping the failed draft", async () => {
+    updateAccountTypeFilterActionMock.mockResolvedValueOnce({
+      status: "error",
+      message: t.errors.failed,
+    });
+    render(<AccountTypeFilterPanel filter={FILTER} />);
+
+    fireEvent.click(within(jointRow()).getByRole("button", { name: t.accountTypes.levelRequired }));
+    await screen.findByText(t.errors.failed);
+
+    expect(
+      within(jointRow())
+        .getByRole("button", { name: t.accountTypes.levelOptional })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
 });
 
 describe("AccountTypeFilterReadOnly", () => {

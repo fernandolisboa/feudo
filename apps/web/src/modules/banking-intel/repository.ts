@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { bankAccount, bankConnection } from "@/modules/sync/schema";
 
@@ -17,7 +17,7 @@ import {
   type StoredWeightLevels,
 } from "./validation";
 
-import type { WeightLevels } from "@feudo/core";
+import type { AccountTypeFilter, WeightLevels } from "@feudo/core";
 import type { HouseholdScope } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
@@ -37,7 +37,11 @@ export type StoredSettingsRead =
   | { status: "found"; levels: StoredWeightLevels; options: StoredOptionsRead }
   | { status: "unreadable" };
 
-export type StoredSettings = { levels: WeightLevels; options: StoredComparisonOptions };
+export type WeightsSave = {
+  levels: WeightLevels;
+  candidateCount: number;
+  proConMinDifference: number;
+};
 
 function readOptions(value: unknown): StoredOptionsRead {
   if (value === null) return { status: "absent" };
@@ -47,7 +51,11 @@ function readOptions(value: unknown): StoredOptionsRead {
 }
 
 // Every method is bound to the household taken from the session (ADR-0001):
-// none accepts a household id.
+// none accepts a household id. The weights panel and the account-type filter
+// panel each own their own keys of this one row (CriteriaWeightsEditor,
+// AccountTypeFilterPanel): every write below patches only its own keys in a
+// single statement, never reading the row first, so a stale tab or two quick
+// saves in a row can never revert the other panel's setting.
 export function createCriteriaWeightsRepository(scope: HouseholdScope) {
   return {
     async get(db: Database): Promise<StoredSettingsRead> {
@@ -66,23 +74,62 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
       return { status: "found", levels: row.weights, options: readOptions(row.options) };
     },
 
-    async save(db: Database, settings: StoredSettings): Promise<void> {
+    // Sets weights and the weights panel's two comparison options
+    // (candidateCount, proConMinDifference); a stored account-type filter is
+    // preserved by the jsonb `||` merge, never read back into application
+    // code first.
+    async saveWeights(db: Database, settings: WeightsSave): Promise<void> {
+      const options = {
+        candidateCount: settings.candidateCount,
+        proConMinDifference: settings.proConMinDifference,
+      };
+      await db
+        .insert(bankCriteriaWeights)
+        .values({ householdId: scope.householdId, weights: settings.levels, options })
+        .onConflictDoUpdate({
+          target: bankCriteriaWeights.householdId,
+          set: {
+            weights: settings.levels,
+            options: sql`coalesce(${bankCriteriaWeights.options}, '{}'::jsonb) || excluded.options`,
+            updatedAt: new Date(),
+          },
+        });
+    },
+
+    // Sets only options.accountTypeFilter; a household with no row yet gets
+    // weights = '{}' (resolves to the product defaults), so a filter-only
+    // save never pins the weights to anything the household did not choose.
+    async saveAccountTypeFilter(db: Database, filter: AccountTypeFilter): Promise<void> {
       await db
         .insert(bankCriteriaWeights)
         .values({
           householdId: scope.householdId,
-          weights: settings.levels,
-          options: settings.options,
+          weights: {},
+          options: { accountTypeFilter: filter },
         })
         .onConflictDoUpdate({
           target: bankCriteriaWeights.householdId,
-          set: { weights: settings.levels, options: settings.options, updatedAt: new Date() },
+          set: {
+            options: sql`coalesce(${bankCriteriaWeights.options}, '{}'::jsonb) || excluded.options`,
+            updatedAt: new Date(),
+          },
         });
     },
 
-    async clear(db: Database): Promise<void> {
+    // "Voltar ao padrão": drops weights and the two weights-panel options
+    // but keeps a stored account-type filter, a patch rather than a row
+    // delete so the other panel's setting survives. A household with
+    // nothing stored yet has no row to update, so this is a no-op for it.
+    async resetWeights(db: Database): Promise<void> {
       await db
-        .delete(bankCriteriaWeights)
+        .update(bankCriteriaWeights)
+        .set({
+          weights: {},
+          options: sql`case when ${bankCriteriaWeights.options} ? 'accountTypeFilter'
+            then jsonb_build_object('accountTypeFilter', ${bankCriteriaWeights.options}->'accountTypeFilter')
+            else null end`,
+          updatedAt: new Date(),
+        })
         .where(eq(bankCriteriaWeights.householdId, scope.householdId));
     },
   };

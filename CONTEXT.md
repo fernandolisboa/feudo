@@ -200,7 +200,7 @@ How hard an institution makes it for a customer to leave or move money out: arbi
 _Avoid_: stickiness, retention tactics
 
 **Account type**:
-Whether an institution offers a joint account ("conta conjunta"), a shared account ("conta compartilhada", a procurador/representante or a shared balance without a true joint account), a joint investment account, or an MEI account: `offered`, `not-offered`, or `not-found` when no source settles it, each with its own evidence, an optional condition (e.g. "only on Ultravioleta") and a review date, maintained the same way as a bank-profile criterion but never scored. Read by the **Account-type filter** below, never by the score.
+Whether an institution offers a joint account ("conta conjunta"), a shared account ("conta compartilhada", a procurador/representante or a shared balance without a true joint account), a joint investment account ("conta de investimento conjunta"), or an MEI account: `offered`, `not-offered`, or `not-found` when no source settles it, each with its own evidence, an optional condition (e.g. "only on Ultravioleta") and a review date, maintained the same way as a bank-profile criterion but never scored. Read by the **Account-type filter** below, never by the score.
 _Avoid_: jointBanking criterion, Dinheiro a dois score (retired 2026-10-16, see ADR-0006)
 
 **Account-type correction**:

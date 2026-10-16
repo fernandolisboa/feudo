@@ -247,7 +247,7 @@ async function buildBankDetailPageProps(
   const reference = referenceProfileOf(institutionId);
   if (institution === undefined || reference === undefined) return null;
 
-  const { today, timeZone, stored, overrides, accountTypeOverrides, comparison } =
+  const { today, timeZone, stored, overrides, accountTypeOverrides, profiles, comparison } =
     await loadHouseholdBankComparison(scope, options.now);
   const score = comparison.reviewed.find((entry) => entry.institutionId === institutionId);
   const weights = new Map(weightViews(stored.levels).map((view) => [view.criterion, view]));
@@ -261,6 +261,7 @@ async function buildBankDetailPageProps(
       .filter((override) => override.institutionId === institutionId)
       .map((override) => [override.accountType, override]),
   );
+  const corrected = profiles.find((profile) => profile.institutionId === institutionId);
 
   return {
     institutionId,
@@ -313,14 +314,11 @@ async function buildBankDetailPageProps(
       const entry = reference.accountTypes[type];
       const override = ownAccountTypeOverrides.get(type);
       const referenceStatusLabel = accountTypeStatusLabel(entry.status);
+      const correctedStatus = corrected?.accountTypes[type] ?? entry.status;
       return {
         type,
         label: accountTypeLabel(type),
-        statusLabel: override
-          ? override.offered
-            ? t.accountTypes.status.offered
-            : t.accountTypes.status.notOffered
-          : referenceStatusLabel,
+        statusLabel: accountTypeStatusLabel(correctedStatus),
         referenceStatusLabel,
         condition: entry.conditionPtBr ?? null,
         summary: entry.summaryPtBr,

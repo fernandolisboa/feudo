@@ -70,7 +70,11 @@ export async function updateComparisonSettingsAction(
 
   const outcome = await setHouseholdCriteriaWeights(
     context.scope,
-    { levels: parsed.levels, options: parsed.options },
+    {
+      levels: parsed.levels,
+      candidateCount: parsed.options.candidateCount,
+      proConMinDifference: parsed.options.proConMinDifference,
+    },
     context.db,
   );
   switch (outcome.status) {

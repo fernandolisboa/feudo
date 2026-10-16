@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountTypeFilter } from "@feudo/core";
 
 const updateComparisonSettingsActionMock = vi.hoisted(() => vi.fn());
 const resetCriteriaWeightsActionMock = vi.hoisted(() => vi.fn());
@@ -49,12 +48,6 @@ function firstSlider(): HTMLElement {
 }
 
 const OPTIONS: ComparisonOptionsView = { candidateCount: 3, proConMinDifference: 10 };
-const FILTER: AccountTypeFilter = {
-  jointBanking: "required",
-  jointOnly: true,
-  jointInvestment: "optional",
-  mei: "optional",
-};
 
 beforeEach(() => {
   updateComparisonSettingsActionMock
@@ -70,42 +63,23 @@ afterEach(() => {
 describe("CriteriaWeightsEditor", () => {
   it("follows new props after a rerender, instead of freezing at what it first mounted with", () => {
     const { rerender } = render(
-      <CriteriaWeightsEditor
-        weights={weights(4)}
-        options={OPTIONS}
-        accountTypeFilter={FILTER}
-        weightsAreCustom
-      />,
+      <CriteriaWeightsEditor weights={weights(4)} options={OPTIONS} weightsAreCustom />,
     );
 
     expect(screen.getByText("80% da nota")).not.toBeNull();
 
-    rerender(
-      <CriteriaWeightsEditor
-        weights={weights(2)}
-        options={OPTIONS}
-        accountTypeFilter={FILTER}
-        weightsAreCustom
-      />,
-    );
+    rerender(<CriteriaWeightsEditor weights={weights(2)} options={OPTIONS} weightsAreCustom />);
 
     expect(screen.queryByText("80% da nota")).toBeNull();
     expect(screen.getByText("67% da nota")).not.toBeNull();
   });
 
-  it("reverts to the server's values after a rejected save, and the next save posts those values plus the household's account-type filter", async () => {
+  it("reverts to the server's values after a rejected save, and the next save posts only weights and the two comparison options, never the account-type filter", async () => {
     updateComparisonSettingsActionMock.mockResolvedValueOnce({
       status: "error",
       message: t.errors.failed,
     });
-    render(
-      <CriteriaWeightsEditor
-        weights={weights(5)}
-        options={OPTIONS}
-        accountTypeFilter={FILTER}
-        weightsAreCustom
-      />,
-    );
+    render(<CriteriaWeightsEditor weights={weights(5)} options={OPTIONS} weightsAreCustom />);
 
     fireEvent.change(firstSlider(), { target: { value: "4" } });
 
@@ -125,9 +99,9 @@ describe("CriteriaWeightsEditor", () => {
     expect(postedForm.get("fees")).toBe("5");
     expect(postedForm.get("lockIn")).toBe("1");
     expect(postedForm.get("proConMinDifference")).toBe("10");
-    expect(postedForm.get("jointBanking")).toBe("required");
-    expect(postedForm.get("jointOnly")).toBe("true");
-    expect(postedForm.get("jointInvestment")).toBe("optional");
-    expect(postedForm.get("mei")).toBe("optional");
+    expect(postedForm.get("jointBanking")).toBeNull();
+    expect(postedForm.get("jointOnly")).toBeNull();
+    expect(postedForm.get("jointInvestment")).toBeNull();
+    expect(postedForm.get("mei")).toBeNull();
   });
 });

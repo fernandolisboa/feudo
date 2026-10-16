@@ -7,18 +7,16 @@ import {
   CRITERION_WEIGHT_MAX,
   CRITERION_WEIGHT_MIN,
   DEFAULT_WEIGHT_LEVELS,
-  hasActiveCriterion,
   hasActiveLevel,
   InvalidCriteriaWeightsError,
   isValidCriterionWeight,
   resolveCriteriaWeights,
-  type CriteriaWeights,
   type WeightLevels,
 } from "./weights";
 
-const ALL_ZERO = Object.fromEntries(
+const ALL_ZERO: WeightLevels = Object.fromEntries(
   BANK_PROFILE_CRITERIA.map((criterion) => [criterion, 0]),
-) as Record<(typeof BANK_PROFILE_CRITERIA)[number], number>;
+) as WeightLevels;
 
 describe("criteria weight levels", () => {
   it("ships a valid default for every criterion", () => {
@@ -78,12 +76,12 @@ describe("criteria weight levels", () => {
 });
 
 describe("criterionShares", () => {
-  function shareOf(weights: CriteriaWeights, criterion: keyof CriteriaWeights): number {
+  function shareOf(weights: WeightLevels, criterion: keyof WeightLevels): number {
     return criterionShares(weights)[criterion];
   }
 
   it("gives every criterion's percentage of the note, summing to 100", () => {
-    const weights: CriteriaWeights = { ...ALL_ZERO, fees: 1, lockIn: 1, security: 2 };
+    const weights: WeightLevels = { ...ALL_ZERO, fees: 1, lockIn: 1, security: 2 };
 
     const shares = criterionShares(weights);
 
@@ -119,15 +117,15 @@ describe("scorable weights", () => {
 
   it("refuses a negative or fractional weight", () => {
     expect(() => {
-      assertScorableWeights({ ...ALL_ZERO, fees: -1 });
+      assertScorableWeights({ ...ALL_ZERO, fees: -1 } as unknown as WeightLevels);
     }).toThrow(/fees is -1/);
     expect(() => {
-      assertScorableWeights({ ...ALL_ZERO, lockIn: 1.5 });
+      assertScorableWeights({ ...ALL_ZERO, lockIn: 1.5 } as unknown as WeightLevels);
     }).toThrow(/lockIn is 1.5/);
   });
 
   it("counts a plain numeric set active only above zero", () => {
-    expect(hasActiveCriterion(ALL_ZERO)).toBe(false);
-    expect(hasActiveCriterion({ ...ALL_ZERO, fees: 1 })).toBe(true);
+    expect(hasActiveLevel(ALL_ZERO)).toBe(false);
+    expect(hasActiveLevel({ ...ALL_ZERO, fees: 1 })).toBe(true);
   });
 });

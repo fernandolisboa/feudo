@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BANK_PROFILE_CRITERIA,
-  DEFAULT_ACCOUNT_TYPE_FILTER,
   DEFAULT_WEIGHT_LEVELS,
   type AccountType,
   type BankProfileCriterion,
-  type ComparisonSettings,
 } from "@feudo/core";
 
 const getViewerRoleMock = vi.hoisted(() => vi.fn());
@@ -63,10 +61,6 @@ function defaultsForm(): FormData {
   }
   formData.set("candidateCount", "3");
   formData.set("proConMinDifference", "10");
-  formData.set("jointBanking", DEFAULT_ACCOUNT_TYPE_FILTER.jointBanking);
-  formData.set("jointOnly", "false");
-  formData.set("jointInvestment", DEFAULT_ACCOUNT_TYPE_FILTER.jointInvestment);
-  formData.set("mei", DEFAULT_ACCOUNT_TYPE_FILTER.mei);
   return formData;
 }
 
@@ -108,14 +102,9 @@ describe("updateComparisonSettingsAction", () => {
     const result = await updateComparisonSettingsAction(initialActionState, defaultsForm());
 
     expect(result).toEqual({ status: "success", message: t.saved });
-    const expectedOptions: ComparisonSettings = {
-      candidateCount: 3,
-      proConMinDifference: 10,
-      accountTypeFilter: DEFAULT_ACCOUNT_TYPE_FILTER,
-    };
     expect(setHouseholdCriteriaWeightsMock).toHaveBeenCalledWith(
       { householdId: "household-1" },
-      { levels: DEFAULT_WEIGHT_LEVELS, options: expectedOptions },
+      { levels: DEFAULT_WEIGHT_LEVELS, candidateCount: 3, proConMinDifference: 10 },
       {},
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/bancos");

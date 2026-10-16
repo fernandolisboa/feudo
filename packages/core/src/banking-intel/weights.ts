@@ -7,9 +7,8 @@ export type CriterionNumericWeight = 0 | 1 | 2 | 3 | 4 | 5;
 
 // A household's weights (what it stores) and the weights scoring reads are
 // the same shape since the essential/required levels were retired (ADR-0006
-// amendment 2026-10-16): both are a plain 0-5 integer per criterion.
-export type CriteriaWeights = Readonly<Record<BankProfileCriterion, number>>;
-export type WeightLevels = CriteriaWeights;
+// amendment 2026-10-16): a plain 0-5 integer per criterion.
+export type WeightLevels = Readonly<Record<BankProfileCriterion, CriterionNumericWeight>>;
 
 export const DEFAULT_WEIGHT_LEVELS: WeightLevels = {
   cardBenefits: 2,
@@ -40,22 +39,18 @@ export function isValidCriterionWeight(weight: unknown): weight is CriterionNume
 // Scoring normalises weights, so it only needs non-negative integers with at
 // least one above zero; the 0 to 5 range is what a household can store per
 // criterion.
-export function hasActiveCriterion(weights: CriteriaWeights): boolean {
-  return BANK_PROFILE_CRITERIA.some((criterion) => weights[criterion] > 0);
-}
-
 export function hasActiveLevel(levels: WeightLevels): boolean {
-  return hasActiveCriterion(levels);
+  return BANK_PROFILE_CRITERIA.some((criterion) => levels[criterion] > 0);
 }
 
-export function assertScorableWeights(weights: CriteriaWeights): void {
+export function assertScorableWeights(weights: WeightLevels): void {
   for (const criterion of BANK_PROFILE_CRITERIA) {
     const weight = weights[criterion];
     if (!Number.isSafeInteger(weight) || weight < 0) {
       throw new InvalidCriteriaWeightsError(`${criterion} is ${String(weight)}`);
     }
   }
-  if (!hasActiveCriterion(weights)) {
+  if (!hasActiveLevel(weights)) {
     throw new InvalidCriteriaWeightsError("every weight is zero");
   }
 }
@@ -76,7 +71,7 @@ export function resolveCriteriaWeights(
       if (level === "essential" || level === "required") return [criterion, 5];
       return [criterion, isValidCriterionWeight(level) ? level : DEFAULT_WEIGHT_LEVELS[criterion]];
     }),
-  ) as Record<BankProfileCriterion, number>;
+  ) as Record<BankProfileCriterion, CriterionNumericWeight>;
   return hasActiveLevel(resolved) ? resolved : DEFAULT_WEIGHT_LEVELS;
 }
 
@@ -85,7 +80,7 @@ export function resolveCriteriaWeights(
 // per-bank evidence gaps: a share is the weight's share of the note, not of
 // what a particular bank was actually scored on.
 export function criterionShares(
-  weights: CriteriaWeights,
+  weights: WeightLevels,
 ): Readonly<Record<BankProfileCriterion, number>> {
   const total = BANK_PROFILE_CRITERIA.reduce((sum, criterion) => sum + weights[criterion], 0);
   if (total <= 0) {

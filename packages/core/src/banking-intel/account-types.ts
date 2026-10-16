@@ -6,7 +6,7 @@ export type AccountType = (typeof ACCOUNT_TYPES)[number];
 // either way, and never satisfies a household's filter.
 export type AccountTypeStatus = "offered" | "not-offered" | "not-found";
 
-type RequirementLevel = "optional" | "required";
+export type RequirementLevel = "optional" | "required";
 
 // Household data: a filter on top of the reference account types, stored in
 // bank_criteria_weights.options alongside the weights. jointOnly only

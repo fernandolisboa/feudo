@@ -23,10 +23,6 @@ function baseEntries(level: string): Record<string, string> {
   const entries: Record<string, string> = {
     candidateCount: "3",
     proConMinDifference: "10",
-    jointBanking: "optional",
-    jointOnly: "false",
-    jointInvestment: "optional",
-    mei: "optional",
   };
   for (const criterion of BANK_PROFILE_CRITERIA) {
     entries[criterion] = level;
@@ -35,23 +31,15 @@ function baseEntries(level: string): Record<string, string> {
 }
 
 describe("parseComparisonSettingsForm", () => {
-  it("accepts a numeric level per criterion plus the comparison settings and the account-type filter", () => {
-    const result = parseComparisonSettingsForm(
-      form({ ...baseEntries("3"), fees: "5", jointBanking: "required", jointOnly: "true" }),
-    );
+  it("accepts a numeric level per criterion plus the comparison settings, never the account-type filter", () => {
+    const result = parseComparisonSettingsForm(form({ ...baseEntries("3"), fees: "5" }));
 
     expect(result.status).toBe("ok");
     if (result.status !== "ok") throw new Error("expected ok");
     expect(result.levels.fees).toBe(5);
     expect(result.levels.cardBenefits).toBe(3);
-    expect(result.options.candidateCount).toBe(3);
-    expect(result.options.proConMinDifference).toBe(10);
-    expect(result.options.accountTypeFilter).toEqual({
-      jointBanking: "required",
-      jointOnly: true,
-      jointInvestment: "optional",
-      mei: "optional",
-    });
+    expect(result.options).toEqual({ candidateCount: 3, proConMinDifference: 10 });
+    expect(result.options).not.toHaveProperty("accountTypeFilter");
   });
 
   it("refuses a set where every level is doesn't-count", () => {
@@ -74,10 +62,12 @@ describe("parseComparisonSettingsForm", () => {
     expect(parseComparisonSettingsForm(formData)).toEqual({ status: "invalid" });
   });
 
-  it("refuses an invalid account-type filter level", () => {
-    expect(
-      parseComparisonSettingsForm(form({ ...baseEntries("3"), jointBanking: "essential" })).status,
-    ).toBe("invalid");
+  it("ignores any account-type filter fields a stale form still posts, rather than failing or reading them", () => {
+    const result = parseComparisonSettingsForm(
+      form({ ...baseEntries("3"), jointBanking: "essential" }),
+    );
+
+    expect(result.status).toBe("ok");
   });
 
   it("refuses a candidate count outside 1-5", () => {
@@ -165,6 +155,21 @@ describe("parseStoredComparisonOptions", () => {
     ).toEqual({
       value: { accountTypeFilter: { jointBanking: "required", mei: "optional" } },
       droppedFields: ["accountTypeFilter.jointOnly"],
+    });
+  });
+
+  it("names accountTypeFilter itself when it is present but not object-shaped", () => {
+    expect(parseStoredComparisonOptions({ accountTypeFilter: "garbage" })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
+    });
+    expect(parseStoredComparisonOptions({ accountTypeFilter: [1, 2, 3] })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
+    });
+    expect(parseStoredComparisonOptions({ accountTypeFilter: null })).toEqual({
+      value: {},
+      droppedFields: ["accountTypeFilter"],
     });
   });
 

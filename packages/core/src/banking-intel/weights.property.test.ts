@@ -11,11 +11,13 @@ import {
 
 const numericLevelArb = fc.integer({ min: 0, max: CRITERION_WEIGHT_MAX });
 
-const levelsArb: fc.Arbitrary<WeightLevels> = fc.record(
-  Object.fromEntries(
-    BANK_PROFILE_CRITERIA.map((criterion) => [criterion, numericLevelArb]),
-  ) as Record<BankProfileCriterion, typeof numericLevelArb>,
-);
+const levelsArb: fc.Arbitrary<WeightLevels> = fc
+  .record(
+    Object.fromEntries(
+      BANK_PROFILE_CRITERIA.map((criterion) => [criterion, numericLevelArb]),
+    ) as Record<BankProfileCriterion, typeof numericLevelArb>,
+  )
+  .map((levels) => levels as unknown as WeightLevels);
 
 describe("weight level properties", () => {
   it("always lets criterionShares add up to 100 when something counts", () => {

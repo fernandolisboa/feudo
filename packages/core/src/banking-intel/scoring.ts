@@ -10,7 +10,7 @@ import {
   type StoredAccountTypeFilter,
 } from "./account-types";
 import { BANK_PROFILE_CRITERIA, type BankProfileCriterion } from "./criteria";
-import { assertScorableWeights, type CriteriaWeights, type WeightLevels } from "./weights";
+import { assertScorableWeights, type WeightLevels } from "./weights";
 
 export const CANDIDATE_COUNT_MIN = 1;
 export const CANDIDATE_COUNT_MAX = 5;
@@ -140,7 +140,7 @@ function roundedRatio(numerator: number, denominator: number): number {
 // A criterion without evidence is left out and the remaining weights are
 // renormalised over what is evidenced, because ADR-0006 forbids standing in a
 // guessed score; missingEvidence says which weighted criteria were dropped.
-function weightedScore(profile: ScorableBankProfile, weights: CriteriaWeights): WeightedScore {
+function weightedScore(profile: ScorableBankProfile, weights: WeightLevels): WeightedScore {
   let weightedSum = 0;
   let evidencedWeight = 0;
   const missingEvidence: BankProfileCriterion[] = [];
@@ -185,7 +185,7 @@ function withoutInternals(
 
 function rankWeighted(
   profiles: readonly ScorableBankProfile[],
-  weights: CriteriaWeights,
+  weights: WeightLevels,
 ): WeightedScore[] {
   assertScorableWeights(weights);
   return profiles.map((profile) => weightedScore(profile, weights)).sort(byScoreDescending);
@@ -195,7 +195,7 @@ function rankWeighted(
 // filter applies here, so every bank meets its (empty) requirements.
 export function rankBankProfiles(
   profiles: readonly ScorableBankProfile[],
-  weights: CriteriaWeights,
+  weights: WeightLevels,
 ): BankScore[] {
   return rankWeighted(profiles, weights).map((score) => withoutInternals(score, []));
 }
@@ -237,7 +237,7 @@ function lowerMedian(
 function prosAndCons(
   candidate: ScorableBankProfile,
   baselines: ReadonlyMap<BankProfileCriterion, Baseline>,
-  weights: CriteriaWeights,
+  weights: WeightLevels,
   proConMinDifference: number,
 ): Pick<BankCandidate, "pros" | "cons"> {
   const comparisons: CriterionComparison[] = [];

@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BANK_PROFILE_CRITERIA, DEFAULT_CANDIDATE_COUNT, type WeightLevels } from "@feudo/core";
+import {
+  BANK_PROFILE_CRITERIA,
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_WEIGHT_LEVELS,
+  type WeightLevels,
+} from "@feudo/core";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
 
@@ -46,12 +51,7 @@ const ONLY_CARDS: WeightLevels = {
 
 function settingsForm(
   levels: WeightLevels,
-  overrides: {
-    candidateCount?: number;
-    proConMinDifference?: number;
-    jointBanking?: "optional" | "required";
-    jointOnly?: boolean;
-  } = {},
+  overrides: { candidateCount?: number; proConMinDifference?: number } = {},
 ): FormData {
   const formData = new FormData();
   for (const criterion of BANK_PROFILE_CRITERIA) {
@@ -59,10 +59,6 @@ function settingsForm(
   }
   formData.set("candidateCount", String(overrides.candidateCount ?? 3));
   formData.set("proConMinDifference", String(overrides.proConMinDifference ?? 10));
-  formData.set("jointBanking", overrides.jointBanking ?? "optional");
-  formData.set("jointOnly", overrides.jointOnly ? "true" : "false");
-  formData.set("jointInvestment", "optional");
-  formData.set("mei", "optional");
   return formData;
 }
 
@@ -273,6 +269,68 @@ describe("Bancos server boundary (integration)", () => {
       }
       const propsB = await getBanksPageProps(userB.session, NOW);
       expect(propsB.accountTypeFilter.jointBanking).toBe("optional");
+    });
+  });
+
+  it("keeps the household's account-type filter when it saves its weights afterwards", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", true),
+      );
+
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
+
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.accountTypeFilter).toEqual({
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "optional",
+      });
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(5);
+    });
+  });
+
+  it("keeps the household's account-type filter after resetting its weights", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", true),
+      );
+      await updateComparisonSettingsAction(initialActionState, settingsForm(ONLY_CARDS));
+
+      const result = await resetCriteriaWeightsAction();
+
+      expect(result).toEqual({ status: "success", message: t.resetDone });
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.weightsAreCustom).toBe(false);
+      expect(props.accountTypeFilter).toEqual({
+        jointBanking: "required",
+        jointOnly: true,
+        jointInvestment: "optional",
+        mei: "optional",
+      });
+    });
+  });
+
+  it("does not mark the weights as custom when only the account-type filter was ever saved", async () => {
+    await withTwoUsers(async ({ userA }) => {
+      signInAs(userA.session);
+
+      await updateAccountTypeFilterAction(
+        initialActionState,
+        accountTypeFilterForm("required", false),
+      );
+
+      const props = await getBanksPageProps(userA.session, NOW);
+      expect(props.weightsAreCustom).toBe(false);
+      expect(props.accountTypeFilter.jointBanking).toBe("required");
+      expect(props.weights.find((entry) => entry.criterion === "cardBenefits")?.level).toBe(
+        DEFAULT_WEIGHT_LEVELS.cardBenefits,
+      );
     });
   });
 

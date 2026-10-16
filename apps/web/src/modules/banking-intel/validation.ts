@@ -14,7 +14,6 @@ import {
   PRO_CON_MIN_DIFFERENCE_STEP,
   type AccountTypeFilter,
   type BankProfileCriterion,
-  type ComparisonSettings,
   type WeightLevels,
 } from "@feudo/core";
 import { institutionById, isoDateSchema } from "@feudo/core/reference-data";
@@ -62,8 +61,11 @@ type ParsedAccountTypeFilter = {
 // of the stored options; only a field that is present and fails validation
 // is named, never one the household simply never set.
 function parseStoredAccountTypeFilter(value: unknown): ParsedAccountTypeFilter {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (value === undefined) {
     return { accountTypeFilter: undefined, droppedFields: [] };
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return { accountTypeFilter: undefined, droppedFields: ["accountTypeFilter"] };
   }
   const record = value as Record<string, unknown>;
   const accountTypeFilter: Partial<AccountTypeFilter> = {};
@@ -165,27 +167,26 @@ const formProConMinDifferenceSchema = z
   .pipe(proConMinDifferenceSchema);
 const formBooleanSchema = z.enum(["true", "false"]).transform((value) => value === "true");
 
+// Weights and the account-type filter are two independent household settings
+// now (CriteriaWeightsEditor and AccountTypeFilterPanel each save on their
+// own): this schema only ever carries the weights form's own fields, never
+// accountTypeFilter, so a save here can never overwrite the other panel's
+// setting.
 export const comparisonSettingsFormSchema = z.object({
   levels: z.object(
     Object.fromEntries(
       BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formNumericLevelSchema]),
     ) as Record<BankProfileCriterion, typeof formNumericLevelSchema>,
   ),
-  accountTypeFilter: z.object({
-    jointBanking: requirementLevelSchema,
-    jointOnly: formBooleanSchema,
-    jointInvestment: requirementLevelSchema,
-    mei: requirementLevelSchema,
-  }),
   candidateCount: formCandidateCountSchema,
   proConMinDifference: formProConMinDifferenceSchema,
 });
 
 // The account-type filter panel saves on its own, separate from the weights
-// form below: it only ever changes accountTypeFilter, merged server-side
-// with whatever levels and other options the household already has
-// (service.ts, setHouseholdAccountTypeFilter), so this schema only ever
-// needs the filter's own four fields.
+// form above: it patches only `options.accountTypeFilter` in a single SQL
+// statement (repository.ts, saveAccountTypeFilter), never touching the
+// household's stored weights, so this schema only ever needs the filter's
+// own four fields.
 export const accountTypeFilterFormSchema = z.object({
   jointBanking: requirementLevelSchema,
   jointOnly: formBooleanSchema,
@@ -193,9 +194,8 @@ export const accountTypeFilterFormSchema = z.object({
   mei: requirementLevelSchema,
 });
 
-// The inverse of the schema above: turns a filter back into the form
-// fields the weights editor also needs to post, since updateComparisonSettingsAction
-// takes the whole comparison settings in one request (CriteriaWeightsEditor).
+// The inverse of the schema above: turns a filter back into the form fields
+// AccountTypeFilterPanel posts.
 export function accountTypeFilterFormEntries(filter: AccountTypeFilter): Record<string, string> {
   return {
     jointBanking: filter.jointBanking,
@@ -218,8 +218,13 @@ export function parseAccountTypeFilterForm(formData: FormData): AccountTypeFilte
   return parsed.success ? { status: "ok", value: parsed.data } : { status: "invalid" };
 }
 
+// candidateCount/proConMinDifference only: the account-type filter is a
+// separate setting the weights form never carries (accountTypeFilterFormSchema
+// above, posted on its own by AccountTypeFilterPanel).
+export type WeightsFormOptions = { candidateCount: number; proConMinDifference: number };
+
 export type ComparisonSettingsFormResult =
-  | { status: "ok"; levels: WeightLevels; options: ComparisonSettings }
+  | { status: "ok"; levels: WeightLevels; options: WeightsFormOptions }
   | { status: "invalid" }
   | { status: "all_zero" };
 
@@ -228,12 +233,6 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
     levels: Object.fromEntries(
       BANK_PROFILE_CRITERIA.map((criterion) => [criterion, formData.get(criterion)]),
     ),
-    accountTypeFilter: {
-      jointBanking: formData.get("jointBanking"),
-      jointOnly: formData.get("jointOnly"),
-      jointInvestment: formData.get("jointInvestment"),
-      mei: formData.get("mei"),
-    },
     candidateCount: formData.get("candidateCount"),
     proConMinDifference: formData.get("proConMinDifference"),
   };
@@ -241,7 +240,11 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
   if (!parsed.success) {
     return { status: "invalid" };
   }
-  const levels = parsed.data.levels;
+  // formNumericLevelSchema already validated every value as an integer from
+  // CRITERION_WEIGHT_MIN to CRITERION_WEIGHT_MAX; zod's inferred type stays
+  // the wider `number`, so this narrows it to the levels type the rest of
+  // the app reads.
+  const levels = parsed.data.levels as unknown as WeightLevels;
   if (!hasActiveLevel(levels)) {
     return { status: "all_zero" };
   }
@@ -251,7 +254,6 @@ export function parseComparisonSettingsForm(formData: FormData): ComparisonSetti
     options: {
       candidateCount: parsed.data.candidateCount,
       proConMinDifference: parsed.data.proConMinDifference,
-      accountTypeFilter: parsed.data.accountTypeFilter,
     },
   };
 }

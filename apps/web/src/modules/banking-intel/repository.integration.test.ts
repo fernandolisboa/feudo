@@ -1,6 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_COMPARISON_SETTINGS, DEFAULT_WEIGHT_LEVELS } from "@feudo/core";
+import {
+  DEFAULT_CANDIDATE_COUNT,
+  DEFAULT_PRO_CON_MIN_DIFFERENCE,
+  DEFAULT_WEIGHT_LEVELS,
+} from "@feudo/core";
 
 import { householdScope } from "@/modules/households";
 import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
@@ -14,17 +18,25 @@ import {
   createCriteriaWeightsRepository,
   createCriterionOverridesRepository,
   listHouseholdInstitutionLabels,
-  type StoredSettings,
+  type WeightsSave,
 } from "./repository";
 import { bankAccountTypeOverride, bankCriteriaWeights, bankCriterionOverride } from "./schema";
 
-const FEES_FIRST: StoredSettings = {
+const FEES_FIRST: WeightsSave = {
   levels: { ...DEFAULT_WEIGHT_LEVELS, fees: 5, cardBenefits: 0 },
-  options: DEFAULT_COMPARISON_SETTINGS,
+  candidateCount: DEFAULT_CANDIDATE_COUNT,
+  proConMinDifference: DEFAULT_PRO_CON_MIN_DIFFERENCE,
 };
-const CARDS_FIRST: StoredSettings = {
+const CARDS_FIRST: WeightsSave = {
   levels: { ...DEFAULT_WEIGHT_LEVELS, fees: 1, cardBenefits: 5 },
-  options: { ...DEFAULT_COMPARISON_SETTINGS, candidateCount: 2 },
+  candidateCount: 2,
+  proConMinDifference: DEFAULT_PRO_CON_MIN_DIFFERENCE,
+};
+const REQUIRED_JOINT = {
+  jointBanking: "required" as const,
+  jointOnly: false,
+  jointInvestment: "optional" as const,
+  mei: "optional" as const,
 };
 
 async function renameConnection(db: Database, connectionId: string, label: string): Promise<void> {
@@ -34,15 +46,22 @@ async function renameConnection(db: Database, connectionId: string, label: strin
     .where(eq(bankConnection.id, connectionId));
 }
 
+function optionsOf(settings: WeightsSave): { candidateCount: number; proConMinDifference: number } {
+  return {
+    candidateCount: settings.candidateCount,
+    proConMinDifference: settings.proConMinDifference,
+  };
+}
+
 describe("criteria weights repository isolation (integration)", () => {
   it("reads only the scoped household's own weights and options", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
-      await createCriteriaWeightsRepository(householdA.scope).save(db, FEES_FIRST);
+      await createCriteriaWeightsRepository(householdA.scope).saveWeights(db, FEES_FIRST);
 
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: { status: "found", value: FEES_FIRST.options, droppedFields: [] },
+        options: { status: "found", value: optionsOf(FEES_FIRST), droppedFields: [] },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "none",
@@ -52,9 +71,9 @@ describe("criteria weights repository isolation (integration)", () => {
 
   it("never overwrites another household's weights or options when saving its own", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
-      await createCriteriaWeightsRepository(householdA.scope).save(db, FEES_FIRST);
-      await createCriteriaWeightsRepository(householdB.scope).save(db, CARDS_FIRST);
-      await createCriteriaWeightsRepository(householdB.scope).save(db, {
+      await createCriteriaWeightsRepository(householdA.scope).saveWeights(db, FEES_FIRST);
+      await createCriteriaWeightsRepository(householdB.scope).saveWeights(db, CARDS_FIRST);
+      await createCriteriaWeightsRepository(householdB.scope).saveWeights(db, {
         ...CARDS_FIRST,
         levels: { ...CARDS_FIRST.levels, lockIn: 0 },
       });
@@ -62,28 +81,104 @@ describe("criteria weights repository isolation (integration)", () => {
       expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
         status: "found",
         levels: FEES_FIRST.levels,
-        options: { status: "found", value: FEES_FIRST.options, droppedFields: [] },
+        options: { status: "found", value: optionsOf(FEES_FIRST), droppedFields: [] },
       });
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: { ...CARDS_FIRST.levels, lockIn: 0 },
-        options: { status: "found", value: CARDS_FIRST.options, droppedFields: [] },
+        options: { status: "found", value: optionsOf(CARDS_FIRST), droppedFields: [] },
       });
       const rows = await db.select().from(bankCriteriaWeights);
       expect(rows).toHaveLength(2);
     });
   });
 
-  it("never clears another household's weights", async () => {
+  it("never resets another household's weights", async () => {
     await withTwoHouseholds(async ({ db, householdA, householdB }) => {
-      await createCriteriaWeightsRepository(householdB.scope).save(db, CARDS_FIRST);
+      await createCriteriaWeightsRepository(householdB.scope).saveWeights(db, CARDS_FIRST);
 
-      await createCriteriaWeightsRepository(householdA.scope).clear(db);
+      await createCriteriaWeightsRepository(householdA.scope).resetWeights(db);
 
       expect(await createCriteriaWeightsRepository(householdB.scope).get(db)).toEqual({
         status: "found",
         levels: CARDS_FIRST.levels,
-        options: { status: "found", value: CARDS_FIRST.options, droppedFields: [] },
+        options: { status: "found", value: optionsOf(CARDS_FIRST), droppedFields: [] },
+      });
+    });
+  });
+
+  it("keeps a stored account-type filter when saving weights, without reading it first", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createCriteriaWeightsRepository(householdA.scope);
+      await repository.saveAccountTypeFilter(db, REQUIRED_JOINT);
+
+      await repository.saveWeights(db, FEES_FIRST);
+
+      expect(await repository.get(db)).toEqual({
+        status: "found",
+        levels: FEES_FIRST.levels,
+        options: {
+          status: "found",
+          value: { ...optionsOf(FEES_FIRST), accountTypeFilter: REQUIRED_JOINT },
+          droppedFields: [],
+        },
+      });
+    });
+  });
+
+  it("keeps stored weights when saving the account-type filter, without reading them first", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createCriteriaWeightsRepository(householdA.scope);
+      await repository.saveWeights(db, CARDS_FIRST);
+
+      await repository.saveAccountTypeFilter(db, REQUIRED_JOINT);
+
+      expect(await repository.get(db)).toEqual({
+        status: "found",
+        levels: CARDS_FIRST.levels,
+        options: {
+          status: "found",
+          value: { ...optionsOf(CARDS_FIRST), accountTypeFilter: REQUIRED_JOINT },
+          droppedFields: [],
+        },
+      });
+    });
+  });
+
+  it("does not pin the weights to a row created only by a filter save", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createCriteriaWeightsRepository(householdA.scope);
+
+      await repository.saveAccountTypeFilter(db, REQUIRED_JOINT);
+
+      expect(await repository.get(db)).toEqual({
+        status: "found",
+        levels: {},
+        options: {
+          status: "found",
+          value: { accountTypeFilter: REQUIRED_JOINT },
+          droppedFields: [],
+        },
+      });
+    });
+  });
+
+  it("keeps the stored account-type filter on a weights reset, dropping only weights and the weights options", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      const repository = createCriteriaWeightsRepository(householdA.scope);
+      await repository.saveAccountTypeFilter(db, REQUIRED_JOINT);
+      await repository.saveWeights(db, FEES_FIRST);
+
+      await repository.resetWeights(db);
+
+      expect(await repository.get(db)).toEqual({
+        status: "found",
+        levels: {},
+        options: {
+          status: "found",
+          value: { accountTypeFilter: REQUIRED_JOINT },
+          droppedFields: [],
+        },
       });
     });
   });

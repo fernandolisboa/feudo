@@ -6,10 +6,10 @@ import {
   CANDIDATE_COUNT_MAX,
   CANDIDATE_COUNT_MIN,
   criterionShares,
+  isValidCriterionWeight,
   PRO_CON_MIN_DIFFERENCE_MAX,
   PRO_CON_MIN_DIFFERENCE_MIN,
   PRO_CON_MIN_DIFFERENCE_STEP,
-  type AccountTypeFilter,
   type BankProfileCriterion,
   type CriterionNumericWeight,
   type WeightLevels,
@@ -26,7 +26,6 @@ import { resetCriteriaWeightsAction, updateComparisonSettingsAction } from "../a
 import { levelLabel } from "../level-label";
 import type { ComparisonOptionsView, CriterionWeightView } from "../page-props";
 import { t } from "../strings";
-import { accountTypeFilterFormEntries } from "../validation";
 
 type LevelValue = `${number}`;
 
@@ -35,7 +34,11 @@ function levelToValue(level: CriterionNumericWeight): LevelValue {
 }
 
 function valueToLevel(value: LevelValue): CriterionNumericWeight {
-  return Number(value) as CriterionNumericWeight;
+  const level = Number(value);
+  if (!isValidCriterionWeight(level)) {
+    throw new Error(`invalid criterion weight value: ${value}`);
+  }
+  return level;
 }
 
 const LEVEL_VALUES: LevelValue[] = Array.from(
@@ -67,20 +70,16 @@ function stateFromProps(
   };
 }
 
-// The weights form posts the full comparison settings in one request
-// (updateComparisonSettingsAction), so it must also carry the household's
-// current account-type filter unchanged; the filter panel saves on its own
-// through a separate action (AccountTypeFilterPanel).
-function toFormData(state: EditorState, accountTypeFilter: AccountTypeFilter): FormData {
+// The weights form only ever posts weights and the two comparison options
+// below; the account-type filter saves on its own through a separate action
+// (AccountTypeFilterPanel), so each panel patches only its own setting.
+function toFormData(state: EditorState): FormData {
   const formData = new FormData();
   for (const criterion of BANK_PROFILE_CRITERIA) {
     formData.set(criterion, state.levels[criterion]);
   }
   formData.set("candidateCount", String(state.candidateCount));
   formData.set("proConMinDifference", String(state.proConMinDifference));
-  for (const [key, value] of Object.entries(accountTypeFilterFormEntries(accountTypeFilter))) {
-    formData.set(key, value);
-  }
   return formData;
 }
 
@@ -99,12 +98,10 @@ function effectiveLevels(state: EditorState): WeightLevels {
 export function CriteriaWeightsEditor({
   weights,
   options,
-  accountTypeFilter,
   weightsAreCustom,
 }: {
   weights: CriterionWeightView[];
   options: ComparisonOptionsView;
-  accountTypeFilter: AccountTypeFilter;
   weightsAreCustom: boolean;
 }) {
   const { errorMessage, isPending, run } = useActionInTransition(t.errors.failed);
@@ -132,9 +129,7 @@ export function CriteriaWeightsEditor({
 
   function save(next: EditorState) {
     setDraft(next);
-    run(() =>
-      updateComparisonSettingsAction(initialActionState, toFormData(next, accountTypeFilter)),
-    );
+    run(() => updateComparisonSettingsAction(initialActionState, toFormData(next)));
   }
 
   return (

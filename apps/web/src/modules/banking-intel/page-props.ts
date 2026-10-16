@@ -17,6 +17,7 @@ import {
   type BankScore,
   type CriterionComparison,
   type CriterionNumericWeight,
+  type ScorableBankProfile,
   type WeightLevels,
 } from "@feudo/core";
 import { institutionById, isStale } from "@feudo/core/reference-data";
@@ -164,7 +165,7 @@ function comparisonLine(item: CriterionComparison): string {
 export function weightViews(levels: WeightLevels): CriterionWeightView[] {
   const shares = criterionShares(levels);
   return BANK_PROFILE_CRITERIA.map((criterion) => {
-    const level = levels[criterion] as CriterionNumericWeight;
+    const level = levels[criterion];
     return {
       criterion,
       label: t.criteria[criterion].label,
@@ -219,33 +220,26 @@ export function accountTypeFilterSummary(
 type AccountTypeStatusEntry = { status: AccountTypeStatus; conditionPtBr?: string };
 type AccountTypeStatusMap = Readonly<Record<AccountType, AccountTypeStatusEntry>>;
 
-// The reference account types with the household's own corrections applied
-// on top, for the bank page and the short "what it offers" line on the
-// reviewed table; the condition chip always comes from the reference data,
-// since a correction carries no condition of its own.
+// The reference account types with the household's own corrections already
+// applied (loadHouseholdBankComparison runs applyAccountTypeOverrides once,
+// before compareBanks), for the bank page and the short "what it offers"
+// line on the reviewed table; the condition chip always comes from the
+// reference data, since a correction carries no condition of its own.
 export function householdAccountTypes(
   institutionId: string,
-  accountTypeOverrides: readonly StoredAccountTypeOverride[],
+  profiles: readonly ScorableBankProfile[],
 ): AccountTypeStatusMap | null {
   const reference = referenceProfileOf(institutionId);
-  if (reference === undefined) return null;
-  const own = new Map(
-    accountTypeOverrides
-      .filter((override) => override.institutionId === institutionId)
-      .map((override) => [override.accountType, override]),
-  );
+  const corrected = profiles.find((profile) => profile.institutionId === institutionId);
+  if (reference === undefined || corrected === undefined) return null;
   return Object.fromEntries(
-    (Object.keys(reference.accountTypes) as AccountType[]).map((type) => {
-      const entry = reference.accountTypes[type];
-      const override = own.get(type);
-      return [
-        type,
-        {
-          status: override ? (override.offered ? "offered" : "not-offered") : entry.status,
-          conditionPtBr: entry.conditionPtBr,
-        },
-      ];
-    }),
+    (Object.keys(reference.accountTypes) as AccountType[]).map((type) => [
+      type,
+      {
+        status: corrected.accountTypes[type],
+        conditionPtBr: reference.accountTypes[type].conditionPtBr,
+      },
+    ]),
   ) as AccountTypeStatusMap;
 }
 
@@ -301,6 +295,7 @@ function reviewedRows(
   comparison: BankComparison,
   overrides: readonly StoredOverride[],
   accountTypeOverrides: readonly StoredAccountTypeOverride[],
+  profiles: readonly ScorableBankProfile[],
   today: string,
 ): ReviewedBankRow[] {
   const correctedCriteria = new Map<string, string[]>();
@@ -324,9 +319,7 @@ function reviewedRows(
       correctedTypes.get(score.institutionId),
     ),
     unmetLabel: unmetLabel(score.unmetRequirements),
-    offeredTypesLine: offeredAccountTypesLine(
-      householdAccountTypes(score.institutionId, accountTypeOverrides),
-    ),
+    offeredTypesLine: offeredAccountTypesLine(householdAccountTypes(score.institutionId, profiles)),
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
   }));
@@ -434,6 +427,7 @@ export type HouseholdBankComparison = {
   institutions: HouseholdInstitutions;
   overrides: StoredOverride[];
   accountTypeOverrides: StoredAccountTypeOverride[];
+  profiles: readonly ScorableBankProfile[];
   comparison: BankComparison;
 };
 
@@ -474,6 +468,7 @@ export async function loadHouseholdBankComparison(
     institutions,
     overrides,
     accountTypeOverrides,
+    profiles,
     comparison,
   };
 }
@@ -483,7 +478,7 @@ export async function buildBanksPageProps(
   options: { now: Date; canManage: boolean },
 ): Promise<BanksPageProps> {
   const { canManage } = options;
-  const { today, stored, institutions, overrides, accountTypeOverrides, comparison } =
+  const { today, stored, institutions, overrides, accountTypeOverrides, profiles, comparison } =
     await loadHouseholdBankComparison(scope, options.now);
   const [top] = comparison.candidates;
   const meeting = comparison.reviewed.filter(
@@ -535,6 +530,6 @@ export async function buildBanksPageProps(
         today,
       ),
     ),
-    reviewed: reviewedRows(comparison, overrides, accountTypeOverrides, today),
+    reviewed: reviewedRows(comparison, overrides, accountTypeOverrides, profiles, today),
   };
 }

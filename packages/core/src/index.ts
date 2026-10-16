@@ -137,11 +137,7 @@ export {
   BANK_PROFILE_SCORE_MIN,
 } from "./banking-intel/criteria";
 
-export type {
-  CriteriaWeights,
-  CriterionNumericWeight,
-  WeightLevels,
-} from "./banking-intel/weights";
+export type { CriterionNumericWeight, WeightLevels } from "./banking-intel/weights";
 export {
   criterionShares,
   CRITERION_WEIGHT_MAX,
@@ -156,6 +152,7 @@ export type {
   AccountTypeFilter,
   AccountTypeRequirement,
   AccountTypeStatus,
+  RequirementLevel,
   StoredAccountTypeFilter,
 } from "./banking-intel/account-types";
 export {
@@ -171,6 +168,7 @@ export type {
   BankScore,
   ComparisonSettings,
   CriterionComparison,
+  ScorableBankProfile,
   StoredComparisonSettings,
 } from "./banking-intel/scoring";
 export {

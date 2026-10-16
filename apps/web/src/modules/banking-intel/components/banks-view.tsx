@@ -236,7 +236,6 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
           <CriteriaWeightsEditor
             weights={weights}
             options={options}
-            accountTypeFilter={accountTypeFilter}
             weightsAreCustom={weightsAreCustom}
           />
         ) : (

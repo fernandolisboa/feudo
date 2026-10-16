@@ -10,12 +10,7 @@ import {
   rankBankProfiles,
   type ScorableBankProfile,
 } from "./scoring";
-import {
-  CRITERION_WEIGHT_MAX,
-  hasActiveCriterion,
-  type CriteriaWeights,
-  type WeightLevels,
-} from "./weights";
+import { CRITERION_WEIGHT_MAX, hasActiveLevel, type WeightLevels } from "./weights";
 
 const entryArb = fc.oneof(
   fc.record({
@@ -59,7 +54,7 @@ const profilesArb = fc
     })),
   );
 
-const weightsArb = fc
+const weightsArb: fc.Arbitrary<WeightLevels> = fc
   .record(
     Object.fromEntries(
       BANK_PROFILE_CRITERIA.map((criterion) => [
@@ -68,7 +63,8 @@ const weightsArb = fc
       ]),
     ) as Record<BankProfileCriterion, fc.Arbitrary<number>>,
   )
-  .filter((weights: CriteriaWeights) => hasActiveCriterion(weights));
+  .map((weights) => weights as unknown as WeightLevels)
+  .filter((weights) => hasActiveLevel(weights));
 
 const criterionArb = fc.constantFrom(...BANK_PROFILE_CRITERIA);
 
@@ -81,10 +77,10 @@ const accountTypeFilterArb = fc.record({
   mei: requirementLevelArb,
 });
 
-function scale(weights: CriteriaWeights, factor: number): CriteriaWeights {
+function scale(weights: WeightLevels, factor: number): WeightLevels {
   return Object.fromEntries(
     BANK_PROFILE_CRITERIA.map((criterion) => [criterion, weights[criterion] * factor]),
-  ) as CriteriaWeights;
+  ) as unknown as WeightLevels;
 }
 
 describe("bank scoring properties", () => {
@@ -192,10 +188,9 @@ describe("bank scoring properties", () => {
         fc.array(fc.nat({ max: 12 })),
         (profiles, weights, picks) => {
           const currentInstitutionIds = picks.map((index) => `bank-${String(index)}`);
-          const levels = weights as unknown as WeightLevels;
           const { candidates } = compareBanks({
             profiles,
-            levels,
+            levels: weights,
             currentInstitutionIds,
             settings: DEFAULT_COMPARISON_SETTINGS,
           });
@@ -224,10 +219,9 @@ describe("bank scoring properties", () => {
         weightsArb,
         accountTypeFilterArb,
         (profiles, weights, accountTypeFilter) => {
-          const levels = weights as unknown as WeightLevels;
           const { candidates } = compareBanks({
             profiles,
-            levels,
+            levels: weights,
             currentInstitutionIds: [],
             settings: { ...DEFAULT_COMPARISON_SETTINGS, candidateCount: 13, accountTypeFilter },
           });

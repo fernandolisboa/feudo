@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AccountTypeFilter } from "@feudo/core";
+import type { AccountTypeFilter, RequirementLevel } from "@feudo/core";
 
 import { Checkbox } from "@/ui/checkbox";
 import { Label } from "@/ui/label";
@@ -15,7 +15,6 @@ import { t } from "../strings";
 import { accountTypeFilterFormEntries } from "../validation";
 
 type FilterRowKey = "jointBanking" | "jointInvestment" | "mei";
-type RequirementLevel = "optional" | "required";
 
 function toFormData(filter: AccountTypeFilter): FormData {
   const formData = new FormData();
@@ -68,6 +67,12 @@ export function AccountTypeFilterPanel({ filter }: { filter: AccountTypeFilter }
   if (filter !== lastFilter) {
     setLastFilter(filter);
     setDraft(null);
+  }
+
+  const [lastErrorMessage, setLastErrorMessage] = useState(errorMessage);
+  if (errorMessage !== lastErrorMessage) {
+    setLastErrorMessage(errorMessage);
+    if (errorMessage !== null) setDraft(null);
   }
 
   const state = draft ?? filter;
