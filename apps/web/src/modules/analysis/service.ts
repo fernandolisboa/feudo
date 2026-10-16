@@ -27,11 +27,11 @@ import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
 import type { Database } from "@/platform/db/client";
-import { AI_MODELS, type AiClient, type AiFailure, type AiTier, type AiUsage } from "./ai-client";
-import { createAnthropicAiClient } from "./anthropic-client";
-import { readAiProviderName, type AnalysisEnv } from "./env";
-import { createFakeAiClient } from "./fake-client";
+import { decryptHouseholdApiKey, getAiSettings } from "./ai-settings";
+import type { AiClient, AiFailure, AiFamily, AiTier, AiUsage } from "./ai-client";
+import { readAiProviderName, readEncryptionKey, type AnalysisEnv } from "./env";
 import { CURRENT_ANALYST_PROMPT, type AnalystPrompt } from "./prompts";
+import { createAiProvider, type AiProvider } from "./provider";
 import { referenceFacts } from "./reference-facts";
 import { createAnalysisRepository, listHouseholdsWithAccounts } from "./repository";
 
@@ -59,34 +59,71 @@ const TIMEOUT_MS: Record<AiTier, number> = { standard: 45_000, deep: 150_000 };
 // Below this a call is unlikely to finish; it is better skipped than cut off.
 const MIN_ATTEMPT_MS: Record<AiTier, number> = { standard: 15_000, deep: 45_000 };
 
-export type AnalysisDeps = { client: AiClient | null; prompt: AnalystPrompt; notifier: Notifier };
+// The household's own key (ADR-0013), never a deploy-wide one: `provider` is
+// null only when the analyst is off for everyone (AI_PROVIDER=off or no
+// ENCRYPTION_KEY); `encryptionKey` is set whenever `provider` can need one
+// to open a household's stored key (anthropic only — fake ignores keys).
+export type AnalysisDeps = {
+  provider: AiProvider | null;
+  encryptionKey: string | null;
+  prompt: AnalystPrompt;
+  notifier: Notifier;
+};
 
 export function createAnalysisDeps(env: AnalysisEnv = process.env): AnalysisDeps {
-  const provider = readAiProviderName(env);
-  const notifier = createNotifierFromEnv(env);
-  switch (provider) {
-    case "off":
-      return { client: null, prompt: CURRENT_ANALYST_PROMPT, notifier };
-    case "fake":
-      return { client: createFakeAiClient(), prompt: CURRENT_ANALYST_PROMPT, notifier };
-    case "anthropic":
-      return {
-        client: createAnthropicAiClient(env.ANTHROPIC_API_KEY ?? ""),
-        prompt: CURRENT_ANALYST_PROMPT,
-        notifier,
-      };
-  }
+  const providerName = readAiProviderName(env);
+  return {
+    provider: createAiProvider(providerName),
+    encryptionKey: providerName === "anthropic" ? readEncryptionKey(env) : null,
+    prompt: CURRENT_ANALYST_PROMPT,
+    notifier: createNotifierFromEnv(env),
+  };
 }
 
 // A misconfigured AI_PROVIDER turns the analyst off instead of breaking the
-// pages that host it; the cron's response reports the error.
-export function isAnalysisEnabled(env: AnalysisEnv = process.env): boolean {
+// pages that host it; the cron's response reports the error. Anthropic's
+// provider is per-household from here: enabled only once this household has
+// registered its own key.
+export async function isAnalysisEnabled(
+  session: HouseholdSession,
+  db: Database,
+  env: AnalysisEnv = process.env,
+): Promise<boolean> {
   try {
-    return readAiProviderName(env) !== "off";
+    const providerName = readAiProviderName(env);
+    if (providerName === "off") {
+      return false;
+    }
+    if (providerName === "fake") {
+      return true;
+    }
+    const settings = await getAiSettings(householdScope(session), db);
+    return settings.apiKeyCiphertext !== null;
   } catch (error) {
     console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
     return false;
   }
+}
+
+async function clientForHousehold(
+  scope: HouseholdScope,
+  db: Database,
+  deps: Pick<AnalysisDeps, "provider" | "encryptionKey">,
+): Promise<{ client: AiClient; family: (tier: "monthly" | "onDemand") => AiFamily } | null> {
+  if (deps.provider === null) {
+    return null;
+  }
+  const settings = await getAiSettings(scope, db);
+  const apiKey =
+    deps.encryptionKey === null ? null : decryptHouseholdApiKey(settings, deps.encryptionKey);
+  const client = deps.provider.clientFor(apiKey);
+  if (client === null) {
+    return null;
+  }
+  return {
+    client,
+    family: (tier) => (tier === "monthly" ? settings.monthlyFamily : settings.onDemandFamily),
+  };
 }
 
 type HouseholdClock = { timeZone: string; localDay: string; analysedMonth: YearMonth };
@@ -161,10 +198,12 @@ export async function generateReading(
   prompt: AnalystPrompt,
   input: AnalysisInput,
   tier: AiTier,
+  family: AiFamily,
+  model: string,
   deadline: Date,
 ): Promise<GenerationResult> {
   let usage: AiUsage | null = null;
-  let model: string | null = null;
+  let answeringModel: string | null = null;
   let correction: string | null = null;
   let reason: GenerationFailure = "no_time";
 
@@ -175,13 +214,15 @@ export async function generateReading(
     }
     const result = await client.complete({
       tier,
+      family,
+      model,
       system: prompt.system,
       user: prompt.renderUser(input, correction),
       input,
       timeoutMs: Math.min(TIMEOUT_MS[tier], remainingMs),
     });
     usage = addUsage(usage, result.usage);
-    model = result.model ?? model;
+    answeringModel = result.model ?? answeringModel;
     if (result.status !== "ok") {
       reason = result.status;
       if (RETRIED_FAILURES.has(result.status)) {
@@ -203,7 +244,7 @@ export async function generateReading(
     reason = "contract_violation";
     correction = describeViolations(violations);
   }
-  return { status: "failed", reason, model, usage };
+  return { status: "failed", reason, model: answeringModel, usage };
 }
 
 async function recordGeneration(
@@ -239,10 +280,12 @@ export async function requestOnDemandAnalysis(
   deps: AnalysisDeps,
   options: { now: Date; deadline: Date },
 ): Promise<OnDemandOutcome> {
-  if (deps.client === null) {
+  const scope = householdScope(session);
+  const resolved = await clientForHousehold(scope, db, deps);
+  if (resolved === null) {
     return { status: "disabled" };
   }
-  const scope = householdScope(session);
+  const { client, family: familyOf } = resolved;
   const repository = createAnalysisRepository(scope);
   const clock = await householdClock(db, scope, options.now);
   const staleBefore = new Date(options.now.getTime() - RUNNING_STALE_MS);
@@ -258,12 +301,14 @@ export async function requestOnDemandAnalysis(
   if (input === null) {
     return { status: "no_accounts" };
   }
+  const family = familyOf("onDemand");
+  const requestedModel = await client.resolveModel(family, "standard");
   const reservation = await repository.reserveOnDemand(db, {
     row: {
       period: input.month,
       localDay: clock.localDay,
       promptVersion: deps.prompt.version,
-      requestedModel: AI_MODELS.standard,
+      requestedModel,
       input,
       requestedByUserId: session.userId,
     },
@@ -274,10 +319,12 @@ export async function requestOnDemandAnalysis(
     return { status: reservation.status };
   }
   const result = await generateReading(
-    deps.client,
+    client,
     deps.prompt,
     input,
     "standard",
+    family,
+    requestedModel,
     options.deadline,
   );
   await recordGeneration(db, scope, reservation.id, result);
@@ -288,7 +335,7 @@ export async function runOnDemandAnalysis(
   session: HouseholdSession,
   db: Database,
 ): Promise<OnDemandOutcome> {
-  if (!isAnalysisEnabled()) {
+  if (!(await isAnalysisEnabled(session, db))) {
     return { status: "disabled" };
   }
   return requestOnDemandAnalysis(session, db, createAnalysisDeps(), {
@@ -304,20 +351,27 @@ type MonthlyRunOptions = { now: Date; deadline: Date };
 export async function runMonthlyAnalysisForHousehold(
   db: Database,
   scope: HouseholdScope,
-  deps: AnalysisDeps & { client: AiClient },
+  deps: AnalysisDeps & { provider: AiProvider },
   options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisOutcome> {
+  const resolved = await clientForHousehold(scope, db, deps);
+  if (resolved === null) {
+    return { status: "skipped" };
+  }
+  const { client, family: familyOf } = resolved;
   const clock = await householdClock(db, scope, options.now);
   const input = await buildAnalysisInput(scope, "monthly", clock, options.now);
   if (input === null) {
     return { status: "skipped" };
   }
+  const family = familyOf("monthly");
+  const requestedModel = await client.resolveModel(family, "deep");
   const id = await createAnalysisRepository(scope).startMonthly(db, {
     row: {
       period: input.month,
       localDay: clock.localDay,
       promptVersion: deps.prompt.version,
-      requestedModel: AI_MODELS.deep,
+      requestedModel,
       input,
       requestedByUserId: null,
     },
@@ -327,7 +381,15 @@ export async function runMonthlyAnalysisForHousehold(
   if (id === null) {
     return { status: "skipped" };
   }
-  const result = await generateReading(deps.client, deps.prompt, input, "deep", options.deadline);
+  const result = await generateReading(
+    client,
+    deps.prompt,
+    input,
+    "deep",
+    family,
+    requestedModel,
+    options.deadline,
+  );
   await recordGeneration(db, scope, id, result);
   if (result.status === "succeeded") {
     // Best effort, after the reading is stored (ADR-0012).
@@ -361,8 +423,8 @@ export async function runMonthlyAnalysis(
   deps: AnalysisDeps,
   options: MonthlyRunOptions,
 ): Promise<MonthlyAnalysisStep> {
-  const { client } = deps;
-  if (client === null) {
+  const { provider } = deps;
+  if (provider === null) {
     return { ok: true, disabled: true, succeeded: 0, failed: 0, skipped: 0, unreached: 0 };
   }
   try {
@@ -381,7 +443,7 @@ export async function runMonthlyAnalysis(
         const outcome = await runMonthlyAnalysisForHousehold(
           db,
           scope,
-          { ...deps, client },
+          { ...deps, provider },
           options,
         );
         counts[outcome.status] += 1;

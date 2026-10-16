@@ -17,7 +17,7 @@ function reading(overrides: Partial<AnalysisDetailView> = {}): AnalysisDetailVie
     tradeOffs: ["Liquidez contra rendimento."],
     counterArgument: "Concentrar tem risco.",
     inputsUsed: [{ key: "ledger.income", label: "Renda em setembro", value: "R$ 12.400,00" }],
-    meta: ["gerada em 01/10/2026, 08:12", "Claude Opus 5.5", "prompt analyst-v2"],
+    meta: ["gerada em 01/10/2026, 08:12", "Opus 5.5", "prompt analyst-v2"],
     ...overrides,
   };
 }
@@ -30,14 +30,14 @@ function props(overrides: Partial<AnalysesPageProps> = {}): AnalysesPageProps {
       {
         id: "r-2",
         title: "Leitura mensal de setembro de 2026",
-        meta: "gerada em 01/10/2026, 08:12 · Claude Opus 5.5",
+        meta: "gerada em 01/10/2026, 08:12 · Opus 5.5",
         href: "/analises?leitura=r-2",
         current: true,
       },
       {
         id: "r-1",
         title: "Leitura pedida sobre agosto de 2026",
-        meta: "gerada em 12/09/2026, 10:00 · Claude Sonnet 5.5",
+        meta: "gerada em 12/09/2026, 10:00 · Sonnet 5.5",
         href: "/analises?leitura=r-1",
         current: false,
       },

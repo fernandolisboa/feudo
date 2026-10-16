@@ -26,6 +26,8 @@ import {
 } from "@/modules/reserve";
 import { AccountsSection, getAccountsSectionProps } from "@/modules/sync";
 
+import { getDb } from "@/platform/db/client";
+
 // "Sincronizar agora" and "Gerar nova leitura" run inside this page's
 // function; sync's MANUAL_SYNC_BUDGET_MS and analysis' ON_DEMAND_BUDGET_MS
 // mirror it (page.test.ts pins them together).
@@ -79,6 +81,7 @@ export default async function Home({
 }) {
   const session = await requireHouseholdSession();
   const params = await searchParams;
+  const analysisEnabled = await isAnalysisEnabled(session, getDb());
 
   return (
     <>
@@ -105,7 +108,7 @@ export default async function Home({
           </OverviewErrorBoundary>
         }
         reading={
-          isAnalysisEnabled() ? (
+          analysisEnabled ? (
             <AnalystReadingErrorBoundary>
               <Suspense fallback={null}>
                 <AnalystReadingContent session={session} />

@@ -15,9 +15,10 @@ import {
 } from "@/modules/notifications/test/fake-push-sender";
 
 import type { Database } from "@/platform/db/client";
-import { AI_MODELS, type AiClient, type AiFailure } from "./ai-client";
+import { PINNED_MODEL_IDS, type AiClient, type AiFailure } from "./ai-client";
 import { createFakeAiClient } from "./fake-client";
 import { CURRENT_ANALYST_PROMPT } from "./prompts";
+import type { AiProvider } from "./provider";
 import { createAnalysisRepository } from "./repository";
 import { householdAnalysis } from "./schema";
 import {
@@ -28,17 +29,28 @@ import {
 } from "./service";
 import { FIXTURE_INPUT } from "./test/fixtures";
 
+function providerFor(client: AiClient): AiProvider {
+  return { verifyKey: () => Promise.resolve({ status: "ok" }), clientFor: () => client };
+}
+
 const fakeDeps: AnalysisDeps = {
-  client: createFakeAiClient(),
+  provider: providerFor(createFakeAiClient()),
+  encryptionKey: null,
   prompt: CURRENT_ANALYST_PROMPT,
   notifier: silentNotifier,
 };
 
 function failingDeps(status: AiFailure): AnalysisDeps {
   const client: AiClient = {
+    resolveModel: () => Promise.resolve(PINNED_MODEL_IDS.sonnet),
     complete: () => Promise.resolve({ status, model: null, usage: null }),
   };
-  return { client, prompt: CURRENT_ANALYST_PROMPT, notifier: silentNotifier };
+  return {
+    provider: providerFor(client),
+    encryptionKey: null,
+    prompt: CURRENT_ANALYST_PROMPT,
+    notifier: silentNotifier,
+  };
 }
 
 function options(now: Date = new Date()) {
@@ -90,7 +102,7 @@ function reservation(localDay: string) {
       period: FIXTURE_INPUT.month,
       localDay,
       promptVersion: CURRENT_ANALYST_PROMPT.version,
-      requestedModel: AI_MODELS.standard,
+      requestedModel: PINNED_MODEL_IDS.sonnet,
       input: FIXTURE_INPUT,
       requestedByUserId: null,
     },
@@ -177,8 +189,8 @@ describe("requestOnDemandAnalysis (integration)", () => {
         kind: "on_demand",
         status: "succeeded",
         promptVersion: CURRENT_ANALYST_PROMPT.version,
-        requestedModel: AI_MODELS.standard,
-        model: `fake-${AI_MODELS.standard}`,
+        requestedModel: PINNED_MODEL_IDS.sonnet,
+        model: `fake-${PINNED_MODEL_IDS.sonnet}`,
         requestedByUserId: userA.id,
         failureReason: null,
       });
@@ -250,7 +262,8 @@ describe("requestOnDemandAnalysis (integration)", () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
       const off: AnalysisDeps = {
-        client: null,
+        provider: null,
+        encryptionKey: null,
         prompt: CURRENT_ANALYST_PROMPT,
         notifier: silentNotifier,
       };
@@ -287,7 +300,7 @@ describe("runMonthlyAnalysis (integration)", () => {
         expect(rows[0]).toMatchObject({
           kind: "monthly",
           status: "succeeded",
-          requestedModel: AI_MODELS.deep,
+          requestedModel: PINNED_MODEL_IDS.opus,
           requestedByUserId: null,
         });
       }
@@ -344,7 +357,8 @@ describe("runMonthlyAnalysis (integration)", () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {
       await seedLedger(db, userA, householdA);
       const off: AnalysisDeps = {
-        client: null,
+        provider: null,
+        encryptionKey: null,
         prompt: CURRENT_ANALYST_PROMPT,
         notifier: silentNotifier,
       };

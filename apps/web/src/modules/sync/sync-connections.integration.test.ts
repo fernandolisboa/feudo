@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
 
-import { encryptSecret } from "./crypto";
+import { encryptSecret } from "@/platform/crypto";
 import { createDocumentHasher } from "./document-hash";
 import { FAKE_INVALID_CLIENT_SECRET, FAKE_ITEM_BANCO_FIXTURE } from "./provider/fake-fixtures";
 import { createFakeProvider } from "./provider/fake-provider";

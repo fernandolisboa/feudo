@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import type { HouseholdSession } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
-import { encryptSecret } from "./crypto";
+import { encryptSecret } from "@/platform/crypto";
 import { createDocumentHasher } from "./document-hash";
 import { createFakeProvider } from "./provider/fake-provider";
 import type { AuthenticateOutcome, DataProvider } from "./provider/provider";

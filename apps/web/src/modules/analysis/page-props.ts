@@ -20,7 +20,6 @@ import {
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
-import { AI_MODELS } from "./ai-client";
 import { ANALYSES_PATH, READING_PARAM } from "./paths";
 import {
   createAnalysisRepository,
@@ -34,10 +33,17 @@ const HISTORY_LIMIT = 12;
 
 const readingIdSchema = z.uuid();
 
-const MODEL_NAMES: Readonly<Record<string, string>> = {
-  [AI_MODELS.standard]: "Claude Sonnet 5.5",
-  [AI_MODELS.deep]: "Claude Opus 5.5",
+const FAMILY_LABELS: Readonly<Record<string, string>> = {
+  haiku: "Haiku",
+  sonnet: "Sonnet",
+  opus: "Opus",
 };
+
+// Any current or future claude-(haiku|sonnet|opus)-X-Y id renders as
+// "Haiku X.Y" / "Sonnet X.Y" / "Opus X.Y" (ADR-0013): the household picks
+// the family, the newest version is resolved at reading time, and the label
+// must keep up without a code change. An id this cannot read stays as-is.
+const MODEL_ID_PATTERN = /^claude-(haiku|sonnet|opus)-(\d+)-(\d+)$/;
 
 type ReadingBase = {
   title: string;
@@ -96,7 +102,14 @@ function modelName(model: string | null): string | null {
   if (model === null) {
     return null;
   }
-  return MODEL_NAMES[model] ?? model;
+  const match = MODEL_ID_PATTERN.exec(model);
+  if (!match) {
+    return model;
+  }
+  const family = match[1] ?? "";
+  const major = match[2] ?? "";
+  const minor = match[3] ?? "";
+  return `${FAMILY_LABELS[family] ?? family} ${major}.${minor}`;
 }
 
 function splitParagraphs(text: string | undefined): string[] {
@@ -242,10 +255,10 @@ export async function getAnalystReadingProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<AnalystReadingProps | null> {
-  if (!isAnalysisEnabled()) {
+  const context = await householdContext(session);
+  if (!(await isAnalysisEnabled(session, context.db))) {
     return null;
   }
-  const context = await householdContext(session);
   const [latest, quota] = await Promise.all([
     context.repository.latestSucceeded(context.db),
     quotaState(context, now),
@@ -265,11 +278,11 @@ export async function getAnalysesPageProps(
   requestedId: unknown,
   now: Date = new Date(),
 ): Promise<AnalysesPageProps | null> {
-  if (!isAnalysisEnabled()) {
-    return null;
-  }
   const context = await householdContext(session);
   const { db, repository, timeZone } = context;
+  if (!(await isAnalysisEnabled(session, db))) {
+    return null;
+  }
   const id = readingIdSchema.safeParse(requestedId);
   const [requested, history, quota] = await Promise.all([
     id.success ? repository.findSucceeded(db, id.data) : Promise.resolve(null),
@@ -294,10 +307,10 @@ export async function getAnalysesPageProps(
 export async function getAnalystBanksNoteProps(
   session: HouseholdSession,
 ): Promise<AnalystBanksNoteProps | null> {
-  if (!isAnalysisEnabled()) {
+  const { db, repository, timeZone } = await householdContext(session);
+  if (!(await isAnalysisEnabled(session, db))) {
     return null;
   }
-  const { db, repository, timeZone } = await householdContext(session);
   const latest = await repository.latestSucceeded(db);
   const view = latest === null ? null : analysisDetailView(latest, timeZone);
   if (view === null || view.banks.length === 0) {

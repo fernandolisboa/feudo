@@ -20,7 +20,7 @@ import {
   encryptSecret,
   EncryptionKeyMismatchError,
   MalformedCiphertextError,
-} from "./crypto";
+} from "@/platform/crypto";
 import { readEncryptionKey, type SyncEnv } from "./env";
 import type {
   DataProvider,

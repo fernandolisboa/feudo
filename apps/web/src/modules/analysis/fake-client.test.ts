@@ -6,8 +6,12 @@ import { FIXTURE_INPUT } from "./test/fixtures";
 
 describe("fake AI client", () => {
   it("writes a reading that passes the contract, so preview can exercise the panel", async () => {
-    const result = await createFakeAiClient().complete({
+    const client = createFakeAiClient();
+    const model = await client.resolveModel("sonnet", "standard");
+    const result = await client.complete({
       tier: "standard",
+      family: "sonnet",
+      model,
       system: "",
       user: "",
       input: FIXTURE_INPUT,
@@ -22,5 +26,11 @@ describe("fake AI client", () => {
     expect(output.summary).toContain("demonstração");
     expect(output.banks).toContain("demonstração");
     expect(result.model).toBe("fake-claude-sonnet-5-5");
+  });
+
+  it("ignores the family's key, resolving the same pinned id for every family", async () => {
+    const client = createFakeAiClient();
+    await expect(client.resolveModel("haiku", "standard")).resolves.toBe("claude-haiku-5-5");
+    await expect(client.resolveModel("opus", "deep")).resolves.toBe("claude-opus-5-5");
   });
 });

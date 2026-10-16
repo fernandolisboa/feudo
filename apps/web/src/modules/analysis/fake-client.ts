@@ -1,10 +1,16 @@
-import { AI_MODELS, type AiClient, type AiRequest, type AiResult } from "./ai-client";
+import { PINNED_MODEL_IDS, type AiClient, type AiRequest, type AiResult } from "./ai-client";
 
 // Preview and tests only (env.ts refuses it in production): a canned reading
 // that quotes the input's own first facts, so it always passes the number
-// validator and the panel can be exercised without a paid API key.
+// validator and the panel can be exercised without a paid API key. The fake
+// provider ignores every household key, including a missing one, so e2e and
+// local development keep working with no key registered at all.
 export function createFakeAiClient(): AiClient {
   return {
+    resolveModel(family) {
+      return Promise.resolve(PINNED_MODEL_IDS[family]);
+    },
+
     complete(request: AiRequest): Promise<AiResult> {
       const [first, second] = request.input.facts;
       const cited = [first, second].flatMap((fact) => (fact ? [fact] : []));
@@ -19,7 +25,7 @@ export function createFakeAiClient(): AiClient {
           counterArgument: "Uma leitura de demonstração não deve orientar nenhuma decisão.",
           citedKeys: cited.map((fact) => fact.key),
         },
-        model: `fake-${AI_MODELS[request.tier]}`,
+        model: `fake-${request.model}`,
         usage: { inputTokens: 0, outputTokens: 0 },
       });
     },

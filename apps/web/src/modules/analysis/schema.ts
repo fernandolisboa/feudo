@@ -17,6 +17,8 @@ export const analysisKind = pgEnum("analysis_kind", ["monthly", "on_demand"]);
 
 export const analysisStatus = pgEnum("analysis_status", ["running", "succeeded", "failed"]);
 
+export const aiModelFamily = pgEnum("ai_model_family", ["haiku", "sonnet", "opus"]);
+
 // Household-scoped (ADR-0001): one row per analyst reading, stored with the
 // exact input the model saw, the prompt version and the model that answered
 // (ADR-0004), so any reading can be re-run and compared. `period` is the
@@ -59,3 +61,20 @@ export const householdAnalysis = pgTable(
       .where(sql`${table.kind} = 'monthly' and ${table.status} <> 'failed'`),
   ],
 );
+
+// Household-scoped (ADR-0001, ADR-0013): the household's own Anthropic key,
+// encrypted the same way as Meu Pluggy credentials (platform/crypto.ts), and
+// the model family it picked for each reading kind. No row means the
+// household defaults (opus monthly, sonnet on demand) and has no key.
+export const householdAiSettings = pgTable("household_ai_settings", {
+  householdId: text("household_id")
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  apiKeyCiphertext: text("api_key_ciphertext"),
+  apiKeyLast4: text("api_key_last4"),
+  monthlyFamily: aiModelFamily("monthly_family").notNull().default("opus"),
+  onDemandFamily: aiModelFamily("on_demand_family").notNull().default("sonnet"),
+  updatedByUserId: text("updated_by_user_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
