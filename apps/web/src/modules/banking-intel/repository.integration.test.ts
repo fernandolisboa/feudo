@@ -259,6 +259,31 @@ describe("criteria weights repository isolation (integration)", () => {
       });
     });
   });
+
+  it("repairs a non-object stored options column instead of wrapping it into an array on save", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(bankCriteriaWeights).values({
+        householdId: householdA.id,
+        weights: DEFAULT_WEIGHT_LEVELS,
+        options: "not an object",
+      });
+
+      await createCriteriaWeightsRepository(householdA.scope).saveAccountTypeFilter(
+        db,
+        REQUIRED_JOINT,
+      );
+
+      expect(await createCriteriaWeightsRepository(householdA.scope).get(db)).toEqual({
+        status: "found",
+        levels: DEFAULT_WEIGHT_LEVELS,
+        options: {
+          status: "found",
+          value: { accountTypeFilter: REQUIRED_JOINT },
+          droppedFields: [],
+        },
+      });
+    });
+  });
 });
 
 describe("listHouseholdInstitutionLabels (integration)", () => {

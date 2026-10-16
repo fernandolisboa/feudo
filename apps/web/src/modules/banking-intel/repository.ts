@@ -90,7 +90,7 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
           target: bankCriteriaWeights.householdId,
           set: {
             weights: settings.levels,
-            options: sql`coalesce(${bankCriteriaWeights.options}, '{}'::jsonb) || excluded.options`,
+            options: sql`(case when jsonb_typeof(${bankCriteriaWeights.options}) = 'object' then ${bankCriteriaWeights.options} else '{}'::jsonb end) || excluded.options`,
             updatedAt: new Date(),
           },
         });
@@ -110,7 +110,7 @@ export function createCriteriaWeightsRepository(scope: HouseholdScope) {
         .onConflictDoUpdate({
           target: bankCriteriaWeights.householdId,
           set: {
-            options: sql`coalesce(${bankCriteriaWeights.options}, '{}'::jsonb) || excluded.options`,
+            options: sql`(case when jsonb_typeof(${bankCriteriaWeights.options}) = 'object' then ${bankCriteriaWeights.options} else '{}'::jsonb end) || excluded.options`,
             updatedAt: new Date(),
           },
         });
