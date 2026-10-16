@@ -5,6 +5,7 @@ export { AnalysesOff, AnalysesView } from "./components/analyses-view";
 export { AnalystBanksNote } from "./components/analyst-banks-note";
 export { AnalystReading } from "./components/analyst-reading";
 export { AnalystReadingErrorBoundary } from "./components/analyst-reading-error-boundary";
+export { getAiSettingsForExport } from "./export";
 export {
   getAiSettingsSectionProps,
   getAnalysesPageProps,

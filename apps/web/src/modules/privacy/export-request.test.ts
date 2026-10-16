@@ -51,6 +51,7 @@ const EMPTY_DOCUMENT: ExportDocument = {
   },
   financialDataAccess: [],
   pushSubscriptions: [],
+  aiSettings: [],
 };
 
 function deps(overrides: Partial<ExportRequestDeps> = {}): Partial<ExportRequestDeps> {
