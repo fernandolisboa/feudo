@@ -127,11 +127,13 @@ describe("AnalysesView", () => {
     expect(screen.getByRole("button", { name: /Gerar nova leitura/ })).toBeDefined();
   });
 
-  it("says the analyst is off when it is", () => {
+  it("says the analyst is off and links to Casa to register a key", () => {
     render(<AnalysesOff />);
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-      "O analista está desligado no momento.",
+      "O analista está desativado",
     );
+    expect(screen.getByText(/registra uma chave da Anthropic em Casa/)).toBeDefined();
+    expect(screen.getByRole("link", { name: "Ir para Casa" }).getAttribute("href")).toBe("/casa");
   });
 });

@@ -12,7 +12,9 @@ import { z } from "zod";
 import { recordFinancialDataAccess } from "@/modules/audit";
 import {
   DEFAULT_TIME_ZONE,
+  canManageHouseholdSettings,
   getHouseholdSettings,
+  getViewerRole,
   householdScope,
   type HouseholdSession,
 } from "@/modules/households";
@@ -20,6 +22,8 @@ import {
 import { formatShortDateTime } from "@/lib/format-date";
 import { interpolate } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
+import { getAiSettings } from "./ai-settings-repository";
+import type { AiFamily } from "./ai-client";
 import { ANALYSES_PATH, READING_PARAM } from "./paths";
 import {
   createAnalysisRepository,
@@ -96,6 +100,14 @@ export type AnalystReadingProps = {
   limit: number;
   remaining: number;
   inProgress: boolean;
+};
+
+export type AiSettingsSectionProps = {
+  canManage: boolean;
+  hasKey: boolean;
+  apiKeyLast4: string | null;
+  monthlyFamily: AiFamily;
+  onDemandFamily: AiFamily;
 };
 
 function modelName(model: string | null): string | null {
@@ -320,5 +332,29 @@ export async function getAnalystBanksNoteProps(
     paragraphs: view.banks,
     source: [view.title, ...generatedAt(latest?.completedAt ?? null, timeZone)].join(" · "),
     href: ANALYSES_PATH,
+  };
+}
+
+// Casa's "Analyst's key and models" section: every member sees the current
+// state (CLAUDE.md's household-settings pattern), only owner/admin can
+// change it (canManage) — the component itself hides the editing controls
+// when canManage is false, this never returns the key itself (only its
+// last 4 characters, already all the repository keeps besides the
+// ciphertext).
+export async function getAiSettingsSectionProps(
+  session: HouseholdSession,
+): Promise<AiSettingsSectionProps> {
+  const db = getDb();
+  const scope = householdScope(session);
+  const [settings, viewerRole] = await Promise.all([
+    getAiSettings(scope, db),
+    getViewerRole(session, db),
+  ]);
+  return {
+    canManage: canManageHouseholdSettings(viewerRole),
+    hasKey: settings.apiKeyCiphertext !== null,
+    apiKeyLast4: settings.apiKeyLast4,
+    monthlyFamily: settings.monthlyFamily,
+    onDemandFamily: settings.onDemandFamily,
   };
 }

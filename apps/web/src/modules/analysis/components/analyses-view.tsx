@@ -189,5 +189,18 @@ export function AnalysesView({
 }
 
 export function AnalysesOff() {
-  return <PageHeader overline={t.analyses.overline} title={t.outcomes.disabled} />;
+  return (
+    <>
+      <PageHeader overline={t.analyses.overline} title={t.off.title} />
+      <Notice
+        action={
+          <Button variant="outline" size="sm" render={<Link href="/casa" />}>
+            {t.off.link}
+          </Button>
+        }
+      >
+        {t.off.explanation}
+      </Notice>
+    </>
+  );
 }
