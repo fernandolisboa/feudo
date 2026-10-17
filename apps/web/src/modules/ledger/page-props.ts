@@ -20,6 +20,7 @@ import type { HouseholdSession } from "@/modules/households";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
+import type { TransactionsDateRange } from "./href";
 import type { LedgerAccount, LedgerTransactionRow } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
@@ -39,6 +40,9 @@ export type TransactionsPageProps = {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
+  range: TransactionsDateRange | null;
+  periodLabel: string | null;
+  todayIso: string;
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
@@ -170,6 +174,8 @@ async function buildTransactionsPageProps(
   const {
     currentMonth,
     month,
+    range,
+    todayIso,
     accounts,
     selectedAccountId,
     uncategorizedOnly,
@@ -204,12 +210,21 @@ async function buildTransactionsPageProps(
   const page = Math.min(requestedPage, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
   const totalsCurrency = fallbackCurrency(monthRows);
+  const periodLabel = range
+    ? interpolateAll(t.period.rangeLabel, {
+        from: formatIsoDate(range.from),
+        to: formatIsoDate(range.to),
+      })
+    : null;
 
   return {
     month,
     monthLabel: formatYearMonth(month),
     previousMonth: shiftYearMonth(month, -1),
     nextMonth: month < currentMonth ? shiftYearMonth(month, 1) : null,
+    range,
+    periodLabel,
+    todayIso,
     accounts,
     selectedAccountId,
     uncategorizedOnly,

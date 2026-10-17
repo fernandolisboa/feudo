@@ -176,10 +176,28 @@ const en = {
       one: "1 transaction found in {month}",
       many: "{count} transactions found in {month}",
     },
+    range: {
+      none: "No transactions from {period}",
+      one: "1 transaction from {period}",
+      many: "{count} transactions from {period}",
+      found: {
+        none: "No transactions found from {period}",
+        one: "1 transaction found from {period}",
+        many: "{count} transactions found from {period}",
+      },
+    },
   },
   monthSwitcher: {
     previous: "Previous month",
     next: "Next month",
+  },
+  period: {
+    label: "Period",
+    from: "From",
+    to: "Until",
+    apply: "Apply",
+    viewByMonth: "View by month",
+    rangeLabel: "{from} to {to}",
   },
   accountFilter: {
     label: "Account",
@@ -213,6 +231,8 @@ const en = {
     connectAction: "Connect bank",
     noTransactions: "Nothing recorded in {month}.",
     noMatches: "No transactions in {month} match these filters.",
+    noTransactionsRange: "Nothing recorded from {period}.",
+    noMatchesRange: "No transactions from {period} match these filters.",
   },
   pagination: {
     label: "Pages",
@@ -225,10 +245,19 @@ const en = {
     one: "1 transaction without a category in {month}",
     many: "{count} transactions without a category in {month}",
   },
+  uncategorizedHeadlineRange: {
+    none: "Everything from {period} has a category",
+    one: "1 transaction without a category from {period}",
+    many: "{count} transactions without a category from {period}",
+  },
   uncategorized: {
     one: "1 transaction in {month} has no category yet ({amount}). It counts in no total until it gets one.",
     many: "{count} transactions in {month} have no category yet ({amount}). They count in no total until they get one.",
     show: "Categorize one by one",
+  },
+  uncategorizedRange: {
+    one: "1 transaction from {period} has no category yet ({amount}). It counts in no total until it gets one.",
+    many: "{count} transactions from {period} have no category yet ({amount}). They count in no total until they get one.",
   },
   totals: {
     income: "Income {amount}",
@@ -245,6 +274,7 @@ const en = {
     csv: "CSV file (.csv)",
     sheetName: "Transactions",
     filename: "feudo-transactions-{month}",
+    filenameRange: "feudo-transactions-{from}-to-{to}",
     columns: {
       date: "Date",
       description: "Description",
@@ -488,10 +518,28 @@ const ptBR = {
       one: "1 transação encontrada em {month}",
       many: "{count} transações encontradas em {month}",
     },
+    range: {
+      none: "Nenhuma transação de {period}",
+      one: "1 transação de {period}",
+      many: "{count} transações de {period}",
+      found: {
+        none: "Nenhuma transação encontrada de {period}",
+        one: "1 transação encontrada de {period}",
+        many: "{count} transações encontradas de {period}",
+      },
+    },
   },
   monthSwitcher: {
     previous: "Mês anterior",
     next: "Próximo mês",
+  },
+  period: {
+    label: "Período",
+    from: "De",
+    to: "Até",
+    apply: "Aplicar",
+    viewByMonth: "Ver por mês",
+    rangeLabel: "{from} a {to}",
   },
   accountFilter: {
     label: "Conta",
@@ -525,6 +573,8 @@ const ptBR = {
     connectAction: "Conectar banco",
     noTransactions: "Nada registrado em {month}.",
     noMatches: "Nenhuma transação de {month} com esses filtros.",
+    noTransactionsRange: "Nada registrado de {period}.",
+    noMatchesRange: "Nenhuma transação de {period} com esses filtros.",
   },
   pagination: {
     label: "Páginas",
@@ -537,10 +587,19 @@ const ptBR = {
     one: "1 transação sem categoria em {month}",
     many: "{count} transações sem categoria em {month}",
   },
+  uncategorizedHeadlineRange: {
+    none: "Tudo categorizado de {period}",
+    one: "1 transação sem categoria de {period}",
+    many: "{count} transações sem categoria de {period}",
+  },
   uncategorized: {
     one: "1 transação de {month} ainda está sem categoria ({amount}). Ela fica fora de todos os totais até ganhar uma.",
     many: "{count} transações de {month} ainda estão sem categoria ({amount}). Elas ficam fora de todos os totais até ganharem uma.",
     show: "Categorizar uma a uma",
+  },
+  uncategorizedRange: {
+    one: "1 transação de {period} ainda está sem categoria ({amount}). Ela fica fora de todos os totais até ganhar uma.",
+    many: "{count} transações de {period} ainda estão sem categoria ({amount}). Elas ficam fora de todos os totais até ganharem uma.",
   },
   totals: {
     income: "Renda {amount}",
@@ -557,6 +616,7 @@ const ptBR = {
     csv: "Arquivo CSV (.csv)",
     sheetName: "Transações",
     filename: "feudo-transacoes-{month}",
+    filenameRange: "feudo-transacoes-{from}-a-{to}",
     columns: {
       date: "Data",
       description: "Descrição",

@@ -4,40 +4,27 @@ import { useRouter } from "next/navigation";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
-import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import { transactionsHref } from "../href";
+import { transactionsHref, type TransactionsRouteBase } from "../href";
 import type { LedgerAccount } from "../repository";
 import { t } from "../strings";
 
 const ALL_ACCOUNTS = "all";
 
 export function AccountFilterSelect({
-  month,
+  route,
   accounts,
-  selectedAccountId,
-  uncategorizedOnly,
-  category,
-  kind,
-  search,
 }: {
-  month: YearMonth;
+  route: TransactionsRouteBase;
   accounts: LedgerAccount[];
-  selectedAccountId: string | null;
-  uncategorizedOnly: boolean;
-  category: ProductCategoryId | null;
-  kind: Kind | null;
-  search: string | null;
 }) {
   const router = useRouter();
 
   function handleValueChange(value: string | null) {
     const accountId = value === null || value === ALL_ACCOUNTS ? null : value;
-    if (accountId === selectedAccountId) {
+    if (accountId === route.accountId) {
       return;
     }
-    router.push(
-      transactionsHref({ month, accountId, page: 1, uncategorizedOnly, category, kind, search }),
-    );
+    router.push(transactionsHref({ ...route, accountId, page: 1 }));
   }
 
   const items = [
@@ -49,11 +36,7 @@ export function AccountFilterSelect({
   ];
 
   return (
-    <Select
-      items={items}
-      value={selectedAccountId ?? ALL_ACCOUNTS}
-      onValueChange={handleValueChange}
-    >
+    <Select items={items} value={route.accountId ?? ALL_ACCOUNTS} onValueChange={handleValueChange}>
       <SelectTrigger
         aria-label={t.accountFilter.label}
         data-tour="transactions.account"

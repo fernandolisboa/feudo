@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { TransactionsRouteBase } from "../href";
 import type { CategoryFilterOption } from "../page-props";
 import { t } from "../strings";
 
@@ -14,39 +15,32 @@ const options: CategoryFilterOption[] = [
   { id: "food", label: t.categories.food },
 ];
 
+function route(overrides: Partial<TransactionsRouteBase> = {}): TransactionsRouteBase {
+  return {
+    month: "2026-09",
+    range: null,
+    accountId: null,
+    uncategorizedOnly: false,
+    category: null,
+    kind: null,
+    search: null,
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
 });
 
 describe("CategoryFilterSelect", () => {
   it("shows the all-categories label when no category filter is active", () => {
-    render(
-      <CategoryFilterSelect
-        month="2026-09"
-        accountId={null}
-        options={options}
-        uncategorizedOnly={false}
-        selectedCategory={null}
-        kind={null}
-        search={null}
-      />,
-    );
+    render(<CategoryFilterSelect route={route()} options={options} />);
 
     expect(within(screen.getByRole("combobox")).queryByText(t.categoryFilter.all)).not.toBeNull();
   });
 
   it("shows the uncategorized label when categoria=sem is active", () => {
-    render(
-      <CategoryFilterSelect
-        month="2026-09"
-        accountId={null}
-        options={options}
-        uncategorizedOnly={true}
-        selectedCategory={null}
-        kind={null}
-        search={null}
-      />,
-    );
+    render(<CategoryFilterSelect route={route({ uncategorizedOnly: true })} options={options} />);
 
     expect(
       within(screen.getByRole("combobox")).queryByText(t.categoryFilter.uncategorized),
@@ -54,17 +48,7 @@ describe("CategoryFilterSelect", () => {
   });
 
   it("shows the selected top-level category's label", () => {
-    render(
-      <CategoryFilterSelect
-        month="2026-09"
-        accountId={null}
-        options={options}
-        uncategorizedOnly={false}
-        selectedCategory="food"
-        kind={null}
-        search={null}
-      />,
-    );
+    render(<CategoryFilterSelect route={route({ category: "food" })} options={options} />);
 
     expect(within(screen.getByRole("combobox")).queryByText(t.categories.food)).not.toBeNull();
   });

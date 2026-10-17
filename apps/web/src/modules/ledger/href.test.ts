@@ -4,6 +4,7 @@ import { transactionsHref, transactionsRouteParams, transactionsSpreadsheetHref 
 
 const BASE = {
   month: "2026-09",
+  range: null,
   accountId: null,
   page: 1,
   uncategorizedOnly: false,
@@ -31,6 +32,28 @@ describe("transactionsHref", () => {
       "/transacoes?mes=2026-09&categoria=sem",
     );
   });
+
+  it("carries de/ate instead of mes once a range is active, and ignores the month entirely", () => {
+    expect(transactionsHref({ ...BASE, range: { from: "2026-07-06", to: "2026-10-17" } })).toBe(
+      "/transacoes?de=2026-07-06&ate=2026-10-17",
+    );
+  });
+
+  it("carries a range alongside the other filters, in the same order as the month view", () => {
+    expect(
+      transactionsHref({
+        ...BASE,
+        range: { from: "2026-07-06", to: "2026-10-17" },
+        accountId: "acc-1",
+        category: "housing",
+        kind: "fixed",
+        search: "condominio",
+        page: 2,
+      }),
+    ).toBe(
+      "/transacoes?de=2026-07-06&ate=2026-10-17&conta=acc-1&categoria=housing&tipo=fixed&busca=condominio&pagina=2",
+    );
+  });
 });
 
 describe("transactionsRouteParams", () => {
@@ -56,6 +79,15 @@ describe("transactionsRouteParams", () => {
       `/transacoes?${new URLSearchParams(transactionsRouteParams(view)).toString()}`,
     );
   });
+
+  it("omits mes and emits de/ate instead once a range is active", () => {
+    const view = { ...BASE, range: { from: "2026-07-06", to: "2026-10-17" } };
+
+    expect(transactionsRouteParams(view)).toEqual([
+      ["de", "2026-07-06"],
+      ["ate", "2026-10-17"],
+    ]);
+  });
 });
 
 describe("transactionsSpreadsheetHref", () => {
@@ -74,5 +106,14 @@ describe("transactionsSpreadsheetHref", () => {
     expect(transactionsSpreadsheetHref({ ...BASE, uncategorizedOnly: true }, "csv")).toBe(
       "/api/transactions/spreadsheet?mes=2026-09&categoria=sem&formato=csv",
     );
+  });
+
+  it("carries de/ate instead of mes once a range is active", () => {
+    expect(
+      transactionsSpreadsheetHref(
+        { ...BASE, range: { from: "2026-07-06", to: "2026-10-17" } },
+        "xlsx",
+      ),
+    ).toBe("/api/transactions/spreadsheet?de=2026-07-06&ate=2026-10-17&formato=xlsx");
   });
 });

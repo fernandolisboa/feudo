@@ -5,44 +5,22 @@ import { useRouter } from "next/navigation";
 import { KINDS } from "@feudo/core";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
-import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import { transactionsHref } from "../href";
+import type { Kind } from "@feudo/core";
+import { transactionsHref, type TransactionsRouteBase } from "../href";
 import { t } from "../strings";
 
 const ALL_KINDS = "all";
 
-export function KindFilterSelect({
-  month,
-  accountId,
-  uncategorizedOnly,
-  category,
-  kind,
-  search,
-}: {
-  month: YearMonth;
-  accountId: string | null;
-  uncategorizedOnly: boolean;
-  category: ProductCategoryId | null;
-  kind: Kind | null;
-  search: string | null;
-}) {
+export function KindFilterSelect({ route }: { route: TransactionsRouteBase }) {
   const router = useRouter();
-  const value = kind ?? ALL_KINDS;
+  const value = route.kind ?? ALL_KINDS;
 
   function handleValueChange(next: string | null) {
     if (next === null || next === value) {
       return;
     }
     router.push(
-      transactionsHref({
-        month,
-        accountId,
-        page: 1,
-        uncategorizedOnly,
-        category,
-        kind: next === ALL_KINDS ? null : (next as Kind),
-        search,
-      }),
+      transactionsHref({ ...route, page: 1, kind: next === ALL_KINDS ? null : (next as Kind) }),
     );
   }
 

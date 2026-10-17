@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { TransactionsRouteBase } from "../href";
 import type { LedgerAccount } from "../repository";
 import { t } from "../strings";
 
@@ -14,23 +15,26 @@ const accounts: LedgerAccount[] = [
   { id: "d55d31d4-7294-4ae7-9184-27f1dbb0a002", name: "Poupança", institutionName: "Nubank" },
 ];
 
+function route(overrides: Partial<TransactionsRouteBase> = {}): TransactionsRouteBase {
+  return {
+    month: "2026-09",
+    range: null,
+    accountId: null,
+    uncategorizedOnly: false,
+    category: null,
+    kind: null,
+    search: null,
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   cleanup();
 });
 
 describe("AccountFilterSelect", () => {
   it("shows the all-accounts label when no account is selected", () => {
-    render(
-      <AccountFilterSelect
-        month="2026-09"
-        accounts={accounts}
-        selectedAccountId={null}
-        uncategorizedOnly={false}
-        category={null}
-        kind={null}
-        search={null}
-      />,
-    );
+    render(<AccountFilterSelect route={route()} accounts={accounts} />);
 
     expect(within(screen.getByRole("combobox")).queryByText(t.accountFilter.all)).not.toBeNull();
   });
@@ -38,13 +42,8 @@ describe("AccountFilterSelect", () => {
   it("shows the selected account's institution and name, not its id", () => {
     render(
       <AccountFilterSelect
-        month="2026-09"
+        route={route({ accountId: "d55d31d4-7294-4ae7-9184-27f1dbb0a002" })}
         accounts={accounts}
-        selectedAccountId="d55d31d4-7294-4ae7-9184-27f1dbb0a002"
-        uncategorizedOnly={false}
-        category={null}
-        kind={null}
-        search={null}
       />,
     );
 

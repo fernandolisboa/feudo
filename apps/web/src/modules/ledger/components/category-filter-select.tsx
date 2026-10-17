@@ -4,32 +4,22 @@ import { useRouter } from "next/navigation";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
-import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import { transactionsHref, UNCATEGORIZED_FILTER } from "../href";
+import type { ProductCategoryId } from "@feudo/core";
+import { transactionsHref, UNCATEGORIZED_FILTER, type TransactionsRouteBase } from "../href";
 import { t } from "../strings";
 import type { CategoryFilterOption } from "../page-props";
 
 const ALL_CATEGORIES = "all";
 
 export function CategoryFilterSelect({
-  month,
-  accountId,
+  route,
   options,
-  uncategorizedOnly,
-  selectedCategory,
-  kind,
-  search,
 }: {
-  month: YearMonth;
-  accountId: string | null;
+  route: TransactionsRouteBase;
   options: CategoryFilterOption[];
-  uncategorizedOnly: boolean;
-  selectedCategory: ProductCategoryId | null;
-  kind: Kind | null;
-  search: string | null;
 }) {
   const router = useRouter();
-  const value = uncategorizedOnly ? UNCATEGORIZED_FILTER : (selectedCategory ?? ALL_CATEGORIES);
+  const value = route.uncategorizedOnly ? UNCATEGORIZED_FILTER : (route.category ?? ALL_CATEGORIES);
 
   function handleValueChange(next: string | null) {
     if (next === null || next === value) {
@@ -37,16 +27,13 @@ export function CategoryFilterSelect({
     }
     router.push(
       transactionsHref({
-        month,
-        accountId,
+        ...route,
         page: 1,
         uncategorizedOnly: next === UNCATEGORIZED_FILTER,
         category:
           next === ALL_CATEGORIES || next === UNCATEGORIZED_FILTER
             ? null
             : (next as ProductCategoryId),
-        kind,
-        search,
       }),
     );
   }

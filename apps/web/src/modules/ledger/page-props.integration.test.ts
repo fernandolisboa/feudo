@@ -1369,6 +1369,162 @@ describe("getTransactionsPageProps (integration)", () => {
     });
   });
 
+  it("reads a range spanning two months, with nothing outside it, and ignores mes once de is present", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "range-before",
+            date: "2026-07-05",
+            description: "ANTES DO CASAMENTO",
+            type: "debit",
+            amountCentavos: -1000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-wedding",
+            date: "2026-07-06",
+            description: "CASAMENTO",
+            type: "debit",
+            amountCentavos: -500000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-middle",
+            date: "2026-08-20",
+            description: "LUA DE MEL",
+            type: "debit",
+            amountCentavos: -200000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-last-day",
+            date: "2026-09-30",
+            description: "NO ULTIMO DIA DO INTERVALO",
+            type: "debit",
+            amountCentavos: -3000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-after",
+            date: "2026-10-01",
+            description: "DEPOIS DO INTERVALO",
+            type: "debit",
+            amountCentavos: -4000,
+          }),
+        ],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "other-item",
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "range-other-household",
+            date: "2026-07-20",
+            description: "OUTRA CASA",
+            type: "debit",
+            amountCentavos: -9000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { mes: "2026-01", de: "2026-07-06", ate: "2026-09-30" },
+        NOW,
+      );
+
+      expect(props.range).toEqual({ from: "2026-07-06", to: "2026-09-30" });
+      expect(props.total).toBe(3);
+      expect(props.transactions.map((transaction) => transaction.description).sort()).toEqual(
+        ["CASAMENTO", "LUA DE MEL", "NO ULTIMO DIA DO INTERVALO"].sort(),
+      );
+    });
+  });
+
+  it("defaults ate to today, clamps a future ate to today, and swaps a reversed de/ate pair", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "open-ended",
+            date: "2026-09-28",
+            description: "DENTRO DO INTERVALO ABERTO",
+            type: "debit",
+            amountCentavos: -1000,
+          }),
+        ],
+      });
+
+      const noAte = await getTransactionsPageProps(userA.session, { de: "2026-09-01" }, NOW);
+      expect(noAte.range).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+
+      const futureAte = await getTransactionsPageProps(
+        userA.session,
+        { de: "2026-09-01", ate: "2026-12-25" },
+        NOW,
+      );
+      expect(futureAte.range).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+
+      const reversed = await getTransactionsPageProps(
+        userA.session,
+        { de: "2026-09-30", ate: "2026-09-01" },
+        NOW,
+      );
+      expect(reversed.range).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+      expect(reversed.total).toBe(1);
+    });
+  });
+
+  it("combines a range with the account, category, kind and search filters", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        accounts: [seedAccount(), seedAccount({ providerAccountId: "acc-2", name: "Poupança" })],
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "range-filter-income",
+            providerAccountId: "acc-1",
+            date: "2026-07-10",
+            description: "SALARIO EMPRESA X",
+            providerCategory: "Salary",
+            type: "credit",
+            amountCentavos: 500000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-filter-market",
+            providerAccountId: "acc-1",
+            date: "2026-08-05",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+          seedTransaction({
+            providerTransactionId: "range-filter-savings",
+            providerAccountId: "acc-2",
+            date: "2026-08-06",
+            description: "COMPRA CARTAO MERCADO",
+            providerCategory: "Groceries",
+            type: "debit",
+            amountCentavos: -6000,
+          }),
+        ],
+      });
+
+      const props = await getTransactionsPageProps(
+        userA.session,
+        { de: "2026-07-06", ate: "2026-10-17", busca: "mercado", tipo: "variable" },
+        NOW,
+      );
+
+      expect(props.total).toBe(2);
+      expect(
+        props.transactions.every(
+          (transaction) => transaction.description === "COMPRA CARTAO MERCADO",
+        ),
+      ).toBe(true);
+    });
+  });
+
   it("never lets another household's transactions leak through a search, category or kind filter", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await seedSyncedConnection(db, userA, {

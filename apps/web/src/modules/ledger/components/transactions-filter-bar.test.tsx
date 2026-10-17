@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { transactionsRouteParams } from "../href";
+import { transactionsRouteParams, type TransactionsRouteBase } from "../href";
 import { t } from "../strings";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -10,6 +10,20 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import { TransactionsFilterBar } from "./transactions-filter-bar";
 
 const accounts = [{ id: "acc-1", name: "Conta corrente", institutionName: "Banco Fixture" }];
+const TODAY_ISO = "2026-10-17";
+
+function route(overrides: Partial<TransactionsRouteBase> = {}): TransactionsRouteBase {
+  return {
+    month: "2026-09",
+    range: null,
+    accountId: null,
+    uncategorizedOnly: false,
+    category: null,
+    kind: null,
+    search: null,
+    ...overrides,
+  };
+}
 
 afterEach(() => {
   cleanup();
@@ -19,24 +33,27 @@ describe("TransactionsFilterBar", () => {
   it("renders exactly the hidden inputs transactionsRouteParams would produce for the same filters, minus busca and pagina", () => {
     const { container } = render(
       <TransactionsFilterBar
-        month="2026-09"
+        route={route({
+          accountId: "acc-1",
+          category: "housing",
+          kind: "fixed",
+          search: "condominio",
+        })}
         accounts={accounts}
-        selectedAccountId="acc-1"
-        uncategorizedOnly={false}
-        selectedCategory="housing"
         categoryFilterOptions={[{ id: "housing", label: t.categories.housing }]}
-        selectedKind="fixed"
-        searchQuery="condominio"
+        todayIso={TODAY_ISO}
       />,
     );
 
-    const form = container.querySelector("form");
-    expect(form?.getAttribute("action")).toBe("/transacoes");
-    const hiddenInputs = [...(form?.querySelectorAll('input[type="hidden"]') ?? [])].map(
+    const forms = container.querySelectorAll("form");
+    const searchForm = forms[0];
+    expect(searchForm?.getAttribute("action")).toBe("/transacoes");
+    const hiddenInputs = [...(searchForm?.querySelectorAll('input[type="hidden"]') ?? [])].map(
       (input) => [input.getAttribute("name"), input.getAttribute("value")],
     );
     const expected = transactionsRouteParams({
       month: "2026-09",
+      range: null,
       accountId: "acc-1",
       page: 1,
       uncategorizedOnly: false,
@@ -57,14 +74,10 @@ describe("TransactionsFilterBar", () => {
   it("shows no clear-filters link when nothing is filtered", () => {
     render(
       <TransactionsFilterBar
-        month="2026-09"
+        route={route()}
         accounts={accounts}
-        selectedAccountId={null}
-        uncategorizedOnly={false}
-        selectedCategory={null}
         categoryFilterOptions={[]}
-        selectedKind={null}
-        searchQuery={null}
+        todayIso={TODAY_ISO}
       />,
     );
 
@@ -74,18 +87,75 @@ describe("TransactionsFilterBar", () => {
   it("shows a clear-filters link once any filter is active", () => {
     render(
       <TransactionsFilterBar
-        month="2026-09"
+        route={route({ search: "mercado" })}
         accounts={accounts}
-        selectedAccountId={null}
-        uncategorizedOnly={false}
-        selectedCategory={null}
         categoryFilterOptions={[]}
-        selectedKind={null}
-        searchQuery="mercado"
+        todayIso={TODAY_ISO}
       />,
     );
 
     const link = screen.getByRole("link", { name: t.filters.clear });
     expect(link.getAttribute("href")).toBe("/transacoes?mes=2026-09");
+  });
+
+  it("shows a clear-filters link once a range is active, and it drops the range", () => {
+    render(
+      <TransactionsFilterBar
+        route={route({ range: { from: "2026-07-06", to: "2026-10-17" } })}
+        accounts={accounts}
+        categoryFilterOptions={[]}
+        todayIso={TODAY_ISO}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: t.filters.clear });
+    expect(link.getAttribute("href")).toBe("/transacoes?mes=2026-09");
+  });
+
+  it("renders the period form with De/Até inputs prefilled from the active range", () => {
+    render(
+      <TransactionsFilterBar
+        route={route({ range: { from: "2026-07-06", to: "2026-10-17" } })}
+        accounts={accounts}
+        categoryFilterOptions={[]}
+        todayIso={TODAY_ISO}
+      />,
+    );
+
+    const from = screen.getByLabelText(t.period.from);
+    const to = screen.getByLabelText(t.period.to);
+    expect(from.getAttribute("value")).toBe("2026-07-06");
+    expect(to.getAttribute("value")).toBe("2026-10-17");
+    expect(from.getAttribute("max")).toBe(TODAY_ISO);
+    expect(to.getAttribute("max")).toBe(TODAY_ISO);
+    expect(screen.getByRole("button", { name: t.period.apply })).not.toBeNull();
+  });
+
+  it("carries the other active filters as hidden inputs on the period form, but never mes or pagina", () => {
+    const { container } = render(
+      <TransactionsFilterBar
+        route={route({
+          accountId: "acc-1",
+          category: "housing",
+          kind: "fixed",
+          search: "condominio",
+        })}
+        accounts={accounts}
+        categoryFilterOptions={[{ id: "housing", label: t.categories.housing }]}
+        todayIso={TODAY_ISO}
+      />,
+    );
+
+    const forms = container.querySelectorAll("form");
+    const periodForm = forms[forms.length - 1];
+    const hiddenInputs = [...(periodForm?.querySelectorAll('input[type="hidden"]') ?? [])].map(
+      (input) => [input.getAttribute("name"), input.getAttribute("value")],
+    );
+    expect(hiddenInputs).toEqual([
+      ["conta", "acc-1"],
+      ["categoria", "housing"],
+      ["tipo", "fixed"],
+      ["busca", "condominio"],
+    ]);
   });
 });

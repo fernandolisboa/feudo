@@ -2,8 +2,9 @@ import type { YearMonth } from "@feudo/core";
 import writeXlsxFile, { type Row } from "write-excel-file/node";
 
 import { formatIsoDate } from "@/lib/format-date";
-import { interpolate } from "@/lib/interpolate";
+import { interpolate, interpolateAll } from "@/lib/interpolate";
 
+import type { TransactionsDateRange } from "./href";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { t } from "./strings";
 import type { TaxonomyView } from "./taxonomy-view";
@@ -62,8 +63,14 @@ export function toSpreadsheetRows(
   });
 }
 
-export function spreadsheetFilename(month: YearMonth, format: SpreadsheetFormat): string {
-  return `${interpolate(t.spreadsheet.filename, "{month}", month)}.${format}`;
+export type SpreadsheetScope = { month: YearMonth } | { range: TransactionsDateRange };
+
+export function spreadsheetFilename(scope: SpreadsheetScope, format: SpreadsheetFormat): string {
+  const base =
+    "range" in scope
+      ? interpolateAll(t.spreadsheet.filenameRange, { from: scope.range.from, to: scope.range.to })
+      : interpolate(t.spreadsheet.filename, "{month}", scope.month);
+  return `${base}.${format}`;
 }
 
 // Excel in pt-BR (the household's locale) splits a CSV on ";" and reads "," as

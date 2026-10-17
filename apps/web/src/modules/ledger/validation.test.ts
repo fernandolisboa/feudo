@@ -124,3 +124,45 @@ describe("transactionsSearchParamsSchema filters", () => {
     });
   });
 });
+
+describe("transactionsSearchParamsSchema date range", () => {
+  it("accepts a valid de/ate pair", () => {
+    expect(
+      transactionsSearchParamsSchema.parse({ de: "2026-07-06", ate: "2026-10-17" }),
+    ).toMatchObject({ de: "2026-07-06", ate: "2026-10-17" });
+  });
+
+  it("accepts de with no ate at all", () => {
+    const parsed = transactionsSearchParamsSchema.parse({ de: "2026-07-06" });
+    expect(parsed.de).toBe("2026-07-06");
+    expect(parsed.ate).toBeUndefined();
+  });
+
+  it("falls back to undefined for an impossible calendar date", () => {
+    expect(transactionsSearchParamsSchema.parse({ de: "2026-02-30" })).toMatchObject({
+      de: undefined,
+    });
+  });
+
+  it("falls back to undefined for garbage that isn't a date at all", () => {
+    expect(transactionsSearchParamsSchema.parse({ de: "not-a-date" })).toMatchObject({
+      de: undefined,
+    });
+    expect(transactionsSearchParamsSchema.parse({ de: 42 })).toMatchObject({ de: undefined });
+  });
+
+  it("falls back to undefined for a year outside the bounded range", () => {
+    expect(transactionsSearchParamsSchema.parse({ de: "0050-03-01" })).toMatchObject({
+      de: undefined,
+    });
+    expect(transactionsSearchParamsSchema.parse({ ate: "0000-01-01" })).toMatchObject({
+      ate: undefined,
+    });
+  });
+
+  it("keeps a reversed de/ate pair as-is; readFilteredTransactions is the one place that swaps them", () => {
+    expect(
+      transactionsSearchParamsSchema.parse({ de: "2026-10-17", ate: "2026-07-06" }),
+    ).toMatchObject({ de: "2026-10-17", ate: "2026-07-06" });
+  });
+});

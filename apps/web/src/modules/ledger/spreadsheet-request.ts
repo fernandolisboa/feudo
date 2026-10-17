@@ -33,6 +33,8 @@ function searchParamsOf(url: URL): TransactionsSearchParams {
     categoria: value("categoria"),
     tipo: value("tipo"),
     busca: value("busca"),
+    de: value("de"),
+    ate: value("ate"),
   });
 }
 
@@ -75,12 +77,13 @@ export async function handleTransactionsSpreadsheetRequest(
   const rows = toSpreadsheetRows(read.listed, buildTaxonomyView(read.kinds));
   const body = format === "xlsx" ? new Uint8Array(await toXlsx(rows)) : toCsv(rows);
   await deps.recordFinancialDataAccess(session, "transactions");
+  const scope = read.range ? { range: read.range } : { month: read.month };
 
   return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": SPREADSHEET_CONTENT_TYPES[format],
-      "Content-Disposition": `attachment; filename="${spreadsheetFilename(read.month, format)}"`,
+      "Content-Disposition": `attachment; filename="${spreadsheetFilename(scope, format)}"`,
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     },
