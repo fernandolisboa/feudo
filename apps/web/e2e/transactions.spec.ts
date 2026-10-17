@@ -113,7 +113,7 @@ test("transactions synced on connect, by month, account, search, category and ki
   await expect(
     page.getByRole("heading", { name: "3 transações de 01/09/2026 a 30/09/2026" }),
   ).toBeVisible();
-  await expect(page.getByText("01/09/2026 a 30/09/2026")).toBeVisible();
+  await expect(page.getByText("01/09/2026 a 30/09/2026", { exact: true })).toBeVisible();
   await expect(page.getByRole("row", { name: /PIX RECEBIDO EMPRESA FIXTURE/ })).toBeVisible();
 
   await page.getByRole("link", { name: "Ver por mês" }).click();
