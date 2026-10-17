@@ -6,55 +6,73 @@ import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { interpolate } from "@/lib/interpolate";
 
-import { GUIDED_CATEGORIZATION_PATH, transactionsHref } from "../href";
+import { GUIDED_CATEGORIZATION_PATH, transactionsHref, type TransactionsRouteBase } from "../href";
 import type { TransactionsPageProps } from "../page-props";
 import { MonthSwitcher } from "./month-switcher";
+import { PeriodSwitcher } from "./period-switcher";
 import { SpreadsheetMenu } from "./spreadsheet-menu";
 import { TransactionsFilterBar } from "./transactions-filter-bar";
 import { TransactionsTable } from "./transactions-table";
 import { t } from "../strings";
 
+function scopeToken(isRange: boolean): "{month}" | "{period}" {
+  return isRange ? "{period}" : "{month}";
+}
+
 function headline(
   total: number,
-  monthLabel: string,
+  scopeLabel: string,
+  isRange: boolean,
   uncategorizedOnly: boolean,
   hasOtherFilters: boolean,
 ): string {
-  const copy = hasOtherFilters
-    ? t.headline.found
-    : uncategorizedOnly
-      ? t.uncategorizedHeadline
-      : t.headline;
+  const token = scopeToken(isRange);
+  const table = isRange ? t.headline.range : t.headline;
+  const uncategorizedTable = isRange ? t.uncategorizedHeadlineRange : t.uncategorizedHeadline;
+  const copy = hasOtherFilters ? table.found : uncategorizedOnly ? uncategorizedTable : table;
   if (total === 0) {
-    return interpolate(copy.none, "{month}", monthLabel);
+    return interpolate(copy.none, token, scopeLabel);
   }
   if (total === 1) {
-    return interpolate(copy.one, "{month}", monthLabel);
+    return interpolate(copy.one, token, scopeLabel);
   }
-  return interpolate(interpolate(copy.many, "{count}", String(total)), "{month}", monthLabel);
+  return interpolate(interpolate(copy.many, "{count}", String(total)), token, scopeLabel);
 }
 
 function emptyStateMessage(
   hasOtherFilters: boolean,
   uncategorizedOnly: boolean,
   monthHasTransactions: boolean,
-  monthLabel: string,
+  scopeLabel: string,
+  isRange: boolean,
 ): string | null {
+  const token = scopeToken(isRange);
   if (hasOtherFilters && monthHasTransactions) {
-    return interpolate(t.empty.noMatches, "{month}", monthLabel);
+    return interpolate(isRange ? t.empty.noMatchesRange : t.empty.noMatches, token, scopeLabel);
   }
   if (uncategorizedOnly && monthHasTransactions) {
     return null;
   }
-  return interpolate(t.empty.noTransactions, "{month}", monthLabel);
+  return interpolate(
+    isRange ? t.empty.noTransactionsRange : t.empty.noTransactions,
+    token,
+    scopeLabel,
+  );
 }
 
-function uncategorizedMessage(count: number, amountLabel: string, monthLabel: string): string {
-  const copy = count === 1 ? t.uncategorized.one : t.uncategorized.many;
+function uncategorizedMessage(
+  count: number,
+  amountLabel: string,
+  scopeLabel: string,
+  isRange: boolean,
+): string {
+  const token = scopeToken(isRange);
+  const table = isRange ? t.uncategorizedRange : t.uncategorized;
+  const copy = count === 1 ? table.one : table.many;
   return interpolate(
     interpolate(interpolate(copy, "{count}", String(count)), "{amount}", amountLabel),
-    "{month}",
-    monthLabel,
+    token,
+    scopeLabel,
   );
 }
 
@@ -78,6 +96,9 @@ export function TransactionsView({
   monthLabel,
   previousMonth,
   nextMonth,
+  range,
+  periodLabel,
+  todayIso,
   accounts,
   selectedAccountId,
   uncategorizedOnly,
@@ -94,69 +115,67 @@ export function TransactionsView({
   page,
   hasMore,
 }: TransactionsPageProps) {
+  const isRange = range !== null;
   const hasOtherFilters =
     selectedCategory !== null || selectedKind !== null || searchQuery !== null;
-  const activeFilters = {
+  const route: TransactionsRouteBase = {
+    month,
+    range,
+    accountId: selectedAccountId,
     uncategorizedOnly,
     category: selectedCategory,
     kind: selectedKind,
     search: searchQuery,
   };
+  const scopeLabel = periodLabel ?? monthLabel;
   const emptyMessage =
     transactions.length === 0
-      ? emptyStateMessage(hasOtherFilters, uncategorizedOnly, monthHasTransactions, monthLabel)
+      ? emptyStateMessage(
+          hasOtherFilters,
+          uncategorizedOnly,
+          monthHasTransactions,
+          scopeLabel,
+          isRange,
+        )
       : null;
 
   return (
     <>
       <PageHeader
-        overline={`${t.overline} · ${monthLabel}`}
-        title={headline(total, monthLabel, uncategorizedOnly, hasOtherFilters)}
+        overline={`${t.overline} · ${scopeLabel}`}
+        title={headline(total, scopeLabel, isRange, uncategorizedOnly, hasOtherFilters)}
         actions={
           <>
-            <MonthSwitcher
-              tourTarget="transactions.month"
-              monthLabel={monthLabel}
-              previousHref={transactionsHref({
-                month: previousMonth,
-                accountId: selectedAccountId,
-                page: 1,
-                ...activeFilters,
-              })}
-              nextHref={
-                nextMonth
-                  ? transactionsHref({
-                      month: nextMonth,
-                      accountId: selectedAccountId,
-                      page: 1,
-                      ...activeFilters,
-                    })
-                  : null
-              }
-            />
+            {range ? (
+              <PeriodSwitcher
+                tourTarget="transactions.month"
+                periodLabel={periodLabel ?? ""}
+                viewByMonthHref={transactionsHref({ ...route, range: null, page: 1 })}
+              />
+            ) : (
+              <MonthSwitcher
+                tourTarget="transactions.month"
+                monthLabel={monthLabel}
+                previousHref={transactionsHref({ ...route, month: previousMonth, page: 1 })}
+                nextHref={
+                  nextMonth ? transactionsHref({ ...route, month: nextMonth, page: 1 }) : null
+                }
+              />
+            )}
             <Button variant="ghost" size="sm" render={<Link href="/categorias" />}>
               <Tags className="size-4" />
               {t.categoriesLink}
             </Button>
-            {total > 0 ? (
-              <SpreadsheetMenu
-                view={{ month, accountId: selectedAccountId, ...activeFilters }}
-                total={total}
-              />
-            ) : null}
+            {total > 0 ? <SpreadsheetMenu view={route} total={total} /> : null}
           </>
         }
       />
       {accounts.length > 0 ? (
         <TransactionsFilterBar
-          month={month}
+          route={route}
           accounts={accounts}
-          selectedAccountId={selectedAccountId}
-          uncategorizedOnly={uncategorizedOnly}
-          selectedCategory={selectedCategory}
           categoryFilterOptions={categoryFilterOptions}
-          selectedKind={selectedKind}
-          searchQuery={searchQuery}
+          todayIso={todayIso}
         />
       ) : null}
       {accounts.length > 0 ? (
@@ -175,7 +194,12 @@ export function TransactionsView({
             </Button>
           }
         >
-          {uncategorizedMessage(uncategorized.count, uncategorized.amountLabel, monthLabel)}
+          {uncategorizedMessage(
+            uncategorized.count,
+            uncategorized.amountLabel,
+            scopeLabel,
+            isRange,
+          )}
         </Notice>
       ) : null}
       {accounts.length === 0 ? (
@@ -206,16 +230,7 @@ export function TransactionsView({
                   <Button
                     variant="outline"
                     size="sm"
-                    render={
-                      <Link
-                        href={transactionsHref({
-                          month,
-                          accountId: selectedAccountId,
-                          page: page - 1,
-                          ...activeFilters,
-                        })}
-                      />
-                    }
+                    render={<Link href={transactionsHref({ ...route, page: page - 1 })} />}
                   >
                     {t.pagination.newer}
                   </Button>
@@ -224,16 +239,7 @@ export function TransactionsView({
                   <Button
                     variant="outline"
                     size="sm"
-                    render={
-                      <Link
-                        href={transactionsHref({
-                          month,
-                          accountId: selectedAccountId,
-                          page: page + 1,
-                          ...activeFilters,
-                        })}
-                      />
-                    }
+                    render={<Link href={transactionsHref({ ...route, page: page + 1 })} />}
                   >
                     {t.pagination.older}
                   </Button>

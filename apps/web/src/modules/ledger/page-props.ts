@@ -8,6 +8,7 @@ import {
   summarizeUncategorized,
   type CurrencyAmount,
   type InternalTransfer,
+  type IsoDateRange,
   type Kind,
   type ProductCategoryId,
   type YearMonth,
@@ -39,6 +40,9 @@ export type TransactionsPageProps = {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
+  range: IsoDateRange | null;
+  periodLabel: string | null;
+  todayIso: string;
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
   uncategorizedOnly: boolean;
@@ -170,6 +174,8 @@ async function buildTransactionsPageProps(
   const {
     currentMonth,
     month,
+    range,
+    todayIso,
     accounts,
     selectedAccountId,
     uncategorizedOnly,
@@ -204,12 +210,21 @@ async function buildTransactionsPageProps(
   const page = Math.min(requestedPage, lastPage);
   const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
   const totalsCurrency = fallbackCurrency(monthRows);
+  const periodLabel = range
+    ? interpolateAll(t.period.rangeLabel, {
+        from: formatIsoDate(range.from),
+        to: formatIsoDate(range.to),
+      })
+    : null;
 
   return {
     month,
     monthLabel: formatYearMonth(month),
     previousMonth: shiftYearMonth(month, -1),
     nextMonth: month < currentMonth ? shiftYearMonth(month, 1) : null,
+    range,
+    periodLabel,
+    todayIso,
     accounts,
     selectedAccountId,
     uncategorizedOnly,

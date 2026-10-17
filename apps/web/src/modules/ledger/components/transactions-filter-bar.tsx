@@ -4,50 +4,37 @@ import { Search } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
-import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import { transactionsHref, transactionsRouteParams } from "../href";
+import { transactionsHref, transactionsRouteParams, type TransactionsRouteBase } from "../href";
 import type { LedgerAccount } from "../repository";
 import { t } from "../strings";
 import { AccountFilterSelect } from "./account-filter-select";
 import { CategoryFilterSelect } from "./category-filter-select";
 import { KindFilterSelect } from "./kind-filter-select";
+import { PeriodFilterForm } from "./period-filter-form";
 import type { CategoryFilterOption } from "../page-props";
 
 export function TransactionsFilterBar({
-  month,
+  route,
   accounts,
-  selectedAccountId,
-  uncategorizedOnly,
-  selectedCategory,
   categoryFilterOptions,
-  selectedKind,
-  searchQuery,
+  todayIso,
 }: {
-  month: YearMonth;
+  route: TransactionsRouteBase;
   accounts: LedgerAccount[];
-  selectedAccountId: string | null;
-  uncategorizedOnly: boolean;
-  selectedCategory: ProductCategoryId | null;
   categoryFilterOptions: CategoryFilterOption[];
-  selectedKind: Kind | null;
-  searchQuery: string | null;
+  todayIso: string;
 }) {
   const hasActiveFilters =
-    selectedAccountId !== null ||
-    uncategorizedOnly ||
-    selectedCategory !== null ||
-    selectedKind !== null ||
-    Boolean(searchQuery);
+    route.accountId !== null ||
+    route.uncategorizedOnly ||
+    route.category !== null ||
+    route.kind !== null ||
+    Boolean(route.search) ||
+    route.range !== null;
 
-  const hiddenParams = transactionsRouteParams({
-    month,
-    accountId: selectedAccountId,
-    page: 1,
-    uncategorizedOnly,
-    category: selectedCategory,
-    kind: selectedKind,
-    search: null,
-  }).filter(([name]) => name !== "busca" && name !== "pagina");
+  const hiddenParams = transactionsRouteParams({ ...route, page: 1, search: null }).filter(
+    ([name]) => name !== "busca" && name !== "pagina",
+  );
 
   return (
     <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
@@ -72,7 +59,7 @@ export function TransactionsFilterBar({
             id="transactions-search"
             name="busca"
             type="search"
-            defaultValue={searchQuery ?? ""}
+            defaultValue={route.search ?? ""}
             placeholder={t.search.placeholder}
             className="w-full pl-8"
           />
@@ -80,34 +67,12 @@ export function TransactionsFilterBar({
       </form>
       <div className="grid grid-cols-2 gap-2 md:contents">
         <div className="col-span-2 md:contents">
-          <AccountFilterSelect
-            month={month}
-            accounts={accounts}
-            selectedAccountId={selectedAccountId}
-            uncategorizedOnly={uncategorizedOnly}
-            category={selectedCategory}
-            kind={selectedKind}
-            search={searchQuery}
-          />
+          <AccountFilterSelect route={route} accounts={accounts} />
         </div>
-        <KindFilterSelect
-          month={month}
-          accountId={selectedAccountId}
-          uncategorizedOnly={uncategorizedOnly}
-          category={selectedCategory}
-          kind={selectedKind}
-          search={searchQuery}
-        />
-        <CategoryFilterSelect
-          month={month}
-          accountId={selectedAccountId}
-          options={categoryFilterOptions}
-          uncategorizedOnly={uncategorizedOnly}
-          selectedCategory={selectedCategory}
-          kind={selectedKind}
-          search={searchQuery}
-        />
+        <KindFilterSelect route={route} />
+        <CategoryFilterSelect route={route} options={categoryFilterOptions} />
       </div>
+      <PeriodFilterForm route={route} todayIso={todayIso} />
       {hasActiveFilters ? (
         <Button
           variant="link"
@@ -115,7 +80,8 @@ export function TransactionsFilterBar({
           render={
             <Link
               href={transactionsHref({
-                month,
+                month: route.month,
+                range: null,
                 accountId: null,
                 page: 1,
                 uncategorizedOnly: false,

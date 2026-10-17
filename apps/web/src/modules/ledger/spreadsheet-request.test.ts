@@ -49,10 +49,15 @@ function ledgerRow(overrides: Partial<ResolvedLedgerRow> = {}): ResolvedLedgerRo
   };
 }
 
-function filtered(listed: ResolvedLedgerRow[]): FilteredTransactions {
+function filtered(
+  listed: ResolvedLedgerRow[],
+  overrides: Partial<Pick<FilteredTransactions, "range" | "month">> = {},
+): FilteredTransactions {
   return {
     currentMonth: "2026-10",
     month: "2026-09",
+    range: null,
+    todayIso: "2026-10-13",
     accounts: [],
     selectedAccountId: null,
     uncategorizedOnly: false,
@@ -65,6 +70,7 @@ function filtered(listed: ResolvedLedgerRow[]): FilteredTransactions {
     padded: listed,
     filteredRows: listed,
     listed,
+    ...overrides,
   };
 }
 
@@ -117,6 +123,8 @@ describe("handleTransactionsSpreadsheetRequest", () => {
         categoria: "housing",
         tipo: "fixed",
         busca: "aluguel",
+        de: undefined,
+        ate: undefined,
       },
       NOW,
     );
@@ -133,8 +141,42 @@ describe("handleTransactionsSpreadsheetRequest", () => {
         categoria: undefined,
         tipo: undefined,
         busca: undefined,
+        de: undefined,
+        ate: undefined,
       },
       NOW,
+    );
+  });
+
+  it("reads a de/ate range from the URL and names the file after it", async () => {
+    const injected = deps({
+      readFilteredTransactions: vi
+        .fn()
+        .mockResolvedValue(
+          filtered([ledgerRow()], { range: { from: "2026-07-06", to: "2026-10-17" } }),
+        ),
+    });
+
+    const response = await handleTransactionsSpreadsheetRequest(
+      request("formato=csv&de=2026-07-06&ate=2026-10-17"),
+      injected,
+    );
+
+    expect(injected.readFilteredTransactions).toHaveBeenCalledWith(
+      SESSION,
+      {
+        mes: undefined,
+        conta: undefined,
+        categoria: undefined,
+        tipo: undefined,
+        busca: undefined,
+        de: "2026-07-06",
+        ate: "2026-10-17",
+      },
+      NOW,
+    );
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="feudo-transacoes-2026-07-06-a-2026-10-17.csv"',
     );
   });
 

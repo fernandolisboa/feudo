@@ -77,6 +77,28 @@ describe("handleTransactionsSpreadsheetRequest (integration)", () => {
     });
   });
 
+  // Pins the de/ate clamp-after-swap fix: clamping "ate" before the swap let
+  // a far-future "de" with no "ate" survive as the swapped `to`, and
+  // pairingReadRange's pad on that date overflowed Postgres's date range
+  // (500, not a download).
+  it("never 500s on a far-future de with no ate", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({ providerTransactionId: "far-future", date: "2026-09-10" }),
+        ],
+      });
+
+      const response = await handleTransactionsSpreadsheetRequest(
+        request("formato=csv&de=9999-12-31"),
+        { getSession: () => Promise.resolve(userA.session), now: () => NOW },
+      );
+
+      expect(response.status).toBe(200);
+    });
+  });
+
   it("never exports another household's rows, even when the URL names that household's account", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const other = await seedSyncedConnection(db, userB, {

@@ -20,6 +20,9 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     monthLabel: "setembro de 2026",
     previousMonth: "2026-08",
     nextMonth: null,
+    range: null,
+    periodLabel: null,
+    todayIso: "2026-10-17",
     accounts: [],
     selectedAccountId: null,
     uncategorizedOnly: false,
@@ -283,5 +286,87 @@ describe("TransactionsView", () => {
     render(<TransactionsView {...buildProps({ accounts: oneAccount, total: 0 })} />);
 
     expect(screen.queryByRole("button", { name: /Exportar/ })).toBeNull();
+  });
+
+  it("shows the range headline and replaces the month switcher with the period label and a Ver por mês link, once a range is active", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          range: { from: "2026-07-06", to: "2026-10-17" },
+          periodLabel: "06/07/2026 a 17/10/2026",
+          total: 3,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "3 transações de 06/07/2026 a 17/10/2026" }),
+    ).not.toBeNull();
+    expect(screen.getByText("06/07/2026 a 17/10/2026")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: t.monthSwitcher.previous })).toBeNull();
+    const backToMonth = screen.getByRole("link", { name: t.period.viewByMonth });
+    expect(backToMonth.getAttribute("href")).toBe("/transacoes?mes=2026-09");
+  });
+
+  it("shows the range empty state when nothing matches", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          range: { from: "2026-07-06", to: "2026-10-17" },
+          periodLabel: "06/07/2026 a 17/10/2026",
+          total: 0,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Nada registrado de 06/07/2026 a 17/10/2026.")).not.toBeNull();
+  });
+
+  it("carries the active range, not the month, through pagination and the spreadsheet links", async () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          range: { from: "2026-07-06", to: "2026-10-17" },
+          periodLabel: "06/07/2026 a 17/10/2026",
+          total: 60,
+          hasMore: true,
+          transactions: [
+            {
+              id: "tx-1",
+              date: "2026-09-15",
+              description: "COMPRA NO MERCADO",
+              amountCentavos: -5000,
+              currency: "BRL",
+              accountName: "Conta corrente",
+              institutionName: "Banco Fixture",
+              category: null,
+              categorize: {
+                id: "tx-1",
+                description: "COMPRA NO MERCADO",
+                amountLabel: "R$ 50,00",
+                type: "debit",
+                subcategoryValue: null,
+                isManual: false,
+                isInternalTransfer: false,
+                hasTransferMark: false,
+                suggestedPattern: "COMPRA NO MERCADO",
+              },
+            },
+          ],
+        })}
+      />,
+    );
+
+    const older = screen.getByRole("link", { name: t.pagination.older });
+    expect(older.getAttribute("href")).toBe("/transacoes?de=2026-07-06&ate=2026-10-17&pagina=2");
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar 60 transações" }));
+    const excel = await screen.findByRole("menuitem", { name: "Planilha do Excel (.xlsx)" });
+    expect(excel.getAttribute("href")).toBe(
+      "/api/transactions/spreadsheet?de=2026-07-06&ate=2026-10-17&formato=xlsx",
+    );
   });
 });

@@ -31,6 +31,18 @@ const yearMonthSchema = z.string().refine(isBoundedYearMonth).optional().catch(u
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
+// z.iso.date() already rejects an impossible calendar day ("2026-02-30");
+// the same bounded-year contract as yearMonthSchema on top of it, so a
+// "de"/"ate" nobody can read falls back to undefined, which
+// readFilteredTransactions treats as no range at all rather than an error
+// page.
+function isBoundedIsoDateYear(value: string): boolean {
+  const year = Number(value.slice(0, 4));
+  return year >= MIN_YEAR_MONTH_YEAR && year <= MAX_YEAR_MONTH_YEAR;
+}
+
+const isoDateSchema = z.iso.date().refine(isBoundedIsoDateYear).optional().catch(undefined);
+
 export const SEARCH_QUERY_MAX_LENGTH = 80;
 
 const searchQuerySchema = z
@@ -49,6 +61,9 @@ const kindFilterSchema = z.enum(KINDS).optional().catch(undefined);
 
 // Anything unreadable in the URL falls back to the default view rather than
 // an error page: a stale bookmark still lands on this month's transactions.
+// "de" and "ate" are read the same way: an unreadable value is dropped
+// instead of breaking the page, and readFilteredTransactions decides what the
+// resulting (de, ate) pair means (a range is active only once "de" survives).
 export const transactionsSearchParamsSchema = z.object({
   mes: yearMonthSchema,
   conta: accountIdSchema,
@@ -56,6 +71,8 @@ export const transactionsSearchParamsSchema = z.object({
   categoria: categoryFilterSchema,
   tipo: kindFilterSchema,
   busca: searchQuerySchema,
+  de: isoDateSchema,
+  ate: isoDateSchema,
 });
 export type TransactionsSearchParams = z.input<typeof transactionsSearchParamsSchema>;
 

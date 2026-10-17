@@ -28,7 +28,10 @@ test("consent, wizard, synced accounts, relabel and credential removal", async (
 
   await page.getByRole("tab", { name: "Contas" }).click();
   await expect(page.getByText("Nenhuma conta ainda.")).toBeVisible();
-  await page.getByRole("link", { name: "Conectar banco" }).click();
+  await page
+    .getByRole("tabpanel", { name: "Contas" })
+    .getByRole("link", { name: "Conectar banco" })
+    .click();
   await expect(page).toHaveURL(/\/conectar-banco$/);
 
   await expect(page.getByRole("heading", { name: "Antes de conectar um banco" })).toBeVisible();

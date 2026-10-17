@@ -210,7 +210,13 @@ describe("toXlsx", () => {
 
 describe("spreadsheetFilename", () => {
   it("names the file after the month and the format", () => {
-    expect(spreadsheetFilename("2026-09", "xlsx")).toBe("feudo-transacoes-2026-09.xlsx");
-    expect(spreadsheetFilename("2026-09", "csv")).toBe("feudo-transacoes-2026-09.csv");
+    expect(spreadsheetFilename({ month: "2026-09" }, "xlsx")).toBe("feudo-transacoes-2026-09.xlsx");
+    expect(spreadsheetFilename({ month: "2026-09" }, "csv")).toBe("feudo-transacoes-2026-09.csv");
+  });
+
+  it("names the file after the range's from and to dates and the format", () => {
+    expect(spreadsheetFilename({ range: { from: "2026-07-06", to: "2026-10-17" } }, "xlsx")).toBe(
+      "feudo-transacoes-2026-07-06-a-2026-10-17.xlsx",
+    );
   });
 });
