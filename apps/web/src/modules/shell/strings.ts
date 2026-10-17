@@ -45,7 +45,7 @@ const en = {
       transactions: {
         month: {
           title: "Month",
-          body: "Change the month here. The list always opens on the current month.",
+          body: "Change the month here, or pick a period in De and Até. The list opens on the current month.",
         },
         account: {
           title: "One account or all",
@@ -178,7 +178,7 @@ const ptBR = {
       transactions: {
         month: {
           title: "Mês",
-          body: "Troque o mês por aqui. A lista sempre abre no mês atual.",
+          body: "Troque o mês por aqui, ou escolha um período em De e Até. A lista abre no mês atual.",
         },
         account: {
           title: "Uma conta ou todas",

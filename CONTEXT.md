@@ -26,7 +26,7 @@ A user downloading their own data as one JSON file: their login identity with si
 _Avoid_: backup, download (as a noun in code), report
 
 **Transactions spreadsheet**:
-A member downloading, from Transações, exactly the rows the screen lists for its current month and filters (every page, not just the one shown) as an Excel (.xlsx) or CSV file: household day, description, amount as a number, currency, account, bank, category, subcategory and kind. It holds nothing the screen does not already show that member, is generated on request and never stored, and is recorded as a financial-data access of kind transactions, after the read (ADR-0008). Unlike the data export, it covers the whole household's listed rows and has no quota.
+A member downloading, from Transações, exactly the rows the screen lists for its current month or De/Até period and filters (every page, not just the one shown) as an Excel (.xlsx) or CSV file: household day, description, amount as a number, currency, account, bank, category, subcategory and kind. It holds nothing the screen does not already show that member, is generated on request and never stored, and is recorded as a financial-data access of kind transactions, after the read (ADR-0008). Unlike the data export, it covers the whole household's listed rows and has no quota.
 _Avoid_: report, data export (that is the LGPD JSON file)
 
 **Role**:

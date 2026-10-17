@@ -1,11 +1,9 @@
-import type { Kind, ProductCategoryId, YearMonth } from "@feudo/core";
+import type { IsoDateRange, Kind, ProductCategoryId, YearMonth } from "@feudo/core";
 import type { SpreadsheetFormat } from "./spreadsheet";
-
-export type TransactionsDateRange = { from: string; to: string };
 
 export type TransactionsRoute = {
   month: YearMonth;
-  range: TransactionsDateRange | null;
+  range: IsoDateRange | null;
   accountId: string | null;
   page: number;
   uncategorizedOnly: boolean;
@@ -14,9 +12,6 @@ export type TransactionsRoute = {
   search: string | null;
 };
 
-// The shape every filter control shares (account, category, kind, search,
-// plus whichever of month/range is active): shared so a new control is one
-// `route` prop, not six.
 export type TransactionsRouteBase = Omit<TransactionsRoute, "page">;
 
 export const UNCATEGORIZED_FILTER = "sem";

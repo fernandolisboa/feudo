@@ -2,7 +2,6 @@ import {
   KINDS,
   PRODUCT_CATEGORY_IDS,
   isYearMonth,
-  isoDateToUtcMidnight,
   normalizeDescription,
   type YearMonth,
 } from "@feudo/core";
@@ -32,22 +31,17 @@ const yearMonthSchema = z.string().refine(isBoundedYearMonth).optional().catch(u
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
 
-// The same bounded-year contract as yearMonthSchema, plus the one place that
-// already rejects an impossible calendar day (isoDateToUtcMidnight throws on
-// "2026-02-30"): a "de"/"ate" nobody can read falls back to undefined, which
+// z.iso.date() already rejects an impossible calendar day ("2026-02-30");
+// the same bounded-year contract as yearMonthSchema on top of it, so a
+// "de"/"ate" nobody can read falls back to undefined, which
 // readFilteredTransactions treats as no range at all rather than an error
 // page.
-function isBoundedIsoDate(value: string): boolean {
-  try {
-    isoDateToUtcMidnight(value);
-  } catch {
-    return false;
-  }
+function isBoundedIsoDateYear(value: string): boolean {
   const year = Number(value.slice(0, 4));
   return year >= MIN_YEAR_MONTH_YEAR && year <= MAX_YEAR_MONTH_YEAR;
 }
 
-const isoDateSchema = z.string().refine(isBoundedIsoDate).optional().catch(undefined);
+const isoDateSchema = z.iso.date().refine(isBoundedIsoDateYear).optional().catch(undefined);
 
 export const SEARCH_QUERY_MAX_LENGTH = 80;
 

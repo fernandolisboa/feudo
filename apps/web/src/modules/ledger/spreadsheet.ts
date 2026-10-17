@@ -1,10 +1,9 @@
-import type { YearMonth } from "@feudo/core";
+import type { IsoDateRange, YearMonth } from "@feudo/core";
 import writeXlsxFile, { type Row } from "write-excel-file/node";
 
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 
-import type { TransactionsDateRange } from "./href";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { t } from "./strings";
 import type { TaxonomyView } from "./taxonomy-view";
@@ -63,7 +62,7 @@ export function toSpreadsheetRows(
   });
 }
 
-export type SpreadsheetScope = { month: YearMonth } | { range: TransactionsDateRange };
+export type SpreadsheetScope = { month: YearMonth } | { range: IsoDateRange };
 
 export function spreadsheetFilename(scope: SpreadsheetScope, format: SpreadsheetFormat): string {
   const base =

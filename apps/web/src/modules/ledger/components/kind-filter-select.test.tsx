@@ -2,25 +2,12 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { TransactionsRouteBase } from "../href";
 import { t } from "../strings";
+import { transactionsRouteFixture as route } from "../test/transactions-route";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import { KindFilterSelect } from "./kind-filter-select";
-
-function route(overrides: Partial<TransactionsRouteBase> = {}): TransactionsRouteBase {
-  return {
-    month: "2026-09",
-    range: null,
-    accountId: null,
-    uncategorizedOnly: false,
-    category: null,
-    kind: null,
-    search: null,
-    ...overrides,
-  };
-}
 
 afterEach(() => {
   cleanup();

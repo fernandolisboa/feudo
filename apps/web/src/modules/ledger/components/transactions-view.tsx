@@ -15,6 +15,10 @@ import { TransactionsFilterBar } from "./transactions-filter-bar";
 import { TransactionsTable } from "./transactions-table";
 import { t } from "../strings";
 
+function scopeToken(isRange: boolean): "{month}" | "{period}" {
+  return isRange ? "{period}" : "{month}";
+}
+
 function headline(
   total: number,
   scopeLabel: string,
@@ -22,7 +26,7 @@ function headline(
   uncategorizedOnly: boolean,
   hasOtherFilters: boolean,
 ): string {
-  const token = isRange ? "{period}" : "{month}";
+  const token = scopeToken(isRange);
   const table = isRange ? t.headline.range : t.headline;
   const uncategorizedTable = isRange ? t.uncategorizedHeadlineRange : t.uncategorizedHeadline;
   const copy = hasOtherFilters ? table.found : uncategorizedOnly ? uncategorizedTable : table;
@@ -42,7 +46,7 @@ function emptyStateMessage(
   scopeLabel: string,
   isRange: boolean,
 ): string | null {
-  const token = isRange ? "{period}" : "{month}";
+  const token = scopeToken(isRange);
   if (hasOtherFilters && monthHasTransactions) {
     return interpolate(isRange ? t.empty.noMatchesRange : t.empty.noMatches, token, scopeLabel);
   }
@@ -62,7 +66,7 @@ function uncategorizedMessage(
   scopeLabel: string,
   isRange: boolean,
 ): string {
-  const token = isRange ? "{period}" : "{month}";
+  const token = scopeToken(isRange);
   const table = isRange ? t.uncategorizedRange : t.uncategorized;
   const copy = count === 1 ? table.one : table.many;
   return interpolate(

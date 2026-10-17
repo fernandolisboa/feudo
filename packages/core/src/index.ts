@@ -32,7 +32,6 @@ export {
   InvalidYearMonthError,
   formatYearMonth,
   isYearMonth,
-  isoDateToUtcMidnight,
   localDateOf,
   parseYearMonth,
   shiftIsoDate,

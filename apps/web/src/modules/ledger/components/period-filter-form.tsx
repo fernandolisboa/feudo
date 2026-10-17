@@ -5,10 +5,11 @@ import { Label } from "@/ui/label";
 import { TRANSACTIONS_PATH, transactionsRouteParams, type TransactionsRouteBase } from "../href";
 import { t } from "../strings";
 
-// Submitting always lands in range mode, so "mes" (and any page number) is
-// dropped from the hidden inputs; the visible "de"/"ate" inputs are what
-// decide the range. Every other active filter (account, category, kind,
-// search) rides along as a hidden input, the same contract the search form
+// "mes" rides along as a hidden input even though "de" is required and
+// should always win: if a crafted or stale submit somehow lands without a
+// valid "de", the server falls back to this month rather than silently
+// jumping to the current one. Every other active filter (account, category,
+// kind, search) rides along the same way, the same contract the search form
 // above it follows.
 export function PeriodFilterForm({
   route,
@@ -18,7 +19,7 @@ export function PeriodFilterForm({
   todayIso: string;
 }) {
   const hiddenParams = transactionsRouteParams({ ...route, range: null, page: 1 }).filter(
-    ([name]) => name !== "mes" && name !== "pagina",
+    ([name]) => name !== "pagina",
   );
 
   return (
@@ -40,6 +41,7 @@ export function PeriodFilterForm({
             name="de"
             type="date"
             max={todayIso}
+            required
             defaultValue={route.range?.from ?? ""}
           />
         </div>

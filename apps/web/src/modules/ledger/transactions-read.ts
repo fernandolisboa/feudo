@@ -4,6 +4,7 @@ import {
   normalizeDescription,
   yearMonthDayRange,
   yearMonthOf,
+  type IsoDateRange,
   type Kind,
   type KindContext,
   type ProductCategoryId,
@@ -14,7 +15,6 @@ import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 
-import type { TransactionsDateRange } from "./href";
 import { UNCATEGORIZED_FILTER } from "./href";
 import { readHouseholdLedger } from "./ledger-read";
 import { createHouseholdLedgerRepository, type LedgerAccount } from "./repository";
@@ -24,7 +24,7 @@ import { transactionsSearchParamsSchema, type TransactionsSearchParams } from ".
 export type FilteredTransactions = {
   currentMonth: YearMonth;
   month: YearMonth;
-  range: TransactionsDateRange | null;
+  range: IsoDateRange | null;
   todayIso: string;
   accounts: LedgerAccount[];
   selectedAccountId: string | null;
@@ -59,17 +59,25 @@ function matchesSearch(row: ResolvedLedgerRow, normalizedQuery: string): boolean
   return normalizedQuery === "" || normalizeDescription(row.description).includes(normalizedQuery);
 }
 
-// "ate" defaults to today and never moves past it (the same clamp the month
-// view applies to "mes"); a reversed pair is swapped rather than rejected, so
-// typing the wedding date into "Até" by mistake still shows something
-// sensible instead of an empty range.
+function clampToToday(isoDate: string, todayIso: string): string {
+  return isoDate < todayIso ? isoDate : todayIso;
+}
+
+// "ate" defaults to today; a reversed pair is swapped rather than rejected,
+// so typing the wedding date into "Até" by mistake still shows something
+// sensible instead of an empty range. The swap happens on the raw pair
+// first, and only then is each end clamped to today (the same clamp the
+// month view applies to "mes"): clamping "ate" before the swap would let a
+// future "de" with no "ate" survive as the swapped `to`, producing a range
+// that reaches years into the future instead of collapsing to today.
 function resolveDateRange(
   from: string,
   requestedTo: string | undefined,
   todayIso: string,
-): TransactionsDateRange {
-  const to = requestedTo !== undefined && requestedTo < todayIso ? requestedTo : todayIso;
-  return from > to ? { from: to, to: from } : { from, to };
+): IsoDateRange {
+  const rawTo = requestedTo ?? todayIso;
+  const [earlier, later] = from > rawTo ? [rawTo, from] : [from, rawTo];
+  return { from: clampToToday(earlier, todayIso), to: clampToToday(later, todayIso) };
 }
 
 // The one reading of /transacoes' URL shared by the page and its spreadsheet,

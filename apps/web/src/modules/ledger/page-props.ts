@@ -8,6 +8,7 @@ import {
   summarizeUncategorized,
   type CurrencyAmount,
   type InternalTransfer,
+  type IsoDateRange,
   type Kind,
   type ProductCategoryId,
   type YearMonth,
@@ -20,7 +21,6 @@ import type { HouseholdSession } from "@/modules/households";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
-import type { TransactionsDateRange } from "./href";
 import type { LedgerAccount, LedgerTransactionRow } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { encodeSubcategoryRef } from "./subcategory-ref";
@@ -40,7 +40,7 @@ export type TransactionsPageProps = {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
-  range: TransactionsDateRange | null;
+  range: IsoDateRange | null;
   periodLabel: string | null;
   todayIso: string;
   accounts: LedgerAccount[];

@@ -1432,10 +1432,23 @@ describe("getTransactionsPageProps (integration)", () => {
       );
 
       expect(props.range).toEqual({ from: "2026-07-06", to: "2026-09-30" });
+      // The household's current month in America/Sao_Paulo at NOW (see the
+      // comment on NOW above): mes=2026-01 is ignored once de is present,
+      // and month falls back to the current month, not the requested one.
+      expect(props.month).toBe("2026-09");
       expect(props.total).toBe(3);
       expect(props.transactions.map((transaction) => transaction.description).sort()).toEqual(
         ["CASAMENTO", "LUA DE MEL", "NO ULTIMO DIA DO INTERVALO"].sort(),
       );
+      expect(props.totals).toEqual({
+        incomeLabel: formatMoney({ amountCentavos: 0, currency: "BRL" }),
+        spendingLabel: formatMoney({ amountCentavos: 0, currency: "BRL" }),
+        transferCount: 0,
+      });
+      expect(props.uncategorized).toEqual({
+        count: 3,
+        amountLabel: formatMoney({ amountCentavos: 703_000, currency: "BRL" }),
+      });
     });
   });
 
@@ -1471,6 +1484,49 @@ describe("getTransactionsPageProps (integration)", () => {
       );
       expect(reversed.range).toEqual({ from: "2026-09-01", to: "2026-09-30" });
       expect(reversed.total).toBe(1);
+    });
+  });
+
+  // A reversed pair must swap before either end is clamped: clamping "ate"
+  // first would let a future "de" with no "ate" survive as the swapped
+  // `to`, producing a range that reaches years into the future (and a
+  // Postgres date overflow once pairingReadRange pads it) instead of
+  // collapsing to today.
+  it("collapses a future de to today, with or without an ate, and never lets to run past today", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, { household: householdScope(userA.session) });
+
+      const todayIso = "2026-09-30";
+
+      const futureDeNoAte = await getTransactionsPageProps(
+        userA.session,
+        { de: "2027-07-06" },
+        NOW,
+      );
+      expect(futureDeNoAte.range).toEqual({ from: todayIso, to: todayIso });
+
+      const extremeDeNoAte = await getTransactionsPageProps(
+        userA.session,
+        { de: "9999-12-31" },
+        NOW,
+      );
+      expect(extremeDeNoAte.range).toEqual({ from: todayIso, to: todayIso });
+
+      const extremeDePastAte = await getTransactionsPageProps(
+        userA.session,
+        { de: "9999-12-31", ate: "2026-01-01" },
+        NOW,
+      );
+      expect(extremeDePastAte.range).toEqual({ from: "2026-01-01", to: todayIso });
+
+      for (const props of [futureDeNoAte, extremeDeNoAte, extremeDePastAte]) {
+        const range = props.range;
+        if (range === null) {
+          throw new Error("expected a range");
+        }
+        expect(range.from <= todayIso).toBe(true);
+        expect(range.to <= todayIso).toBe(true);
+      }
     });
   });
 

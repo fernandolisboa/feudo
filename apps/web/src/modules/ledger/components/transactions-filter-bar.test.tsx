@@ -2,8 +2,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { transactionsRouteParams, type TransactionsRouteBase } from "../href";
+import { transactionsRouteParams } from "../href";
 import { t } from "../strings";
+import { transactionsRouteFixture as route } from "../test/transactions-route";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -11,19 +12,6 @@ import { TransactionsFilterBar } from "./transactions-filter-bar";
 
 const accounts = [{ id: "acc-1", name: "Conta corrente", institutionName: "Banco Fixture" }];
 const TODAY_ISO = "2026-10-17";
-
-function route(overrides: Partial<TransactionsRouteBase> = {}): TransactionsRouteBase {
-  return {
-    month: "2026-09",
-    range: null,
-    accountId: null,
-    uncategorizedOnly: false,
-    category: null,
-    kind: null,
-    search: null,
-    ...overrides,
-  };
-}
 
 afterEach(() => {
   cleanup();
@@ -131,7 +119,7 @@ describe("TransactionsFilterBar", () => {
     expect(screen.getByRole("button", { name: t.period.apply })).not.toBeNull();
   });
 
-  it("carries the other active filters as hidden inputs on the period form, but never mes or pagina", () => {
+  it("carries mes and the other active filters as hidden inputs on the period form, but never pagina", () => {
     const { container } = render(
       <TransactionsFilterBar
         route={route({
@@ -152,10 +140,25 @@ describe("TransactionsFilterBar", () => {
       (input) => [input.getAttribute("name"), input.getAttribute("value")],
     );
     expect(hiddenInputs).toEqual([
+      ["mes", "2026-09"],
       ["conta", "acc-1"],
       ["categoria", "housing"],
       ["tipo", "fixed"],
       ["busca", "condominio"],
     ]);
+  });
+
+  it("marks the De input required, so a half-filled period submit cannot drop it silently", () => {
+    render(
+      <TransactionsFilterBar
+        route={route()}
+        accounts={accounts}
+        categoryFilterOptions={[]}
+        todayIso={TODAY_ISO}
+      />,
+    );
+
+    const from = screen.getByLabelText(t.period.from);
+    expect(from.getAttribute("required")).not.toBeNull();
   });
 });
