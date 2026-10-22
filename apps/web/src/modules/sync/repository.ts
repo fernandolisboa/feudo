@@ -16,7 +16,7 @@ import {
 
 import { organization, user } from "@/modules/auth/schema";
 import { lockMembershipScope } from "@/modules/households";
-import { LEGACY_ENVELOPE_PREFIX } from "@/platform/crypto";
+import { LEGACY_ENVELOPE_PATTERN } from "@/platform/crypto";
 
 import {
   bankAccount,
@@ -36,7 +36,7 @@ import type {
   NormalizedTransaction,
   RateType,
 } from "./provider/provider";
-import type { UserScope } from "./scope";
+import { scopeForUser, type UserScope } from "./scope";
 import type { ConnectionSyncFailure } from "./sync-status";
 
 // Every method runs equally on the pooled connection or inside a transaction
@@ -203,8 +203,8 @@ export function createSyncUserRepository(scope: UserScope) {
     async replaceCredentialCiphertext(
       db: Database,
       input: { from: string; to: string },
-    ): Promise<void> {
-      await db
+    ): Promise<boolean> {
+      const updated = await db
         .update(providerCredential)
         .set({ ciphertext: input.to })
         .where(
@@ -212,7 +212,9 @@ export function createSyncUserRepository(scope: UserScope) {
             eq(providerCredential.userId, scope.userId),
             eq(providerCredential.ciphertext, input.from),
           ),
-        );
+        )
+        .returning({ id: providerCredential.id });
+      return updated.length > 0;
     },
 
     async deleteCredential(db: Database): Promise<boolean> {
@@ -927,41 +929,24 @@ export async function pruneOrphanConsents(db: Database, olderThan: Date): Promis
   return deleted.length;
 }
 
-const LEGACY_CIPHERTEXT_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
+export type LegacyCredentialRow = { scope: UserScope; ciphertext: string };
 
-export type LegacyCredentialRow = { id: string; userId: string; ciphertext: string };
-
-// Unscoped on purpose: the cross-user sweep (legacy-ciphertext-sweep.ts) is
-// the only caller, and rebinds each row to its own userId.
+// Job-only enumeration (ADR-0001, amended 2026-10-01): the legacy credential
+// sweep is the one caller that walks every user's credential, and it builds
+// one scope per row before writing.
 export async function listLegacyCredentials(db: Database): Promise<LegacyCredentialRow[]> {
-  return db
-    .select({
-      id: providerCredential.id,
-      userId: providerCredential.userId,
-      ciphertext: providerCredential.ciphertext,
-    })
+  const rows = await db
+    .select({ userId: providerCredential.userId, ciphertext: providerCredential.ciphertext })
     .from(providerCredential)
-    .where(like(providerCredential.ciphertext, LEGACY_CIPHERTEXT_PATTERN));
+    .where(like(providerCredential.ciphertext, LEGACY_ENVELOPE_PATTERN))
+    .orderBy(asc(providerCredential.userId));
+  return rows.map((row) => ({ scope: scopeForUser(row.userId), ciphertext: row.ciphertext }));
 }
 
 export async function countLegacyCredentials(db: Database): Promise<number> {
   const [row] = await db
     .select({ total: count() })
     .from(providerCredential)
-    .where(like(providerCredential.ciphertext, LEGACY_CIPHERTEXT_PATTERN));
+    .where(like(providerCredential.ciphertext, LEGACY_ENVELOPE_PATTERN));
   return row?.total ?? 0;
-}
-
-// Conditional on the old ciphertext, like replaceCredentialCiphertext, so a
-// sweep never overwrites credentials the user saved in the meantime.
-export async function replaceLegacyCredential(
-  db: Database,
-  input: { id: string; from: string; to: string },
-): Promise<boolean> {
-  const updated = await db
-    .update(providerCredential)
-    .set({ ciphertext: input.to })
-    .where(and(eq(providerCredential.id, input.id), eq(providerCredential.ciphertext, input.from)))
-    .returning({ id: providerCredential.id });
-  return updated.length > 0;
 }

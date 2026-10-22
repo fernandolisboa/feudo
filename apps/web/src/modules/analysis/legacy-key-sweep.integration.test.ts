@@ -9,7 +9,7 @@ import {
   isLegacyEnvelope,
 } from "@/platform/crypto";
 import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
-import { createAiSettingsRepository, replaceLegacyApiKey } from "./ai-settings-repository";
+import { createAiSettingsRepository } from "./ai-settings-repository";
 import { runLegacyApiKeySweepStep } from "./legacy-key-sweep";
 import { householdAiSettings } from "./schema";
 
@@ -154,21 +154,39 @@ describe("legacy API key sweep (integration)", () => {
     });
   });
 
-  it("replaceLegacyApiKey does nothing when the key changed since it was read", async () => {
-    await withTwoHouseholds(async ({ db, householdA }) => {
+  it("needs no ENCRYPTION_KEY when no key is v1", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const bound = encryptSecret(API_KEY_A, KEY, HOUSEHOLD_AI_KEY_PURPOSE, householdA.id);
+      await saveKey(db, householdA.scope, bound);
+      await saveKey(db, householdB.scope, undefined);
+
+      const result = await runLegacyApiKeySweepStep(db, {});
+
+      expect(result).toEqual({ rewritten: 0, unreadable: 0, remaining: 0 });
+      expect(await storedCiphertext(db, householdA.id)).toBe(bound);
+    });
+  });
+
+  it("replaceKeyCiphertext does nothing for another household's key or when the key changed since it was read", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
       const stale = encryptLegacySecret(API_KEY_A, KEY, HOUSEHOLD_AI_KEY_PURPOSE);
       await saveKey(db, householdA.scope, stale);
       const saved = encryptSecret(API_KEY_B, KEY, HOUSEHOLD_AI_KEY_PURPOSE, householdA.id);
       await saveKey(db, householdA.scope, saved);
+      const to = encryptSecret(API_KEY_A, KEY, HOUSEHOLD_AI_KEY_PURPOSE, householdA.id);
+      const repository = createAiSettingsRepository(householdA.scope);
 
-      const replaced = await replaceLegacyApiKey(db, {
-        householdId: householdA.id,
-        from: stale,
-        to: encryptSecret(API_KEY_A, KEY, HOUSEHOLD_AI_KEY_PURPOSE, householdA.id),
-      });
-
-      expect(replaced).toBe(false);
+      expect(await repository.replaceKeyCiphertext(db, { from: stale, to })).toBe(false);
       expect(await storedCiphertext(db, householdA.id)).toBe(saved);
+      expect(
+        await createAiSettingsRepository(householdB.scope).replaceKeyCiphertext(db, {
+          from: saved,
+          to,
+        }),
+      ).toBe(false);
+      expect(await storedCiphertext(db, householdA.id)).toBe(saved);
+      expect(await repository.replaceKeyCiphertext(db, { from: saved, to })).toBe(true);
+      expect(await storedCiphertext(db, householdA.id)).toBe(to);
     });
   });
 });

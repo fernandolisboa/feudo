@@ -10,54 +10,55 @@ import {
 import type { Database } from "@/platform/db/client";
 import {
   countLegacyApiKeys,
+  createAiSettingsRepository,
   listLegacyApiKeys,
-  replaceLegacyApiKey,
 } from "./ai-settings-repository";
 import { readEncryptionKey, type AnalysisEnv } from "./env";
 
 export type LegacyApiKeySweepStep =
   { rewritten: number; unreadable: number; remaining: number } | { error: string };
 
-// Rewrites every stored Anthropic key still in the pre-binding envelope as a
-// bound one, so the read-time rebind (ai-settings.ts) is not the only way a
-// row leaves v1: a household that never runs a reading again would otherwise
-// keep its key. A step of the existing `GET /api/cron/daily`, not a cron of
-// its own. `remaining` is a fresh count after the pass: it is what shows the
-// sweep worked (unreadable rows stay in it by design).
+// The read-time rebind (ai-settings.ts) is not the only way out of v1: a
+// household that never runs a reading again would keep its key. `remaining`
+// is a fresh count that keeps unreadable rows by design; it is what shows the
+// sweep worked. The key is read only when a row needs it, so a deployment
+// without one still runs.
 export async function runLegacyApiKeySweepStep(
   db: Database,
   env: AnalysisEnv = process.env,
 ): Promise<LegacyApiKeySweepStep> {
   try {
-    const encryptionKey = readEncryptionKey(env);
+    const rows = await listLegacyApiKeys(db);
     let rewritten = 0;
     let unreadable = 0;
-    for (const row of await listLegacyApiKeys(db)) {
-      let plaintext: string;
-      try {
-        plaintext = decryptSecret(
-          row.apiKeyCiphertext,
-          encryptionKey,
-          HOUSEHOLD_AI_KEY_PURPOSE,
-          row.householdId,
-        );
-      } catch (error) {
-        if (
-          error instanceof EncryptionKeyMismatchError ||
-          error instanceof MalformedCiphertextError
-        ) {
-          unreadable += 1;
-          continue;
+    if (rows.length > 0) {
+      const encryptionKey = readEncryptionKey(env);
+      for (const { scope, ciphertext } of rows) {
+        let to: string;
+        try {
+          to = encryptSecret(
+            decryptSecret(ciphertext, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE, scope.householdId),
+            encryptionKey,
+            HOUSEHOLD_AI_KEY_PURPOSE,
+            scope.householdId,
+          );
+        } catch (error) {
+          if (
+            error instanceof EncryptionKeyMismatchError ||
+            error instanceof MalformedCiphertextError
+          ) {
+            unreadable += 1;
+            continue;
+          }
+          throw error;
         }
-        throw error;
-      }
-      const replaced = await replaceLegacyApiKey(db, {
-        householdId: row.householdId,
-        from: row.apiKeyCiphertext,
-        to: encryptSecret(plaintext, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE, row.householdId),
-      });
-      if (replaced) {
-        rewritten += 1;
+        const replaced = await createAiSettingsRepository(scope).replaceKeyCiphertext(db, {
+          from: ciphertext,
+          to,
+        });
+        if (replaced) {
+          rewritten += 1;
+        }
       }
     }
     const remaining = await countLegacyApiKeys(db);

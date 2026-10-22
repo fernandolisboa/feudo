@@ -52,7 +52,7 @@ credential, consent or connection; household A never lists or relabels household
    envelope bound to the user's id (`enc:v2:<keyId>:…`, `platform/crypto.ts`; the 16-byte tag and
    the user id as additional authenticated data mean a ciphertext copied into another user's row
    never opens; `enc:v1` rows written before 2026-10-22 are still read and rewritten as `v2` the
-   first time a sync reads them), reads the item and its accounts and investment
+   first time a sync reads them, and the daily cron's `sweepLegacyCredentials` step rewrites the unread ones, #152; the legacy branch is removed once production shows `remaining=0` for it and `sweepLegacyApiKeys`), reads the item and its accounts and investment
    positions, then creates the connection and upserts the accounts into the active household with
    the default label `individual`. Every provider read happens before the first write, so a
    provider failure after the credential check leaves no half-synced connection. Pluggy exposes no

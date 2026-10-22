@@ -52,7 +52,6 @@ async function callCronRoute(): Promise<Response> {
 process.env.BETTER_AUTH_SECRET ??= "integration-test-secret-integration-test-secret";
 process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
 process.env.EMAIL_PROVIDER = "fake";
-process.env.ENCRYPTION_KEY ??= "integration-test-encryption-key-with-32-chars";
 
 describe("GET /api/cron/daily (integration)", () => {
   beforeEach(() => {
@@ -65,6 +64,7 @@ describe("GET /api/cron/daily (integration)", () => {
     process.env.CRON_SECRET = ORIGINAL_CRON_SECRET;
     globalThis.fetch = ORIGINAL_FETCH;
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("runs the market-data refresh and the verification prune in the same request, reporting both steps", async () => {
@@ -299,12 +299,14 @@ describe("GET /api/cron/daily (integration)", () => {
   it("rewrites a legacy stored credential nobody has read, reporting it in the sweep step", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       globalThis.fetch = buildSgsFetchMock();
-      const encryptionKey = process.env.ENCRYPTION_KEY ?? "";
+      const credentialsJson = '{"clientId":"a","clientSecret":"secret-a"}';
+      const encryptionKey = "integration-test-encryption-key-with-32-chars";
+      vi.stubEnv("ENCRYPTION_KEY", encryptionKey);
       await db.insert(providerCredential).values({
         userId: userA.id,
         provider: "pluggy",
         ciphertext: encryptLegacySecret(
-          '{"clientId":"a"}',
+          credentialsJson,
           encryptionKey,
           PROVIDER_CREDENTIALS_PURPOSE,
         ),
@@ -331,7 +333,7 @@ describe("GET /api/cron/daily (integration)", () => {
       expect(isLegacyEnvelope(row?.ciphertext ?? "")).toBe(false);
       expect(
         decryptSecret(row?.ciphertext ?? "", encryptionKey, PROVIDER_CREDENTIALS_PURPOSE, userA.id),
-      ).toBe('{"clientId":"a"}');
+      ).toBe(credentialsJson);
     });
   });
 

@@ -1,63 +1,57 @@
 import { errorName } from "@/lib/error-name";
 
-import {
-  decryptSecret,
-  encryptSecret,
-  EncryptionKeyMismatchError,
-  MalformedCiphertextError,
-  PROVIDER_CREDENTIALS_PURPOSE,
-} from "@/platform/crypto";
 import type { Database } from "@/platform/db/client";
 import { readEncryptionKey, type SyncEnv } from "./env";
 import {
   countLegacyCredentials,
+  createSyncUserRepository,
   listLegacyCredentials,
-  replaceLegacyCredential,
 } from "./repository";
+import {
+  deserializeCredentials,
+  isUnreadableCredentialsFailure,
+  serializeCredentials,
+} from "./service";
 
 export type LegacyCredentialSweepStep =
   { rewritten: number; unreadable: number; remaining: number } | { error: string };
 
-// Rewrites every stored credential still in the pre-binding envelope as a
-// bound one, so the read-time rebind (service.ts) is not the only way a row
-// leaves v1: a user who never syncs again would otherwise keep theirs. A
-// step of the existing `GET /api/cron/daily`, not a cron of its own.
-// `remaining` is a fresh count after the pass: it is what shows the sweep
-// worked (unreadable rows stay in it by design).
+// The read-time rebind (service.ts) is not the only way out of v1: a user who
+// never syncs again would keep theirs. `remaining` is a fresh count that
+// keeps unreadable rows by design; it is what shows the sweep worked. The key
+// is read only when a row needs it, so a deployment without one still runs.
 export async function runLegacyCredentialSweepStep(
   db: Database,
   env: SyncEnv = process.env,
 ): Promise<LegacyCredentialSweepStep> {
   try {
-    const encryptionKey = readEncryptionKey(env);
+    const rows = await listLegacyCredentials(db);
     let rewritten = 0;
     let unreadable = 0;
-    for (const row of await listLegacyCredentials(db)) {
-      let plaintext: string;
-      try {
-        plaintext = decryptSecret(
-          row.ciphertext,
-          encryptionKey,
-          PROVIDER_CREDENTIALS_PURPOSE,
-          row.userId,
-        );
-      } catch (error) {
-        if (
-          error instanceof EncryptionKeyMismatchError ||
-          error instanceof MalformedCiphertextError
-        ) {
-          unreadable += 1;
-          continue;
+    if (rows.length > 0) {
+      const encryptionKey = readEncryptionKey(env);
+      for (const { scope, ciphertext } of rows) {
+        let to: string;
+        try {
+          to = serializeCredentials(
+            deserializeCredentials(ciphertext, encryptionKey, scope.userId),
+            encryptionKey,
+            scope.userId,
+          );
+        } catch (error) {
+          if (isUnreadableCredentialsFailure(error)) {
+            unreadable += 1;
+            continue;
+          }
+          throw error;
         }
-        throw error;
-      }
-      const replaced = await replaceLegacyCredential(db, {
-        id: row.id,
-        from: row.ciphertext,
-        to: encryptSecret(plaintext, encryptionKey, PROVIDER_CREDENTIALS_PURPOSE, row.userId),
-      });
-      if (replaced) {
-        rewritten += 1;
+        const replaced = await createSyncUserRepository(scope).replaceCredentialCiphertext(db, {
+          from: ciphertext,
+          to,
+        });
+        if (replaced) {
+          rewritten += 1;
+        }
       }
     }
     const remaining = await countLegacyCredentials(db);

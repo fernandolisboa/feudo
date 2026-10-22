@@ -9,7 +9,7 @@ import {
 } from "@/platform/crypto";
 import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
 import { runLegacyCredentialSweepStep } from "./legacy-ciphertext-sweep";
-import { createSyncUserRepository, replaceLegacyCredential } from "./repository";
+import { createSyncUserRepository } from "./repository";
 import { providerCredential } from "./schema";
 import { withTwoUsers } from "./test/with-two-users";
 
@@ -155,8 +155,40 @@ describe("legacy credential sweep (integration)", () => {
     });
   });
 
-  it("replaceLegacyCredential does nothing when the row changed since it was read", async () => {
+  it("counts a v1 row whose plaintext is not valid credentials as unreadable", async () => {
     await withTwoUsers(async ({ db, userA }) => {
+      const notCredentials = encryptLegacySecret("not json", KEY, PROVIDER_CREDENTIALS_PURPOSE);
+      await createSyncUserRepository(userA.scope).saveCredential(db, {
+        provider: "pluggy",
+        ciphertext: notCredentials,
+        validatedAt: new Date(),
+      });
+
+      const result = await runLegacyCredentialSweepStep(db, ENV);
+
+      expect(result).toEqual({ rewritten: 0, unreadable: 1, remaining: 1 });
+      expect(await storedCiphertext(db, userA.id)).toBe(notCredentials);
+    });
+  });
+
+  it("needs no ENCRYPTION_KEY when no row is v1", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const bound = encryptSecret(SECRET_A, KEY, PROVIDER_CREDENTIALS_PURPOSE, userA.id);
+      await createSyncUserRepository(userA.scope).saveCredential(db, {
+        provider: "pluggy",
+        ciphertext: bound,
+        validatedAt: new Date(),
+      });
+
+      const result = await runLegacyCredentialSweepStep(db, {});
+
+      expect(result).toEqual({ rewritten: 0, unreadable: 0, remaining: 0 });
+      expect(await storedCiphertext(db, userA.id)).toBe(bound);
+    });
+  });
+
+  it("replaceCredentialCiphertext does nothing for another user's row or when the row changed since it was read", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
       const repository = createSyncUserRepository(userA.scope);
       const stale = encryptLegacySecret(SECRET_A, KEY, PROVIDER_CREDENTIALS_PURPOSE);
       await repository.saveCredential(db, {
@@ -170,16 +202,19 @@ describe("legacy credential sweep (integration)", () => {
         ciphertext: saved,
         validatedAt: new Date(),
       });
-      const credential = await repository.getCredential(db);
+      const to = encryptSecret(SECRET_A, KEY, PROVIDER_CREDENTIALS_PURPOSE, userA.id);
 
-      const replaced = await replaceLegacyCredential(db, {
-        id: credential?.id ?? "",
-        from: stale,
-        to: encryptSecret(SECRET_A, KEY, PROVIDER_CREDENTIALS_PURPOSE, userA.id),
-      });
-
-      expect(replaced).toBe(false);
+      expect(await repository.replaceCredentialCiphertext(db, { from: stale, to })).toBe(false);
       expect(await storedCiphertext(db, userA.id)).toBe(saved);
+      expect(
+        await createSyncUserRepository(userB.scope).replaceCredentialCiphertext(db, {
+          from: saved,
+          to,
+        }),
+      ).toBe(false);
+      expect(await storedCiphertext(db, userA.id)).toBe(saved);
+      expect(await repository.replaceCredentialCiphertext(db, { from: saved, to })).toBe(true);
+      expect(await storedCiphertext(db, userA.id)).toBe(to);
     });
   });
 });

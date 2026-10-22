@@ -1,8 +1,8 @@
-import { and, count, eq, like, sql } from "drizzle-orm";
+import { and, asc, count, eq, like, sql } from "drizzle-orm";
 
 import type { HouseholdScope } from "@/modules/households";
 
-import { LEGACY_ENVELOPE_PREFIX } from "@/platform/crypto";
+import { LEGACY_ENVELOPE_PATTERN } from "@/platform/crypto";
 import type { Database } from "@/platform/db/client";
 import { DEFAULT_MONTHLY_FAMILY, DEFAULT_ON_DEMAND_FAMILY, type AiFamily } from "./ai-client";
 import { householdAiSettings } from "./schema";
@@ -77,11 +77,16 @@ export function createAiSettingsRepository(scope: HouseholdScope) {
 
     // Conditional on the old ciphertext so a rewrite never overwrites a key
     // saved in the meantime; last4 and the audit columns stay as they are.
-    async replaceKeyCiphertext(db: Database, input: { from: string; to: string }): Promise<void> {
-      await db
+    async replaceKeyCiphertext(
+      db: Database,
+      input: { from: string; to: string },
+    ): Promise<boolean> {
+      const updated = await db
         .update(householdAiSettings)
         .set({ apiKeyCiphertext: input.to })
-        .where(and(inHousehold, eq(householdAiSettings.apiKeyCiphertext, input.from)));
+        .where(and(inHousehold, eq(householdAiSettings.apiKeyCiphertext, input.from)))
+        .returning({ householdId: householdAiSettings.householdId });
+      return updated.length > 0;
     },
 
     async removeKey(db: Database, updatedByUserId: string | null): Promise<void> {
@@ -105,12 +110,11 @@ export async function getAiSettings(scope: HouseholdScope, db: Database): Promis
   return row ?? DEFAULT_AI_SETTINGS;
 }
 
-const LEGACY_CIPHERTEXT_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
+export type LegacyApiKeyRow = { scope: HouseholdScope; ciphertext: string };
 
-export type LegacyApiKeyRow = { householdId: string; apiKeyCiphertext: string };
-
-// Unscoped on purpose: the cross-household sweep (legacy-key-sweep.ts) is the
-// only caller, and rebinds each row to its own householdId.
+// Job-only enumeration (ADR-0001, amended 2026-10-01): the legacy key sweep
+// is the one caller that walks every household's key, and it builds one scope
+// per row before writing.
 export async function listLegacyApiKeys(db: Database): Promise<LegacyApiKeyRow[]> {
   const rows = await db
     .select({
@@ -118,11 +122,12 @@ export async function listLegacyApiKeys(db: Database): Promise<LegacyApiKeyRow[]
       apiKeyCiphertext: householdAiSettings.apiKeyCiphertext,
     })
     .from(householdAiSettings)
-    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_CIPHERTEXT_PATTERN));
+    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_ENVELOPE_PATTERN))
+    .orderBy(asc(householdAiSettings.householdId));
   return rows.flatMap((row) =>
     row.apiKeyCiphertext === null
       ? []
-      : [{ householdId: row.householdId, apiKeyCiphertext: row.apiKeyCiphertext }],
+      : [{ scope: { householdId: row.householdId }, ciphertext: row.apiKeyCiphertext }],
   );
 }
 
@@ -130,25 +135,6 @@ export async function countLegacyApiKeys(db: Database): Promise<number> {
   const [row] = await db
     .select({ total: count() })
     .from(householdAiSettings)
-    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_CIPHERTEXT_PATTERN));
+    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_ENVELOPE_PATTERN));
   return row?.total ?? 0;
-}
-
-// Conditional on the old ciphertext, like replaceKeyCiphertext, so a sweep
-// never overwrites a key saved in the meantime.
-export async function replaceLegacyApiKey(
-  db: Database,
-  input: { householdId: string; from: string; to: string },
-): Promise<boolean> {
-  const updated = await db
-    .update(householdAiSettings)
-    .set({ apiKeyCiphertext: input.to })
-    .where(
-      and(
-        eq(householdAiSettings.householdId, input.householdId),
-        eq(householdAiSettings.apiKeyCiphertext, input.from),
-      ),
-    )
-    .returning({ householdId: householdAiSettings.householdId });
-  return updated.length > 0;
 }
