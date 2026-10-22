@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { EmailSender } from "@/modules/auth";
-import { member, organization, session as sessionTable, user } from "@/modules/auth/schema";
+import {
+  invitation,
+  member,
+  organization,
+  session as sessionTable,
+  user,
+} from "@/modules/auth/schema";
 import { householdSettings } from "@/modules/households/schema";
 import { pushSubscription } from "@/modules/notifications/schema";
 import { seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
@@ -306,6 +312,31 @@ describe("account deletion (integration)", () => {
         .where(eq(bankAccount.connectionId, biaConnection.connectionId));
       expect(biaAccounts).toEqual([{ householdId: casa }]);
       expect(await db.select().from(user).where(eq(user.id, bia.id))).toHaveLength(1);
+    });
+  });
+
+  it("erases the invitations sent to the purged user's address and keeps the ones sent to anyone else", async () => {
+    await withTestDb(async (db) => {
+      const { ana, bia, caio, casa } = await seedCasa(db);
+      await requestAccountDeletion(ana.session, db, deps(recordingSender().sender));
+      await db.insert(invitation).values(
+        [
+          { id: "to-ana", email: ana.session.email.toUpperCase() },
+          { id: "to-caio", email: caio.session.email },
+        ].map((row) => ({
+          ...row,
+          organizationId: casa,
+          inviterId: bia.id,
+          role: "member",
+          status: "accepted",
+          expiresAt: new Date(Date.now() + 3_600_000),
+        })),
+      );
+
+      expect(await purgeAccount(db, ana.id, GRACE_END)).toBe("purged");
+
+      const remaining = await db.select({ id: invitation.id }).from(invitation);
+      expect(remaining).toEqual([{ id: "to-caio" }]);
     });
   });
 
