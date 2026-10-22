@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/ui/dialog";
 import { initialActionState } from "@/lib/action-state";
+import { interpolate } from "@/lib/interpolate";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import { transferOwnershipAction } from "../actions";
@@ -48,9 +49,11 @@ export function TransferOwnershipDialog({
         <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="memberId" value={memberId} />
           <DialogHeader>
-            <DialogTitle>{t.casa.transferDialog.title.replace("{name}", memberName)}</DialogTitle>
+            <DialogTitle>
+              {interpolate(t.casa.transferDialog.title, "{name}", memberName)}
+            </DialogTitle>
             <DialogDescription>
-              {t.casa.transferDialog.description.replace("{name}", memberName)}
+              {interpolate(t.casa.transferDialog.description, "{name}", memberName)}
             </DialogDescription>
           </DialogHeader>
 

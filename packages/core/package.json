@@ -16,12 +16,12 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "eslint": "9.39.5",
     "fast-check": "4.9.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.69.0",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "dependencies": {
     "zod": "4.5.4"

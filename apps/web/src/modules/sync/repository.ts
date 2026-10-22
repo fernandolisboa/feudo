@@ -196,6 +196,23 @@ export function createSyncUserRepository(scope: UserScope) {
         });
     },
 
+    // Conditional on the old ciphertext so a rewrite never overwrites
+    // credentials the user saved in the meantime.
+    async replaceCredentialCiphertext(
+      db: Database,
+      input: { from: string; to: string },
+    ): Promise<void> {
+      await db
+        .update(providerCredential)
+        .set({ ciphertext: input.to })
+        .where(
+          and(
+            eq(providerCredential.userId, scope.userId),
+            eq(providerCredential.ciphertext, input.from),
+          ),
+        );
+    },
+
     async deleteCredential(db: Database): Promise<boolean> {
       const deleted = await db
         .delete(providerCredential)

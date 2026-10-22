@@ -5,7 +5,20 @@ import path from "node:path";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
-const nextConfig: NextConfig = {};
+import {
+  API_CONTENT_SECURITY_POLICY,
+  CSP_HEADER,
+  STATIC_SECURITY_HEADERS,
+} from "./src/platform/security-headers";
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  headers: () =>
+    Promise.resolve([
+      { source: "/:path*", headers: [...STATIC_SECURITY_HEADERS] },
+      { source: "/api/:path*", headers: [{ key: CSP_HEADER, value: API_CONTENT_SECURITY_POLICY }] },
+    ]),
+};
 
 const publicDir = path.join(process.cwd(), "public");
 

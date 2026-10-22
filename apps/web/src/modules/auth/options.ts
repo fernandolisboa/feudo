@@ -429,6 +429,14 @@ export function buildAuthOptions(
         await emailSender.send({ to: user.email, ...email });
       },
     },
+    // Vercel sets x-real-ip to the client address and overwrites
+    // x-forwarded-for with it, so neither can be spoofed there; naming both
+    // keeps the limiter keyed per client instead of falling back to one
+    // shared bucket (where one client could lock everyone out) if a hop ever
+    // forwards a multi-value x-forwarded-for.
+    advanced: {
+      ipAddress: { ipAddressHeaders: ["x-real-ip", "x-forwarded-for"] },
+    },
     rateLimit: {
       enabled: true,
       storage: "database",

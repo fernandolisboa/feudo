@@ -19,6 +19,7 @@ import {
   decryptSecret,
   encryptSecret,
   EncryptionKeyMismatchError,
+  isLegacyEnvelope,
   MalformedCiphertextError,
   PROVIDER_CREDENTIALS_PURPOSE,
 } from "@/platform/crypto";
@@ -85,13 +86,26 @@ const storedCredentialsSchema = z.object({
   clientSecret: z.string().min(1),
 });
 
-function serializeCredentials(credentials: ProviderCredentials, encryptionKey: string): string {
-  return encryptSecret(JSON.stringify(credentials), encryptionKey, PROVIDER_CREDENTIALS_PURPOSE);
+function serializeCredentials(
+  credentials: ProviderCredentials,
+  encryptionKey: string,
+  userId: string,
+): string {
+  return encryptSecret(
+    JSON.stringify(credentials),
+    encryptionKey,
+    PROVIDER_CREDENTIALS_PURPOSE,
+    userId,
+  );
 }
 
-function deserializeCredentials(ciphertext: string, encryptionKey: string): ProviderCredentials {
+function deserializeCredentials(
+  ciphertext: string,
+  encryptionKey: string,
+  userId: string,
+): ProviderCredentials {
   return storedCredentialsSchema.parse(
-    JSON.parse(decryptSecret(ciphertext, encryptionKey, PROVIDER_CREDENTIALS_PURPOSE)),
+    JSON.parse(decryptSecret(ciphertext, encryptionKey, PROVIDER_CREDENTIALS_PURPOSE, userId)),
   );
 }
 
@@ -305,21 +319,45 @@ async function loadStoredCredentials(
   repository: SyncUserRepository,
   db: Database,
   encryptionKey: string,
+  userId: string,
 ): Promise<StoredCredentialsOutcome> {
   const stored = await repository.getCredential(db);
   if (!stored) {
     return { status: "no_credentials" };
   }
+  let credentials: ProviderCredentials;
   try {
-    return {
-      status: "ok",
-      credentials: deserializeCredentials(stored.ciphertext, encryptionKey),
-    };
+    credentials = deserializeCredentials(stored.ciphertext, encryptionKey, userId);
   } catch (error) {
     if (isUnreadableCredentialsFailure(error)) {
       return { status: "credentials_unreadable" };
     }
     throw error;
+  }
+  if (isLegacyEnvelope(stored.ciphertext)) {
+    await rebindCredentials(repository, db, stored.ciphertext, credentials, encryptionKey, userId);
+  }
+  return { status: "ok", credentials };
+}
+
+// A row written before ciphertexts were bound to their owner is rewritten
+// the first time it is read, so the daily sync moves every stored secret to
+// the bound envelope. Best effort: the credentials were read either way.
+async function rebindCredentials(
+  repository: SyncUserRepository,
+  db: Database,
+  legacyCiphertext: string,
+  credentials: ProviderCredentials,
+  encryptionKey: string,
+  userId: string,
+): Promise<void> {
+  try {
+    await repository.replaceCredentialCiphertext(db, {
+      from: legacyCiphertext,
+      to: serializeCredentials(credentials, encryptionKey, userId),
+    });
+  } catch (error) {
+    console.warn(`sync: could not rebind stored credentials (${errorName(error)})`);
   }
 }
 
@@ -377,7 +415,7 @@ export async function connectProvider(
   try {
     await repository.saveCredential(db, {
       provider: PROVIDER_KIND,
-      ciphertext: serializeCredentials(credentials, deps.encryptionKey),
+      ciphertext: serializeCredentials(credentials, deps.encryptionKey, session.userId),
       validatedAt: new Date(),
     });
   } catch {
@@ -411,7 +449,7 @@ export async function addConnection(
   deps: SyncDeps,
 ): Promise<AddConnectionOutcome> {
   const repository = createSyncUserRepository(userScope(session));
-  const stored = await loadStoredCredentials(repository, db, deps.encryptionKey);
+  const stored = await loadStoredCredentials(repository, db, deps.encryptionKey, session.userId);
   if (stored.status !== "ok") {
     return { status: stored.status };
   }
@@ -569,7 +607,7 @@ async function credentialsFor(
   if (cached) {
     return cached;
   }
-  const outcome = await loadStoredCredentials(repository, db, deps.encryptionKey);
+  const outcome = await loadStoredCredentials(repository, db, deps.encryptionKey, userId);
   cache.set(userId, outcome);
   return outcome;
 }

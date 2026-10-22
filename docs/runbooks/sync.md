@@ -10,7 +10,7 @@ ADR-0008). Its public surface is `apps/web/src/modules/sync/index.ts`:
 - `t` and the daily housekeeping entry point `runDailyPruneStep`.
 
 Everything else (`service.ts`, `repository.ts`, `actions.ts`, `validation.ts`, `scope.ts`,
-`crypto.ts`, `document-hash.ts`, `provider/`) is module-private.
+`document-hash.ts`, `provider/`) is module-private.
 
 ## Two scopes, one invariant (ADR-0001)
 
@@ -49,7 +49,10 @@ credential, consent or connection; household A never lists or relabels household
    ID instead of listing the user's connections.
 3. **Credentials** (`connectProviderAction` → `sync.connectProvider`): authenticates against the
    provider first (`invalid_credentials` saves nothing), stores the credentials as one AES-256-GCM
-   envelope (`enc:v1:<keyId>:…`, `crypto.ts`), reads the item and its accounts and investment
+   envelope bound to the user's id (`enc:v2:<keyId>:…`, `platform/crypto.ts`; the 16-byte tag and
+   the user id as additional authenticated data mean a ciphertext copied into another user's row
+   never opens; `enc:v1` rows written before 2026-10-22 are still read and rewritten as `v2` the
+   first time a sync reads them), reads the item and its accounts and investment
    positions, then creates the connection and upserts the accounts into the active household with
    the default label `individual`. Every provider read happens before the first write, so a
    provider failure after the credential check leaves no half-synced connection. Pluggy exposes no

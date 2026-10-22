@@ -33,7 +33,12 @@ describe("runOnDemandAnalysis", () => {
     getAiSettingsMock.mockResolvedValue({
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", ENCRYPTION_KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyCiphertext: encryptSecret(
+        "sk-ant-secret",
+        ENCRYPTION_KEY,
+        HOUSEHOLD_AI_KEY_PURPOSE,
+        SESSION.householdId,
+      ),
       apiKeyLast4: "cret",
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);

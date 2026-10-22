@@ -64,6 +64,7 @@ async function saveCredentials(
       JSON.stringify({ clientId: "id", clientSecret }),
       ENCRYPTION_KEY,
       PROVIDER_CREDENTIALS_PURPOSE,
+      user.scope.userId,
     ),
     validatedAt: NOW,
   });

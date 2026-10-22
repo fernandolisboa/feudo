@@ -51,8 +51,9 @@ export const providerAuthAttempt = pgTable(
 
 // User-scoped (ADR-0001): the secret a user hands Feudo to read their own
 // bank data. One row per user and provider; the client id and secret travel
-// together inside one ciphertext (sync/crypto.ts) whose envelope carries the
-// key id, so a key rotation can tell old rows apart (ADR-0008).
+// together inside one ciphertext (platform/crypto.ts) bound to the user id,
+// whose envelope carries the key id, so a key rotation can tell old rows
+// apart (ADR-0008).
 export const providerCredential = pgTable(
   "provider_credential",
   {

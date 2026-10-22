@@ -71,6 +71,37 @@ describe("household_ai_settings isolation (integration)", () => {
     });
   });
 
+  it("replaceKeyCiphertext rewrites only the scoped household's key, and only while it is unchanged", async () => {
+    await withTwoHouseholds(async ({ db, householdA, householdB }) => {
+      const saveKey = (scope: typeof householdA.scope, ciphertext: string) =>
+        createAiSettingsRepository(scope).save(db, {
+          apiKey: { ciphertext, last4: "same" },
+          monthlyFamily: "opus",
+          onDemandFamily: "sonnet",
+          updatedByUserId: null,
+        });
+      await saveKey(householdA.scope, "enc:v1:shared");
+      await saveKey(householdB.scope, "enc:v1:shared");
+
+      await createAiSettingsRepository(householdA.scope).replaceKeyCiphertext(db, {
+        from: "enc:v1:shared",
+        to: "enc:v2:rebound",
+      });
+      await createAiSettingsRepository(householdA.scope).replaceKeyCiphertext(db, {
+        from: "enc:v1:shared",
+        to: "enc:v2:stale-rewrite",
+      });
+
+      expect(await createAiSettingsRepository(householdA.scope).get(db)).toMatchObject({
+        apiKeyCiphertext: "enc:v2:rebound",
+        apiKeyLast4: "same",
+      });
+      expect(await createAiSettingsRepository(householdB.scope).get(db)).toMatchObject({
+        apiKeyCiphertext: "enc:v1:shared",
+      });
+    });
+  });
+
   it("keeps the current key when only the families are saved", async () => {
     await withTwoHouseholds(async ({ db, householdA }) => {
       const repository = createAiSettingsRepository(householdA.scope);
