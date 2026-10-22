@@ -23,7 +23,11 @@ import {
 import { initialActionState } from "@/lib/action-state";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
 
-import { categorizeTransactionAction, setTransferMarkAction } from "../actions";
+import {
+  categorizeTransactionAction,
+  deferCategorizationAction,
+  setTransferMarkAction,
+} from "../actions";
 import type { GuidedCategorizationProps, GuidedItemView } from "../guided-categorization";
 import { t } from "../strings";
 import { RULE_PATTERN_MAX_LENGTH, RULE_PATTERN_MIN_LENGTH } from "../validation";
@@ -42,20 +46,23 @@ function title(hasAccounts: boolean, remaining: number, sinceLabel: string): str
   return interpolate(t.guided.title.many, "{count}", String(remaining));
 }
 
-function similarLine(count: number): string {
-  return count === 1
-    ? t.guided.similarOne
-    : interpolate(t.guided.similarMany, "{count}", String(count));
+function countLine(count: number, one: string, many: string): string {
+  return count === 1 ? one : interpolate(many, "{count}", String(count));
 }
 
+// An item already put off is deferred again only on this screen
+// (onDeferHere): it is already at the back of the queue, so another write
+// would change nothing the household sees. The defer button belongs to its
+// own form (form={deferFormId}) so Enter in a field still saves: the first
+// submit button of the categorize form is its default button.
 function GuidedItem({
   item,
   groups,
-  onSkip,
+  onDeferHere,
 }: {
   item: GuidedItemView;
   groups: SubcategoryOptionGroup[];
-  onSkip: () => void;
+  onDeferHere: () => void;
 }) {
   const [createRule, setCreateRule] = useState(
     item.similarCount > 0 &&
@@ -70,16 +77,19 @@ function GuidedItem({
     setTransferMarkAction,
     initialActionState,
   );
+  const [deferState, deferAction, isDeferring] = useActionState(
+    deferCategorizationAction,
+    initialActionState,
+  );
   const items = groups.flatMap((group) => group.options);
   const error =
-    state.status === "error"
-      ? state.message
-      : markState.status === "error"
-        ? markState.message
-        : null;
+    [state, markState, deferState].find((actionState) => actionState.status === "error")?.message ??
+    null;
   const selectId = `guided-category-${item.id}`;
   const patternId = `guided-pattern-${item.id}`;
   const suggestionId = `guided-suggestion-${item.id}`;
+  const deferFormId = `guided-defer-${item.id}`;
+  const isBusy = isSaving || isDeferring;
 
   return (
     <article className="border-border bg-card flex flex-col gap-5 rounded-lg border p-4 sm:p-6">
@@ -92,6 +102,9 @@ function GuidedItem({
           <span className="font-heading text-[26px] tabular-nums">{item.amountLabel}</span>
           <span className="text-muted-foreground text-[13px]">{t.guided[item.type]}</span>
         </p>
+        {item.deferred ? (
+          <p className="text-muted-foreground text-[13px]">{t.guided.deferredNote}</p>
+        ) : null}
       </header>
 
       {error ? (
@@ -169,18 +182,30 @@ function GuidedItem({
             </div>
           ) : null}
           {createRule && item.similarCount > 0 ? (
-            <p className="text-muted-foreground pl-6 text-xs">{similarLine(item.similarCount)}</p>
+            <p className="text-muted-foreground pl-6 text-xs">
+              {countLine(item.similarCount, t.guided.similarOne, t.guided.similarMany)}
+            </p>
           ) : null}
         </div>
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-          <Button type="button" variant="outline" onClick={onSkip}>
-            {t.guided.skip}
-          </Button>
-          <Button type="submit" disabled={isSaving} className="sm:ml-auto">
+          {item.deferred ? (
+            <Button type="button" variant="outline" onClick={onDeferHere}>
+              {t.guided.defer}
+            </Button>
+          ) : (
+            <Button type="submit" variant="outline" form={deferFormId} disabled={isBusy}>
+              {t.guided.defer}
+            </Button>
+          )}
+          <Button type="submit" disabled={isBusy} className="sm:ml-auto">
             {t.guided.save}
           </Button>
         </div>
+      </form>
+
+      <form id={deferFormId} action={deferAction} hidden>
+        <input type="hidden" name="transactionId" value={item.id} />
       </form>
 
       <form action={markAction} className="border-border border-t pt-3">
@@ -201,12 +226,16 @@ export function GuidedCategorizationView({
   categoryGroups,
 }: GuidedCategorizationProps) {
   const [initialTotal] = useState(items.length);
-  const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set());
+  const [reviewing, setReviewing] = useState(false);
+  const [deferredHere, setDeferredHere] = useState<ReadonlySet<string>>(() => new Set());
 
   const remaining = items.length;
   const total = Math.max(initialTotal, remaining);
   const done = total - remaining;
-  const current = items.find((item) => !skipped.has(item.id));
+  const deferred = items.filter((item) => item.deferred);
+  const current =
+    items.find((item) => !item.deferred) ??
+    (reviewing ? deferred.find((item) => !deferredHere.has(item.id)) : undefined);
 
   return (
     <>
@@ -238,6 +267,9 @@ export function GuidedCategorizationView({
                 done: String(done),
                 total: String(total),
               })}
+              {deferred.length > 0
+                ? ` · ${countLine(deferred.length, t.guided.deferredCountOne, t.guided.deferredCountMany)}`
+                : null}
             </span>
           </Progress>
           {current ? (
@@ -245,24 +277,29 @@ export function GuidedCategorizationView({
               key={current.id}
               item={current}
               groups={categoryGroups}
-              onSkip={() => {
-                setSkipped((previous) => new Set(previous).add(current.id));
+              onDeferHere={() => {
+                setDeferredHere((previous) => new Set(previous).add(current.id));
               }}
             />
           ) : (
             <div className="flex flex-col items-start gap-3">
               <p className="font-heading text-[18px]">
-                {remaining === 1
-                  ? t.guided.skippedAllOne
-                  : interpolate(t.guided.skippedAllMany, "{count}", String(remaining))}
+                {reviewing
+                  ? countLine(
+                      deferred.length,
+                      t.guided.deferredAgainOne,
+                      t.guided.deferredAgainMany,
+                    )
+                  : countLine(deferred.length, t.guided.onlyDeferredOne, t.guided.onlyDeferredMany)}
               </p>
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSkipped(new Set());
+                  setReviewing(true);
+                  setDeferredHere(new Set());
                 }}
               >
-                {t.guided.restart}
+                {reviewing ? t.guided.reviewAgain : t.guided.review}
               </Button>
             </div>
           )}

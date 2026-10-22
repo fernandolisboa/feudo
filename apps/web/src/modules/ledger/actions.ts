@@ -12,6 +12,7 @@ import {
   categorizeTransaction,
   changeSubcategoryKind,
   clearInternalTransferMark,
+  deferCategorization,
   markInternalTransfer,
   removeRule,
   resetTransactionCategory,
@@ -178,5 +179,22 @@ export async function clearTransferMarkAction(
   return stateFor(
     await clearInternalTransferMark(parsed.data.transactionId, session, getDb()),
     t.categorize.transfer.cleared,
+  );
+}
+
+export async function deferCategorizationAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = transactionIdFormSchema.safeParse({
+    transactionId: formData.get("transactionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateFor(
+    await deferCategorization(parsed.data.transactionId, session, getDb()),
+    t.guided.deferred,
   );
 }

@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { categorizeTransactionAction, deferCategorizationAction } = vi.hoisted(() => ({
+  categorizeTransactionAction: vi.fn(() => Promise.resolve({ status: "idle" as const })),
+  deferCategorizationAction: vi.fn(() => Promise.resolve({ status: "idle" as const })),
+}));
+
 vi.mock("../actions", () => ({
-  categorizeTransactionAction: vi.fn(),
+  categorizeTransactionAction,
+  deferCategorizationAction,
   setTransferMarkAction: vi.fn(),
 }));
 
@@ -12,7 +18,11 @@ import { categorizeTransactionFormSchema } from "../validation";
 import { t } from "../strings";
 import { GuidedCategorizationView } from "./guided-categorization-view";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  categorizeTransactionAction.mockClear();
+  deferCategorizationAction.mockClear();
+});
 
 function item(overrides: Partial<GuidedItemView>): GuidedItemView {
   return {
@@ -29,6 +39,7 @@ function item(overrides: Partial<GuidedItemView>): GuidedItemView {
       label: "Renda · Outras rendas",
       reason: t.guided.suggestion.credit,
     },
+    deferred: false,
     ...overrides,
   };
 }
@@ -142,20 +153,99 @@ describe("GuidedCategorizationView", () => {
     expect(screen.queryByLabelText(t.guided.patternLabel)).toBeNull();
   });
 
-  it("skips to the next one and offers to go back once every remaining one was skipped", () => {
+  it("leaves a pending one for later through the defer action, with no category chosen", async () => {
     render(
       <GuidedCategorizationView
-        {...props({ items: [item({}), item({ id: "tx-2", description: "PADARIA DO ZE" })] })}
+        {...props({
+          items: [
+            item({ id: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b", suggestion: null }),
+            item({ id: "tx-2", description: "PADARIA DO ZE" }),
+          ],
+        })}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: t.guided.skip }));
+    const deferButton = screen.getByRole("button", { name: t.guided.defer });
+    await act(() => {
+      (deferButton as HTMLButtonElement).form?.requestSubmit(deferButton);
+      return Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(deferCategorizationAction).toHaveBeenCalledTimes(1);
+    });
+    const [, formData] = deferCategorizationAction.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("transactionId")).toBe("6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b");
+  });
+
+  it("saves, not defers, when a field submits the form with Enter", async () => {
+    const { container } = render(
+      <GuidedCategorizationView
+        {...props({ items: [item({ id: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b" })] })}
+      />,
+    );
+
+    const form = container.querySelector("form");
+    const defaultButton = Array.from(form?.elements ?? []).find(
+      (element) => element instanceof HTMLButtonElement && element.type === "submit",
+    );
+    expect(defaultButton?.textContent).toBe(t.guided.save);
+    await act(() => {
+      form?.requestSubmit();
+      return Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(categorizeTransactionAction).toHaveBeenCalledTimes(1);
+    });
+    expect(deferCategorizationAction).not.toHaveBeenCalled();
+  });
+
+  it("shows the ones left for later after all the others, and counts them", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [
+            item({ deferred: true }),
+            item({ id: "tx-2", description: "PADARIA DO ZE" }),
+            item({ id: "tx-3", description: "UBER TRIP", deferred: true }),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("PADARIA DO ZE");
+    expect(screen.getByText("0 de 3 categorizadas · 2 deixadas para depois")).toBeTruthy();
+    expect(screen.queryByText(t.guided.deferredNote)).toBeNull();
+  });
+
+  it("stops when only the ones left for later remain, and goes through them on request", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [
+            item({ deferred: true }),
+            item({ id: "tx-2", description: "PADARIA DO ZE", deferred: true }),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(screen.getByText("Só faltam as 2 que você deixou para depois.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: t.guided.review }));
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("TED RECEBIDA EMPRESA X");
+    expect(screen.getByText(t.guided.deferredNote)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: t.guided.defer }));
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("PADARIA DO ZE");
 
-    fireEvent.click(screen.getByRole("button", { name: t.guided.skip }));
-    expect(screen.getByText("Você pulou as 2 que faltavam.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: t.guided.defer }));
+    expect(screen.getByText("Você deixou as 2 para depois de novo.")).toBeTruthy();
+    expect(deferCategorizationAction).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: t.guided.restart }));
+    fireEvent.click(screen.getByRole("button", { name: t.guided.reviewAgain }));
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("TED RECEBIDA EMPRESA X");
   });
 
@@ -191,12 +281,16 @@ describe("GuidedCategorizationView", () => {
     );
   });
 
-  it("uses the singular when the one transaction left was skipped", () => {
-    render(<GuidedCategorizationView {...props({})} />);
+  it("uses the singular when the one transaction left was left for later", () => {
+    render(<GuidedCategorizationView {...props({ items: [item({ deferred: true })] })} />);
 
-    fireEvent.click(screen.getByRole("button", { name: t.guided.skip }));
+    expect(screen.getByText(t.guided.onlyDeferredOne)).toBeTruthy();
+    expect(screen.getByText("0 de 1 categorizadas · 1 deixada para depois")).toBeTruthy();
 
-    expect(screen.getByText(t.guided.skippedAllOne)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: t.guided.review }));
+    fireEvent.click(screen.getByRole("button", { name: t.guided.defer }));
+
+    expect(screen.getByText(t.guided.deferredAgainOne)).toBeTruthy();
   });
 
   it("does not pre-tick a rule whose proposed text is longer than a rule allows", () => {

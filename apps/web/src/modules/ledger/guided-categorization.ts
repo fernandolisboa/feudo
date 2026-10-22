@@ -18,6 +18,7 @@ import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
 import { getDb } from "@/platform/db/client";
 
+import { createCategorizationRepository } from "./categorization-repository";
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
@@ -37,6 +38,7 @@ export type GuidedItemView = {
   pattern: string;
   similarCount: number;
   suggestion: GuidedSuggestionView | null;
+  deferred: boolean;
 };
 
 export type GuidedCategorizationProps = {
@@ -109,15 +111,17 @@ function suggestionView(
 
 // Everything /categorizar renders: the uncategorized transactions of the
 // overview's window, largest first, each with a suggestion drawn only from
-// the household's own categorized history (packages/core, no AI call). The
-// audit write (ADR-0008) happens only after the read succeeds.
+// the household's own categorized history (packages/core, no AI call), and
+// whether the household put it off for later. The audit write (ADR-0008)
+// happens only after the read succeeds.
 export async function getGuidedCategorizationProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<GuidedCategorizationProps> {
-  const [{ sinceLabel, kinds, rows }, hasAccounts] = await Promise.all([
+  const [{ sinceLabel, kinds, rows }, hasAccounts, deferredIds] = await Promise.all([
     readUncategorizedWindow(session, now),
     householdHasAccounts(getDb(), householdScope(session)),
+    createCategorizationRepository(householdScope(session)).listDeferredTransactionIds(getDb()),
   ]);
   const taxonomy = buildTaxonomyView(kinds);
   const rowById = new Map(rows.map((row) => [row.id, row]));
@@ -152,6 +156,7 @@ export async function getGuidedCategorizationProps(
           pattern: item.pattern,
           similarCount: item.similarCount,
           suggestion: suggestionView(item.suggestion, taxonomy),
+          deferred: deferredIds.has(row.id),
         },
       ];
     }),
