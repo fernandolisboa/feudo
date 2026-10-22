@@ -141,7 +141,7 @@ describe("connectProvider (integration)", () => {
       expect(outcome).toMatchObject({ status: "ok", accountsCount: 6 });
       const [stored] = await db.select().from(providerCredential);
       expect(stored?.userId).toBe(userA.id);
-      expect(stored?.ciphertext.startsWith("enc:v1:")).toBe(true);
+      expect(stored?.ciphertext.startsWith("enc:v2:")).toBe(true);
       expect(stored?.ciphertext).not.toContain(credentials.clientSecret);
       expect(stored?.ciphertext).not.toContain(credentials.clientId);
 

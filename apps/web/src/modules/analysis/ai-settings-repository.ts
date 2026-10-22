@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import type { HouseholdScope } from "@/modules/households";
 
@@ -72,6 +72,15 @@ export function createAiSettingsRepository(scope: HouseholdScope) {
               : { apiKeyCiphertext: input.apiKey.ciphertext, apiKeyLast4: input.apiKey.last4 }),
           },
         });
+    },
+
+    // Conditional on the old ciphertext so a rewrite never overwrites a key
+    // saved in the meantime; last4 and the audit columns stay as they are.
+    async replaceKeyCiphertext(db: Database, input: { from: string; to: string }): Promise<void> {
+      await db
+        .update(householdAiSettings)
+        .set({ apiKeyCiphertext: input.to })
+        .where(and(inHousehold, eq(householdAiSettings.apiKeyCiphertext, input.from)));
     },
 
     async removeKey(db: Database, updatedByUserId: string | null): Promise<void> {

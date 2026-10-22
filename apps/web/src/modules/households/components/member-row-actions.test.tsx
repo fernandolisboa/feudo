@@ -66,4 +66,32 @@ describe("MemberRowActions", () => {
 
     expect(screen.queryByRole("button", { name: t.casa.table.actions })).toBeNull();
   });
+
+  it("shows a member's name verbatim in the owner's menu and dialogs, replacement patterns included", async () => {
+    const member: HouseholdMember = {
+      ...soleOwner,
+      id: "member-2",
+      userId: "user-2",
+      name: "Bea $& $'",
+      role: "admin",
+    };
+    render(
+      <MemberRowActions
+        member={member}
+        currentUserId="user-1"
+        viewerRole="owner"
+        isLastMember={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: t.casa.table.actions }));
+    const transferItem = await screen.findByText(
+      t.casa.rowActions.transferTo.split("{name}").join("Bea $& $'"),
+    );
+    fireEvent.click(transferItem);
+
+    expect(
+      await screen.findByText(t.casa.transferDialog.title.split("{name}").join("Bea $& $'")),
+    ).not.toBeNull();
+  });
 });

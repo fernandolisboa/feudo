@@ -68,7 +68,12 @@ describe("getAiSettingsSectionProps", () => {
     getAiSettingsMock.mockResolvedValue({
       monthlyFamily: "haiku",
       onDemandFamily: "opus",
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", ENCRYPTION_KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyCiphertext: encryptSecret(
+        "sk-ant-secret",
+        ENCRYPTION_KEY,
+        HOUSEHOLD_AI_KEY_PURPOSE,
+        SESSION.householdId,
+      ),
       apiKeyLast4: "cret",
     });
 
@@ -102,6 +107,7 @@ describe("getAiSettingsSectionProps", () => {
         "sk-ant-secret",
         "a-different-key-of-32-characters",
         HOUSEHOLD_AI_KEY_PURPOSE,
+        SESSION.householdId,
       ),
       apiKeyLast4: "cret",
     });

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { initialActionState } from "@/lib/action-state";
+import { interpolate } from "@/lib/interpolate";
 import { blockWriteWhenOffline } from "@/lib/offline-writes";
 
 import { updateMemberRoleAction } from "../actions";
@@ -112,7 +113,7 @@ export function MemberRowActions({
                 setOpenDialog("transfer");
               }}
             >
-              {t.casa.rowActions.transferTo.replace("{name}", member.name)}
+              {interpolate(t.casa.rowActions.transferTo, "{name}", member.name)}
             </DropdownMenuItem>
           ) : null}
           {canRemove ? (

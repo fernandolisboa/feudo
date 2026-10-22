@@ -27,7 +27,12 @@ import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
 import { getDb, type Database } from "@/platform/db/client";
-import { decryptHouseholdApiKey, getAiSettings, householdHasUsableKey } from "./ai-settings";
+import {
+  decryptHouseholdApiKey,
+  getAiSettings,
+  householdHasUsableKey,
+  rebindLegacyApiKey,
+} from "./ai-settings";
 import {
   MIN_ATTEMPT_MS,
   type AiClient,
@@ -103,7 +108,7 @@ export async function isAnalysisEnabled(
       return true;
     }
     const settings = await getAiSettings(householdScope(session), getDb());
-    return householdHasUsableKey(settings, readEncryptionKey(env));
+    return householdHasUsableKey(settings, readEncryptionKey(env), session.householdId);
   } catch (error) {
     console.warn(`analysis: AI provider misconfigured (${errorName(error)})`);
     return false;
@@ -120,7 +125,12 @@ async function clientForHousehold(
   }
   const settings = await getAiSettings(scope, db);
   const apiKey =
-    deps.encryptionKey === null ? null : decryptHouseholdApiKey(settings, deps.encryptionKey);
+    deps.encryptionKey === null
+      ? null
+      : decryptHouseholdApiKey(settings, deps.encryptionKey, scope.householdId);
+  if (apiKey !== null && deps.encryptionKey !== null) {
+    await rebindLegacyApiKey(scope, db, settings, apiKey, deps.encryptionKey);
+  }
   const client = deps.provider.clientFor(apiKey);
   if (client === null) {
     return null;

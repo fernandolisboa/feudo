@@ -383,7 +383,7 @@ export async function getAiSettingsSectionProps(
     };
   }
   const encryptionKey = hasValidEncryptionKey(env) ? readEncryptionKey(env) : null;
-  const hasKey = householdHasUsableKey(settings, encryptionKey);
+  const hasKey = householdHasUsableKey(settings, encryptionKey, scope.householdId);
   return {
     status: "available",
     canManage,

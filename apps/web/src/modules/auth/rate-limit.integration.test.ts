@@ -41,6 +41,22 @@ describe("rate limiting on the flows the UI drives through the auth handler", ()
     });
   });
 
+  it("keys the limiter on the client IP the platform puts in x-real-ip, before x-forwarded-for", async () => {
+    await withTestDb(async () => {
+      const attempt = (ip: string) =>
+        signIn(
+          { email: "nobody@example.com", password: "wrong-password" },
+          new Headers({ "x-real-ip": ip, "x-forwarded-for": "198.51.100.7" }),
+        );
+
+      for (let i = 0; i < 3; i++) {
+        expect((await attempt("203.0.113.1")).status).toBe("invalid_credentials");
+      }
+      expect((await attempt("203.0.113.1")).status).toBe("rate_limited");
+      expect((await attempt("203.0.113.2")).status).toBe("invalid_credentials");
+    });
+  });
+
   it("refuses the 4th rapid sign-up attempt within the window", async () => {
     await withTestDb(async () => {
       const email = "sign-up-rate-limit@example.com";

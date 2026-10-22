@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { interpolateAll } from "@/lib/interpolate";
+
 import { AuthShell, ResendVerificationForm, sanitizeNextPath, t } from "@/modules/auth";
 
 export default async function VerifyEmailPage({
@@ -14,7 +16,7 @@ export default async function VerifyEmailPage({
     <AuthShell title={t.verifyEmail.title}>
       {email ? (
         <>
-          <p className="text-sm">{t.verifyEmail.body.replace("{email}", email)}</p>
+          <p className="text-sm">{interpolateAll(t.verifyEmail.body, { email })}</p>
           <div className="mt-4">
             <ResendVerificationForm email={email} next={nextPath} />
           </div>

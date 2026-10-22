@@ -1,9 +1,16 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
 
 const ENVELOPE_PREFIX = "enc";
-const ENVELOPE_VERSION = "v1";
+// v2 binds each ciphertext to the row it belongs to (GCM additional
+// authenticated data); v1, written before that, is still read so existing
+// rows keep working, and isLegacyEnvelope tells callers to rewrite it.
+const ENVELOPE_VERSION = "v2";
+const LEGACY_ENVELOPE_VERSION = "v1";
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12;
+// Pinned on both sides: without it Node accepts a tag cut down to 4 bytes,
+// which a forger can brute-force.
+const AUTH_TAG_BYTES = 16;
 const KEY_BYTES = 32;
 const KEY_ID_PREFIX = "feudo:key-id:";
 const KEY_ID_LENGTH = 8;
@@ -49,9 +56,19 @@ function deriveAesKey(encryptionKey: string, purpose: string): Buffer {
   return Buffer.from(hkdfSync("sha256", encryptionKey, "", purpose, KEY_BYTES));
 }
 
-export function encryptSecret(plaintext: string, encryptionKey: string, purpose: string): string {
+// `boundTo` names the row's owner (the user id or the household id): a
+// ciphertext copied into another owner's row fails to decrypt there.
+export function encryptSecret(
+  plaintext: string,
+  encryptionKey: string,
+  purpose: string,
+  boundTo: string,
+): string {
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv(ALGORITHM, deriveAesKey(encryptionKey, purpose), iv);
+  const cipher = createCipheriv(ALGORITHM, deriveAesKey(encryptionKey, purpose), iv, {
+    authTagLength: AUTH_TAG_BYTES,
+  });
+  cipher.setAAD(Buffer.from(boundTo, "utf8"));
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [
@@ -64,9 +81,23 @@ export function encryptSecret(plaintext: string, encryptionKey: string, purpose:
   ].join(":");
 }
 
-export function decryptSecret(envelope: string, encryptionKey: string, purpose: string): string {
+export function isLegacyEnvelope(envelope: string): boolean {
+  return envelope.startsWith(`${ENVELOPE_PREFIX}:${LEGACY_ENVELOPE_VERSION}:`);
+}
+
+export function decryptSecret(
+  envelope: string,
+  encryptionKey: string,
+  purpose: string,
+  boundTo: string,
+): string {
   const parts = envelope.split(":");
-  if (parts.length !== 6 || parts[0] !== ENVELOPE_PREFIX || parts[1] !== ENVELOPE_VERSION) {
+  const version = parts[1];
+  if (
+    parts.length !== 6 ||
+    parts[0] !== ENVELOPE_PREFIX ||
+    (version !== ENVELOPE_VERSION && version !== LEGACY_ENVELOPE_VERSION)
+  ) {
     throw new MalformedCiphertextError();
   }
   const [, , keyId, ivEncoded, tagEncoded, ciphertextEncoded] = parts;
@@ -86,7 +117,11 @@ export function decryptSecret(envelope: string, encryptionKey: string, purpose: 
       ALGORITHM,
       deriveAesKey(encryptionKey, purpose),
       Buffer.from(ivEncoded, "base64url"),
+      { authTagLength: AUTH_TAG_BYTES },
     );
+    if (version === ENVELOPE_VERSION) {
+      decipher.setAAD(Buffer.from(boundTo, "utf8"));
+    }
     decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
     return Buffer.concat([
       decipher.update(Buffer.from(ciphertextEncoded, "base64url")),

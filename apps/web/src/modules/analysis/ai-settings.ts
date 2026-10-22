@@ -1,7 +1,12 @@
 import type { HouseholdScope } from "@/modules/households";
 
 import { errorName } from "@/lib/error-name";
-import { decryptSecret, encryptSecret, HOUSEHOLD_AI_KEY_PURPOSE } from "@/platform/crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  HOUSEHOLD_AI_KEY_PURPOSE,
+  isLegacyEnvelope,
+} from "@/platform/crypto";
 import type { Database } from "@/platform/db/client";
 import type { AiFamily } from "./ai-client";
 import { createAiSettingsRepository, type AiSettings } from "./ai-settings-repository";
@@ -16,12 +21,21 @@ const LAST4_LENGTH = 4;
 // longer be opened (a rotated ENCRYPTION_KEY, a tampered row) is treated as
 // "no key" rather than thrown: the household simply has no analyst until it
 // registers a new one, instead of every reading crashing.
-export function decryptHouseholdApiKey(settings: AiSettings, encryptionKey: string): string | null {
+export function decryptHouseholdApiKey(
+  settings: AiSettings,
+  encryptionKey: string,
+  householdId: string,
+): string | null {
   if (settings.apiKeyCiphertext === null) {
     return null;
   }
   try {
-    return decryptSecret(settings.apiKeyCiphertext, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE);
+    return decryptSecret(
+      settings.apiKeyCiphertext,
+      encryptionKey,
+      HOUSEHOLD_AI_KEY_PURPOSE,
+      householdId,
+    );
   } catch (error) {
     console.warn(`analysis: could not decrypt the household's Anthropic key (${errorName(error)})`);
     return null;
@@ -33,8 +47,36 @@ export function decryptHouseholdApiKey(settings: AiSettings, encryptionKey: stri
 // row) counts as no key everywhere it is checked — the gate on Visão
 // geral/Reserva/Análises, Casa's hasKey/last4 line, the actions and the
 // cron — never just "•••• abcd" shown as if the key still worked.
-export function householdHasUsableKey(settings: AiSettings, encryptionKey: string | null): boolean {
-  return encryptionKey !== null && decryptHouseholdApiKey(settings, encryptionKey) !== null;
+export function householdHasUsableKey(
+  settings: AiSettings,
+  encryptionKey: string | null,
+  householdId: string,
+): boolean {
+  return (
+    encryptionKey !== null && decryptHouseholdApiKey(settings, encryptionKey, householdId) !== null
+  );
+}
+
+// A key stored before ciphertexts were bound to their household is rewritten
+// the first time a reading opens it. Best effort: the key was read either way.
+export async function rebindLegacyApiKey(
+  scope: HouseholdScope,
+  db: Database,
+  settings: AiSettings,
+  apiKey: string,
+  encryptionKey: string,
+): Promise<void> {
+  if (settings.apiKeyCiphertext === null || !isLegacyEnvelope(settings.apiKeyCiphertext)) {
+    return;
+  }
+  try {
+    await createAiSettingsRepository(scope).replaceKeyCiphertext(db, {
+      from: settings.apiKeyCiphertext,
+      to: encryptSecret(apiKey, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE, scope.householdId),
+    });
+  } catch (error) {
+    console.warn(`analysis: could not rebind the household's Anthropic key (${errorName(error)})`);
+  }
 }
 
 export type SaveAiSettingsCommand = {
@@ -91,7 +133,12 @@ export async function saveAiSettings(
       return { status: "unavailable" };
     }
     apiKey = {
-      ciphertext: encryptSecret(input.apiKey, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE),
+      ciphertext: encryptSecret(
+        input.apiKey,
+        encryptionKey,
+        HOUSEHOLD_AI_KEY_PURPOSE,
+        scope.householdId,
+      ),
       last4: input.apiKey.slice(-LAST4_LENGTH),
     };
   }

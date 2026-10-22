@@ -5,7 +5,12 @@ import path from "node:path";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
-const nextConfig: NextConfig = {};
+import { STATIC_SECURITY_HEADERS } from "./src/platform/security-headers";
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  headers: () => Promise.resolve([{ source: "/:path*", headers: [...STATIC_SECURITY_HEADERS] }]),
+};
 
 const publicDir = path.join(process.cwd(), "public");
 

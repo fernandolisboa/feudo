@@ -3,20 +3,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const saveMock = vi.hoisted(() => vi.fn());
 const removeKeyMock = vi.hoisted(() => vi.fn());
 const reserveMock = vi.hoisted(() => vi.fn());
+const replaceKeyCiphertextMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./ai-settings-repository", () => ({
-  createAiSettingsRepository: () => ({ save: saveMock, removeKey: removeKeyMock }),
+  createAiSettingsRepository: () => ({
+    save: saveMock,
+    removeKey: removeKeyMock,
+    replaceKeyCiphertext: replaceKeyCiphertextMock,
+  }),
 }));
 vi.mock("./key-verification-attempts", () => ({
   createKeyVerificationAttemptRepository: () => ({ reserve: reserveMock }),
 }));
 
-import { encryptSecret, HOUSEHOLD_AI_KEY_PURPOSE } from "@/platform/crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  HOUSEHOLD_AI_KEY_PURPOSE,
+  isLegacyEnvelope,
+} from "@/platform/crypto";
+import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
 
 import type { AiProvider } from "./provider";
 import {
   decryptHouseholdApiKey,
   householdHasUsableKey,
+  rebindLegacyApiKey,
   removeAiKey,
   saveAiSettings,
 } from "./ai-settings";
@@ -24,6 +36,7 @@ import {
 const SCOPE = { householdId: "household-1" };
 const DB = {} as never;
 const KEY = "unit-test-encryption-key-with-at-least-32-chars";
+const HOUSEHOLD = "household-1";
 
 function provider(verifyKey: AiProvider["verifyKey"]): AiProvider {
   return { verifyKey, clientFor: () => null };
@@ -33,22 +46,27 @@ beforeEach(() => {
   saveMock.mockReset().mockResolvedValue(undefined);
   removeKeyMock.mockReset().mockResolvedValue(undefined);
   reserveMock.mockReset().mockResolvedValue({ status: "reserved" });
+  replaceKeyCiphertextMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("decryptHouseholdApiKey", () => {
   it("returns null when the household has no key", () => {
     expect(
-      decryptHouseholdApiKey({ apiKeyCiphertext: null, apiKeyLast4: null } as never, KEY),
+      decryptHouseholdApiKey(
+        { apiKeyCiphertext: null, apiKeyLast4: null } as never,
+        KEY,
+        HOUSEHOLD,
+      ),
     ).toBeNull();
   });
 
   it("round-trips a stored key", () => {
     const settings = {
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE, HOUSEHOLD),
       apiKeyLast4: "cret",
     } as never;
 
-    expect(decryptHouseholdApiKey(settings, KEY)).toBe("sk-ant-secret");
+    expect(decryptHouseholdApiKey(settings, KEY, HOUSEHOLD)).toBe("sk-ant-secret");
   });
 
   it("treats a ciphertext the current key cannot open as no key, not a crash", () => {
@@ -58,30 +76,93 @@ describe("decryptHouseholdApiKey", () => {
         "sk-ant-secret",
         "a-different-key-of-32-chars!!!!!",
         HOUSEHOLD_AI_KEY_PURPOSE,
+        HOUSEHOLD,
       ),
       apiKeyLast4: "cret",
     } as never;
 
-    expect(decryptHouseholdApiKey(settings, KEY)).toBeNull();
+    expect(decryptHouseholdApiKey(settings, KEY, HOUSEHOLD)).toBeNull();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
+describe("rebindLegacyApiKey", () => {
+  it("rewrites a key stored before the household binding, conditionally on the old ciphertext", async () => {
+    const legacy = encryptLegacySecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE);
+    const settings = { apiKeyCiphertext: legacy, apiKeyLast4: "cret" } as never;
+
+    await rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY);
+
+    expect(replaceKeyCiphertextMock).toHaveBeenCalledTimes(1);
+    const [, input] = replaceKeyCiphertextMock.mock.calls[0] as [
+      unknown,
+      { from: string; to: string },
+    ];
+    expect(input.from).toBe(legacy);
+    expect(isLegacyEnvelope(input.to)).toBe(false);
+    expect(decryptSecret(input.to, KEY, HOUSEHOLD_AI_KEY_PURPOSE, SCOPE.householdId)).toBe(
+      "sk-ant-secret",
+    );
+  });
+
+  it("leaves a key that is already bound alone", async () => {
+    const settings = {
+      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE, HOUSEHOLD),
+      apiKeyLast4: "cret",
+    } as never;
+
+    await rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY);
+
+    expect(replaceKeyCiphertextMock).not.toHaveBeenCalled();
+  });
+
+  it("swallows a failed rewrite: the key was read either way", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    replaceKeyCiphertextMock.mockRejectedValue(new Error("db down"));
+    const settings = {
+      apiKeyCiphertext: encryptLegacySecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyLast4: "cret",
+    } as never;
+
+    await expect(
+      rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY),
+    ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
 });
 
 describe("householdHasUsableKey", () => {
-  it("is false with no encryption key at all (the deploy cannot open anything)", () => {
+  it("is false for a key copied from another household's row", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const settings = {
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyCiphertext: encryptSecret(
+        "sk-ant-secret",
+        KEY,
+        HOUSEHOLD_AI_KEY_PURPOSE,
+        "household-2",
+      ),
       apiKeyLast4: "cret",
     } as never;
 
-    expect(householdHasUsableKey(settings, null)).toBe(false);
+    expect(householdHasUsableKey(settings, KEY, HOUSEHOLD)).toBe(false);
+    warn.mockRestore();
+  });
+
+  it("is false with no encryption key at all (the deploy cannot open anything)", () => {
+    const settings = {
+      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE, HOUSEHOLD),
+      apiKeyLast4: "cret",
+    } as never;
+
+    expect(householdHasUsableKey(settings, null, HOUSEHOLD)).toBe(false);
   });
 
   it("is false when the household registered no key", () => {
-    expect(householdHasUsableKey({ apiKeyCiphertext: null, apiKeyLast4: null } as never, KEY)).toBe(
-      false,
-    );
+    expect(
+      householdHasUsableKey({ apiKeyCiphertext: null, apiKeyLast4: null } as never, KEY, HOUSEHOLD),
+    ).toBe(false);
   });
 
   it("is false for a ciphertext this deploy's key cannot open, same as no key", () => {
@@ -91,21 +172,22 @@ describe("householdHasUsableKey", () => {
         "sk-ant-secret",
         "a-different-key-of-32-chars!!!!!",
         HOUSEHOLD_AI_KEY_PURPOSE,
+        HOUSEHOLD,
       ),
       apiKeyLast4: "cret",
     } as never;
 
-    expect(householdHasUsableKey(settings, KEY)).toBe(false);
+    expect(householdHasUsableKey(settings, KEY, HOUSEHOLD)).toBe(false);
     warn.mockRestore();
   });
 
   it("is true for a key this deploy can decrypt", () => {
     const settings = {
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE),
+      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE, HOUSEHOLD),
       apiKeyLast4: "cret",
     } as never;
 
-    expect(householdHasUsableKey(settings, KEY)).toBe(true);
+    expect(householdHasUsableKey(settings, KEY, HOUSEHOLD)).toBe(true);
   });
 });
 

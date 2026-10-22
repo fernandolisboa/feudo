@@ -7,3 +7,9 @@ minimumReleaseAge: 4320
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# Transitive build and test tools still resolved inside vulnerable ranges by
+# their parents (pnpm audit --prod, issue #124).
+overrides:
+  "browserslist@<4.28.7": "^4.28.7"
+  "vite@>=8.2.0 <8.2.4": "8.3.4"

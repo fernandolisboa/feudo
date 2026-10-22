@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { interpolateAll } from "@/lib/interpolate";
+
 import {
   AuthShell,
   getCurrentSession,
@@ -54,9 +56,10 @@ export default async function InviteAcceptPage({ params }: { params: Promise<{ i
   return (
     <AuthShell title={t.inviteAcceptPage.title}>
       <p className="text-sm">
-        {t.inviteAcceptPage.description
-          .replace("{householdName}", preview.householdName)
-          .replace("{role}", t.casa.roles[preview.role])}
+        {interpolateAll(t.inviteAcceptPage.description, {
+          householdName: preview.householdName,
+          role: t.casa.roles[preview.role],
+        })}
       </p>
       <div className="mt-4">
         <AcceptInvitationButton invitationId={id} />
