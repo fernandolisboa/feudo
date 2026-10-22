@@ -264,6 +264,13 @@ window, since it would only be re-testing the library's own configuration option
 
 Magic-link tokens are stored `storeToken: "hashed"` (Better Auth's own default is `"plain"`): the
 `verification` row holds a hash, not the token a phishing read of the database could replay.
+Password-reset tokens get the same protection through `verification.storeIdentifier` (ADR-0008,
+#117): the `reset-password:` override stores `reset-password-sha256:` followed by the base64url
+SHA-256 of the full identifier, so `onPasswordReset` below can still find the rows and the token
+cannot be read back. Better Auth hashes the incoming token the same way on lookup and, on a miss,
+retries the plain `reset-password:<token>`, so a link issued before the change keeps working until it
+expires (1 hour). That retry is why the stored prefix differs from `reset-password:`: under the same
+prefix, submitting a stored digest as the token would match its row and reset the password.
 
 Every request for a magic link or a password reset writes a `verification` row, including for an
 address with no sign-up (`disableSignUp`/enumeration protection above), and Better Auth never prunes
@@ -357,7 +364,8 @@ not Feudo code). `/request-password-reset` already returns the same generic mess
 an unknown email (Better Auth's own enumeration protection, simulating the verification-token
 lookup either way).
 `emailAndPassword.onPasswordReset` deletes every other outstanding `reset-password:*` verification
-row for that user directly (there is no `internalAdapter` method to look rows up by value, only by
+row for that user directly (by its `reset-password-sha256:` prefix, or `reset-password:` for a row from before the
+hashing; there is no `internalAdapter` method to look rows up by value, only by
 exact identifier), so a second unused reset link from an earlier request can't set the password
 again after this one already did.
 
@@ -444,14 +452,31 @@ own `runInBackgroundOrAwait` unmodified and are still awaited inline, since that
 set globally — the timing floor only covers the two paths above. Invite delivery failures are
 surfaced to the inviting household instead: see "Resend" in `docs/runbooks/households.md`.
 
-`/sign-in/magic-link` and `/reset-password` (the POST that submits the new password) get a tight
-`rateLimit.customRules` entry (10s / 3 requests) in `options.ts`: the magic-link plugin's own
-default is looser (60s / 5), and `/reset-password` submission — unlike `/request-password-reset` —
-isn't covered by any of Better Auth's built-in special rules at all. `/magic-link/verify` and
+A `rateLimit.customRules` entry replaces the plugin's or Better Auth's own rule for that path; it
+never adds to it. `/sign-in/magic-link` is pinned at the magic-link plugin's own 60s / 5 per IP (a
+10s / 3 rule used to sit here and allowed about 18 a minute, #118). `/reset-password` (the POST that
+submits the new password) gets 10s / 3, since unlike `/request-password-reset` it isn't covered by
+any of Better Auth's built-in special rules at all. `/magic-link/verify` and
 `/reset-password/*` (the GET Better Auth's own email links point at) get a much looser ceiling (10s
 / 20) instead: rate limiting runs ahead of any route handler, so a 429 on a GET the user's browser
 navigates to would render as raw JSON, not the app's error page — the token those routes carry is
 already single-use, so a generous ceiling costs nothing.
+
+Every limit above is per IP. Per recipient, `reserveEmailQuota(…, "auth")` (`email-quota.ts`) allows at most 5
+auth emails (verification, magic link, password reset) per account per hour, counted on the user row
+(`auth_email_window_started_at`, `auth_email_count`, migration `0031`) in one `UPDATE`, so concurrent
+requests serialize on the row lock. The window opens with the first send and closes an hour later; a
+refused attempt still counts but never moves the window. Over the limit the request answers exactly
+as if it sent (no existence oracle) and nothing is sent: magic link and reset check the quota inside
+the scheduled send, after the response, and verification checks it before its awaited send.
+Invitation emails have their own per-inviter ceiling (`docs/runbooks/households.md`).
+
+Known trade-offs: the quota is shared by all three kinds and counts anonymous requests, so someone
+who knows an address can spend its 5 an hour and hold back that account's magic links and resets
+for the rest of the window; password sign-in is unaffected, and the ticket (#118) chose this over an
+unbounded inbox. The checks that refuse a second household (`beforeCreateOrganization`) and count
+invitations run before Better Auth's insert without a lock, so concurrent calls can overshoot by the
+number in flight; the organization limit (20) and the IP limiter still bound them.
 
 ## Email copy
 

@@ -218,6 +218,13 @@
       "when": 1792162198147,
       "tag": "0030_household_ai_settings_and_key_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792684570730,
+      "tag": "0031_user_email_quotas",
+      "breakpoints": true
     }
   ]
 }

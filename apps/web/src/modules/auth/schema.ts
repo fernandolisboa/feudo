@@ -30,6 +30,15 @@ export const user = pgTable("user", {
   // Owned by the privacy slice: when the other members were last emailed
   // about this user's deletion, so a request-cancel loop cannot flood them.
   deletionNoticesSentAt: timestamp("deletion_notices_sent_at", { withTimezone: true }),
+  // Hourly email ceilings (auth/email-quota.ts): the start of each one-hour
+  // window and how many sends it has seen. auth counts emails this user
+  // receives; invitation counts invitation emails this user sends.
+  authEmailWindowStartedAt: timestamp("auth_email_window_started_at", { withTimezone: true }),
+  authEmailCount: integer("auth_email_count").notNull().default(0),
+  invitationEmailWindowStartedAt: timestamp("invitation_email_window_started_at", {
+    withTimezone: true,
+  }),
+  invitationEmailCount: integer("invitation_email_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -166,8 +175,8 @@ export const invitation = pgTable(
     // Set by sendInvitationEmail on every send that actually calls the
     // provider — initial and resend alike, success or failure — never on a
     // row it didn't touch. households.resendInvitation's own minimum-interval
-    // guard and the per-inviter hourly ceiling both read this column instead
-    // of createdAt, which a resend never advances.
+    // guard reads this column instead of createdAt, which a resend never
+    // advances.
     lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
   },
   (table) => [

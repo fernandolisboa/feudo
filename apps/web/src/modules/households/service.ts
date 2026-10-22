@@ -83,6 +83,11 @@ export async function createHousehold(
     if (error instanceof APIError && error.status === "UNAUTHORIZED") {
       return { status: "unauthenticated" };
     }
+    // auth's beforeCreateOrganization holds the same rule for every caller;
+    // a concurrent submit can pass the check above and meet it there.
+    if (error instanceof APIError && error.message === "already_has_household") {
+      return { status: "already_has_household" };
+    }
     await deleteOrphanedOrganizationBySlug(db, slug, requestHeaders);
     return { status: "failed" };
   }

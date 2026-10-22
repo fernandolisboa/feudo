@@ -36,12 +36,11 @@ function makeChain(result: unknown) {
 }
 
 // Mirrors resendInvitation's select sequence up to the stray-row branch:
-// the eligible pending row, recentInvitationCount, the still-pending
-// re-check, then the stray-row lookup itself returning one row.
+// the eligible pending row, the still-pending re-check, then the stray-row
+// lookup itself returning one row.
 function buildDb(): Database {
   const results = [
     [{ email: "member@example.com", role: "member", lastSentAt: null }],
-    [{ total: 0 }],
     [{ status: "pending" }],
     [{ id: "stray-invitation-id" }],
   ];

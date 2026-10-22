@@ -4,6 +4,8 @@ import { invitation } from "./schema";
 
 import type { Database } from "@/platform/db/client";
 
+export const INVITATION_RATE_LIMITED_CODE = "INVITATION_RATE_LIMITED";
+
 export async function hasPendingInvitation(db: Database, email: string): Promise<boolean> {
   const rows = await db
     .select({ id: invitation.id })

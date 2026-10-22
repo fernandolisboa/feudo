@@ -22,6 +22,7 @@ export { SignOutMenuItem } from "./components/sign-out-menu-item";
 export { SignUpForm } from "./components/sign-up-form";
 export { findLastFakeSentEmail } from "./email/fake-email-repository";
 export { isFakeEmailProvider, readAuthBaseUrl } from "./env";
+export { INVITATION_RATE_LIMITED_CODE } from "./invitations";
 export type { CurrentSession, PendingAccountDeletion } from "./session";
 export {
   ACCOUNT_DELETION_PENDING_ROUTE,
