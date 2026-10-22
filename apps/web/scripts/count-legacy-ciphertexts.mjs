@@ -1,5 +1,6 @@
 import { Pool } from "@neondatabase/serverless";
 
+import { LEGACY_ENVELOPE_PATTERN } from "../src/platform/crypto.ts";
 import { assertDatabaseConnectionAllowed } from "../src/platform/db/connection-guard.ts";
 import { DatabaseConnectionNotAllowedError } from "../src/platform/db/errors.ts";
 
@@ -9,12 +10,11 @@ import { DatabaseConnectionNotAllowedError } from "../src/platform/db/errors.ts"
 const COUNTS = [
   {
     label: "provider_credential",
-    query: "select count(*)::int as n from provider_credential where ciphertext like 'enc:v1:%'",
+    query: "select count(*)::int as n from provider_credential where ciphertext like $1",
   },
   {
     label: "household_ai_settings",
-    query:
-      "select count(*)::int as n from household_ai_settings where api_key_ciphertext like 'enc:v1:%'",
+    query: "select count(*)::int as n from household_ai_settings where api_key_ciphertext like $1",
   },
 ];
 
@@ -30,7 +30,7 @@ async function main() {
   try {
     await client.query("begin transaction read only");
     for (const { label, query } of COUNTS) {
-      const { rows } = await client.query(query);
+      const { rows } = await client.query(query, [LEGACY_ENVELOPE_PATTERN]);
       console.log(`${label} enc:v1 rows: ${String(rows[0].n)}`);
     }
     await client.query("rollback");
