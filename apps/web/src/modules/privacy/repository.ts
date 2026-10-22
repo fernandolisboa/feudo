@@ -1,7 +1,8 @@
-import { and, asc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, lte, notExists, or } from "drizzle-orm";
 
 import type { CurrentSession, PendingAccountDeletion } from "@/modules/auth";
-import { session as sessionTable, user } from "@/modules/auth/schema";
+import { member, session as sessionTable, user } from "@/modules/auth/schema";
+import { bankConnection, providerCredential } from "@/modules/sync/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
@@ -81,6 +82,38 @@ export async function lockAccountDueForDeletion(
 
 export async function deleteUser(tx: DatabaseOrTransaction, userId: string): Promise<void> {
   await tx.delete(user).where(eq(user.id, userId));
+}
+
+// Job-only enumeration (ADR-0001): read only by runUnverifiedSignUpPruneStep.
+// The guards are defensive, since an unverified user cannot sign in to join a
+// household or connect a bank; they keep the job from ever erasing a user
+// that holds anything.
+export async function deleteUnverifiedSignUpsCreatedBefore(
+  db: Database,
+  cutoff: Date,
+): Promise<number> {
+  const result = await db
+    .delete(user)
+    .where(
+      and(
+        eq(user.emailVerified, false),
+        lt(user.createdAt, cutoff),
+        notExists(db.select({ id: member.id }).from(member).where(eq(member.userId, user.id))),
+        notExists(
+          db
+            .select({ id: bankConnection.id })
+            .from(bankConnection)
+            .where(eq(bankConnection.userId, user.id)),
+        ),
+        notExists(
+          db
+            .select({ id: providerCredential.id })
+            .from(providerCredential)
+            .where(eq(providerCredential.userId, user.id)),
+        ),
+      ),
+    );
+  return result.rowCount ?? 0;
 }
 
 export type ExportUserRow = {

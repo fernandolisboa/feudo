@@ -10,6 +10,8 @@ vi.mock("@/modules/market-data", () => ({
 
 vi.mock("@/modules/auth", () => ({
   runDailyPruneStep: vi.fn(),
+  runSessionPruneStep: vi.fn(),
+  runRateLimitPruneStep: vi.fn(),
 }));
 
 vi.mock("@/modules/households", () => ({
@@ -19,6 +21,7 @@ vi.mock("@/modules/households", () => ({
 
 vi.mock("@/modules/privacy", () => ({
   runAccountPurgeStep: vi.fn(),
+  runUnverifiedSignUpPruneStep: vi.fn(),
 }));
 
 vi.mock("@/modules/sync", () => ({
@@ -39,10 +42,14 @@ vi.mock("@/modules/reserve", () => ({
 
 const { GET } = await import("./route");
 const { runDailyRefreshStep } = await import("@/modules/market-data");
-const { runDailyPruneStep: runAuthPruneStep } = await import("@/modules/auth");
+const {
+  runDailyPruneStep: runAuthPruneStep,
+  runSessionPruneStep,
+  runRateLimitPruneStep,
+} = await import("@/modules/auth");
 const { runDailyPruneStep: runHouseholdsPruneStep, runHouseholdPurgeStep } =
   await import("@/modules/households");
-const { runAccountPurgeStep } = await import("@/modules/privacy");
+const { runAccountPurgeStep, runUnverifiedSignUpPruneStep } = await import("@/modules/privacy");
 const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
 const { runDailyPruneStep: runAuditPruneStep } = await import("@/modules/audit");
 const { runDailyPruneStep: runAnalysisPruneStep } = await import("@/modules/analysis");
@@ -62,7 +69,10 @@ describe("GET /api/cron/daily", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-secret";
     vi.mocked(runAuthPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runSessionPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runRateLimitPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runHouseholdsPruneStep).mockResolvedValue({ deleted: 0 });
+    vi.mocked(runUnverifiedSignUpPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAuditPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAnalysisPruneStep).mockResolvedValue({ deleted: 0 });
@@ -163,6 +173,66 @@ describe("GET /api/cron/daily", () => {
     expect(body.ok).toBe(false);
     expect(body.steps.pruneInvitations).toEqual({ error: "Error" });
     expect(body.steps.pruneVerification).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the session prune step fails", async () => {
+    vi.mocked(runSessionPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneSessions: { error: string };
+        pruneInvitations: { deleted: number };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneSessions).toEqual({ error: "Error" });
+    expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the rate-limit prune step fails", async () => {
+    vi.mocked(runRateLimitPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneRateLimits: { error: string };
+        pruneInvitations: { deleted: number };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneRateLimits).toEqual({ error: "Error" });
+    expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
+  });
+
+  it("returns 500 with an error summary and still reports the other steps when the unverified sign-up prune step fails", async () => {
+    vi.mocked(runUnverifiedSignUpPruneStep).mockResolvedValue({ error: "Error" });
+
+    const response = await callCronRoute();
+
+    expect(response.status).toBe(500);
+    const body = (await response.json()) as {
+      ok: boolean;
+      steps: {
+        marketData: { ok: boolean; results: unknown[] };
+        pruneUnverifiedSignUps: { error: string };
+        pruneConsents: { deleted: number };
+      };
+    };
+    expect(body.ok).toBe(false);
+    expect(body.steps.pruneUnverifiedSignUps).toEqual({ error: "Error" });
+    expect(body.steps.pruneConsents).toEqual({ deleted: 0 });
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 

@@ -39,6 +39,8 @@ export {
   TERMS_VERSION,
 } from "./terms";
 export { revokeUserSessions } from "./revoke-sessions";
+export { runRateLimitPruneStep } from "./rate-limit-prune";
+export { runSessionPruneStep } from "./session-prune";
 export type { EmailCopy } from "./email/render";
 export { renderEmail } from "./email/render";
 export { getEmailSender } from "./email/select";

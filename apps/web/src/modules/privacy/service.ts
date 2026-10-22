@@ -7,6 +7,7 @@ import {
   type PendingAccountDeletion,
 } from "@/modules/auth";
 import {
+  deleteInvitationsForAccountPurge,
   planMembershipDepartures,
   releaseMembershipsForAccountPurge,
   timeZoneForDepartingUser,
@@ -172,8 +173,9 @@ export async function cancelAccountDeletion(
 
 // The hard delete, in one transaction per user (ADR-0001, ADR-0008):
 // ownership passes on and households left empty go, then the user's
-// connections (with their accounts and transactions), then the user row and
-// everything that cascades from it.
+// connections (with their accounts and transactions), then the invitations
+// sent to their address, then the user row and everything that cascades from
+// it.
 export async function purgeAccount(
   db: Database,
   userId: string,
@@ -185,6 +187,7 @@ export async function purgeAccount(
     }
     await releaseMembershipsForAccountPurge(tx, userId);
     await deleteConnectionsForAccountPurge(tx, userId);
+    await deleteInvitationsForAccountPurge(tx, userId);
     await deleteUser(tx, userId);
     return "purged";
   });
