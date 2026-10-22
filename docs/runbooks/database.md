@@ -5,7 +5,8 @@ environment:
 
 - **`feudo` (production)**: the only place production personal data lives. Vercel Production env
   points at it. Never reset by CI or by hand. The only CI job allowed near it is
-  `migrate-production` (see below), which only ever runs `drizzle-kit migrate`.
+  `migrate-production` (see below), which only ever runs `drizzle-kit migrate` and, until #152
+  closes, one read-only count.
 - **`feudo-preview` (preview)**: a separate, free Neon project used by both Vercel Preview and
   Development env and by CI. It never receives a copy of production data — there is no restore
   step between the two projects — so it structurally cannot leak production personal data
@@ -132,6 +133,11 @@ only workflow that runs on push:
    matches `DATABASE_PRODUCTION_HOST` (see "The reset guard" below), so even a copy-pasted step
    from the `integration` job would fail closed instead
    of dropping the production schema.
+4. Until #152 closes: `pnpm --filter @feudo/web db:count-legacy-ciphertexts` prints how many
+   `provider_credential` and `household_ai_settings` rows still hold an `enc:v1` ciphertext, inside
+   a read-only transaction, counts only. The workflow also accepts `workflow_dispatch` so the count
+   can be re-run after the daily sweep; a dispatched run re-applies migrations, which is a no-op.
+   The step, the script and the dispatch trigger go away with the v1-removal PR.
 
 The workflow holds a `production-db` concurrency group with `cancel-in-progress: false`, separate
 from the preview project's `preview-db` group, so two pushes to `main` in quick succession queue
@@ -205,11 +211,12 @@ shares its host policy with the reset guard (`apps/web/src/platform/db/host-poli
 - requires `DATABASE_URL` to parse and, after `databaseHost()` normalisation, its host to equal
   `DATABASE_RESET_ALLOWED_HOST`;
 - refuses the host that equals `DATABASE_PRODUCTION_HOST` even when it is also the allowed host,
-  except in two places that opt in: `getDb()` when both `VERCEL_ENV` and `NODE_ENV` are
+  except in the places that opt in: `getDb()` when both `VERCEL_ENV` and `NODE_ENV` are
   `production` (the deployed app; a production env file pulled into `next dev` still fails, since
   `next dev` runs with `NODE_ENV=development`), and `drizzle.config.ts` for the `migrate` command
   only (`migrate-production` and the manual
-  emergency migration). `drizzle-kit push`, `drop`, `check` or `studio` never admit the production
+  emergency migration), and, until #152 closes, `scripts/count-legacy-ciphertexts.mjs` (read-only,
+  still refuses a host matching neither variable). `drizzle-kit push`, `drop`, `check` or `studio` never admit the production
   host.
 
 Because the guard never skips, every environment declares its host: Vercel Production carries
