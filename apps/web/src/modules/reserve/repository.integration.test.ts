@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
 import { organization } from "@/modules/auth/schema";
+import { bankAccount } from "@/modules/sync/schema";
 import { householdScope } from "@/modules/households";
 import { withTwoHouseholds } from "@/modules/households/test/with-two-households";
 import {
@@ -18,6 +19,7 @@ import {
   createReserveTargetRecordRepository,
   listHouseholdIdsForMonthClose,
 } from "./repository";
+import { reserveMark } from "./schema";
 import type { HouseholdScope } from "@/modules/households";
 
 const RECORD = {
@@ -348,6 +350,34 @@ describe("reserve mark repository isolation (integration)", () => {
       expect(await repository.set(db, { accountId: "missing", ...MARK }, userA.id)).toBe(
         "not_found",
       );
+    });
+  });
+
+  it("leaves out a closed position and refuses to mark it, keeping its mark (#102)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const scopeA = householdScope(userA.session);
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: scopeA,
+        accounts: [
+          seedAccount({ providerAccountId: "checking" }),
+          seedAccount({ providerAccountId: "cdb", type: "investment", name: "CDB" }),
+        ],
+      });
+      const cdb = seeded.accountIdsByProvider.get("cdb") ?? "";
+      const repository = createReserveMarkRepository(scopeA);
+      await repository.set(db, { accountId: cdb, ...MARK }, userA.id);
+
+      await db
+        .update(bankAccount)
+        .set({ balanceCentavos: 0, closedAt: new Date() })
+        .where(eq(bankAccount.id, cdb));
+
+      expect((await repository.listPositions(db)).map((row) => row.name)).toEqual([
+        "Conta corrente",
+      ]);
+      expect(await repository.set(db, { accountId: cdb, ...MARK }, userA.id)).toBe("not_found");
+      const [mark] = await db.select().from(reserveMark).where(eq(reserveMark.accountId, cdb));
+      expect(mark?.isReserve).toBe(true);
     });
   });
 

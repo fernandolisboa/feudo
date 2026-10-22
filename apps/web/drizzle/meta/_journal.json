@@ -225,6 +225,13 @@
       "when": 1792684570730,
       "tag": "0031_user_email_quotas",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792690490654,
+      "tag": "0032_bank_account_closed_at",
+      "breakpoints": true
     }
   ]
 }

@@ -40,13 +40,20 @@ export function describeFreshness(syncedAt: Date, now: Date, timeZone: string): 
 // account's own stamp: an account the provider stops listing (a fully
 // redeemed position) keeps its old stamp forever, and no sync could ever
 // clear a warning keyed on it. A connection that never synced falls back to
-// the account's stamp.
+// the account's stamp. A closed account has nothing left to refresh.
 export function isStale(
-  account: { syncedAt: Date; connectionSyncedAt: Date | null },
+  account: { syncedAt: Date; closedAt: Date | null; connectionSyncedAt: Date | null },
   now: Date,
 ): boolean {
+  if (account.closedAt !== null) {
+    return false;
+  }
   const lastRead = account.connectionSyncedAt ?? account.syncedAt;
   return now.getTime() - lastRead.getTime() > STALE_AFTER_MS;
+}
+
+export function closedLabel(closedAt: Date, timeZone: string): string {
+  return interpolate(t.accounts.closed, "{date}", formatIsoDate(localDateOf(closedAt, timeZone)));
 }
 
 export function freshnessLabel(freshness: Freshness): string {

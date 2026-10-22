@@ -5,7 +5,7 @@ import {
   seedPushDevice,
   silentNotifier,
 } from "@/modules/notifications/test/fake-push-sender";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
 
@@ -30,7 +30,7 @@ import { withTwoUsers, type TwoUsers } from "./test/with-two-users";
 import { narrowedFirstSyncSince, transactionsSince } from "./transactions-window";
 
 import type { Database } from "@/platform/db/client";
-import type { AuthenticateOutcome, DataProvider } from "./provider/provider";
+import type { AuthenticateOutcome, DataProvider, NormalizedAccount } from "./provider/provider";
 
 const ENCRYPTION_KEY = "integration-test-encryption-key-with-32-chars";
 const deps: SyncDeps = {
@@ -249,6 +249,32 @@ function throwingOnItem(itemId: string): DataProvider {
             return client.listAccounts(id);
           },
           listInvestmentPositions: (id) => client.listInvestmentPositions(id),
+          listTransactionsSince: (accountId, since) =>
+            client.listTransactionsSince(accountId, since),
+        },
+      };
+    },
+  };
+}
+
+function listingAlso(extra: NormalizedAccount): DataProvider {
+  return {
+    name: "fake",
+    async authenticate(credentials, options): Promise<AuthenticateOutcome> {
+      const real = await deps.provider.authenticate(credentials, options);
+      if (real.status !== "ok") {
+        return real;
+      }
+      const client = real.client;
+      return {
+        status: "ok",
+        client: {
+          describeConnection: (id) => client.describeConnection(id),
+          listAccounts: (id) => client.listAccounts(id),
+          listInvestmentPositions: async (id) => [
+            ...(await client.listInvestmentPositions(id)),
+            extra,
+          ],
           listTransactionsSince: (accountId, since) =>
             client.listTransactionsSince(accountId, since),
         },
@@ -1177,6 +1203,105 @@ describe("repeated sync failure push notification (integration)", () => {
 
       expect(await failuresOf(db, withoutCredentials)).toBe(3);
       expect(sender.sent).toEqual([]);
+    });
+  });
+});
+
+describe("accounts a successful sync stops listing (integration, #102)", () => {
+  const REDEEMED_CDB = "redeemed-cdb-fixture";
+  const cdb = seedAccount({
+    providerAccountId: REDEEMED_CDB,
+    providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+    type: "investment",
+    name: "CDB resgatado",
+    balanceCentavos: 500000,
+  });
+
+  async function seedWithRedeemedCdb(db: Database, user: TwoUsers["userA"]): Promise<string> {
+    const { connectionId } = await seedSyncedConnection(db, user, {
+      household: householdScope(user.session),
+      itemId: FAKE_ITEM_BANCO_FIXTURE,
+      accounts: [
+        seedAccount({
+          providerAccountId: FIXTURE_CHECKING,
+          providerItemId: FAKE_ITEM_BANCO_FIXTURE,
+        }),
+        cdb,
+      ],
+      transactions: [
+        seedTransaction({ providerAccountId: REDEEMED_CDB, providerTransactionId: "aplicacao" }),
+      ],
+    });
+    return connectionId;
+  }
+
+  async function cdbRow(db: Database, connectionId: string) {
+    const [row] = await db
+      .select({ balanceCentavos: bankAccount.balanceCentavos, closedAt: bankAccount.closedAt })
+      .from(bankAccount)
+      .where(
+        and(
+          eq(bankAccount.connectionId, connectionId),
+          eq(bankAccount.providerAccountId, REDEEMED_CDB),
+        ),
+      );
+    return row;
+  }
+
+  it("zeroes it and stamps the first sync that missed it, keeping its history", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedWithRedeemedCdb(db, userA);
+
+      await expect(
+        syncAllConnections(db, deps, { now: NOW, deadline: ampleDeadline() }),
+      ).resolves.toMatchObject({ synced: 1, failed: 0 });
+      const later = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
+      await syncAllConnections(db, deps, { now: later, deadline: ampleDeadline() });
+
+      expect(await cdbRow(db, connectionId)).toEqual({ balanceCentavos: 0, closedAt: NOW });
+      expect(
+        (await transactionsOf(db, connectionId)).map((row) => row.providerTransactionId),
+      ).toContain("aplicacao");
+      const accounts = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
+      expect(accounts.at(-1)).toMatchObject({ name: "CDB resgatado", closedAt: NOW });
+      expect(accounts.filter((account) => account.closedAt === null)).toHaveLength(6);
+    });
+  });
+
+  it("reopens it with the new balance once the provider lists it again", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedWithRedeemedCdb(db, userA);
+      await syncAllConnections(db, deps, { now: NOW, deadline: ampleDeadline() });
+
+      await syncAllConnections(
+        db,
+        { ...deps, provider: listingAlso({ ...cdb, balanceCentavos: 250000 }) },
+        { now: new Date(NOW.getTime() + 24 * 60 * 60 * 1000), deadline: ampleDeadline() },
+      );
+
+      expect(await cdbRow(db, connectionId)).toEqual({ balanceCentavos: 250000, closedAt: null });
+    });
+  });
+
+  it("changes nothing when the sync fails", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await saveCredentials(db, userA);
+      const connectionId = await seedWithRedeemedCdb(db, userA);
+
+      await expect(
+        syncAllConnections(
+          db,
+          { ...deps, provider: throwingOnItem(FAKE_ITEM_BANCO_FIXTURE) },
+          { now: NOW, deadline: ampleDeadline() },
+        ),
+      ).resolves.toMatchObject({ synced: 0 });
+
+      expect(await cdbRow(db, connectionId)).toEqual({ balanceCentavos: 500000, closedAt: null });
     });
   });
 });

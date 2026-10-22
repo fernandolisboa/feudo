@@ -73,6 +73,7 @@ export async function getSyncExportData(session: CurrentSession) {
           dueDate: bankAccount.dueDate,
           acquisitionDate: bankAccount.acquisitionDate,
           syncedAt: bankAccount.syncedAt,
+          closedAt: bankAccount.closedAt,
           createdAt: bankAccount.createdAt,
         })
         .from(bankAccount)

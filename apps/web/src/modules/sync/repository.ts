@@ -1,4 +1,17 @@
-import { and, asc, count, eq, exists, gte, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  notExists,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 
 import { organization, user } from "@/modules/auth/schema";
 import { lockMembershipScope } from "@/modules/households";
@@ -413,10 +426,37 @@ export function createSyncUserRepository(scope: UserScope) {
               dueDate: sql`excluded.due_date`,
               acquisitionDate: sql`excluded.acquisition_date`,
               syncedAt: sql`excluded.synced_at`,
+              closedAt: sql`null`,
             },
           });
       });
       return unique.length;
+    },
+
+    // A successful snapshot is the provider's whole list for the connection,
+    // so an account missing from it was closed or fully redeemed there
+    // (#102). It is zeroed and stamped closed, never deleted, so its
+    // transactions and marks stay. Only rows still open are stamped, so the
+    // date stays the first sync that missed it.
+    async closeUnlistedAccounts(
+      db: Database,
+      connectionId: string,
+      listedProviderAccountIds: string[],
+      options: { closedAt: Date },
+    ): Promise<number> {
+      await requireOwnedConnection(db, connectionId);
+      const closed = await db
+        .update(bankAccount)
+        .set({ balanceCentavos: 0, closedAt: options.closedAt })
+        .where(
+          and(
+            eq(bankAccount.connectionId, connectionId),
+            isNull(bankAccount.closedAt),
+            notInArray(bankAccount.providerAccountId, listedProviderAccountIds),
+          ),
+        )
+        .returning({ id: bankAccount.id });
+      return closed.length;
     },
 
     // Whether the ledger already holds history for this connection, which is
@@ -756,6 +796,7 @@ export type HouseholdAccount = {
   connectedByUserId: string;
   connectedByName: string;
   syncedAt: Date;
+  closedAt: Date | null;
   connectionSyncedAt: Date | null;
   lastSyncError: string | null;
 };
@@ -785,6 +826,7 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope, owner: 
           connectedByUserId: bankConnection.userId,
           connectedByName: user.name,
           syncedAt: bankAccount.syncedAt,
+          closedAt: bankAccount.closedAt,
           connectionSyncedAt: bankConnection.lastSyncedAt,
           lastSyncError: bankConnection.lastSyncError,
         })
@@ -792,7 +834,12 @@ export function createHouseholdAccountsRepository(scope: HouseholdScope, owner: 
         .innerJoin(bankConnection, eq(bankConnection.id, bankAccount.connectionId))
         .innerJoin(user, eq(user.id, bankConnection.userId))
         .where(eq(bankAccount.householdId, scope.householdId))
-        .orderBy(bankConnection.institutionName, bankAccount.type, bankAccount.name);
+        .orderBy(
+          sql`${bankAccount.closedAt} is not null`,
+          bankConnection.institutionName,
+          bankAccount.type,
+          bankAccount.name,
+        );
     },
 
     async relabel(

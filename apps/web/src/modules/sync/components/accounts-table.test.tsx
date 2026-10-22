@@ -29,6 +29,7 @@ const base: HouseholdAccount = {
   connectedByUserId: "user-1",
   connectedByName: "Ana",
   syncedAt: new Date("2026-10-01T09:10:00Z"),
+  closedAt: null,
   connectionSyncedAt: new Date("2026-10-01T09:10:00Z"),
   lastSyncError: null,
 };
@@ -55,5 +56,32 @@ describe("AccountsTable freshness", () => {
 
     expect(screen.getByText("hoje, 06:10").className).not.toContain("text-warning");
     expect(screen.getByText("28/09/2026, 06:10").className).toContain("text-warning");
+  });
+});
+
+describe("AccountsTable closed accounts", () => {
+  it("says when an account was found closed instead of its frozen last update", () => {
+    const stale = new Date("2026-09-10T09:10:00Z");
+    render(
+      <AccountsTable
+        accounts={[
+          {
+            ...base,
+            name: "CDB Banco X",
+            type: "investment",
+            syncedAt: stale,
+            connectionSyncedAt: stale,
+            closedAt: new Date("2026-09-11T09:10:00Z"),
+          },
+        ]}
+        viewerUserId="someone-else"
+        timeZone="America/Sao_Paulo"
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("Encerrada em 11/09/2026").className).not.toContain("text-warning");
+    expect(screen.queryByText("10/09/2026, 06:10")).toBeNull();
+    expect(screen.getByText("R$ 0,00")).toBeDefined();
   });
 });

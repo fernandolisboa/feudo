@@ -675,6 +675,12 @@ async function syncConnection(
   try {
     await db.transaction(async (tx) => {
       await repository.upsertAccounts(tx, connection.id, snapshot.accounts, { syncedAt: now });
+      await repository.closeUnlistedAccounts(
+        tx,
+        connection.id,
+        snapshot.accounts.map((account) => account.providerAccountId),
+        { closedAt: now },
+      );
       await repository.upsertTransactions(tx, connection.id, snapshot.transactions, {
         syncedAt: now,
       });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { describeFreshness, freshnessLabel, isStale, STALE_AFTER_MS } from "./freshness";
+import {
+  closedLabel,
+  describeFreshness,
+  freshnessLabel,
+  isStale,
+  STALE_AFTER_MS,
+} from "./freshness";
 
 const SAO_PAULO = "America/Sao_Paulo";
 
@@ -53,7 +59,7 @@ describe("isStale", () => {
   const lastRead = new Date("2026-09-29T09:00:00Z");
 
   it("calls data stale only once the connection's last read is more than 48 hours old", () => {
-    const account = { syncedAt: lastRead, connectionSyncedAt: lastRead };
+    const account = { syncedAt: lastRead, closedAt: null, connectionSyncedAt: lastRead };
 
     expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS))).toBe(false);
     expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS + 1))).toBe(true);
@@ -62,6 +68,7 @@ describe("isStale", () => {
   it("does not flag an account the provider stopped listing while its connection keeps syncing", () => {
     const account = {
       syncedAt: new Date("2026-09-01T09:00:00Z"),
+      closedAt: null,
       connectionSyncedAt: new Date("2026-10-01T09:00:00Z"),
     };
 
@@ -69,8 +76,22 @@ describe("isStale", () => {
   });
 
   it("falls back to the account's own stamp when the connection has none", () => {
-    const account = { syncedAt: lastRead, connectionSyncedAt: null };
+    const account = { syncedAt: lastRead, closedAt: null, connectionSyncedAt: null };
 
     expect(isStale(account, new Date(lastRead.getTime() + STALE_AFTER_MS + 1))).toBe(true);
+  });
+
+  it("never flags a closed account, even once its connection stops syncing", () => {
+    const account = { syncedAt: lastRead, closedAt: lastRead, connectionSyncedAt: lastRead };
+
+    expect(isStale(account, new Date(lastRead.getTime() + 30 * STALE_AFTER_MS))).toBe(false);
+  });
+});
+
+describe("closedLabel", () => {
+  it("shows the household's calendar day the account was found closed", () => {
+    expect(closedLabel(new Date("2026-10-22T02:30:00Z"), SAO_PAULO)).toBe(
+      "Encerrada em 21/10/2026",
+    );
   });
 });
