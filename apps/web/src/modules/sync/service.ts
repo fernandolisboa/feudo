@@ -86,7 +86,7 @@ const storedCredentialsSchema = z.object({
   clientSecret: z.string().min(1),
 });
 
-function serializeCredentials(
+export function serializeCredentials(
   credentials: ProviderCredentials,
   encryptionKey: string,
   userId: string,
@@ -99,7 +99,7 @@ function serializeCredentials(
   );
 }
 
-function deserializeCredentials(
+export function deserializeCredentials(
   ciphertext: string,
   encryptionKey: string,
   userId: string,
@@ -135,7 +135,7 @@ function isProviderFailure(error: unknown): boolean {
   );
 }
 
-function isUnreadableCredentialsFailure(error: unknown): boolean {
+export function isUnreadableCredentialsFailure(error: unknown): boolean {
   return (
     error instanceof EncryptionKeyMismatchError ||
     error instanceof MalformedCiphertextError ||

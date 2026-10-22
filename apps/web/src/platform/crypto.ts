@@ -6,6 +6,8 @@ const ENVELOPE_PREFIX = "enc";
 // rows keep working, and isLegacyEnvelope tells callers to rewrite it.
 const ENVELOPE_VERSION = "v2";
 const LEGACY_ENVELOPE_VERSION = "v1";
+const LEGACY_ENVELOPE_PREFIX = `${ENVELOPE_PREFIX}:${LEGACY_ENVELOPE_VERSION}:`;
+export const LEGACY_ENVELOPE_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12;
 // Pinned on both sides: without it Node accepts a tag cut down to 4 bytes,
@@ -82,7 +84,7 @@ export function encryptSecret(
 }
 
 export function isLegacyEnvelope(envelope: string): boolean {
-  return envelope.startsWith(`${ENVELOPE_PREFIX}:${LEGACY_ENVELOPE_VERSION}:`);
+  return envelope.startsWith(LEGACY_ENVELOPE_PREFIX);
 }
 
 export function decryptSecret(

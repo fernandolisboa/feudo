@@ -21,7 +21,11 @@ import {
   buildSgsFetchMock,
 } from "@/modules/market-data/test/sgs-fixtures";
 import { marketData } from "@/modules/market-data/schema";
+import { providerCredential } from "@/modules/sync/schema";
+import { withTwoUsers } from "@/modules/sync/test/with-two-users";
+import { decryptSecret, isLegacyEnvelope, PROVIDER_CREDENTIALS_PURPOSE } from "@/platform/crypto";
 import { withTestDb } from "@/platform/db/test/harness";
+import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
 
 import { GET } from "./route";
 
@@ -60,6 +64,7 @@ describe("GET /api/cron/daily (integration)", () => {
     process.env.CRON_SECRET = ORIGINAL_CRON_SECRET;
     globalThis.fetch = ORIGINAL_FETCH;
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("runs the market-data refresh and the verification prune in the same request, reporting both steps", async () => {
@@ -288,6 +293,47 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const remaining = await db.select({ id: invitation.id }).from(invitation);
       expect(remaining.map((row) => row.id)).toEqual([pendingId]);
+    });
+  });
+
+  it("rewrites a legacy stored credential nobody has read, reporting it in the sweep step", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      globalThis.fetch = buildSgsFetchMock();
+      const credentialsJson = '{"clientId":"a","clientSecret":"secret-a"}';
+      const encryptionKey = "integration-test-encryption-key-with-32-chars";
+      vi.stubEnv("ENCRYPTION_KEY", encryptionKey);
+      await db.insert(providerCredential).values({
+        userId: userA.id,
+        provider: "pluggy",
+        ciphertext: encryptLegacySecret(
+          credentialsJson,
+          encryptionKey,
+          PROVIDER_CREDENTIALS_PURPOSE,
+        ),
+        lastValidatedAt: new Date(),
+      });
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+      const response = await callCronRoute();
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        steps: {
+          sweepLegacyCredentials: { rewritten: number; unreadable: number; remaining: number };
+          sweepLegacyApiKeys: { rewritten: number; unreadable: number; remaining: number };
+        };
+      };
+      expect(body.steps.sweepLegacyCredentials).toEqual({
+        rewritten: 1,
+        unreadable: 0,
+        remaining: 0,
+      });
+      expect(body.steps.sweepLegacyApiKeys).toEqual({ rewritten: 0, unreadable: 0, remaining: 0 });
+      const [row] = await db.select().from(providerCredential);
+      expect(isLegacyEnvelope(row?.ciphertext ?? "")).toBe(false);
+      expect(
+        decryptSecret(row?.ciphertext ?? "", encryptionKey, PROVIDER_CREDENTIALS_PURPOSE, userA.id),
+      ).toBe(credentialsJson);
     });
   });
 
