@@ -6,6 +6,7 @@ export { AnalystBanksNote } from "./components/analyst-banks-note";
 export { AnalystReading } from "./components/analyst-reading";
 export { AnalystReadingErrorBoundary } from "./components/analyst-reading-error-boundary";
 export { getAiSettingsForExport } from "./export";
+export { runLegacyApiKeySweepStep } from "./legacy-key-sweep";
 export {
   getAiSettingsSectionProps,
   getAnalysesPageProps,

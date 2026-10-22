@@ -1,7 +1,8 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, like, sql } from "drizzle-orm";
 
 import type { HouseholdScope } from "@/modules/households";
 
+import { LEGACY_ENVELOPE_PREFIX } from "@/platform/crypto";
 import type { Database } from "@/platform/db/client";
 import { DEFAULT_MONTHLY_FAMILY, DEFAULT_ON_DEMAND_FAMILY, type AiFamily } from "./ai-client";
 import { householdAiSettings } from "./schema";
@@ -102,4 +103,52 @@ export type AiSettingsRepository = ReturnType<typeof createAiSettingsRepository>
 export async function getAiSettings(scope: HouseholdScope, db: Database): Promise<AiSettings> {
   const row = await createAiSettingsRepository(scope).get(db);
   return row ?? DEFAULT_AI_SETTINGS;
+}
+
+const LEGACY_CIPHERTEXT_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
+
+export type LegacyApiKeyRow = { householdId: string; apiKeyCiphertext: string };
+
+// Unscoped on purpose: the cross-household sweep (legacy-key-sweep.ts) is the
+// only caller, and rebinds each row to its own householdId.
+export async function listLegacyApiKeys(db: Database): Promise<LegacyApiKeyRow[]> {
+  const rows = await db
+    .select({
+      householdId: householdAiSettings.householdId,
+      apiKeyCiphertext: householdAiSettings.apiKeyCiphertext,
+    })
+    .from(householdAiSettings)
+    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_CIPHERTEXT_PATTERN));
+  return rows.flatMap((row) =>
+    row.apiKeyCiphertext === null
+      ? []
+      : [{ householdId: row.householdId, apiKeyCiphertext: row.apiKeyCiphertext }],
+  );
+}
+
+export async function countLegacyApiKeys(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(householdAiSettings)
+    .where(like(householdAiSettings.apiKeyCiphertext, LEGACY_CIPHERTEXT_PATTERN));
+  return row?.total ?? 0;
+}
+
+// Conditional on the old ciphertext, like replaceKeyCiphertext, so a sweep
+// never overwrites a key saved in the meantime.
+export async function replaceLegacyApiKey(
+  db: Database,
+  input: { householdId: string; from: string; to: string },
+): Promise<boolean> {
+  const updated = await db
+    .update(householdAiSettings)
+    .set({ apiKeyCiphertext: input.to })
+    .where(
+      and(
+        eq(householdAiSettings.householdId, input.householdId),
+        eq(householdAiSettings.apiKeyCiphertext, input.from),
+      ),
+    )
+    .returning({ householdId: householdAiSettings.householdId });
+  return updated.length > 0;
 }

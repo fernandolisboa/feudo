@@ -7,6 +7,7 @@ import {
   gte,
   inArray,
   isNull,
+  like,
   lt,
   notExists,
   notInArray,
@@ -15,6 +16,7 @@ import {
 
 import { organization, user } from "@/modules/auth/schema";
 import { lockMembershipScope } from "@/modules/households";
+import { LEGACY_ENVELOPE_PREFIX } from "@/platform/crypto";
 
 import {
   bankAccount,
@@ -923,4 +925,43 @@ export async function pruneOrphanConsents(db: Database, olderThan: Date): Promis
     )
     .returning({ id: bankConnectionConsent.id });
   return deleted.length;
+}
+
+const LEGACY_CIPHERTEXT_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
+
+export type LegacyCredentialRow = { id: string; userId: string; ciphertext: string };
+
+// Unscoped on purpose: the cross-user sweep (legacy-ciphertext-sweep.ts) is
+// the only caller, and rebinds each row to its own userId.
+export async function listLegacyCredentials(db: Database): Promise<LegacyCredentialRow[]> {
+  return db
+    .select({
+      id: providerCredential.id,
+      userId: providerCredential.userId,
+      ciphertext: providerCredential.ciphertext,
+    })
+    .from(providerCredential)
+    .where(like(providerCredential.ciphertext, LEGACY_CIPHERTEXT_PATTERN));
+}
+
+export async function countLegacyCredentials(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(providerCredential)
+    .where(like(providerCredential.ciphertext, LEGACY_CIPHERTEXT_PATTERN));
+  return row?.total ?? 0;
+}
+
+// Conditional on the old ciphertext, like replaceCredentialCiphertext, so a
+// sweep never overwrites credentials the user saved in the meantime.
+export async function replaceLegacyCredential(
+  db: Database,
+  input: { id: string; from: string; to: string },
+): Promise<boolean> {
+  const updated = await db
+    .update(providerCredential)
+    .set({ ciphertext: input.to })
+    .where(and(eq(providerCredential.id, input.id), eq(providerCredential.ciphertext, input.from)))
+    .returning({ id: providerCredential.id });
+  return updated.length > 0;
 }
