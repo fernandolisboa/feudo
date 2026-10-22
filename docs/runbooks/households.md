@@ -98,14 +98,23 @@ A default `household_settings` row (`America/Sao_Paulo`, 6 months) is also writt
 so a household created through any other path (a raw call to `/organization/create`) can never be
 observed without one; `createHousehold` immediately overwrites it with the caller's chosen values.
 `beforeCreateOrganization` in the same file rejects a `logo` or `metadata` on the create call —
-Feudo never uses either field on `organization`.
+Feudo never uses either field on `organization` — and a name over 120 characters (also on
+`beforeUpdateOrganization`), and it refuses (`already_has_household`) a user who is already a member
+of a household not pending deletion, the same rule `createHousehold` applies, so a raw
+`/organization/create` cannot mint extra households either. For a raw HTTP call to any
+`/organization/*` endpoint, `hooks.before` also refuses (`terms_outdated`) a user who has not
+accepted the current `TERMS_VERSION`; pages already send that user to `/aceitar-termos`
+(2026-10-22, #119).
 
 ## Single-owner enforcement
 
 Better Auth's `organization` plugin allows several owners; Feudo does not (ADR-0001). Three lines of
 defense in total; the first two live in `auth/options.ts` and `modules/auth/schema.ts`:
 `organizationHooks.beforeUpdateMemberRole`
-rejects any role update to `owner` outright and `organizationHooks.beforeCreateInvitation` rejects
+rejects any role update that is not exactly one of `admin` or `member` — `owner`, and any
+multi-role value such as `member,owner` or `["member","owner"]`, which Better Auth's permission
+checks would split on the comma while the owner index and trigger below compare `role = 'owner'`
+exactly (2026-10-22, #121) — and `organizationHooks.beforeCreateInvitation` rejects
 any invitation with role `owner` outright (and any invitation carrying more than one role — an
 array or a comma-joined string — since `membership.ts` stores and reads back a single role per
 member) — ownership only ever moves through `households.transferOwnership` (`membership.ts`),
@@ -168,9 +177,13 @@ and "the last member leaving deletes the household"):
   sends the email through the same `EmailSender` as every other auth email
   (`auth/email/invitation-email.ts`), linking to `/convite/:id`. Rate-limited two ways:
   `auth.api.createInvitation` never traverses Better Auth's own limiter (`auth.api.*` calls skip
-  `onRequest`, see docs/runbooks/auth.md), so `inviteMember` counts the inviter's own `invitation`
-  rows created (or last sent — see Resend below) in the last hour and refuses above 20
-  (`rate_limited`) before ever calling the plugin; a raw call to `POST /organization/invite-member`
+  `onRequest`, see docs/runbooks/auth.md), so `hooks.before` in `auth/options.ts` counts the
+  inviter's own `invitation` rows created (or last sent — see Resend below) in the last hour
+  (`countRecentInvitationsBy`, `auth/invitations.ts`) and refuses above 20 with
+  `INVITATION_RATE_LIMITED`, which `inviteMember` and `resendInvitation` report as `rate_limited`.
+  It runs on every call to `/organization/invite-member`, the server actions' `auth.api` calls, a
+  raw HTTP call and the `resend: true` path alike (that path never reaches
+  `beforeCreateInvitation`); a raw call to `POST /organization/invite-member`
   additionally gets its own `rateLimit.customRules` entry (`auth/options.ts`, 60s/5) since that path
   does go through Better Auth's own limiter. `organization({ invitationLimit: 10 })` caps pending
   invitations per household on top of both. A send failure is not silently dropped:
@@ -187,7 +200,7 @@ and "the last member leaving deletes the household"):
   that already exists, never mint one under a different identity). Eligibility (`status = 'pending'`
   and `delivery_failed_at IS NOT NULL`) is required directly in the scoped select, not just checked
   in code, so a healthy or cancelled invitation is `not_found` before any rate check runs. Subject to
-  three limits: the same per-inviter hourly ceiling as a fresh invite (`recentInvitationCount`, which
+  three limits: the same per-inviter hourly ceiling as a fresh invite (`countRecentInvitationsBy`, which
   now counts a row recent by either `created_at` or `last_sent_at` — Better Auth's own `resend: true`
   only ever bumps `expires_at`, never `created_at`, so counting by `created_at` alone would let an
   invitation age out of the ceiling and then be resent indefinitely); a 60-second minimum interval

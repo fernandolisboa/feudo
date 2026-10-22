@@ -122,19 +122,18 @@ describe("rate limiting on the flows the UI drives through the auth handler", ()
     });
   });
 
-  it("refuses the 4th rapid magic-link request within the window", async () => {
+  it("refuses the 6th magic-link request from the same IP within 60 seconds", async () => {
     await withTestDb(async () => {
       const attempt = () => requestMagicLink("magic-link-rate-limit@example.com", new Headers());
 
-      const first = await attempt();
-      const second = await attempt();
-      const third = await attempt();
-      const fourth = await attempt();
+      const allowed = [];
+      for (let index = 0; index < 5; index += 1) {
+        allowed.push(await attempt());
+      }
+      const sixth = await attempt();
 
-      expect(first.status).toBe("ok");
-      expect(second.status).toBe("ok");
-      expect(third.status).toBe("ok");
-      expect(fourth.status).toBe("rate_limited");
+      expect(allowed.map((outcome) => outcome.status)).toEqual(["ok", "ok", "ok", "ok", "ok"]);
+      expect(sixth.status).toBe("rate_limited");
     });
   });
 
@@ -154,20 +153,23 @@ describe("rate limiting on the flows the UI drives through the auth handler", ()
     });
   });
 
-  it("clears the magic-link rate limit once its 10-second window has passed", async () => {
+  it("still refuses magic-link requests 11 seconds later, and clears once its 60-second window has passed", async () => {
     await withTestDb(async () => {
       const email = "magic-link-rate-limit-clears@example.com";
       const attempt = () => requestMagicLink(email, new Headers());
 
-      await attempt();
-      await attempt();
-      await attempt();
+      for (let index = 0; index < 5; index += 1) {
+        await attempt();
+      }
       const limited = await attempt();
       expect(limited.status).toBe("rate_limited");
 
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date(Date.now() + 11_000));
+      const stillLimited = await attempt();
+      expect(stillLimited.status).toBe("rate_limited");
 
+      vi.setSystemTime(new Date(Date.now() + 61_000));
       const afterWindow = await attempt();
       expect(afterWindow.status).toBe("ok");
     });

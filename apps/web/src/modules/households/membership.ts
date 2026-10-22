@@ -1,7 +1,12 @@
 import { APIError } from "better-auth/api";
-import { and, count, eq, gt, isNotNull, ne, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
 
-import { clearActiveHouseholdOnSessions, getAuth, type CurrentSession } from "@/modules/auth";
+import {
+  clearActiveHouseholdOnSessions,
+  getAuth,
+  INVITATION_RATE_LIMITED_CODE,
+  type CurrentSession,
+} from "@/modules/auth";
 import { invitation as invitationTable, member, organization } from "@/modules/auth/schema";
 
 import type { Outcome, SimpleOutcome } from "@/lib/outcome";
@@ -123,33 +128,11 @@ export async function listMyPendingInvitations(
     }));
 }
 
-// A household is a small pool of people, not a mailing list: 20 invites in
-// an hour is already generous headroom for onboarding a real household and
-// keeps a compromised session from spraying invitation emails.
-const INVITE_HOURLY_LIMIT = 20;
 // Below this interval, a resend of the same invitation is refused
 // (rate_limited) instead of firing another email: a double-click or a
 // scripted retry loop must not outrun what a human resending by hand would
 // ever do.
 const RESEND_MIN_INTERVAL_MS = 60 * 1000;
-
-// A row counts toward the ceiling if it was either created or last sent
-// within the hour: createdAt alone would let an old invitation be resent
-// indefinitely once it ages out of the window, since resend (resend: true)
-// only ever bumps expiresAt on the existing row, never createdAt.
-async function recentInvitationCount(db: Database, inviterId: string): Promise<number> {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const [row] = await db
-    .select({ total: count() })
-    .from(invitationTable)
-    .where(
-      and(
-        eq(invitationTable.inviterId, inviterId),
-        or(gt(invitationTable.createdAt, oneHourAgo), gt(invitationTable.lastSentAt, oneHourAgo)),
-      ),
-    );
-  return row?.total ?? 0;
-}
 
 export type InviteMemberOutcome = Outcome<
   { invitationId: string },
@@ -170,14 +153,8 @@ export async function inviteMember(
   if (!session) {
     return { status: "unauthenticated" };
   }
-  // Better Auth's own invitationLimit only counts pending invitations for
-  // the household, and auth.api.* calls never traverse the rate limiter's
-  // onRequest hook (docs/runbooks/auth.md) — a resend or a cancel-then-
-  // reinvite loop can otherwise mint unlimited emails from one session.
-  const recentCount = await recentInvitationCount(db, session.userId);
-  if (recentCount >= INVITE_HOURLY_LIMIT) {
-    return { status: "rate_limited" };
-  }
+  // The per-inviter hourly ceiling is auth's hooks.before on
+  // /organization/invite-member, so a raw HTTP call meets it too.
   try {
     const invitation = await getAuth().api.createInvitation({
       headers: requestHeaders,
@@ -186,6 +163,9 @@ export async function inviteMember(
     return { status: "ok", invitationId: invitation.id };
   } catch (error) {
     const code = apiErrorCode(error);
+    if (code === INVITATION_RATE_LIMITED_CODE) {
+      return { status: "rate_limited" };
+    }
     if (code === "USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION") {
       return { status: "already_a_member" };
     }
@@ -211,7 +191,7 @@ export type ResendInvitationOutcome = SimpleOutcome<
 // and role instead of taking them from the caller, so this can only ever
 // resend an invitation that already exists — never mint a new one under a
 // different identity — and is subject to the same per-inviter hourly ceiling
-// as a fresh invite (recentInvitationCount above), plus its own minimum
+// as a fresh invite (auth's hooks.before), plus its own minimum
 // interval (RESEND_MIN_INTERVAL_MS). Eligibility (status = 'pending',
 // deliveryFailedAt set and expiresAt in the future) is required in the
 // scoped select itself, not just checked in code, and re-checked
@@ -257,11 +237,6 @@ export async function resendInvitation(
     return { status: "rate_limited" };
   }
 
-  const recentCount = await recentInvitationCount(db, session.userId);
-  if (recentCount >= INVITE_HOURLY_LIMIT) {
-    return { status: "rate_limited" };
-  }
-
   const [stillPending] = await db
     .select({ status: invitationTable.status })
     .from(invitationTable)
@@ -283,6 +258,9 @@ export async function resendInvitation(
     });
   } catch (error) {
     const code = apiErrorCode(error);
+    if (code === INVITATION_RATE_LIMITED_CODE) {
+      return { status: "rate_limited" };
+    }
     if (
       code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION" ||
       code === "YOU_ARE_NOT_ALLOWED_TO_INVITE_USER_WITH_THIS_ROLE"

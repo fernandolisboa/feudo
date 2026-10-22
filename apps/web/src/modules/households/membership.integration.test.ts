@@ -623,8 +623,8 @@ describe("inviteMember rate limiting (integration)", () => {
         // Cancelled immediately after creation, not left pending: Better
         // Auth's own invitationLimit (organization({ invitationLimit: 10 }))
         // caps pending invitations per household, independent of this test's
-        // own per-inviter, any-status hourly count (recentInvitationCount in
-        // membership.ts) — leaving all 20 pending would hit that cap first.
+        // own per-inviter, any-status hourly count (countRecentInvitationsBy in
+        // auth/invitations.ts) — leaving all 20 pending would hit that cap first.
         for (let index = 0; index < 20; index += 1) {
           const outcome = await inviteMember(
             {

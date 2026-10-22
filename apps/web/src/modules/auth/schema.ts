@@ -30,6 +30,10 @@ export const user = pgTable("user", {
   // Owned by the privacy slice: when the other members were last emailed
   // about this user's deletion, so a request-cancel loop cannot flood them.
   deletionNoticesSentAt: timestamp("deletion_notices_sent_at", { withTimezone: true }),
+  // Per-recipient ceiling on auth emails (auth/email-quota.ts): the start of
+  // the current one-hour window and how many sends it has seen.
+  authEmailWindowStartedAt: timestamp("auth_email_window_started_at", { withTimezone: true }),
+  authEmailCount: integer("auth_email_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

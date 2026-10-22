@@ -6,6 +6,7 @@ vi.mock("next/headers", () => ({
   headers: () => Promise.resolve(currentHeaders.value),
 }));
 
+import type { Database } from "@/platform/db/client";
 import { withTestDb } from "@/platform/db/test/harness";
 import { member } from "@/modules/auth/schema.ts";
 import { householdSettings } from "@/modules/households/schema.ts";
@@ -39,18 +40,29 @@ async function sessionFor(headers: Headers): Promise<CurrentSession | null> {
 // Simulates the membership households.acceptInvitation (membership.ts) creates:
 // a second household for a user who already has one active, without going
 // through households.createHousehold's idempotency guard.
-async function addHouseholdMembership(headers: Headers, name: string): Promise<string> {
+// A second household only ever comes by invitation: the auth hooks refuse
+// to create one for someone who already has one, so the second household
+// belongs to another owner and the user joins it as a member.
+async function addHouseholdMembership(
+  db: Database,
+  headers: Headers,
+  name: string,
+): Promise<string> {
   const session = await getAuth().api.getSession({ headers });
   if (!session) {
     throw new Error("addHouseholdMembership requires a signed-in session");
   }
+  const ownerHeaders = await signUpVerifiedUser(db, {
+    name: `Dono da ${name}`,
+    email: `${crypto.randomUUID()}@example.com`,
+    password: "correct-horse",
+  });
   const organization = await getAuth().api.createOrganization({
-    body: {
-      name,
-      slug: crypto.randomUUID(),
-      userId: session.user.id,
-      keepCurrentActiveOrganization: true,
-    },
+    headers: ownerHeaders,
+    body: { name, slug: crypto.randomUUID() },
+  });
+  await getAuth().api.addMember({
+    body: { userId: session.user.id, organizationId: organization.id, role: "member" },
   });
   return organization.id;
 }
@@ -199,7 +211,7 @@ describe("listHouseholds and switchHousehold (integration)", () => {
       if (first.status !== "ok") {
         throw new Error("household creation failed in test setup");
       }
-      const secondHouseholdId = await addHouseholdMembership(headers, "Casa 2");
+      const secondHouseholdId = await addHouseholdMembership(db, headers, "Casa 2");
 
       expect(await activeHouseholdId(headers)).toBe(first.householdId);
 

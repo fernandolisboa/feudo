@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
+
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink, organization } from "better-auth/plugins";
-import { and, count, eq, inArray, isNotNull, like, or } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, isNull, like, or } from "drizzle-orm";
 import { DEFAULT_RESERVE_MULTIPLE, evaluateRegistrationMode } from "@feudo/core";
 
 import { householdSettings } from "@/modules/households/schema";
@@ -24,8 +26,14 @@ import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
+import { reserveAuthEmail } from "./email-quota";
 import { readAuthBaseUrl } from "./env";
-import { hasPendingInvitation } from "./invitations";
+import {
+  countRecentInvitationsBy,
+  hasPendingInvitation,
+  INVITATION_RATE_LIMITED_CODE,
+  INVITE_HOURLY_LIMIT,
+} from "./invitations";
 import { resolveRegistrationMode } from "./registration-mode";
 import { TERMS_VERSION } from "./terms";
 import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
@@ -51,6 +59,7 @@ const ORGANIZATION_LIMIT = 20;
 const FALLBACK_HOUSEHOLD_TIME_ZONE = "America/Sao_Paulo";
 const FALLBACK_HOUSEHOLD_RESERVE_MULTIPLE = DEFAULT_RESERVE_MULTIPLE;
 const OWNER_ROLE = "owner";
+const MEMBER_ROLES: ReadonlySet<string> = new Set(["admin", "member"]);
 // households/membership.ts stores and reads back a single role per member
 // (beforeCreateInvitation below rejects a multi-role invitation outright),
 // but a raw member row's role is still read here as Better Auth's own
@@ -62,9 +71,8 @@ const INVITATION_READ_ROLES = new Set(["owner", "admin"]);
 // that skips the app's forms entirely.
 const MAX_NAME_LENGTH = 120;
 // A household is a small pool of people, not a mailing list (see
-// inviteMember's INVITE_HOURLY_LIMIT in households/membership.ts, the
-// per-inviter check): this is the plugin's own ceiling on pending
-// invitations per household.
+// INVITE_HOURLY_LIMIT in invitations.ts, the per-inviter check): this is the
+// plugin's own ceiling on pending invitations per household.
 const INVITATION_LIMIT = 10;
 
 function readTermsVersion(body: unknown): string | undefined {
@@ -81,6 +89,23 @@ function readName(body: unknown): string | undefined {
   }
   const value = (body as Record<string, unknown>).name;
   return typeof value === "string" ? value : undefined;
+}
+
+// Better Auth's own schema for a household name is only min(1); this is the
+// same 120-char floor sign-up and /update-user get, for a raw
+// /organization/create or /organization/update that skips the app's forms.
+// Feudo never uses logo or metadata on organization (data minimization).
+function assertOrganizationFields(organization: {
+  name?: unknown;
+  logo?: unknown;
+  metadata?: unknown;
+}): void {
+  if (organization.logo || organization.metadata) {
+    throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
+  }
+  if (typeof organization.name === "string" && organization.name.length > MAX_NAME_LENGTH) {
+    throw new APIError("BAD_REQUEST", { message: "name_too_long" });
+  }
 }
 
 const CONSENT_FIELDS = ["termsVersion", "termsAcceptedAt"] as const;
@@ -149,6 +174,17 @@ function hasInvitationReadRole(role: string | null | undefined): boolean {
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
+
+// ADR-0008: a reset token never sits in the database in clear, or a read of
+// the verification table becomes an account takeover. The stored identifier
+// keeps its plain prefix in front of the hash so deleteOtherPasswordResetTokens
+// can still find a user's reset rows; Better Auth hashes the incoming token
+// the same way on lookup, and falls back to the plain identifier for rows
+// written before this option existed.
+function hashResetPasswordIdentifier(identifier: string): Promise<string> {
+  const digest = createHash("sha256").update(identifier).digest("base64url");
+  return Promise.resolve(`${RESET_PASSWORD_VERIFICATION_PREFIX}${digest}`);
+}
 
 async function deleteOtherPasswordResetTokens(db: Database, userId: string): Promise<void> {
   await db
@@ -240,6 +276,46 @@ export function buildAuthOptions(
     }
   }
 
+  async function assertCurrentTermsAccepted(
+    ctx: Parameters<typeof getSessionFromCtx>[0],
+  ): Promise<void> {
+    const rawSession = await getSessionFromCtx(ctx);
+    if (rawSession && rawSession.user.termsVersion !== TERMS_VERSION) {
+      throw new APIError("FORBIDDEN", { message: "terms_outdated" });
+    }
+  }
+
+  async function assertInviterUnderHourlyLimit(
+    ctx: Parameters<typeof getSessionFromCtx>[0],
+  ): Promise<void> {
+    const rawSession = await getSessionFromCtx(ctx);
+    if (!rawSession) {
+      return;
+    }
+    if ((await countRecentInvitationsBy(db, rawSession.user.id)) >= INVITE_HOURLY_LIMIT) {
+      throw new APIError("TOO_MANY_REQUESTS", {
+        message: "invitation_rate_limited",
+        code: INVITATION_RATE_LIMITED_CODE,
+      });
+    }
+  }
+
+  // Mirrors households.createHousehold's already_has_household: a user
+  // starts a household only while they have none (a household pending
+  // deletion counts as gone, as in getCurrentSession). Joining more happens
+  // only by invitation.
+  async function assertHasNoHousehold(userId: string): Promise<void> {
+    const [existing] = await db
+      .select({ id: member.id })
+      .from(member)
+      .innerJoin(organizationTable, eq(organizationTable.id, member.organizationId))
+      .where(and(eq(member.userId, userId), isNull(organizationTable.deletionRequestedAt)))
+      .limit(1);
+    if (existing) {
+      throw new APIError("FORBIDDEN", { message: "already_has_household" });
+    }
+  }
+
   async function assertHouseholdNotPendingDeletion(organizationId: string): Promise<void> {
     const [pending] = await db
       .select({ id: organizationTable.id })
@@ -261,6 +337,14 @@ export function buildAuthOptions(
     secret: env.BETTER_AUTH_SECRET,
     baseURL,
     trustedOrigins: [baseURL],
+    verification: {
+      storeIdentifier: {
+        default: "plain",
+        overrides: {
+          [RESET_PASSWORD_VERIFICATION_PREFIX]: { hash: hashResetPasswordIdentifier },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -286,8 +370,8 @@ export function buildAuthOptions(
             url,
             describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
           );
-          const sendPromise = emailSender
-            .send({ to: user.email, ...email })
+          const sendPromise = reserveAuthEmail(db, user.id)
+            .then((reserved) => (reserved ? emailSender.send({ to: user.email, ...email }) : null))
             .catch((error: unknown) => {
               logSendFailure("reset-password", error);
             });
@@ -339,30 +423,35 @@ export function buildAuthOptions(
       expiresIn: VERIFICATION_EXPIRES_IN_SECONDS,
       sendVerificationEmail: async ({ user, url }) => {
         const email = buildVerificationEmail(url);
+        if (!(await reserveAuthEmail(db, user.id))) {
+          return;
+        }
         await emailSender.send({ to: user.email, ...email });
       },
     },
     rateLimit: {
       enabled: true,
       storage: "database",
-      // Magic-link sign-in and the reset-password submission fall outside
-      // Better Auth's own default special rules (magic link defaults to
-      // 60s/5 via the plugin; reset submission isn't listed at all), so we
-      // align the sign-in family's 10s/3 strictness on the ones a bot could
-      // spam. `/magic-link/verify` and `/reset-password/*` are the GET links
-      // an email client re-opens (link previews, double-clicks) and their
-      // tokens are single-use anyway, so they get a looser ceiling: a 429 on
-      // a GET a real user's browser navigates to would surface as raw JSON
-      // instead of the app's error page (no route handler intercepts it).
+      // A custom rule replaces the plugin's own, never tightens it: a 10s/3
+      // rule on magic-link requests would allow ~18 a minute, over three
+      // times the plugin's 60s/5, so that one is pinned to the plugin's
+      // value here. The reset-password submission isn't covered by any
+      // built-in special rule, so it gets the sign-in family's 10s/3.
+      // `/magic-link/verify` and `/reset-password/*` are the GET links an
+      // email client re-opens (link previews, double-clicks) and their tokens
+      // are single-use anyway, so they get a looser ceiling: a 429 on a GET a
+      // real user's browser navigates to would surface as raw JSON instead of
+      // the app's error page (no route handler intercepts it). None of these
+      // is per recipient; reserveAuthEmail is.
       customRules: {
-        "/sign-in/magic-link": { window: 10, max: 3 },
+        "/sign-in/magic-link": { window: 60, max: 5 },
         "/magic-link/verify": { window: 10, max: 20 },
         "/reset-password": { window: 10, max: 3 },
         "/reset-password/*": { window: 10, max: 20 },
         // auth.api.createInvitation (households.inviteMember) never
         // traverses this limiter — only a direct HTTP call to the raw
         // endpoint does — so this is a second, independent ceiling next to
-        // inviteMember's own per-inviter database count, not a replacement
+        // the per-inviter database count in hooks.before, not a replacement
         // for it.
         "/organization/invite-member": { window: 60, max: 5 },
       },
@@ -380,6 +469,22 @@ export function buildAuthOptions(
 
         if (ctx.path.startsWith("/organization/")) {
           await assertTargetHouseholdNotPendingDeletion(ctx);
+          // Pages send a user with outdated terms to the acceptance page
+          // (redirectIfTermsOutdated); a raw HTTP call never renders a page,
+          // so it is refused here instead. Server-side auth.api calls carry
+          // no request and stay with the pages' own gate.
+          if (ctx.request) {
+            await assertCurrentTermsAccepted(ctx);
+          }
+        }
+
+        // Covers the resend path too, which never reaches
+        // beforeCreateInvitation, and every caller alike: households'
+        // inviteMember and resendInvitation (auth.api, no IP limiter) and a
+        // raw HTTP call.
+        if (ctx.path === "/organization/invite-member") {
+          await assertInviterUnderHourlyLimit(ctx);
+          return;
         }
 
         // Both raw endpoints below return invitation data (pending invitee
@@ -513,18 +618,12 @@ export function buildAuthOptions(
           }
         },
         organizationHooks: {
-          beforeCreateOrganization: ({ organization }) => {
-            if (organization.logo || organization.metadata) {
-              throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
-            }
-            return Promise.resolve();
+          beforeCreateOrganization: async ({ organization, user }) => {
+            assertOrganizationFields(organization);
+            await assertHasNoHousehold(user.id);
           },
-          // Mirrors beforeCreateOrganization: Feudo never uses logo or
-          // metadata on organization, on create or update (data minimization).
           beforeUpdateOrganization: ({ organization }) => {
-            if (organization.logo || organization.metadata) {
-              throw new APIError("BAD_REQUEST", { message: "logo_and_metadata_not_supported" });
-            }
+            assertOrganizationFields(organization);
             return Promise.resolve();
           },
           // Safety net for any organization created outside
@@ -547,11 +646,22 @@ export function buildAuthOptions(
           // dedicated action that promotes and demotes in one database
           // transaction, bypassing this hook entirely. The partial unique
           // index on member (organization_id) where role = 'owner' is the
-          // second, DB-level line of defense.
+          // second, DB-level line of defense. Better Auth hands newRole over
+          // comma-joined ("member,owner") and its own permission checks split
+          // on the comma, while that index and the owner trigger compare
+          // role = 'owner' exactly: a multi-role value would make the two
+          // layers disagree on who owns the household, so only one plain
+          // admin or member role passes.
           beforeUpdateMemberRole: ({ newRole }) => {
-            const roles = Array.isArray(newRole) ? newRole : [newRole];
-            if (roles.includes(OWNER_ROLE)) {
+            const role = newRole as string | string[];
+            if (Array.isArray(role) || role.includes(",")) {
+              throw new APIError("BAD_REQUEST", { message: "multiple_roles_not_allowed" });
+            }
+            if (role === OWNER_ROLE) {
               throw new APIError("FORBIDDEN", { message: "owner_role_not_transferable" });
+            }
+            if (!MEMBER_ROLES.has(role)) {
+              throw new APIError("BAD_REQUEST", { message: "role_not_allowed" });
             }
             return Promise.resolve();
           },
@@ -651,9 +761,13 @@ export function buildAuthOptions(
             // gap this ticket closes. Scheduling it instead keeps the known
             // and unknown branches equally fast; the .catch keeps the failure
             // logged instead of becoming an unhandled rejection, since
-            // scheduleBackgroundTask does not log for us.
-            const sendPromise = emailSender
-              .send({ to: email, ...magicLinkEmail })
+            // scheduleBackgroundTask does not log for us. The per-recipient
+            // quota is checked inside the same task, so a refused send
+            // answers exactly like a sent one.
+            const sendPromise = reserveAuthEmail(db, existing.user.id)
+              .then((reserved) =>
+                reserved ? emailSender.send({ to: email, ...magicLinkEmail }) : null,
+              )
               .catch((error: unknown) => {
                 logSendFailure("magic-link", error);
               });
