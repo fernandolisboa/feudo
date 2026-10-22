@@ -2,7 +2,7 @@ import { formatMoney } from "@feudo/core";
 
 import { Badge } from "@/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
-import { describeFreshness, freshnessLabel, isStale } from "../freshness";
+import { closedLabel, describeFreshness, freshnessLabel, isStale } from "../freshness";
 import type { HouseholdAccount } from "../repository";
 import { AccountRowActions } from "./account-row-actions";
 import { t } from "../strings";
@@ -36,7 +36,10 @@ export function AccountsTable({
       </TableHeader>
       <TableBody>
         {accounts.map((account) => {
-          const freshness = describeFreshness(account.syncedAt, now, timeZone);
+          const updated =
+            account.closedAt === null
+              ? freshnessLabel(describeFreshness(account.syncedAt, now, timeZone))
+              : closedLabel(account.closedAt, timeZone);
           return (
             <TableRow key={account.id} className="h-[var(--density-row)]">
               <TableCell>{account.institutionName}</TableCell>
@@ -57,7 +60,7 @@ export function AccountsTable({
                     : "text-muted-foreground tabular-nums"
                 }
               >
-                {freshnessLabel(freshness)}
+                {updated}
                 {account.lastSyncError ? (
                   <span className="text-destructive block text-xs">{t.accounts.syncFailed}</span>
                 ) : null}

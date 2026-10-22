@@ -110,6 +110,9 @@ describe("sync user-scoped repository isolation (integration)", () => {
       await expect(
         repositoryB.upsertTransactions(db, connectionId, [], { syncedAt: new Date() }),
       ).rejects.toThrow(ConnectionNotOwnedError);
+      await expect(
+        repositoryB.closeUnlistedAccounts(db, connectionId, [], { closedAt: new Date() }),
+      ).rejects.toThrow(ConnectionNotOwnedError);
       await expect(repositoryB.recordSyncFailure(db, connectionId, "failed")).rejects.toThrow(
         ConnectionNotOwnedError,
       );
@@ -154,6 +157,66 @@ describe("sync user-scoped repository isolation (integration)", () => {
           db,
         ),
       ).toEqual([]);
+    });
+  });
+
+  it("closes only the scoped user's unlisted accounts of that connection, once", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const repositoryA = createSyncUserRepository(userA.scope);
+      const accountsA = [account(), account({ providerAccountId: "cdb", type: "investment" })];
+      const connectionA = await connectFor(db, userA, { accounts: accountsA });
+      const otherOfA = await connectFor(db, userA, { itemId: "other-item", accounts: accountsA });
+      await connectFor(db, userB, { accounts: accountsA });
+      const firstMiss = new Date("2026-10-01T06:00:00.000Z");
+
+      expect(
+        await repositoryA.closeUnlistedAccounts(db, connectionA, ["acc-1"], {
+          closedAt: firstMiss,
+        }),
+      ).toBe(1);
+      expect(
+        await repositoryA.closeUnlistedAccounts(db, connectionA, ["acc-1"], {
+          closedAt: new Date("2026-10-02T06:00:00.000Z"),
+        }),
+      ).toBe(0);
+
+      const rows = await db
+        .select({
+          connectionId: bankAccount.connectionId,
+          providerAccountId: bankAccount.providerAccountId,
+          balanceCentavos: bankAccount.balanceCentavos,
+          closedAt: bankAccount.closedAt,
+        })
+        .from(bankAccount);
+      const closed = rows.filter((row) => row.closedAt !== null);
+      expect(closed).toEqual([
+        {
+          connectionId: connectionA,
+          providerAccountId: "cdb",
+          balanceCentavos: 0,
+          closedAt: firstMiss,
+        },
+      ]);
+      expect(rows.filter((row) => row.connectionId === otherOfA)).toHaveLength(2);
+      expect(rows.filter((row) => row.balanceCentavos === 123456)).toHaveLength(5);
+    });
+  });
+
+  it("reopens a closed account the provider lists again, with its new balance", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repository = createSyncUserRepository(userA.scope);
+      const connectionId = await connectFor(db, userA);
+      await repository.closeUnlistedAccounts(db, connectionId, [], { closedAt: new Date() });
+
+      await repository.upsertAccounts(db, connectionId, [account({ balanceCentavos: 777 })], {
+        syncedAt: new Date(),
+      });
+
+      const [row] = await createHouseholdAccountsRepository(
+        householdScope(userA.session),
+        userA.scope,
+      ).list(db);
+      expect(row).toMatchObject({ balanceCentavos: 777, closedAt: null });
     });
   });
 

@@ -89,6 +89,7 @@ const BASE_DOCUMENT: ExportDocument = {
       dueDate: null,
       acquisitionDate: null,
       syncedAt: "2026-01-02T00:00:00.000Z",
+      closedAt: null,
       createdAt: "2026-01-01T00:00:00.000Z",
     },
   ],

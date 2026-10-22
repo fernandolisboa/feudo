@@ -72,6 +72,10 @@ _Avoid_: wallet, balance
 An account in no household, visible only to its connection's owner, who sees it flagged under "Suas conexões" and can move it into a household. An account becomes unassigned when its household is deleted, or when its connection's owner leaves or is removed from that household: the household stops seeing it, and its transactions, in the same transaction that ends the membership (ADR-0001).
 _Avoid_: orphan account, hidden account
 
+**Closed account**:
+An account a successful sync no longer lists: a fully redeemed position, a closed account, or one Meu Pluggy stops returning (#102). Its balance becomes zero and it is stamped with the first sync that missed it; it leaves every balance, the reserve positions and the Reserva placement, and "Contas" lists it last as "Encerrada em" that date instead of a frozen update. It is never deleted: its transactions, marks and household stay. It stays a ledger filter, since its history does, and still counts as a bank the household uses in the bank comparison. If the provider lists it again, it reopens with the new balance. A failed sync closes nothing; a successful one that lists nothing at all closes every account of that connection (ADR-0005, 2026-10-22).
+_Avoid_: deleted account, redeemed account (in code)
+
 **Shared account**:
 An account the household treats as the household's own, for reporting purposes. The label never restricts visibility.
 
@@ -87,7 +91,7 @@ _Avoid_: refresh (that is Meu Pluggy's own step, outside Feudo), import
 A member's "Sincronizar agora": the same read as the daily sync, limited to the connections with an account in their active household, each under its own owner's credentials. A household gets three per calendar day in its own time zone, shared by all its members; a press spends one whether the read succeeds or not, and a household with no account spends none. It only re-reads Meu Pluggy's snapshot: how fresh that is still depends on Meu Pluggy's own daily refresh (ADR-0005).
 
 **Freshness**:
-When Feudo last read an account successfully, shown in the household's time zone as "hoje, 06:10", "ontem, 22:15" or a date. An account not read for more than 48 hours is stale and the household is told so; a connection whose last sync failed says why, in plain language, and offers a retry through the manual sync.
+When Feudo last read an account successfully, shown in the household's time zone as "hoje, 06:10", "ontem, 22:15" or a date. An account not read for more than 48 hours is stale and the household is told so (a closed account never is); a connection whose last sync failed says why, in plain language, and offers a retry through the manual sync.
 
 **Institution**:
 A bank or financial company a user can connect. Referenced by name, Open Finance identifier, financial conglomerate and FGC participation. The legal entity that holds the account can differ from the entity that carries the deposit guarantee: a payment institution (Nubank, PicPay, Mercado Pago) is not an FGC member, and the guarantee belongs to the bank or financing company in the same financial conglomerate. Distinct from a bank connection's institution name, which is a label its owner types and may not match.

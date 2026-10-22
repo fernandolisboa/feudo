@@ -267,10 +267,11 @@ export type ReserveMarkInput = {
   institutionId: string | null;
 };
 
-// Household-scoped (ADR-0001): every account of the session's household that
-// can hold reserve money (a credit card cannot), each with this household's
-// own mark, if it made one. The mark is joined on the household too, so a
-// mark left behind by an account's previous household is never read here.
+// Household-scoped (ADR-0001): every open account of the session's household
+// that can hold reserve money (a credit card cannot, nor a closed one: #102),
+// each with this household's own mark, if it made one. The mark is joined on
+// the household too, so a mark left behind by an account's previous
+// household is never read here.
 export function createReserveMarkRepository(scope: HouseholdScope) {
   return {
     async listPositions(db: DatabaseOrTransaction): Promise<ReservePositionRow[]> {
@@ -304,6 +305,7 @@ export function createReserveMarkRepository(scope: HouseholdScope) {
           and(
             eq(bankAccount.householdId, scope.householdId),
             inArray(bankAccount.type, RESERVE_ACCOUNT_TYPES),
+            isNull(bankAccount.closedAt),
           ),
         )
         .orderBy(asc(bankConnection.institutionName), asc(bankAccount.name), asc(bankAccount.id));
@@ -341,6 +343,7 @@ export function createReserveMarkRepository(scope: HouseholdScope) {
             eq(bankAccount.id, input.accountId),
             eq(bankAccount.householdId, scope.householdId),
             inArray(bankAccount.type, RESERVE_ACCOUNT_TYPES),
+            isNull(bankAccount.closedAt),
           ),
         )
         .limit(1);

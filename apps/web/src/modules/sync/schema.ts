@@ -163,6 +163,9 @@ export const bankAccount = pgTable(
     dueDate: date("due_date", { mode: "string" }),
     acquisitionDate: date("acquisition_date", { mode: "string" }),
     syncedAt: timestamp("synced_at", { withTimezone: true }).notNull(),
+    // First successful sync that no longer listed the account (#102); cleared
+    // when it is listed again.
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

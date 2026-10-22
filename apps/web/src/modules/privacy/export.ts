@@ -79,6 +79,7 @@ export type ExportDocument = {
     dueDate: string | null;
     acquisitionDate: string | null;
     syncedAt: string;
+    closedAt: string | null;
     createdAt: string;
   }>;
   transactions: Array<{
@@ -255,6 +256,7 @@ export async function buildExportDocument(
       dueDate: account.dueDate,
       acquisitionDate: account.acquisitionDate,
       syncedAt: account.syncedAt.toISOString(),
+      closedAt: isoOrNull(account.closedAt),
       createdAt: account.createdAt.toISOString(),
     })),
     transactions: sync.transactions.map((transaction) => ({

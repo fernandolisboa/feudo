@@ -129,7 +129,9 @@ export type DescribeConnectionOutcome = Outcome<{ connection: ProviderConnection
 // request), ProviderResponseShapeError (a payload Feudo cannot read),
 // ProviderListingTooLongError (a listing with more pages than the paginator
 // caps at) or, when authenticate() was given a signal, ProviderReadAbortedError
-// (the run's own deadline cut the read short).
+// (the run's own deadline cut the read short). Together, listAccounts and
+// listInvestmentPositions must return every account still open on the item:
+// sync closes whatever they leave out (ADR-0005, 2026-10-22).
 export interface ProviderClient {
   describeConnection(providerItemId: string): Promise<DescribeConnectionOutcome>;
   listAccounts(providerItemId: string): Promise<NormalizedAccount[]>;

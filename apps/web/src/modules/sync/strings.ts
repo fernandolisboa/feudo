@@ -86,6 +86,7 @@ const en = {
       markIndividual: "Mark as individual account",
     },
     syncFailed: "Last sync failed",
+    closed: "Closed on {date}",
     relabelled: "Label updated.",
   },
   freshness: {
@@ -295,6 +296,7 @@ const ptBR = {
       markIndividual: "Marcar como conta individual",
     },
     syncFailed: "Última sincronização falhou",
+    closed: "Encerrada em {date}",
     relabelled: "Rótulo atualizado.",
   },
   freshness: {

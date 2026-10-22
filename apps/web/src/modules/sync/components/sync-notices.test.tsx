@@ -28,6 +28,7 @@ function account(overrides: Partial<HouseholdAccount>): HouseholdAccount {
     connectedByUserId: "user-1",
     connectedByName: "Ana",
     syncedAt: new Date("2026-10-01T09:10:00Z"),
+    closedAt: null,
     connectionSyncedAt: new Date("2026-10-01T09:10:00Z"),
     lastSyncError: null,
     ...overrides,
