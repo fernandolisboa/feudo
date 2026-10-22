@@ -18,6 +18,7 @@ export {
 } from "./page-props";
 export type { MembershipDeparture } from "./departure";
 export {
+  deleteInvitationsForAccountPurge,
   planMembershipDepartures,
   releaseMembershipsForAccountPurge,
   timeZoneForDepartingUser,

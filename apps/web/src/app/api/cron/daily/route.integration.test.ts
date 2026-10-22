@@ -14,6 +14,7 @@ import { getAuth } from "@/modules/auth";
 import { signUpVerifiedUser } from "@/modules/auth/test/sign-up-verified-user";
 import * as householdsModule from "@/modules/households";
 import * as marketDataModule from "@/modules/market-data";
+import * as privacyModule from "@/modules/privacy";
 import {
   CDI_DAILY_OBSERVATIONS,
   IPCA_MONTHLY_OBSERVATIONS,
@@ -90,13 +91,19 @@ describe("GET /api/cron/daily (integration)", () => {
         steps: {
           marketData: { ok: boolean; results: unknown[] };
           pruneVerification: { deleted: number };
+          pruneSessions: { deleted: number };
+          pruneRateLimits: { deleted: number };
           pruneInvitations: { deleted: number };
+          pruneUnverifiedSignUps: { deleted: number };
         };
       };
       expect(body.ok).toBe(true);
       expect(body.steps.marketData.ok).toBe(true);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneSessions).toEqual({ deleted: 0 });
+      expect(body.steps.pruneRateLimits).toEqual({ deleted: 0 });
       expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+      expect(body.steps.pruneUnverifiedSignUps).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(CDI_DAILY_OBSERVATIONS.length);
       expect(await countMarketDataRows(db, "13522")).toBe(0);
@@ -145,13 +152,19 @@ describe("GET /api/cron/daily (integration)", () => {
         steps: {
           marketData: { ok: boolean };
           pruneVerification: { deleted: number };
+          pruneSessions: { deleted: number };
+          pruneRateLimits: { deleted: number };
           pruneInvitations: { deleted: number };
+          pruneUnverifiedSignUps: { deleted: number };
         };
       };
       expect(body.ok).toBe(false);
       expect(body.steps.marketData.ok).toBe(false);
       expect(body.steps.pruneVerification).toEqual({ deleted: 1 });
+      expect(body.steps.pruneSessions).toEqual({ deleted: 0 });
+      expect(body.steps.pruneRateLimits).toEqual({ deleted: 0 });
       expect(body.steps.pruneInvitations).toEqual({ deleted: 0 });
+      expect(body.steps.pruneUnverifiedSignUps).toEqual({ deleted: 0 });
 
       expect(await countMarketDataRows(db, "12")).toBe(0);
       const remainingVerification = await db.select().from(verification);
@@ -283,16 +296,33 @@ describe("GET /api/cron/daily (integration)", () => {
       globalThis.fetch = buildSgsFetchMock();
       const callOrder: string[] = [];
       const actualPruneVerification = authModule.runDailyPruneStep;
+      const actualPruneSessions = authModule.runSessionPruneStep;
+      const actualPruneRateLimits = authModule.runRateLimitPruneStep;
       const actualPruneInvitations = householdsModule.runDailyPruneStep;
+      const actualPruneUnverified = privacyModule.runUnverifiedSignUpPruneStep;
       const actualRefresh = marketDataModule.runDailyRefreshStep;
       vi.spyOn(authModule, "runDailyPruneStep").mockImplementation(async (...args) => {
         callOrder.push("pruneVerification");
         return actualPruneVerification(...args);
       });
+      vi.spyOn(authModule, "runSessionPruneStep").mockImplementation(async (...args) => {
+        callOrder.push("pruneSessions");
+        return actualPruneSessions(...args);
+      });
+      vi.spyOn(authModule, "runRateLimitPruneStep").mockImplementation(async (...args) => {
+        callOrder.push("pruneRateLimits");
+        return actualPruneRateLimits(...args);
+      });
       vi.spyOn(householdsModule, "runDailyPruneStep").mockImplementation(async (...args) => {
         callOrder.push("pruneInvitations");
         return actualPruneInvitations(...args);
       });
+      vi.spyOn(privacyModule, "runUnverifiedSignUpPruneStep").mockImplementation(
+        async (...args) => {
+          callOrder.push("pruneUnverifiedSignUps");
+          return actualPruneUnverified(...args);
+        },
+      );
       vi.spyOn(marketDataModule, "runDailyRefreshStep").mockImplementation(async (...args) => {
         callOrder.push("marketData");
         return actualRefresh(...args);
@@ -300,7 +330,14 @@ describe("GET /api/cron/daily (integration)", () => {
 
       const response = await callCronRoute();
       expect(response.status).toBe(200);
-      expect(callOrder).toEqual(["pruneVerification", "pruneInvitations", "marketData"]);
+      expect(callOrder).toEqual([
+        "pruneVerification",
+        "pruneSessions",
+        "pruneRateLimits",
+        "pruneInvitations",
+        "pruneUnverifiedSignUps",
+        "marketData",
+      ]);
     });
   });
 });

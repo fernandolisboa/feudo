@@ -10,3 +10,5 @@ export { getAccountDeletionPendingPage, getDeleteAccountSectionProps } from "./p
 export type { AccountPurgeStep } from "./service";
 export { runAccountPurgeStep } from "./service";
 export { t } from "./strings";
+export type { UnverifiedSignUpPruneStep } from "./unverified-sign-up-prune";
+export { runUnverifiedSignUpPruneStep } from "./unverified-sign-up-prune";

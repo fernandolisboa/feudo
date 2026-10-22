@@ -100,8 +100,9 @@ variable decides) rather than failing every auth endpoint.
   `mode === "invite"`. Invitations are created by `households.inviteMember`
   (`apps/web/src/modules/households/membership.ts`), which calls
   `getAuth().api.createInvitation` — see `docs/runbooks/households.md` for the invite, accept,
-  role and ownership flows. Expired and cancelled pending-invite rows are purged by the daily
-  housekeeping job (`households.pruneExpiredInvitations`, a step of `GET /api/cron/daily`).
+  role and ownership flows. Cancelled and expired invite rows, whatever their status, are purged by
+  the daily housekeeping job (`households.pruneExpiredInvitations`, a step of
+  `GET /api/cron/daily`), and the account purge deletes the invites sent to the purged user's email.
 - `open`: sign-up always allowed, subject to Better Auth's own validation and rate limits.
 
 ## Base URL and trusted origins
@@ -293,22 +294,31 @@ https://vercel.com/docs/cron-jobs/usage-and-pricing). Feudo runs three, all bear
 model call that needs a 300 s budget. `daily`
 (`apps/web/src/app/api/cron/daily/route.ts`) only checks the bearer token, calls each slice's own
 daily step and composes the response — per ADR-0011, each slice owns its own try/catch around its
-step, so one step failing never stops the others from running: `runDailyPruneStep`
-(`apps/web/src/modules/auth/verification-prune.ts` and
-`apps/web/src/modules/households/invitation-prune.ts`) and `runDailyRefreshStep`
-(`apps/web/src/modules/market-data/refresh-market-data.ts`), all exported through each module's
-`index.ts`. The response is a per-step summary:
-`{ ok, steps: { pruneVerification: { deleted } | { error }, pruneInvitations: { deleted } | { error }, marketData: { ok, results } | { error } } }`.
-The steps run in this order:
+step, so one step failing never stops the others from running. Each step returns a summary,
+`{ deleted } | { error }` for the prunes, and the response is
+`{ ok, steps: { <step>: <summary>, ... } }`. The steps run in this order:
 
-1. The expired-verification prune (`auth.runDailyPruneStep`, wrapping `pruneExpiredVerifications`)
-   — one cheap `DELETE`.
-2. The expired/cancelled-invitation prune (`households.runDailyPruneStep`, wrapping
-   `pruneExpiredInvitations`, ADR-0008) — another cheap `DELETE`.
-3. The market-data refresh (`market-data.runDailyRefreshStep`, wrapping `refreshMarketData`) — up
-   to five sequential SGS fetches, each with its own 10 s timeout.
+1. `pruneVerification`: expired verification rows (`auth.runDailyPruneStep`,
+   `verification-prune.ts`).
+2. `pruneSessions`: expired sessions, with their IP address and user agent
+   (`auth.runSessionPruneStep`, `session-prune.ts`, #123).
+3. `pruneRateLimits`: Better Auth `rate_limit` rows (their key embeds the requester IP) whose last
+   request is more than a day old (`auth.runRateLimitPruneStep`, `rate-limit-prune.ts`, #123).
+4. `pruneInvitations`: every cancelled or expired invitation, whatever its status
+   (`households.runDailyPruneStep`, `invitation-prune.ts`, ADR-0008).
+5. `pruneUnverifiedSignUps`: users whose email was never verified, created more than 7 days ago,
+   with no membership, connection or provider credential (`privacy.runUnverifiedSignUpPruneStep`,
+   #123). It deletes user rows, so its guards are what keep it from erasing anyone who holds data.
+6. `pruneConsents`, `pruneAuditLog`, `pruneKeyVerificationAttempts`: the sync, audit and analysis
+   prunes.
+7. `purgeAccounts` (20 s budget) and `purgeHouseholds`: accounts and households past their 7-day
+   deletion grace (ADR-0008). The account purge also deletes the invitations sent to the purged
+   user's email (`households.deleteInvitationsForAccountPurge`).
+8. `marketData`: the market-data refresh (`market-data.runDailyRefreshStep`), up to five sequential
+   SGS fetches, each with its own 10 s timeout.
+9. `reserveMonthClose`: the reserve month close, bounded by the route's own deadline.
 
-The two prunes run first deliberately: each is orders of magnitude cheaper than the market-data
+The prunes run first deliberately: each is orders of magnitude cheaper than the market-data
 step, and running them after it would let a slow or unreachable Bacen SGS starve them on every
 invocation. The response is `200` when every step succeeded and `500` when any step errored or, for
 market-data, fetched nothing at all. Any new daily housekeeping task becomes a step of this same

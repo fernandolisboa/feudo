@@ -1,8 +1,8 @@
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { pickSuccessor, type SuccessionCandidate } from "@feudo/core";
 
 import type { CurrentSession } from "@/modules/auth";
-import { member, organization, user } from "@/modules/auth/schema";
+import { invitation, member, organization, user } from "@/modules/auth/schema";
 
 import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 import type { HouseholdRole } from "./membership";
@@ -174,6 +174,20 @@ export async function releaseMembershipsForAccountPurge(
         .where(and(eq(member.id, successor.id), ne(member.userId, userId)));
     }
   }
+}
+
+// Invitations sent to the departing user's address, in any household: their
+// email is personal data and the inviter's own invitations already cascade
+// with the inviter. Runs before the user row goes, which holds the address.
+export async function deleteInvitationsForAccountPurge(
+  tx: DatabaseOrTransaction,
+  userId: string,
+): Promise<void> {
+  const email = tx
+    .select({ email: sql`lower(${user.email})` })
+    .from(user)
+    .where(eq(user.id, userId));
+  await tx.delete(invitation).where(eq(sql`lower(${invitation.email})`, email));
 }
 
 // The time zone a departing user's own dates are shown in, the same on every

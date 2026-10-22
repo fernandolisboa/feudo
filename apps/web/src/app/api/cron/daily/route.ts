@@ -4,14 +4,18 @@ import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
 import { runDailyPruneStep as runAnalysisPruneStep } from "@/modules/analysis";
 import { runDailyPruneStep as runAuditPruneStep } from "@/modules/audit";
-import { runDailyPruneStep as runAuthPruneStep } from "@/modules/auth";
+import {
+  runDailyPruneStep as runAuthPruneStep,
+  runRateLimitPruneStep,
+  runSessionPruneStep,
+} from "@/modules/auth";
 import {
   runDailyPruneStep as runHouseholdsPruneStep,
   runHouseholdPurgeStep,
 } from "@/modules/households";
 import { runDailyRefreshStep } from "@/modules/market-data";
 import { createNotifierFromEnv } from "@/modules/notifications";
-import { runAccountPurgeStep } from "@/modules/privacy";
+import { runAccountPurgeStep, runUnverifiedSignUpPruneStep } from "@/modules/privacy";
 import { runReserveMonthCloseStep } from "@/modules/reserve";
 import { runDailyPruneStep as runSyncPruneStep } from "@/modules/sync";
 
@@ -40,7 +44,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   const requestStartedAt = Date.now();
   const db = getDb();
   const pruneVerification = await runAuthPruneStep(db);
+  const pruneSessions = await runSessionPruneStep(db, new Date());
+  const pruneRateLimits = await runRateLimitPruneStep(db, new Date());
   const pruneInvitations = await runHouseholdsPruneStep(db);
+  const pruneUnverifiedSignUps = await runUnverifiedSignUpPruneStep(db, new Date());
   const pruneConsents = await runSyncPruneStep(db);
   const pruneAuditLog = await runAuditPruneStep(db);
   const pruneKeyVerificationAttempts = await runAnalysisPruneStep(db);
@@ -59,7 +66,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   );
   const marketDataOk = "error" in marketData ? false : marketData.ok;
   const pruneVerificationOk = !("error" in pruneVerification);
+  const pruneSessionsOk = !("error" in pruneSessions);
+  const pruneRateLimitsOk = !("error" in pruneRateLimits);
   const pruneInvitationsOk = !("error" in pruneInvitations);
+  const pruneUnverifiedSignUpsOk = !("error" in pruneUnverifiedSignUps);
   const pruneConsentsOk = !("error" in pruneConsents);
   const pruneAuditLogOk = !("error" in pruneAuditLog);
   const pruneKeyVerificationAttemptsOk = !("error" in pruneKeyVerificationAttempts);
@@ -69,7 +79,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   const ok =
     marketDataOk &&
     pruneVerificationOk &&
+    pruneSessionsOk &&
+    pruneRateLimitsOk &&
     pruneInvitationsOk &&
+    pruneUnverifiedSignUpsOk &&
     pruneConsentsOk &&
     pruneAuditLogOk &&
     pruneKeyVerificationAttemptsOk &&
@@ -82,7 +95,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       ok,
       steps: {
         pruneVerification,
+        pruneSessions,
+        pruneRateLimits,
         pruneInvitations,
+        pruneUnverifiedSignUps,
         pruneConsents,
         pruneAuditLog,
         pruneKeyVerificationAttempts,
