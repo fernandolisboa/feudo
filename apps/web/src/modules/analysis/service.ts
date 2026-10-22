@@ -124,12 +124,13 @@ async function clientForHousehold(
     return null;
   }
   const settings = await getAiSettings(scope, db);
+  const encryptionKey = deps.encryptionKey;
   const apiKey =
-    deps.encryptionKey === null
+    encryptionKey === null
       ? null
-      : decryptHouseholdApiKey(settings, deps.encryptionKey, scope.householdId);
-  if (apiKey !== null && deps.encryptionKey !== null) {
-    await rebindLegacyApiKey(scope, db, settings, apiKey, deps.encryptionKey);
+      : decryptHouseholdApiKey(settings, encryptionKey, scope.householdId);
+  if (encryptionKey !== null && apiKey !== null) {
+    await rebindLegacyApiKey(scope, db, settings, apiKey, encryptionKey);
   }
   const client = deps.provider.clientFor(apiKey);
   if (client === null) {

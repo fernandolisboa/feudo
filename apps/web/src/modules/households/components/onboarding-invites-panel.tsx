@@ -1,3 +1,5 @@
+import { interpolate } from "@/lib/interpolate";
+
 import { AcceptInvitationButton } from "./accept-invitation-button";
 import type { InvitationForUser } from "../membership";
 import { t } from "../strings";
@@ -8,7 +10,7 @@ function InvitationRow({ invitation }: { invitation: InvitationForUser }) {
       <div>
         <p className="font-medium">{invitation.householdName}</p>
         <p className="text-muted-foreground text-sm">
-          {t.invitesTab.invitedAs.replace("{role}", t.casa.roles[invitation.role])}
+          {interpolate(t.invitesTab.invitedAs, "{role}", t.casa.roles[invitation.role])}
         </p>
       </div>
       <AcceptInvitationButton invitationId={invitation.id} />

@@ -32,8 +32,12 @@ test("a page carries the security headers and a per-request CSP nonce its script
   }
 });
 
-test("an API route carries the security headers", async ({ request }) => {
-  expectStaticHeaders(await request.get("/api/health"));
+test("an API route carries the security headers and a policy that runs nothing", async ({
+  request,
+}) => {
+  const response = await request.get("/api/health");
+  expectStaticHeaders(response);
+  expect(response.headers()["content-security-policy"]).toContain("default-src 'none'");
 });
 
 // Vercel injects its preview toolbar (vercel.live) into preview deployments

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { contentSecurityPolicy, createNonce, STATIC_SECURITY_HEADERS } from "./security-headers";
+import {
+  API_CONTENT_SECURITY_POLICY,
+  contentSecurityPolicy,
+  createNonce,
+  STATIC_SECURITY_HEADERS,
+} from "./security-headers";
 
 function directives(policy: string): Map<string, string> {
   return new Map(
@@ -35,6 +40,15 @@ describe("contentSecurityPolicy", () => {
     expect(directives(contentSecurityPolicy("n", false)).get("style-src")).toBe(
       "'self' 'unsafe-inline'",
     );
+  });
+});
+
+describe("API_CONTENT_SECURITY_POLICY", () => {
+  it("lets a route handler's response run, load or frame nothing", () => {
+    const policy = directives(API_CONTENT_SECURITY_POLICY);
+    expect(policy.get("default-src")).toBe("'none'");
+    expect(policy.get("frame-ancestors")).toBe("'none'");
+    expect(policy.has("script-src")).toBe(false);
   });
 });
 

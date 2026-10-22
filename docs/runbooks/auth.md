@@ -53,7 +53,7 @@ Because of this, `signUp`, `signIn`, `resendVerification` and `signOut` never ca
 `getAuth().api.*` directly — `auth.api.*` calls skip Better Auth's router-level rate limiter
 entirely (it only runs in `onRequest`, which `auth.handler()` executes and `dispatchAuthEndpoint`
 does not). Instead they build a `Request` and call `getAuth().handler(request)`, forwarding the
-caller's headers so IP-based rate limiting sees the real request.
+caller's headers so IP-based rate limiting sees the real request. The limiter reads the client address from `x-real-ip`, then `x-forwarded-for` (`advanced.ipAddress.ipAddressHeaders` in `options.ts`): Vercel sets both to the client and overwrites anything the client sent, and naming them keeps one bucket per client instead of Better Auth's shared fallback bucket when no single address can be read.
 
 `nextCookies()` (the plugin in `options.ts`) only bridges `Set-Cookie` back onto Next's `cookies()`
 for `auth.api.*` calls; it flags `auth.handler()`'s own dispatch as router-driven and skips it. So

@@ -36,7 +36,7 @@ import {
 const SCOPE = { householdId: "household-1" };
 const DB = {} as never;
 const KEY = "unit-test-encryption-key-with-at-least-32-chars";
-const HOUSEHOLD = "household-1";
+const HOUSEHOLD = SCOPE.householdId;
 
 function provider(verifyKey: AiProvider["verifyKey"]): AiProvider {
   return { verifyKey, clientFor: () => null };

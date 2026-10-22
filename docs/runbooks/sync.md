@@ -10,7 +10,7 @@ ADR-0008). Its public surface is `apps/web/src/modules/sync/index.ts`:
 - `t` and the daily housekeeping entry point `runDailyPruneStep`.
 
 Everything else (`service.ts`, `repository.ts`, `actions.ts`, `validation.ts`, `scope.ts`,
-`crypto.ts`, `document-hash.ts`, `provider/`) is module-private.
+`document-hash.ts`, `provider/`) is module-private.
 
 ## Two scopes, one invariant (ADR-0001)
 

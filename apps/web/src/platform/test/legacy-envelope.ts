@@ -2,8 +2,8 @@ import { createCipheriv, hkdfSync, randomBytes } from "node:crypto";
 
 import { keyIdFor } from "../crypto";
 
-// What encryptSecret wrote before envelopes were bound to their owner (v1):
-// tests use it to seed rows that predate the binding.
+// What encryptSecret wrote before envelopes were bound to their owner (v1),
+// frozen as it was: tests use it to seed rows that predate the binding.
 export function encryptLegacySecret(
   plaintext: string,
   encryptionKey: string,

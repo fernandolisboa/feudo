@@ -10,6 +10,11 @@ export const STATIC_SECURITY_HEADERS: readonly { key: string; value: string }[] 
 
 export const CSP_HEADER = "Content-Security-Policy";
 
+// Route handlers answer JSON, files and redirects, plus Better Auth's own
+// error page: nothing there needs to run a script or be framed.
+export const API_CONTENT_SECURITY_POLICY =
+  "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
 export function createNonce(): string {
   return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64");
 }
