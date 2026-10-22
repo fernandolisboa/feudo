@@ -232,6 +232,13 @@
       "when": 1792690490654,
       "tag": "0032_bank_account_closed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792699908416,
+      "tag": "0033_categorization_deferral",
+      "breakpoints": true
     }
   ]
 }

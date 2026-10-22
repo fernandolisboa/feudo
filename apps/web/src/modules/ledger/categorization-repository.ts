@@ -17,6 +17,7 @@ import { bankAccount, bankTransaction } from "@/modules/sync/schema";
 import { hasSqlState } from "@/platform/db/sql-state";
 
 import {
+  categorizationDeferral,
   categorizationRule,
   householdSubcategory,
   internalTransferMark,
@@ -470,6 +471,46 @@ export function createCategorizationRepository(scope: HouseholdScope) {
           ),
         );
       return "ok";
+    },
+
+    // Columns in schema order, for the same INSERT ... SELECT reason as
+    // setTransferMark. Deferring again only moves deferred_at forward.
+    async defer(db: Database, transactionId: string): Promise<"ok" | "not_found"> {
+      const values = db
+        .select({
+          householdId: sql<string>`${scope.householdId}::text`.as("household_id"),
+          transactionId: sql<string>`${transactionId}::text`.as("transaction_id"),
+          deferredAt: sql<Date>`now()`.as("deferred_at"),
+        })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(scopedToHousehold(transactionId))
+        .limit(1);
+
+      const written = await db
+        .insert(categorizationDeferral)
+        .select(values)
+        .onConflictDoUpdate({
+          target: [categorizationDeferral.householdId, categorizationDeferral.transactionId],
+          set: { deferredAt: sql`now()` },
+        })
+        .returning({ transactionId: categorizationDeferral.transactionId });
+      return written.length > 0 ? "ok" : "not_found";
+    },
+
+    async listDeferredTransactionIds(db: Database): Promise<Set<string>> {
+      const rows = await db
+        .select({ transactionId: categorizationDeferral.transactionId })
+        .from(categorizationDeferral)
+        .innerJoin(bankTransaction, eq(bankTransaction.id, categorizationDeferral.transactionId))
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(
+          and(
+            eq(categorizationDeferral.householdId, scope.householdId),
+            eq(bankAccount.householdId, scope.householdId),
+          ),
+        );
+      return new Set(rows.map((row) => row.transactionId));
     },
   };
 }

@@ -13,7 +13,7 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
-import { transactionCategorization } from "./schema";
+import { categorizationDeferral, transactionCategorization } from "./schema";
 
 import type { Database } from "@/platform/db/client";
 
@@ -577,6 +577,48 @@ describe("categorization repository (integration)", () => {
         accountId: null,
       });
       expect(rowsB.find((row) => row.id === transactionId)?.transferMark).toBe(true);
+    });
+  });
+
+  it("defers a transaction only through its own household and lists it only there", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "defer-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "defer-1");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+
+      expect(await repoB.defer(db, transactionId)).toBe("not_found");
+      expect(await repoB.defer(db, UNKNOWN_ID)).toBe("not_found");
+      expect(await db.select().from(categorizationDeferral)).toEqual([]);
+
+      expect(await repoA.defer(db, transactionId)).toBe("ok");
+      expect(await repoA.defer(db, transactionId)).toBe("ok");
+      expect(await repoA.listDeferredTransactionIds(db)).toEqual(new Set([transactionId]));
+      expect(await repoB.listDeferredTransactionIds(db)).toEqual(new Set());
+    });
+  });
+
+  it("leaves a deferral behind when its account moves to another household", async () => {
+    await withTwoUsers(async ({ db, userA, householdB }) => {
+      const seeded = await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "defer-move-1" })],
+      });
+      const transactionId = await transactionIdFor(db, "defer-move-1");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      expect(await repoA.defer(db, transactionId)).toBe("ok");
+
+      await joinHousehold(db, userA.id, householdB);
+      const accountId = seeded.accountIdsByProvider.get("acc-1") ?? "";
+      expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("ok");
+
+      expect(await repoA.listDeferredTransactionIds(db)).toEqual(new Set());
+      const repoB = createCategorizationRepository({ householdId: householdB });
+      expect(await repoB.listDeferredTransactionIds(db)).toEqual(new Set());
+      expect(await repoA.defer(db, transactionId)).toBe("not_found");
     });
   });
 });

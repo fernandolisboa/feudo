@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   foreignKey,
+  index,
   pgEnum,
   pgTable,
   primaryKey,
@@ -169,3 +170,28 @@ export const internalTransferMark = pgTable("internal_transfer_mark", {
   markedByUserId: text("marked_by_user_id").references(() => user.id, { onDelete: "set null" }),
   markedAt: timestamp("marked_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Household-scoped (ADR-0001), unlike the two annotations above: putting a
+// transaction off is this household's way through /categorizar, not a fact
+// about the transaction, so it stays behind when the account moves. Read only
+// while the transaction's account is still this household's. No author is
+// kept (LGPD data minimization): nothing reads who did it.
+export const categorizationDeferral = pgTable(
+  "categorization_deferral",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => bankTransaction.id, { onDelete: "cascade" }),
+    deferredAt: timestamp("deferred_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "categorization_deferral_pk",
+      columns: [table.householdId, table.transactionId],
+    }),
+    index("categorization_deferral_transaction_id_idx").on(table.transactionId),
+  ],
+);

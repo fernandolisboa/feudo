@@ -155,3 +155,19 @@ export async function clearInternalTransferMark(
     return { status: "failed" };
   }
 }
+
+export async function deferCategorization(
+  transactionId: string,
+  session: HouseholdSession,
+  db: Database,
+): Promise<CategorizeOutcome> {
+  try {
+    const status = await createCategorizationRepository(householdScope(session)).defer(
+      db,
+      transactionId,
+    );
+    return { status };
+  } catch {
+    return { status: "failed" };
+  }
+}

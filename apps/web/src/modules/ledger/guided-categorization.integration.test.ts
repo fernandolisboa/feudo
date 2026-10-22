@@ -7,7 +7,7 @@ import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 import type { Database } from "@/platform/db/client";
 
-import { categorizeTransaction } from "./categorization-service";
+import { categorizeTransaction, deferCategorization } from "./categorization-service";
 import { getCategorizationNudgeProps, getGuidedCategorizationProps } from "./guided-categorization";
 
 const NOW = new Date("2026-10-13T12:00:00.000Z");
@@ -86,6 +86,49 @@ describe("guided categorization (integration)", () => {
         reason: "1 transação com esta descrição já está em Alimentação · Mercado.",
       });
       expect(props.items[1]?.pattern).toBe("PADARIA DO ZE");
+    });
+  });
+
+  it("flags what the household left for later, and only for that household", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "later",
+            date: "2026-09-05",
+            description: "PIX ENVIADO FULANO",
+            type: "debit",
+            amountCentavos: -100000,
+          }),
+          seedTransaction({
+            providerTransactionId: "now",
+            date: "2026-09-06",
+            description: "MERCADO BOM PRECO",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+        ],
+      });
+
+      expect(
+        await deferCategorization(await transactionIdFor(db, "later"), userB.session, db),
+      ).toEqual({ status: "not_found" });
+      expect(
+        (await getGuidedCategorizationProps(userA.session, NOW)).items.map((item) => item.deferred),
+      ).toEqual([false, false]);
+
+      expect(
+        await deferCategorization(await transactionIdFor(db, "later"), userA.session, db),
+      ).toEqual({ status: "ok" });
+      const props = await getGuidedCategorizationProps(userA.session, NOW);
+      expect(
+        props.items.map((item) => ({ description: item.description, deferred: item.deferred })),
+      ).toEqual([
+        { description: "PIX ENVIADO FULANO", deferred: true },
+        { description: "MERCADO BOM PRECO", deferred: false },
+      ]);
+      expect(await getCategorizationNudgeProps(userA.session, NOW)).toMatchObject({ count: 2 });
     });
   });
 

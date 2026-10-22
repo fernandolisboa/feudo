@@ -5,6 +5,7 @@ const recordFinancialDataAccessMock = vi.hoisted(() => vi.fn());
 const getHouseholdSettingsMock = vi.hoisted(() => vi.fn());
 const readHouseholdDashboardLinesMock = vi.hoisted(() => vi.fn());
 const householdHasAccountsMock = vi.hoisted(() => vi.fn());
+const listDeferredTransactionIdsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/audit", () => ({ recordFinancialDataAccess: recordFinancialDataAccessMock }));
 vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
@@ -16,6 +17,12 @@ vi.mock("@/modules/households", () => ({
 vi.mock("./dashboard-lines", () => ({
   readHouseholdDashboardLines: readHouseholdDashboardLinesMock,
   householdHasAccounts: householdHasAccountsMock,
+}));
+
+vi.mock("./categorization-repository", () => ({
+  createCategorizationRepository: () => ({
+    listDeferredTransactionIds: listDeferredTransactionIdsMock,
+  }),
 }));
 
 import { getCategorizationNudgeProps, getGuidedCategorizationProps } from "./guided-categorization";
@@ -61,6 +68,7 @@ function resetAll() {
   getHouseholdSettingsMock.mockReset().mockResolvedValue(undefined);
   readHouseholdDashboardLinesMock.mockReset();
   householdHasAccountsMock.mockReset().mockResolvedValue(true);
+  listDeferredTransactionIdsMock.mockReset().mockResolvedValue(new Set());
 }
 
 describe("guided categorization recording order (ADR-0008)", () => {
@@ -69,6 +77,19 @@ describe("guided categorization recording order (ADR-0008)", () => {
     readHouseholdDashboardLinesMock.mockRejectedValue(new Error("read failed"));
 
     await expect(getGuidedCategorizationProps(SESSION, NOW)).rejects.toThrow("read failed");
+    expect(recordFinancialDataAccessMock).not.toHaveBeenCalled();
+  });
+
+  it("never records access when reading what was left for later fails", async () => {
+    resetAll();
+    readHouseholdDashboardLinesMock.mockResolvedValue({
+      kinds: KINDS,
+      rows: [uncategorizedRow("tx-1", 5000)],
+      lines: [],
+    });
+    listDeferredTransactionIdsMock.mockRejectedValue(new Error("deferrals failed"));
+
+    await expect(getGuidedCategorizationProps(SESSION, NOW)).rejects.toThrow("deferrals failed");
     expect(recordFinancialDataAccessMock).not.toHaveBeenCalled();
   });
 
