@@ -623,8 +623,8 @@ describe("inviteMember rate limiting (integration)", () => {
         // Cancelled immediately after creation, not left pending: Better
         // Auth's own invitationLimit (organization({ invitationLimit: 10 }))
         // caps pending invitations per household, independent of this test's
-        // own per-inviter, any-status hourly count (countRecentInvitationsBy in
-        // auth/invitations.ts) — leaving all 20 pending would hit that cap first.
+        // own per-inviter hourly send count (the invitation quota in
+        // auth/email-quota.ts) — leaving all 20 pending would hit that cap first.
         for (let index = 0; index < 20; index += 1) {
           const outcome = await inviteMember(
             {
@@ -1219,7 +1219,7 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
   });
 
   it(
-    "still counts an invitation with an old createdAt toward the hourly ceiling once it has been resent",
+    "counts a resend toward the inviter's hourly ceiling, like a fresh invite",
     { timeout: 60_000 },
     async () => {
       await withTestDb(async (db) => {
@@ -1241,12 +1241,9 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
         expect(invited.status).toBe("ok");
         if (invited.status !== "ok") return;
 
-        // Pushed outside the hourly window on createdAt alone: only a recent
-        // lastSentAt (set by the resend below) can keep this row counting
-        // toward recentInvitationCount's ceiling. lastSentAt is also pushed
-        // outside the 60s minimum interval (the initial send's own failure
-        // already set it) so the resend below reaches the provider instead
-        // of short-circuiting on rate_limited.
+        // lastSentAt is pushed outside the 60s minimum interval (the initial
+        // send's own failure already set it) so the resend below reaches the
+        // provider instead of short-circuiting on rate_limited.
         await db
           .update(invitation)
           .set({
@@ -1263,12 +1260,12 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
         );
         expect(resendOutcome.status).toBe("ok");
 
-        // 19 more, cancelled immediately (Better Auth's own invitationLimit
+        // 18 more, cancelled immediately (Better Auth's own invitationLimit
         // caps pending invitations per household, independent of this
-        // per-inviter hourly count) — combined with the aged-but-resent
-        // invitation above, that is 20 rows recentInvitationCount should
-        // count as recent; a 21st fails only if the aged row still counts.
-        for (let index = 0; index < 19; index += 1) {
+        // per-inviter hourly count): with the invite and its resend above
+        // that is 20 sends, so the next invite fails only if the resend
+        // counted.
+        for (let index = 0; index < 18; index += 1) {
           const outcome = await inviteMember(
             {
               email: `resend-ceiling-${index.toString()}-${crypto.randomUUID()}@example.com`,
@@ -1296,7 +1293,7 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
   );
 
   it(
-    "still counts an invitation with an old createdAt toward the hourly ceiling when only its send has failed",
+    "counts an invitation whose send failed toward the inviter's hourly ceiling",
     { timeout: 60_000 },
     async () => {
       await withTestDb(async (db) => {
@@ -1317,15 +1314,6 @@ describe("resendInvitation ceiling and eligibility (integration)", () => {
         );
         expect(invited.status).toBe("ok");
         if (invited.status !== "ok") return;
-
-        // Pushed outside the hourly window on createdAt alone, and never
-        // resent: only the initial send's own failure (which sets lastSentAt
-        // in sendInvitationEmail's catch branch, not just on success) can
-        // keep this row counting toward recentInvitationCount's ceiling.
-        await db
-          .update(invitation)
-          .set({ createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) })
-          .where(eq(invitation.id, invited.invitationId));
 
         for (let index = 0; index < 19; index += 1) {
           const outcome = await inviteMember(

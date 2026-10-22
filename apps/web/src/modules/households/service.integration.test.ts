@@ -159,6 +159,33 @@ describe("createHousehold (integration)", () => {
       expect(second.status).toBe("already_has_household");
     });
   });
+
+  it("reports already_has_household when a session read before the first household was created races past its own check", async () => {
+    await withTestDb(async (db) => {
+      const headers = await signUpVerifiedUser(db, {
+        name: "Iara",
+        email: "iara@example.com",
+        password: "correct-horse",
+      });
+      const staleSession = await sessionFor(headers);
+
+      const first = await createHousehold(
+        { name: "Casa da Iara", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        staleSession,
+        db,
+        headers,
+      );
+      expect(first.status).toBe("ok");
+
+      const second = await createHousehold(
+        { name: "Segunda casa da Iara", timeZone: "America/Sao_Paulo", reserveMultiple: 6 },
+        staleSession,
+        db,
+        headers,
+      );
+      expect(second.status).toBe("already_has_household");
+    });
+  });
 });
 
 describe("listHouseholds and switchHousehold (integration)", () => {

@@ -4,7 +4,7 @@ import { count, eq } from "drizzle-orm";
 import type { Database } from "@/platform/db/client";
 import { withTestDb } from "@/platform/db/test/harness";
 
-import { AUTH_EMAIL_HOURLY_LIMIT, reserveAuthEmail } from "./email-quota";
+import { EMAIL_QUOTA_LIMITS, reserveEmailQuota } from "./email-quota";
 import { fakeSentEmails, user } from "./schema";
 import { requestMagicLink, requestPasswordReset, resendVerification, signUp } from "./service";
 import { signUpVerifiedUser } from "./test/sign-up-verified-user";
@@ -69,19 +69,19 @@ describe("per-recipient auth email quota (integration)", () => {
       await signUpVerifiedUser(db, { name: "Target", email, password: "correct-horse" });
       expect(await sentEmailCount(db, email)).toBe(1);
 
-      for (let index = 1; index < AUTH_EMAIL_HOURLY_LIMIT; index += 1) {
+      for (let index = 1; index < EMAIL_QUOTA_LIMITS.auth; index += 1) {
         const outcome = await requestMagicLink(email, fromIp(`10.0.0.${String(index)}`));
         expect(outcome).toEqual({ status: "ok" });
       }
-      await pollUntil(() => sentEmailCount(db, email), AUTH_EMAIL_HOURLY_LIMIT);
+      await pollUntil(() => sentEmailCount(db, email), EMAIL_QUOTA_LIMITS.auth);
 
       const overMagicLink = await requestMagicLink(email, fromIp("10.0.1.1"));
       const overReset = await requestPasswordReset(email, fromIp("10.0.1.2"));
       expect(overMagicLink).toEqual({ status: "ok" });
       expect(overReset).toEqual({ status: "ok" });
 
-      await pollUntil(() => authEmailCount(db, email), AUTH_EMAIL_HOURLY_LIMIT + 2);
-      expect(await sentEmailCount(db, email)).toBe(AUTH_EMAIL_HOURLY_LIMIT);
+      await pollUntil(() => authEmailCount(db, email), EMAIL_QUOTA_LIMITS.auth + 2);
+      expect(await sentEmailCount(db, email)).toBe(EMAIL_QUOTA_LIMITS.auth);
     });
   });
 
@@ -92,15 +92,15 @@ describe("per-recipient auth email quota (integration)", () => {
         { name: "Unverified", email, password: "correct-horse", termsAccepted: true },
         fromIp("10.0.2.1"),
       );
-      for (let index = 1; index < AUTH_EMAIL_HOURLY_LIMIT; index += 1) {
+      for (let index = 1; index < EMAIL_QUOTA_LIMITS.auth; index += 1) {
         await resendVerification(email, fromIp(`10.0.2.${String(index + 1)}`));
       }
-      expect(await sentEmailCount(db, email)).toBe(AUTH_EMAIL_HOURLY_LIMIT);
+      expect(await sentEmailCount(db, email)).toBe(EMAIL_QUOTA_LIMITS.auth);
 
       const over = await resendVerification(email, fromIp("10.0.3.1"));
       expect(over).toEqual({ status: "ok" });
-      expect(await authEmailCount(db, email)).toBe(AUTH_EMAIL_HOURLY_LIMIT + 1);
-      expect(await sentEmailCount(db, email)).toBe(AUTH_EMAIL_HOURLY_LIMIT);
+      expect(await authEmailCount(db, email)).toBe(EMAIL_QUOTA_LIMITS.auth + 1);
+      expect(await sentEmailCount(db, email)).toBe(EMAIL_QUOTA_LIMITS.auth);
     });
   });
 
@@ -119,11 +119,11 @@ describe("per-recipient auth email quota (integration)", () => {
       const userA = await userIdFor(db, "quota-a@example.com");
       const userB = await userIdFor(db, "quota-b@example.com");
 
-      for (let index = 1; index < AUTH_EMAIL_HOURLY_LIMIT; index += 1) {
-        expect(await reserveAuthEmail(db, userA)).toBe(true);
+      for (let index = 1; index < EMAIL_QUOTA_LIMITS.auth; index += 1) {
+        expect(await reserveEmailQuota(db, userA, "auth")).toBe(true);
       }
-      expect(await reserveAuthEmail(db, userA)).toBe(false);
-      expect(await reserveAuthEmail(db, userB)).toBe(true);
+      expect(await reserveEmailQuota(db, userA, "auth")).toBe(false);
+      expect(await reserveEmailQuota(db, userB, "auth")).toBe(true);
     });
   });
 
@@ -137,15 +137,15 @@ describe("per-recipient auth email quota (integration)", () => {
       const userId = await userIdFor(db, "quota-window@example.com");
       const start = new Date(Date.now() + TWO_HOURS_MS);
 
-      for (let index = 0; index < AUTH_EMAIL_HOURLY_LIMIT; index += 1) {
-        expect(await reserveAuthEmail(db, userId, start)).toBe(true);
+      for (let index = 0; index < EMAIL_QUOTA_LIMITS.auth; index += 1) {
+        expect(await reserveEmailQuota(db, userId, "auth", start)).toBe(true);
       }
-      expect(await reserveAuthEmail(db, userId, new Date(start.getTime() + 59 * 60_000))).toBe(
-        false,
-      );
-      expect(await reserveAuthEmail(db, userId, new Date(start.getTime() + 61 * 60_000))).toBe(
-        true,
-      );
+      expect(
+        await reserveEmailQuota(db, userId, "auth", new Date(start.getTime() + 59 * 60_000)),
+      ).toBe(false);
+      expect(
+        await reserveEmailQuota(db, userId, "auth", new Date(start.getTime() + 61 * 60_000)),
+      ).toBe(true);
     });
   });
 
@@ -160,9 +160,9 @@ describe("per-recipient auth email quota (integration)", () => {
       const start = new Date(Date.now() + TWO_HOURS_MS);
 
       const results = await Promise.all(
-        Array.from({ length: 12 }, () => reserveAuthEmail(db, userId, start)),
+        Array.from({ length: 12 }, () => reserveEmailQuota(db, userId, "auth", start)),
       );
-      expect(results.filter(Boolean)).toHaveLength(AUTH_EMAIL_HOURLY_LIMIT);
+      expect(results.filter(Boolean)).toHaveLength(EMAIL_QUOTA_LIMITS.auth);
     });
   });
 });

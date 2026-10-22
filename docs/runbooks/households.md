@@ -97,10 +97,10 @@ A default `household_settings` row (`America/Sao_Paulo`, 6 months) is also writt
 `organizationHooks.afterCreateOrganization` in `auth/options.ts`, independent of `createHousehold`,
 so a household created through any other path (a raw call to `/organization/create`) can never be
 observed without one; `createHousehold` immediately overwrites it with the caller's chosen values.
-`beforeCreateOrganization` in the same file rejects a `logo` or `metadata` on the create call —
-Feudo never uses either field on `organization` — and a name over 120 characters (also on
-`beforeUpdateOrganization`), and it refuses (`already_has_household`) a user who is already a member
-of a household not pending deletion, the same rule `createHousehold` applies, so a raw
+`beforeCreateOrganization` in the same file rejects a `logo` or `metadata` (Feudo never uses either
+field on `organization`) and a name over 120 characters; `beforeUpdateOrganization` applies the same
+two checks. `beforeCreateOrganization` also refuses (`already_has_household`) a user who is already a
+member of a household not pending deletion, the rule `createHousehold` applies, so a raw
 `/organization/create` cannot mint extra households either. For a raw HTTP call to any
 `/organization/*` endpoint, `hooks.before` also refuses (`terms_outdated`) a user who has not
 accepted the current `TERMS_VERSION`; pages already send that user to `/aceitar-termos`
@@ -177,13 +177,15 @@ and "the last member leaving deletes the household"):
   sends the email through the same `EmailSender` as every other auth email
   (`auth/email/invitation-email.ts`), linking to `/convite/:id`. Rate-limited two ways:
   `auth.api.createInvitation` never traverses Better Auth's own limiter (`auth.api.*` calls skip
-  `onRequest`, see docs/runbooks/auth.md), so `hooks.before` in `auth/options.ts` counts the
-  inviter's own `invitation` rows created (or last sent — see Resend below) in the last hour
-  (`countRecentInvitationsBy`, `auth/invitations.ts`) and refuses above 20 with
-  `INVITATION_RATE_LIMITED`, which `inviteMember` and `resendInvitation` report as `rate_limited`.
-  It runs on every call to `/organization/invite-member`, the server actions' `auth.api` calls, a
-  raw HTTP call and the `resend: true` path alike (that path never reaches
-  `beforeCreateInvitation`); a raw call to `POST /organization/invite-member`
+  `onRequest`, see docs/runbooks/auth.md), so `hooks.before` in `auth/options.ts` counts every
+  call the inviter makes to `/organization/invite-member` in an hourly window on their own user row
+  (`reserveEmailQuota(…, "invitation")`, `auth/email-quota.ts`, columns
+  `invitation_email_window_started_at` and `invitation_email_count`, migration `0031`) and refuses
+  above 20 with `INVITATION_RATE_LIMITED`, which `inviteMember` and `resendInvitation` report as
+  `rate_limited`. It counts calls, not rows: Better Auth's `resend: true` path sends again on the
+  existing row and never reaches `beforeCreateInvitation`, so a count of rows let a raw resend loop
+  on one invitation send without limit (2026-10-22, #119). It covers the server actions' `auth.api`
+  calls and a raw HTTP call alike; a raw call to `POST /organization/invite-member`
   additionally gets its own `rateLimit.customRules` entry (`auth/options.ts`, 60s/5) since that path
   does go through Better Auth's own limiter. `organization({ invitationLimit: 10 })` caps pending
   invitations per household on top of both. A send failure is not silently dropped:
@@ -200,10 +202,8 @@ and "the last member leaving deletes the household"):
   that already exists, never mint one under a different identity). Eligibility (`status = 'pending'`
   and `delivery_failed_at IS NOT NULL`) is required directly in the scoped select, not just checked
   in code, so a healthy or cancelled invitation is `not_found` before any rate check runs. Subject to
-  three limits: the same per-inviter hourly ceiling as a fresh invite (`countRecentInvitationsBy`, which
-  now counts a row recent by either `created_at` or `last_sent_at` — Better Auth's own `resend: true`
-  only ever bumps `expires_at`, never `created_at`, so counting by `created_at` alone would let an
-  invitation age out of the ceiling and then be resent indefinitely); a 60-second minimum interval
+  three limits: the same per-inviter hourly ceiling as a fresh invite (every resend is one more call
+  to `/organization/invite-member`); a 60-second minimum interval
   since the invitation's own `last_sent_at`; and a re-check of `status = 'pending'` immediately
   before calling `auth.api.createInvitation`, closing the window for a concurrent cancel between the
   first read and the call. After the call, if a different invitation row now exists pending for the

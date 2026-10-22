@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { parseSetCookieHeader } from "better-auth/cookies";
 import { eq } from "drizzle-orm";
 
-import { getDb } from "@/platform/db/client";
+import { getDb, type Database } from "@/platform/db/client";
 import { withTestDb } from "@/platform/db/test/harness";
 import { user, verification } from "@/modules/auth/schema.ts";
 
@@ -65,6 +65,12 @@ async function waitForNewResetPasswordToken(email: string, previousToken: string
   }
 }
 
+async function userIdFor(db: Database, email: string): Promise<string> {
+  const [row] = await db.select({ id: user.id }).from(user).where(eq(user.email, email));
+  if (!row) throw new Error("user missing in test setup");
+  return row.id;
+}
+
 async function createVerifiedUser(email: string, password: string): Promise<void> {
   const signUpOutcome = await signUp(
     { name: "Password Reset User", email, password, termsAccepted: true },
@@ -117,14 +123,47 @@ describe("password reset", () => {
         expect(row.identifier).not.toContain(token);
         expect(row.value).not.toContain(token);
       }
-      const resetRows = rows.filter((row) => row.identifier.startsWith("reset-password:"));
+      const resetRows = rows.filter((row) => row.identifier.startsWith("reset-password-sha256:"));
       expect(resetRows).toHaveLength(1);
+      expect(rows.some((row) => row.identifier.startsWith("reset-password:"))).toBe(false);
 
       const resetOutcome = await resetPassword(
         { token, newPassword: "new-password" },
         new Headers(),
       );
       expect(resetOutcome.status).toBe("ok");
+    });
+  });
+
+  it("refuses the stored identifier's digest submitted as a token, on the link and on the submission", async () => {
+    await withTestDb(async (db) => {
+      const email = "replayed-digest@example.com";
+      await createVerifiedUser(email, "old-password");
+
+      await requestPasswordReset(email, new Headers());
+      await lastResetPasswordEmailTextFor(email);
+      const [row] = await db
+        .select()
+        .from(verification)
+        .where(eq(verification.value, await userIdFor(db, email)));
+      if (!row) throw new Error("reset row missing in test setup");
+      const digest = row.identifier.slice(row.identifier.indexOf(":") + 1);
+
+      const link = await getAuth().handler(
+        new Request(
+          `http://localhost:3000/api/auth/reset-password/${digest}?callbackURL=/redefinir-senha`,
+        ),
+      );
+      expect(link.headers.get("location") ?? "").toContain("INVALID_TOKEN");
+
+      const outcome = await resetPassword(
+        { token: digest, newPassword: "attacker-password" },
+        new Headers(),
+      );
+      expect(outcome.status).toBe("invalid_token");
+
+      const stillOld = await signIn({ email, password: "old-password" }, new Headers());
+      expect(stillOld.status).toBe("ok");
     });
   });
 

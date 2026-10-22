@@ -26,14 +26,9 @@ import { buildMagicLinkEmail } from "./email/magic-link-email";
 import { buildResetPasswordEmail } from "./email/reset-password-email";
 import { buildVerificationEmail } from "./email/verification-email";
 import { getEmailSender } from "./email/select";
-import { reserveAuthEmail } from "./email-quota";
+import { reserveEmailQuota } from "./email-quota";
 import { readAuthBaseUrl } from "./env";
-import {
-  countRecentInvitationsBy,
-  hasPendingInvitation,
-  INVITATION_RATE_LIMITED_CODE,
-  INVITE_HOURLY_LIMIT,
-} from "./invitations";
+import { hasPendingInvitation, INVITATION_RATE_LIMITED_CODE } from "./invitations";
 import { resolveRegistrationMode } from "./registration-mode";
 import { TERMS_VERSION } from "./terms";
 import { markTimingFloorRequestStart, waitForTimingFloor } from "./timing-floor";
@@ -71,7 +66,7 @@ const INVITATION_READ_ROLES = new Set(["owner", "admin"]);
 // that skips the app's forms entirely.
 const MAX_NAME_LENGTH = 120;
 // A household is a small pool of people, not a mailing list (see
-// INVITE_HOURLY_LIMIT in invitations.ts, the per-inviter check): this is the
+// the invitation quota in email-quota.ts, the per-inviter check): this is the
 // plugin's own ceiling on pending invitations per household.
 const INVITATION_LIMIT = 10;
 
@@ -174,16 +169,18 @@ function hasInvitationReadRole(role: string | null | undefined): boolean {
 }
 
 const RESET_PASSWORD_VERIFICATION_PREFIX = "reset-password:";
+const HASHED_RESET_PASSWORD_PREFIX = "reset-password-sha256:";
 
 // ADR-0008: a reset token never sits in the database in clear, or a read of
-// the verification table becomes an account takeover. The stored identifier
-// keeps its plain prefix in front of the hash so deleteOtherPasswordResetTokens
-// can still find a user's reset rows; Better Auth hashes the incoming token
-// the same way on lookup, and falls back to the plain identifier for rows
-// written before this option existed.
+// the verification table becomes an account takeover. Better Auth hashes the
+// incoming "reset-password:<token>" this way on lookup and, on a miss, retries
+// it unhashed so rows written before this option still work until they expire.
+// The stored prefix must therefore be one no "reset-password:<token>" can
+// spell: under "reset-password:<digest>", submitting the digest itself as the
+// token would match the row through that unhashed retry.
 function hashResetPasswordIdentifier(identifier: string): Promise<string> {
   const digest = createHash("sha256").update(identifier).digest("base64url");
-  return Promise.resolve(`${RESET_PASSWORD_VERIFICATION_PREFIX}${digest}`);
+  return Promise.resolve(`${HASHED_RESET_PASSWORD_PREFIX}${digest}`);
 }
 
 async function deleteOtherPasswordResetTokens(db: Database, userId: string): Promise<void> {
@@ -192,7 +189,10 @@ async function deleteOtherPasswordResetTokens(db: Database, userId: string): Pro
     .where(
       and(
         eq(verification.value, userId),
-        like(verification.identifier, `${RESET_PASSWORD_VERIFICATION_PREFIX}%`),
+        or(
+          like(verification.identifier, `${HASHED_RESET_PASSWORD_PREFIX}%`),
+          like(verification.identifier, `${RESET_PASSWORD_VERIFICATION_PREFIX}%`),
+        ),
       ),
     );
 }
@@ -292,7 +292,7 @@ export function buildAuthOptions(
     if (!rawSession) {
       return;
     }
-    if ((await countRecentInvitationsBy(db, rawSession.user.id)) >= INVITE_HOURLY_LIMIT) {
+    if (!(await reserveEmailQuota(db, rawSession.user.id, "invitation"))) {
       throw new APIError("TOO_MANY_REQUESTS", {
         message: "invitation_rate_limited",
         code: INVITATION_RATE_LIMITED_CODE,
@@ -370,7 +370,7 @@ export function buildAuthOptions(
             url,
             describeExpiryPtBR(RESET_PASSWORD_EXPIRES_IN_SECONDS),
           );
-          const sendPromise = reserveAuthEmail(db, user.id)
+          const sendPromise = reserveEmailQuota(db, user.id, "auth")
             .then((reserved) => (reserved ? emailSender.send({ to: user.email, ...email }) : null))
             .catch((error: unknown) => {
               logSendFailure("reset-password", error);
@@ -423,7 +423,7 @@ export function buildAuthOptions(
       expiresIn: VERIFICATION_EXPIRES_IN_SECONDS,
       sendVerificationEmail: async ({ user, url }) => {
         const email = buildVerificationEmail(url);
-        if (!(await reserveAuthEmail(db, user.id))) {
+        if (!(await reserveEmailQuota(db, user.id, "auth"))) {
           return;
         }
         await emailSender.send({ to: user.email, ...email });
@@ -432,17 +432,16 @@ export function buildAuthOptions(
     rateLimit: {
       enabled: true,
       storage: "database",
-      // A custom rule replaces the plugin's own, never tightens it: a 10s/3
-      // rule on magic-link requests would allow ~18 a minute, over three
-      // times the plugin's 60s/5, so that one is pinned to the plugin's
-      // value here. The reset-password submission isn't covered by any
-      // built-in special rule, so it gets the sign-in family's 10s/3.
+      // A custom rule replaces the plugin's own rather than tightening it,
+      // so magic-link requests are pinned to the plugin's 60s/5. The
+      // reset-password submission isn't covered by any built-in special
+      // rule, so it gets the sign-in family's 10s/3.
       // `/magic-link/verify` and `/reset-password/*` are the GET links an
       // email client re-opens (link previews, double-clicks) and their tokens
       // are single-use anyway, so they get a looser ceiling: a 429 on a GET a
       // real user's browser navigates to would surface as raw JSON instead of
       // the app's error page (no route handler intercepts it). None of these
-      // is per recipient; reserveAuthEmail is.
+      // is per recipient; reserveEmailQuota is.
       customRules: {
         "/sign-in/magic-link": { window: 60, max: 5 },
         "/magic-link/verify": { window: 10, max: 20 },
@@ -478,10 +477,10 @@ export function buildAuthOptions(
           }
         }
 
-        // Covers the resend path too, which never reaches
-        // beforeCreateInvitation, and every caller alike: households'
-        // inviteMember and resendInvitation (auth.api, no IP limiter) and a
-        // raw HTTP call.
+        // Counts every call, resend included: Better Auth's resend path sends
+        // again on the existing row and never reaches beforeCreateInvitation.
+        // Covers households' inviteMember and resendInvitation (auth.api, no
+        // IP limiter) and a raw HTTP call alike.
         if (ctx.path === "/organization/invite-member") {
           await assertInviterUnderHourlyLimit(ctx);
           return;
@@ -653,6 +652,8 @@ export function buildAuthOptions(
           // layers disagree on who owns the household, so only one plain
           // admin or member role passes.
           beforeUpdateMemberRole: ({ newRole }) => {
+            // Typed as a string; widened on purpose, as in
+            // beforeCreateInvitation below, so an array never slips through.
             const role = newRole as string | string[];
             if (Array.isArray(role) || role.includes(",")) {
               throw new APIError("BAD_REQUEST", { message: "multiple_roles_not_allowed" });
@@ -764,7 +765,7 @@ export function buildAuthOptions(
             // scheduleBackgroundTask does not log for us. The per-recipient
             // quota is checked inside the same task, so a refused send
             // answers exactly like a sent one.
-            const sendPromise = reserveAuthEmail(db, existing.user.id)
+            const sendPromise = reserveEmailQuota(db, existing.user.id, "auth")
               .then((reserved) =>
                 reserved ? emailSender.send({ to: email, ...magicLinkEmail }) : null,
               )

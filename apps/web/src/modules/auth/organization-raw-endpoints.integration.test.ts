@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
-import type { Database } from "@/platform/db/client";
 import { withTestDb } from "@/platform/db/test/harness";
 
 import { getAuth } from "./auth";
-import { INVITE_HOURLY_LIMIT } from "./invitations";
+import { EMAIL_QUOTA_LIMITS } from "./email-quota";
 import {
+  fakeSentEmails,
   invitation,
   member,
   organization as organizationTable,
@@ -62,26 +62,6 @@ async function addMember(householdId: string, headers: Headers, role: "admin" | 
   return getAuth().api.addMember({
     body: { userId: await userIdOf(headers), organizationId: householdId, role },
   });
-}
-
-async function seedRecentInvitations(
-  db: Database,
-  householdId: string,
-  inviterId: string,
-  total: number,
-): Promise<void> {
-  await db.insert(invitation).values(
-    Array.from({ length: total }, (_, index) => ({
-      id: crypto.randomUUID(),
-      organizationId: householdId,
-      email: `seeded-${String(index)}@example.com`,
-      role: "member",
-      status: "canceled",
-      expiresAt: new Date(Date.now() + 60 * 60_000),
-      createdAt: new Date(),
-      inviterId,
-    })),
-  );
 }
 
 describe("raw /organization/* endpoints enforce the same rules as the server actions (integration)", () => {
@@ -170,7 +150,7 @@ describe("raw /organization/* endpoints enforce the same rules as the server act
     });
   });
 
-  it("applies the per-inviter hourly invitation limit to raw invites and resends", async () => {
+  it("caps a raw resend loop on one invitation, and fresh invites, at the per-inviter hourly limit", async () => {
     await withTestDb(async (db) => {
       const headers = await signUpVerifiedUser(db, {
         name: "Inviter",
@@ -178,35 +158,38 @@ describe("raw /organization/* endpoints enforce the same rules as the server act
         password: "correct-horse",
       });
       const householdId = await createHouseholdFor(headers);
-      const inviterId = await userIdOf(headers);
+      const invitee = "resend-loop-invitee@example.com";
+      const body = { email: invitee, role: "member", organizationId: householdId };
 
-      const pending = await rawPost(
+      const first = await rawPost("/organization/invite-member", body, headers);
+      expect(first.status).toBe(200);
+      for (let index = 1; index < EMAIL_QUOTA_LIMITS.invitation; index += 1) {
+        const resend = await rawPost(
+          "/organization/invite-member",
+          { ...body, resend: true },
+          headers,
+        );
+        expect(resend.status).toBe(200);
+      }
+
+      const overResend = await rawPost(
         "/organization/invite-member",
-        { email: "pending-invitee@example.com", role: "member", organizationId: householdId },
+        { ...body, resend: true },
         headers,
       );
-      expect(pending.status).toBe(200);
-      await seedRecentInvitations(db, householdId, inviterId, INVITE_HOURLY_LIMIT - 1);
-
-      const fresh = await rawPost(
+      expect(overResend.status).toBe(429);
+      const overFresh = await rawPost(
         "/organization/invite-member",
         { email: "one-too-many@example.com", role: "member", organizationId: householdId },
         headers,
       );
-      expect(fresh.status).toBe(429);
+      expect(overFresh.status).toBe(429);
 
-      const resend = await rawPost(
-        "/organization/invite-member",
-        {
-          email: "pending-invitee@example.com",
-          role: "member",
-          organizationId: householdId,
-          resend: true,
-        },
-        headers,
-      );
-      expect(resend.status).toBe(429);
-
+      const [sent] = await db
+        .select({ total: count() })
+        .from(fakeSentEmails)
+        .where(eq(fakeSentEmails.to, invitee));
+      expect(sent?.total).toBe(EMAIL_QUOTA_LIMITS.invitation);
       const rows = await db
         .select({ email: invitation.email })
         .from(invitation)
