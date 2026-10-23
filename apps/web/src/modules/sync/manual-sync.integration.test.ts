@@ -6,13 +6,7 @@ import { eq } from "drizzle-orm";
 import type { HouseholdSession } from "@/modules/households";
 import type { Database } from "@/platform/db/client";
 
-import {
-  decryptSecret,
-  encryptSecret,
-  isLegacyEnvelope,
-  PROVIDER_CREDENTIALS_PURPOSE,
-} from "@/platform/crypto";
-import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
+import { encryptSecret, PROVIDER_CREDENTIALS_PURPOSE } from "@/platform/crypto";
 import { createDocumentHasher } from "./document-hash";
 import { createFakeProvider } from "./provider/fake-provider";
 import type { AuthenticateOutcome, DataProvider } from "./provider/provider";
@@ -21,7 +15,7 @@ import {
   createSyncUserRepository,
   pruneOldManualSyncTriggers,
 } from "./repository";
-import { bankConnection, manualSyncTrigger, providerCredential } from "./schema";
+import { bankConnection, manualSyncTrigger } from "./schema";
 import { getManualSyncQuota, syncHouseholdNow, type SyncDeps } from "./service";
 import { seedAccount, seedSyncedConnection } from "./test/seed-synced-connection";
 import { joinHousehold, withTwoUsers, type SeededUser } from "./test/with-two-users";
@@ -106,35 +100,6 @@ describe("syncHouseholdNow (integration)", () => {
         expect(state).toMatchObject({ lastSyncedAt: NOW, lastSyncError: null });
         expect(state?.lastSyncAttemptedAt).toBeInstanceOf(Date);
       }
-    });
-  });
-
-  it("rebinds credentials stored before owner binding to their user the first time a sync reads them", async () => {
-    await withTwoUsers(async ({ db, userA, householdA }) => {
-      const plaintext = JSON.stringify({ clientId: "id", clientSecret: "client-secret" });
-      await createSyncUserRepository(userA.scope).saveCredential(db, {
-        provider: "pluggy",
-        ciphertext: encryptLegacySecret(plaintext, ENCRYPTION_KEY, PROVIDER_CREDENTIALS_PURPOSE),
-        validatedAt: SEEDED_AT,
-      });
-      const connectionId = await seedConnection(db, userA, householdA, "item-a");
-
-      await syncHouseholdNow(userA.session, db, deps, runAt(NOW));
-
-      expect(await connectionState(db, connectionId)).toMatchObject({ lastSyncError: null });
-      const [stored] = await db
-        .select({ ciphertext: providerCredential.ciphertext })
-        .from(providerCredential)
-        .where(eq(providerCredential.userId, userA.id));
-      expect(isLegacyEnvelope(stored?.ciphertext ?? "")).toBe(false);
-      expect(
-        decryptSecret(
-          stored?.ciphertext ?? "",
-          ENCRYPTION_KEY,
-          PROVIDER_CREDENTIALS_PURPOSE,
-          userA.id,
-        ),
-      ).toBe(plaintext);
     });
   });
 

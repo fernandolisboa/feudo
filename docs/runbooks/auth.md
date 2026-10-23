@@ -295,8 +295,7 @@ model call that needs a 300 s budget. `daily`
 (`apps/web/src/app/api/cron/daily/route.ts`) only checks the bearer token, calls each slice's own
 daily step and composes the response — per ADR-0011, each slice owns its own try/catch around its
 step, so one step failing never stops the others from running. Each step returns a summary,
-`{ deleted } | { error }` for the prunes, `{ rewritten, unreadable, remaining } | { error }` for
-the legacy-ciphertext sweeps, and the response is
+`{ deleted } | { error }` for the prunes, and the response is
 `{ ok, steps: { <step>: <summary>, ... } }`. The steps run in this order:
 
 1. `pruneVerification`: expired verification rows (`auth.runDailyPruneStep`,
@@ -312,19 +311,12 @@ the legacy-ciphertext sweeps, and the response is
    #123). It deletes user rows, so its guards are what keep it from erasing anyone who holds data.
 6. `pruneConsents`, `pruneAuditLog`, `pruneKeyVerificationAttempts`: the sync, audit and analysis
    prunes.
-7. `sweepLegacyCredentials` and `sweepLegacyApiKeys`: rewrite every stored `enc:v1` Meu Pluggy
-   credential and household Anthropic key as `enc:v2`, bound to its owner
-   (`sync.runLegacyCredentialSweepStep`, `analysis.runLegacyApiKeySweepStep`, #152). Summary
-   `{ rewritten, unreadable, remaining } | { error }`; unreadable or remaining rows do not make the
-   response `500`, only an `error` does (for example `ENCRYPTION_KEY` missing while a v1 row
-   exists). `remaining` is a fresh count of v1 rows after the pass and is what the v1-removal PR
-   checks: production must show `remaining: 0` for both before the legacy branch goes.
-8. `purgeAccounts` (20 s budget) and `purgeHouseholds`: accounts and households past their 7-day
+7. `purgeAccounts` (20 s budget) and `purgeHouseholds`: accounts and households past their 7-day
    deletion grace (ADR-0008). The account purge also deletes the invitations sent to the purged
    user's email (`households.deleteInvitationsForAccountPurge`).
-9. `marketData`: the market-data refresh (`market-data.runDailyRefreshStep`), up to five sequential
+8. `marketData`: the market-data refresh (`market-data.runDailyRefreshStep`), up to five sequential
    SGS fetches, each with its own 10 s timeout.
-10. `reserveMonthClose`: the reserve month close, bounded by the route's own deadline.
+9. `reserveMonthClose`: the reserve month close, bounded by the route's own deadline.
 
 The prunes run first deliberately: each is orders of magnitude cheaper than the market-data
 step, and running them after it would let a slow or unreachable Bacen SGS starve them on every

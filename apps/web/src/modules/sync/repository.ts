@@ -7,7 +7,6 @@ import {
   gte,
   inArray,
   isNull,
-  like,
   lt,
   notExists,
   notInArray,
@@ -16,7 +15,6 @@ import {
 
 import { organization, user } from "@/modules/auth/schema";
 import { lockMembershipScope } from "@/modules/households";
-import { LEGACY_ENVELOPE_PATTERN } from "@/platform/crypto";
 
 import {
   bankAccount,
@@ -36,7 +34,7 @@ import type {
   NormalizedTransaction,
   RateType,
 } from "./provider/provider";
-import { scopeForUser, type UserScope } from "./scope";
+import type { UserScope } from "./scope";
 import type { ConnectionSyncFailure } from "./sync-status";
 
 // Every method runs equally on the pooled connection or inside a transaction
@@ -196,25 +194,6 @@ export function createSyncUserRepository(scope: UserScope) {
           target: [providerCredential.userId, providerCredential.provider],
           set: { ciphertext: input.ciphertext, lastValidatedAt: input.validatedAt },
         });
-    },
-
-    // Conditional on the old ciphertext so a rewrite never overwrites
-    // credentials the user saved in the meantime.
-    async replaceCredentialCiphertext(
-      db: Database,
-      input: { from: string; to: string },
-    ): Promise<boolean> {
-      const updated = await db
-        .update(providerCredential)
-        .set({ ciphertext: input.to })
-        .where(
-          and(
-            eq(providerCredential.userId, scope.userId),
-            eq(providerCredential.ciphertext, input.from),
-          ),
-        )
-        .returning({ id: providerCredential.id });
-      return updated.length > 0;
     },
 
     async deleteCredential(db: Database): Promise<boolean> {
@@ -927,26 +906,4 @@ export async function pruneOrphanConsents(db: Database, olderThan: Date): Promis
     )
     .returning({ id: bankConnectionConsent.id });
   return deleted.length;
-}
-
-export type LegacyCredentialRow = { scope: UserScope; ciphertext: string };
-
-// Job-only enumeration (ADR-0001, amended 2026-10-01): the legacy credential
-// sweep is the one caller that walks every user's credential, and it builds
-// one scope per row before writing.
-export async function listLegacyCredentials(db: Database): Promise<LegacyCredentialRow[]> {
-  const rows = await db
-    .select({ userId: providerCredential.userId, ciphertext: providerCredential.ciphertext })
-    .from(providerCredential)
-    .where(like(providerCredential.ciphertext, LEGACY_ENVELOPE_PATTERN))
-    .orderBy(asc(providerCredential.userId));
-  return rows.map((row) => ({ scope: scopeForUser(row.userId), ciphertext: row.ciphertext }));
-}
-
-export async function countLegacyCredentials(db: Database): Promise<number> {
-  const [row] = await db
-    .select({ total: count() })
-    .from(providerCredential)
-    .where(like(providerCredential.ciphertext, LEGACY_ENVELOPE_PATTERN));
-  return row?.total ?? 0;
 }

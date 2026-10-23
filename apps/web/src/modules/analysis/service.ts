@@ -27,12 +27,7 @@ import { getReserveAnalysisFacts } from "@/modules/reserve";
 
 import { errorName } from "@/lib/error-name";
 import { getDb, type Database } from "@/platform/db/client";
-import {
-  decryptHouseholdApiKey,
-  getAiSettings,
-  householdHasUsableKey,
-  rebindLegacyApiKey,
-} from "./ai-settings";
+import { decryptHouseholdApiKey, getAiSettings, householdHasUsableKey } from "./ai-settings";
 import {
   MIN_ATTEMPT_MS,
   type AiClient,
@@ -124,14 +119,10 @@ async function clientForHousehold(
     return null;
   }
   const settings = await getAiSettings(scope, db);
-  const encryptionKey = deps.encryptionKey;
   const apiKey =
-    encryptionKey === null
+    deps.encryptionKey === null
       ? null
-      : decryptHouseholdApiKey(settings, encryptionKey, scope.householdId);
-  if (encryptionKey !== null && apiKey !== null) {
-    await rebindLegacyApiKey(scope, db, settings, apiKey, encryptionKey);
-  }
+      : decryptHouseholdApiKey(settings, deps.encryptionKey, scope.householdId);
   const client = deps.provider.clientFor(apiKey);
   if (client === null) {
     return null;

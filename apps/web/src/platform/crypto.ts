@@ -2,12 +2,8 @@ import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } f
 
 const ENVELOPE_PREFIX = "enc";
 // v2 binds each ciphertext to the row it belongs to (GCM additional
-// authenticated data); v1, written before that, is still read so existing
-// rows keep working, and isLegacyEnvelope tells callers to rewrite it.
+// authenticated data). The unbound v1 envelope is refused (#152).
 const ENVELOPE_VERSION = "v2";
-const LEGACY_ENVELOPE_VERSION = "v1";
-const LEGACY_ENVELOPE_PREFIX = `${ENVELOPE_PREFIX}:${LEGACY_ENVELOPE_VERSION}:`;
-export const LEGACY_ENVELOPE_PATTERN = `${LEGACY_ENVELOPE_PREFIX}%`;
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12;
 // Pinned on both sides: without it Node accepts a tag cut down to 4 bytes,
@@ -83,10 +79,6 @@ export function encryptSecret(
   ].join(":");
 }
 
-export function isLegacyEnvelope(envelope: string): boolean {
-  return envelope.startsWith(LEGACY_ENVELOPE_PREFIX);
-}
-
 export function decryptSecret(
   envelope: string,
   encryptionKey: string,
@@ -95,11 +87,7 @@ export function decryptSecret(
 ): string {
   const parts = envelope.split(":");
   const version = parts[1];
-  if (
-    parts.length !== 6 ||
-    parts[0] !== ENVELOPE_PREFIX ||
-    (version !== ENVELOPE_VERSION && version !== LEGACY_ENVELOPE_VERSION)
-  ) {
+  if (parts.length !== 6 || parts[0] !== ENVELOPE_PREFIX || version !== ENVELOPE_VERSION) {
     throw new MalformedCiphertextError();
   }
   const [, , keyId, ivEncoded, tagEncoded, ciphertextEncoded] = parts;
@@ -121,9 +109,7 @@ export function decryptSecret(
       Buffer.from(ivEncoded, "base64url"),
       { authTagLength: AUTH_TAG_BYTES },
     );
-    if (version === ENVELOPE_VERSION) {
-      decipher.setAAD(Buffer.from(boundTo, "utf8"));
-    }
+    decipher.setAAD(Buffer.from(boundTo, "utf8"));
     decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
     return Buffer.concat([
       decipher.update(Buffer.from(ciphertextEncoded, "base64url")),

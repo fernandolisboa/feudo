@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  # Re-runs the read-only legacy-ciphertext count below on demand (#152).
-  # Re-applying committed migrations is a no-op.
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -78,9 +75,3 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
           DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
         run: pnpm --filter @feudo/web db:migrate
-
-      - name: Count legacy ciphertexts
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
-          DATABASE_PRODUCTION_HOST: ${{ vars.DATABASE_PRODUCTION_HOST }}
-        run: pnpm --filter @feudo/web db:count-legacy-ciphertexts

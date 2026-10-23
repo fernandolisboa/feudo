@@ -3,32 +3,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const saveMock = vi.hoisted(() => vi.fn());
 const removeKeyMock = vi.hoisted(() => vi.fn());
 const reserveMock = vi.hoisted(() => vi.fn());
-const replaceKeyCiphertextMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./ai-settings-repository", () => ({
   createAiSettingsRepository: () => ({
     save: saveMock,
     removeKey: removeKeyMock,
-    replaceKeyCiphertext: replaceKeyCiphertextMock,
   }),
 }));
 vi.mock("./key-verification-attempts", () => ({
   createKeyVerificationAttemptRepository: () => ({ reserve: reserveMock }),
 }));
 
-import {
-  decryptSecret,
-  encryptSecret,
-  HOUSEHOLD_AI_KEY_PURPOSE,
-  isLegacyEnvelope,
-} from "@/platform/crypto";
-import { encryptLegacySecret } from "@/platform/test/legacy-envelope";
+import { encryptSecret, HOUSEHOLD_AI_KEY_PURPOSE } from "@/platform/crypto";
 
 import type { AiProvider } from "./provider";
 import {
   decryptHouseholdApiKey,
   householdHasUsableKey,
-  rebindLegacyApiKey,
   removeAiKey,
   saveAiSettings,
 } from "./ai-settings";
@@ -46,7 +37,6 @@ beforeEach(() => {
   saveMock.mockReset().mockResolvedValue(undefined);
   removeKeyMock.mockReset().mockResolvedValue(undefined);
   reserveMock.mockReset().mockResolvedValue({ status: "reserved" });
-  replaceKeyCiphertextMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("decryptHouseholdApiKey", () => {
@@ -82,52 +72,6 @@ describe("decryptHouseholdApiKey", () => {
     } as never;
 
     expect(decryptHouseholdApiKey(settings, KEY, HOUSEHOLD)).toBeNull();
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
-  });
-});
-
-describe("rebindLegacyApiKey", () => {
-  it("rewrites a key stored before the household binding, conditionally on the old ciphertext", async () => {
-    const legacy = encryptLegacySecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE);
-    const settings = { apiKeyCiphertext: legacy, apiKeyLast4: "cret" } as never;
-
-    await rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY);
-
-    expect(replaceKeyCiphertextMock).toHaveBeenCalledTimes(1);
-    const [, input] = replaceKeyCiphertextMock.mock.calls[0] as [
-      unknown,
-      { from: string; to: string },
-    ];
-    expect(input.from).toBe(legacy);
-    expect(isLegacyEnvelope(input.to)).toBe(false);
-    expect(decryptSecret(input.to, KEY, HOUSEHOLD_AI_KEY_PURPOSE, SCOPE.householdId)).toBe(
-      "sk-ant-secret",
-    );
-  });
-
-  it("leaves a key that is already bound alone", async () => {
-    const settings = {
-      apiKeyCiphertext: encryptSecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE, HOUSEHOLD),
-      apiKeyLast4: "cret",
-    } as never;
-
-    await rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY);
-
-    expect(replaceKeyCiphertextMock).not.toHaveBeenCalled();
-  });
-
-  it("swallows a failed rewrite: the key was read either way", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    replaceKeyCiphertextMock.mockRejectedValue(new Error("db down"));
-    const settings = {
-      apiKeyCiphertext: encryptLegacySecret("sk-ant-secret", KEY, HOUSEHOLD_AI_KEY_PURPOSE),
-      apiKeyLast4: "cret",
-    } as never;
-
-    await expect(
-      rebindLegacyApiKey(SCOPE, DB, settings, "sk-ant-secret", KEY),
-    ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });

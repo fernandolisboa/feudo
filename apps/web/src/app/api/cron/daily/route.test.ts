@@ -26,7 +26,6 @@ vi.mock("@/modules/privacy", () => ({
 
 vi.mock("@/modules/sync", () => ({
   runDailyPruneStep: vi.fn(),
-  runLegacyCredentialSweepStep: vi.fn(),
 }));
 
 vi.mock("@/modules/audit", () => ({
@@ -35,7 +34,6 @@ vi.mock("@/modules/audit", () => ({
 
 vi.mock("@/modules/analysis", () => ({
   runDailyPruneStep: vi.fn(),
-  runLegacyApiKeySweepStep: vi.fn(),
 }));
 
 vi.mock("@/modules/reserve", () => ({
@@ -52,11 +50,9 @@ const {
 const { runDailyPruneStep: runHouseholdsPruneStep, runHouseholdPurgeStep } =
   await import("@/modules/households");
 const { runAccountPurgeStep, runUnverifiedSignUpPruneStep } = await import("@/modules/privacy");
-const { runDailyPruneStep: runSyncPruneStep, runLegacyCredentialSweepStep } =
-  await import("@/modules/sync");
+const { runDailyPruneStep: runSyncPruneStep } = await import("@/modules/sync");
 const { runDailyPruneStep: runAuditPruneStep } = await import("@/modules/audit");
-const { runDailyPruneStep: runAnalysisPruneStep, runLegacyApiKeySweepStep } =
-  await import("@/modules/analysis");
+const { runDailyPruneStep: runAnalysisPruneStep } = await import("@/modules/analysis");
 const { runReserveMonthCloseStep } = await import("@/modules/reserve");
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
@@ -80,16 +76,6 @@ describe("GET /api/cron/daily", () => {
     vi.mocked(runSyncPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAuditPruneStep).mockResolvedValue({ deleted: 0 });
     vi.mocked(runAnalysisPruneStep).mockResolvedValue({ deleted: 0 });
-    vi.mocked(runLegacyCredentialSweepStep).mockResolvedValue({
-      rewritten: 0,
-      unreadable: 0,
-      remaining: 0,
-    });
-    vi.mocked(runLegacyApiKeySweepStep).mockResolvedValue({
-      rewritten: 0,
-      unreadable: 0,
-      remaining: 0,
-    });
     vi.mocked(runAccountPurgeStep).mockResolvedValue({
       ok: true,
       purged: 0,
@@ -308,74 +294,6 @@ describe("GET /api/cron/daily", () => {
     expect(body.ok).toBe(false);
     expect(body.steps.pruneKeyVerificationAttempts).toEqual({ error: "Error" });
     expect(body.steps.pruneAuditLog).toEqual({ deleted: 0 });
-    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
-  });
-
-  it("reports both legacy-ciphertext sweeps and stays ok while some rows are unreadable or remain", async () => {
-    vi.mocked(runLegacyCredentialSweepStep).mockResolvedValue({
-      rewritten: 1,
-      unreadable: 2,
-      remaining: 2,
-    });
-    vi.mocked(runLegacyApiKeySweepStep).mockResolvedValue({
-      rewritten: 3,
-      unreadable: 1,
-      remaining: 1,
-    });
-
-    const response = await callCronRoute();
-
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      ok: boolean;
-      steps: { sweepLegacyCredentials: unknown; sweepLegacyApiKeys: unknown };
-    };
-    expect(body.ok).toBe(true);
-    expect(body.steps.sweepLegacyCredentials).toEqual({
-      rewritten: 1,
-      unreadable: 2,
-      remaining: 2,
-    });
-    expect(body.steps.sweepLegacyApiKeys).toEqual({ rewritten: 3, unreadable: 1, remaining: 1 });
-  });
-
-  it("returns 500 with an error summary and still reports the other steps when the legacy credential sweep fails", async () => {
-    vi.mocked(runLegacyCredentialSweepStep).mockResolvedValue({ error: "MissingSecretError" });
-
-    const response = await callCronRoute();
-
-    expect(response.status).toBe(500);
-    const body = (await response.json()) as {
-      ok: boolean;
-      steps: {
-        marketData: { ok: boolean; results: unknown[] };
-        sweepLegacyCredentials: { error: string };
-        sweepLegacyApiKeys: { remaining: number };
-      };
-    };
-    expect(body.ok).toBe(false);
-    expect(body.steps.sweepLegacyCredentials).toEqual({ error: "MissingSecretError" });
-    expect(body.steps.sweepLegacyApiKeys.remaining).toBe(0);
-    expect(body.steps.marketData).toEqual({ ok: true, results: [] });
-  });
-
-  it("returns 500 with an error summary and still reports the other steps when the legacy API key sweep fails", async () => {
-    vi.mocked(runLegacyApiKeySweepStep).mockResolvedValue({ error: "MissingEncryptionKeyError" });
-
-    const response = await callCronRoute();
-
-    expect(response.status).toBe(500);
-    const body = (await response.json()) as {
-      ok: boolean;
-      steps: {
-        marketData: { ok: boolean; results: unknown[] };
-        sweepLegacyCredentials: { remaining: number };
-        sweepLegacyApiKeys: { error: string };
-      };
-    };
-    expect(body.ok).toBe(false);
-    expect(body.steps.sweepLegacyApiKeys).toEqual({ error: "MissingEncryptionKeyError" });
-    expect(body.steps.sweepLegacyCredentials.remaining).toBe(0);
     expect(body.steps.marketData).toEqual({ ok: true, results: [] });
   });
 
