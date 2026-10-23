@@ -530,7 +530,7 @@ describe("syncAllConnections (integration)", () => {
       const missing = await seedBancoNeverSynced(db, userA);
       await createSyncUserRepository(userB.scope).saveCredential(db, {
         provider: "pluggy",
-        ciphertext: "enc:v1:not-a-real-envelope",
+        ciphertext: "enc:v2:not-a-real-envelope",
         validatedAt: NOW,
       });
       const unreadable = await seedBancoNeverSynced(db, userB);

@@ -80,32 +80,6 @@ describe("sync user-scoped repository isolation (integration)", () => {
     });
   });
 
-  it("rewrites only the scoped user's credential, and only while it is unchanged", async () => {
-    await withTwoUsers(async ({ db, userA, userB }) => {
-      const repositoryA = createSyncUserRepository(userA.scope);
-      const repositoryB = createSyncUserRepository(userB.scope);
-      for (const repository of [repositoryA, repositoryB]) {
-        await repository.saveCredential(db, {
-          provider: "pluggy",
-          ciphertext: "enc:v1:shared",
-          validatedAt: new Date(),
-        });
-      }
-
-      await repositoryA.replaceCredentialCiphertext(db, {
-        from: "enc:v1:shared",
-        to: "enc:v2:rebound",
-      });
-      await repositoryA.replaceCredentialCiphertext(db, {
-        from: "enc:v1:shared",
-        to: "enc:v2:stale-rewrite",
-      });
-
-      expect((await repositoryA.getCredential(db))?.ciphertext).toBe("enc:v2:rebound");
-      expect((await repositoryB.getCredential(db))?.ciphertext).toBe("enc:v1:shared");
-    });
-  });
-
   it("does not let another user read, reuse or delete a consent or connection", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const repositoryA = createSyncUserRepository(userA.scope);

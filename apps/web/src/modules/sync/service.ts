@@ -19,7 +19,6 @@ import {
   decryptSecret,
   encryptSecret,
   EncryptionKeyMismatchError,
-  isLegacyEnvelope,
   MalformedCiphertextError,
   PROVIDER_CREDENTIALS_PURPOSE,
 } from "@/platform/crypto";
@@ -86,7 +85,7 @@ const storedCredentialsSchema = z.object({
   clientSecret: z.string().min(1),
 });
 
-export function serializeCredentials(
+function serializeCredentials(
   credentials: ProviderCredentials,
   encryptionKey: string,
   userId: string,
@@ -99,7 +98,7 @@ export function serializeCredentials(
   );
 }
 
-export function deserializeCredentials(
+function deserializeCredentials(
   ciphertext: string,
   encryptionKey: string,
   userId: string,
@@ -135,7 +134,7 @@ function isProviderFailure(error: unknown): boolean {
   );
 }
 
-export function isUnreadableCredentialsFailure(error: unknown): boolean {
+function isUnreadableCredentialsFailure(error: unknown): boolean {
   return (
     error instanceof EncryptionKeyMismatchError ||
     error instanceof MalformedCiphertextError ||
@@ -334,31 +333,7 @@ async function loadStoredCredentials(
     }
     throw error;
   }
-  if (isLegacyEnvelope(stored.ciphertext)) {
-    await rebindCredentials(repository, db, stored.ciphertext, credentials, encryptionKey, userId);
-  }
   return { status: "ok", credentials };
-}
-
-// A row written before ciphertexts were bound to their owner is rewritten
-// the first time it is read, so the daily sync moves every stored secret to
-// the bound envelope. Best effort: the credentials were read either way.
-async function rebindCredentials(
-  repository: SyncUserRepository,
-  db: Database,
-  legacyCiphertext: string,
-  credentials: ProviderCredentials,
-  encryptionKey: string,
-  userId: string,
-): Promise<void> {
-  try {
-    await repository.replaceCredentialCiphertext(db, {
-      from: legacyCiphertext,
-      to: serializeCredentials(credentials, encryptionKey, userId),
-    });
-  } catch (error) {
-    console.warn(`sync: could not rebind stored credentials (${errorName(error)})`);
-  }
 }
 
 type ProviderSessionOutcome = Outcome<

@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/platform/db/client";
 import { isCronRequestAuthorized } from "@/platform/cron-auth";
-import {
-  runDailyPruneStep as runAnalysisPruneStep,
-  runLegacyApiKeySweepStep,
-} from "@/modules/analysis";
+import { runDailyPruneStep as runAnalysisPruneStep } from "@/modules/analysis";
 import { runDailyPruneStep as runAuditPruneStep } from "@/modules/audit";
 import {
   runDailyPruneStep as runAuthPruneStep,
@@ -20,10 +17,7 @@ import { runDailyRefreshStep } from "@/modules/market-data";
 import { createNotifierFromEnv } from "@/modules/notifications";
 import { runAccountPurgeStep, runUnverifiedSignUpPruneStep } from "@/modules/privacy";
 import { runReserveMonthCloseStep } from "@/modules/reserve";
-import {
-  runDailyPruneStep as runSyncPruneStep,
-  runLegacyCredentialSweepStep,
-} from "@/modules/sync";
+import { runDailyPruneStep as runSyncPruneStep } from "@/modules/sync";
 
 export const maxDuration = 60;
 
@@ -57,8 +51,6 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneConsents = await runSyncPruneStep(db);
   const pruneAuditLog = await runAuditPruneStep(db);
   const pruneKeyVerificationAttempts = await runAnalysisPruneStep(db);
-  const sweepLegacyCredentials = await runLegacyCredentialSweepStep(db);
-  const sweepLegacyApiKeys = await runLegacyApiKeySweepStep(db);
   const purgeAccounts = await runAccountPurgeStep(
     db,
     new Date(),
@@ -81,8 +73,6 @@ export async function GET(request: Request): Promise<NextResponse> {
   const pruneConsentsOk = !("error" in pruneConsents);
   const pruneAuditLogOk = !("error" in pruneAuditLog);
   const pruneKeyVerificationAttemptsOk = !("error" in pruneKeyVerificationAttempts);
-  const sweepLegacyCredentialsOk = !("error" in sweepLegacyCredentials);
-  const sweepLegacyApiKeysOk = !("error" in sweepLegacyApiKeys);
   const reserveMonthCloseOk = "error" in reserveMonthClose ? false : reserveMonthClose.ok;
   const purgeAccountsOk = "error" in purgeAccounts ? false : purgeAccounts.ok;
   const purgeHouseholdsOk = !("error" in purgeHouseholds);
@@ -96,8 +86,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     pruneConsentsOk &&
     pruneAuditLogOk &&
     pruneKeyVerificationAttemptsOk &&
-    sweepLegacyCredentialsOk &&
-    sweepLegacyApiKeysOk &&
     purgeAccountsOk &&
     purgeHouseholdsOk &&
     reserveMonthCloseOk;
@@ -114,8 +102,6 @@ export async function GET(request: Request): Promise<NextResponse> {
         pruneConsents,
         pruneAuditLog,
         pruneKeyVerificationAttempts,
-        sweepLegacyCredentials,
-        sweepLegacyApiKeys,
         purgeAccounts,
         purgeHouseholds,
         marketData,

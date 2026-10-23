@@ -5,17 +5,15 @@ import {
   encryptSecret,
   EncryptionKeyMismatchError,
   HOUSEHOLD_AI_KEY_PURPOSE,
-  isLegacyEnvelope,
   keyIdFor,
   MalformedCiphertextError,
   PROVIDER_CREDENTIALS_PURPOSE,
 } from "./crypto";
-import { encryptLegacySecret } from "./test/legacy-envelope";
 
 const KEY = "unit-test-encryption-key-with-at-least-32-chars";
 const OTHER_KEY = "another-encryption-key-with-at-least-32-chars!";
 const OWNER = "user-a";
-const LEGACY_ENVELOPE =
+const V1_ENVELOPE =
   "enc:v1:4aa2ba22:BwcHBwcHBwcHBwcH:vQKqJwJk-c-RpBb1AAK5CA:FkMRmpI0q3i6vpjaPXvme6sMCfhcPf2IKY9hkvyVyJxMSspLtOlbgVnG";
 
 describe("encryptSecret / decryptSecret", () => {
@@ -100,19 +98,6 @@ describe("encryptSecret / decryptSecret", () => {
     );
   });
 
-  it("opens a legacy envelope under any owner, the window in which it gets rewritten", () => {
-    const envelope = encryptLegacySecret("s3cret", KEY, PROVIDER_CREDENTIALS_PURPOSE);
-    expect(decryptSecret(envelope, KEY, PROVIDER_CREDENTIALS_PURPOSE, OWNER)).toBe("s3cret");
-    expect(isLegacyEnvelope(envelope)).toBe(true);
-  });
-
-  it("writes bound envelopes and flags the legacy ones for rewriting", () => {
-    expect(
-      isLegacyEnvelope(encryptSecret("s3cret", KEY, PROVIDER_CREDENTIALS_PURPOSE, OWNER)),
-    ).toBe(false);
-    expect(isLegacyEnvelope(LEGACY_ENVELOPE)).toBe(true);
-  });
-
   it("rejects an envelope it did not produce", () => {
     expect(() =>
       decryptSecret("plain-text-secret", KEY, PROVIDER_CREDENTIALS_PURPOSE, OWNER),
@@ -122,9 +107,9 @@ describe("encryptSecret / decryptSecret", () => {
     ).toThrow(MalformedCiphertextError);
   });
 
-  it("still opens a known legacy envelope, produced before purposes and owner binding existed", () => {
-    expect(decryptSecret(LEGACY_ENVELOPE, KEY, PROVIDER_CREDENTIALS_PURPOSE, OWNER)).toBe(
-      '{"clientId":"abc","clientSecret":"s3cret"}',
+  it("refuses an enc:v1 envelope, which no longer opens under any owner", () => {
+    expect(() => decryptSecret(V1_ENVELOPE, KEY, PROVIDER_CREDENTIALS_PURPOSE, OWNER)).toThrow(
+      MalformedCiphertextError,
     );
   });
 

@@ -1,12 +1,7 @@
 import type { HouseholdScope } from "@/modules/households";
 
 import { errorName } from "@/lib/error-name";
-import {
-  decryptSecret,
-  encryptSecret,
-  HOUSEHOLD_AI_KEY_PURPOSE,
-  isLegacyEnvelope,
-} from "@/platform/crypto";
+import { decryptSecret, encryptSecret, HOUSEHOLD_AI_KEY_PURPOSE } from "@/platform/crypto";
 import type { Database } from "@/platform/db/client";
 import type { AiFamily } from "./ai-client";
 import { createAiSettingsRepository, type AiSettings } from "./ai-settings-repository";
@@ -55,28 +50,6 @@ export function householdHasUsableKey(
   return (
     encryptionKey !== null && decryptHouseholdApiKey(settings, encryptionKey, householdId) !== null
   );
-}
-
-// A key stored before ciphertexts were bound to their household is rewritten
-// the first time a reading opens it. Best effort: the key was read either way.
-export async function rebindLegacyApiKey(
-  scope: HouseholdScope,
-  db: Database,
-  settings: AiSettings,
-  apiKey: string,
-  encryptionKey: string,
-): Promise<void> {
-  if (settings.apiKeyCiphertext === null || !isLegacyEnvelope(settings.apiKeyCiphertext)) {
-    return;
-  }
-  try {
-    await createAiSettingsRepository(scope).replaceKeyCiphertext(db, {
-      from: settings.apiKeyCiphertext,
-      to: encryptSecret(apiKey, encryptionKey, HOUSEHOLD_AI_KEY_PURPOSE, scope.householdId),
-    });
-  } catch (error) {
-    console.warn(`analysis: could not rebind the household's Anthropic key (${errorName(error)})`);
-  }
 }
 
 export type SaveAiSettingsCommand = {
