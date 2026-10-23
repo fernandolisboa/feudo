@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { shellLayoutEnum, themeEnum } from "@/modules/auth/schema";
+
 import {
   colorSchemeFor,
   DEFAULT_SHELL_LAYOUT,
@@ -81,5 +83,12 @@ describe("shell layouts", () => {
     expect(resolveShellLayout("grid")).toBe(DEFAULT_SHELL_LAYOUT);
     expect(resolveShellLayout(null)).toBe(DEFAULT_SHELL_LAYOUT);
     expect(resolveShellLayout(undefined)).toBe(DEFAULT_SHELL_LAYOUT);
+  });
+});
+
+describe("database enums", () => {
+  it("lists exactly the registered themes and layouts, so every value the app writes is storable", () => {
+    expect([...themeEnum.enumValues].sort()).toEqual([...THEME_NAMES].sort());
+    expect(shellLayoutEnum.enumValues).toEqual([...SHELL_LAYOUTS]);
   });
 });

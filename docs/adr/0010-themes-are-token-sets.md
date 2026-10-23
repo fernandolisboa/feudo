@@ -5,6 +5,9 @@ date: 2026-09-09
 
 # Themes are per-user token sets plus a shell layout, over one canonical structure
 
+> Amended 2026-10-23: the shell layout is no longer part of a theme. It is a separate per-user
+> preference; where the text below ties `shell` to a theme, the amendment at the end wins.
+
 The owner wants users to pick a look, and the three direction sketches from Phase 2 (Caderno, Painel, Sala) differed in colour, type, radius and density but also in structure (top nav vs sidebar, cards vs hairlines). Shipping three structures would triple every UI ticket and its design gate. We therefore fix one set of components for every screen (page header, hairline sections, stat tiles, bar lists, tables) and ship the three directions as **themes**: CSS variable sets selected by `data-theme`, plus one layout field for the app shell, `shell: sidebar | topnav`, resolved by `grid-template-areas` in the single AppShell component (Caderno and Painel use `sidebar`, Sala uses `topnav`). The preference is stored per user (not per household), with Caderno as the default. The preference is a column on the existing user record, not a new domain table; it does not extend the user-scoped table list in ADR-0001.
 
 ## Consequences
@@ -32,5 +35,8 @@ set `topnav` for users already on Sala, so nobody's screen changed on deploy. A 
   tab bar. Under 768px every layout still uses the bottom tab bar.
 - Adding a layout is an AppShell branch, a `[data-shell]` block in `globals.css`, a
   `SHELL_LAYOUTS` entry and an enum migration; the contrast test checks every layout has CSS.
+- The `theme` slice is the appearance slice: it owns `SHELL_LAYOUTS` and writes `user.layout`
+  under the same documented exception to ADR-0001 as `user.theme`. This replaces the theme's
+  `shell` field and the consequence above that a theme may move the navigation.
 - The theme picker previews each theme with a swatch rendered under that theme's own
   `data-theme`, so the preview reads the real tokens instead of a copy of them.

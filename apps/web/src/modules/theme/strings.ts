@@ -67,7 +67,7 @@ const ptBR = {
       cofre: "Cofre",
     },
     themeHints: {
-      caderno: "Papel e serifa, tranquilo",
+      caderno: "Papel e serifa, sereno",
       painel: "Neutro e compacto",
       sala: "Arejado e arredondado",
       varanda: "Plantas, azulejo e terracota",

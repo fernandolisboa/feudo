@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import type { ShellLayout } from "@/modules/theme";
 
@@ -38,7 +38,7 @@ export function AppShell({
 }) {
   const userMenu = <UserMenu name={userName} email={userEmail} />;
 
-  function renderNav(): ReactNode {
+  function renderNav(): ReactElement {
     switch (shell) {
       case "sidebar":
         return (

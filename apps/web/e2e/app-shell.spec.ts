@@ -108,7 +108,7 @@ test("the app shell: sidebar (open, collapsed), topnav, dock and mobile bottom t
     await expect(dock).toBeInViewport();
     await expect(dock.getByRole("link", { name: "Transações" })).toBeInViewport();
     const box = await dock.boundingBox();
-    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThan(900);
+    expectWithinAPixel(box ? box.y + box.height : undefined, 900 - 20);
   });
 
   await test.step("under 768px, the dock layout floats the bottom tab bar", async () => {

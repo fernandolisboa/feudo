@@ -10,7 +10,7 @@ A calm, trustworthy finance tool for a couple. Reads like a well-kept household 
 fintech landing page: paper-toned surfaces, a serif for headlines and money, hairlines instead of
 shadows, one accent used sparingly, dense enough for a desktop that is open every day.
 
-## Structure (one set of components; the shell layout is themeable)
+## Structure (one set of components; the shell layout is a per-user choice)
 
 - **App shell**: a CSS grid with named areas (nav, header, content). The user's layout preference
   (independent of the theme, ADR-0010 amendment) places the nav: `sidebar` (collapsible, 224px
