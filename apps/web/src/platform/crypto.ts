@@ -2,8 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } f
 
 const ENVELOPE_PREFIX = "enc";
 // v2 binds each ciphertext to the row it belongs to (GCM additional
-// authenticated data). The unbound v1 envelope is refused: every row was
-// rewritten as v2 before its support was removed (#152).
+// authenticated data). The unbound v1 envelope is refused (#152).
 const ENVELOPE_VERSION = "v2";
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12;
