@@ -202,9 +202,11 @@ Canonical values live in `DESIGN.md`; this is the summary `/design` and `/design
 
 - Direction: calm, trustworthy household ledger; paper surfaces, serif for headlines and money,
   hairlines not shadows, one accent used sparingly.
-- Structure (not themeable): collapsible sidebar (224px / 64px), bottom tabs under 768px; page =
-  overline + serif headline + hairline sections; stat tiles, bar lists, 40px table rows.
-- Themes (per-user, `data-theme`, ADR-0010): `caderno` (default) · `painel` · `sala`. Tokens:
+- Structure (not themeable): page = overline + serif headline + hairline sections; stat tiles,
+  bar lists, 40px table rows. Layout (per-user, separate from the theme, ADR-0010): `sidebar`
+  (default, 224px / 64px) · `topnav` · `dock`; bottom tabs under 768px in every layout.
+- Themes (per-user, `data-theme`, ADR-0010): `caderno` (default) · `painel` · `sala` · `varanda` ·
+  `nitido` · `lamparina` (dark) · `cofre` (dark). Tokens:
   `--bg --surface --surface-2 --line --line-soft --ink --muted --accent --accent-hover
 --accent-soft --chart-1 --chart-2 --warning --danger --font-display --font-body --font-mono
 --radius --elevation --density`.

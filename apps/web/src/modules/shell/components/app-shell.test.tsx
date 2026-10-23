@@ -8,7 +8,8 @@ vi.mock("./sidebar-nav", () => ({
     <div data-testid="sidebar-slot">{householdSwitcher}</div>
   ),
 }));
-vi.mock("./top-nav", () => ({ TopNav: () => null }));
+vi.mock("./top-nav", () => ({ TopNav: () => <div data-testid="top-nav" /> }));
+vi.mock("./dock-nav", () => ({ DockNav: () => <div data-testid="dock-nav" /> }));
 vi.mock("./mobile-header", () => ({
   MobileHeader: ({ householdSwitcher }: { householdSwitcher: ReactNode }) => (
     <div data-testid="mobile-header-slot">{householdSwitcher}</div>
@@ -95,5 +96,30 @@ describe("AppShell", () => {
     expect(
       notice.compareDocumentPosition(screen.getByTestId("page")) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it.each([
+    ["sidebar", "sidebar-slot"],
+    ["topnav", "top-nav"],
+    ["dock", "dock-nav"],
+  ] as const)("renders only the %s navigation for that layout", (shell, testId) => {
+    const { container } = render(
+      <AppShell
+        shell={shell}
+        sidebarCollapsed={false}
+        userName="Ada"
+        userEmail="ada@example.com"
+        householdSwitcher={null}
+        tourState={{ autoStart: true, seenVersions: {} }}
+        offline={OFFLINE}
+      >
+        {null}
+      </AppShell>,
+    );
+
+    expect(container.querySelector(".app-shell")?.getAttribute("data-shell")).toBe(shell);
+    for (const other of ["sidebar-slot", "top-nav", "dock-nav"]) {
+      expect(screen.queryByTestId(other) !== null).toBe(other === testId);
+    }
   });
 });

@@ -11,6 +11,7 @@ function fakeSession(householdId: string | null): CurrentSession {
     email: "ada@example.com",
     householdId,
     theme: "caderno",
+    layout: "sidebar",
     termsVersion: "test",
   };
 }

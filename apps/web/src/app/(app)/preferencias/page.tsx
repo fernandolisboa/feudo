@@ -21,7 +21,14 @@ import {
   PushNotificationsSection,
 } from "@/modules/notifications";
 import { getTourState, TourPreferencesForm } from "@/modules/shell";
-import { PreferencesSectionErrorBoundary, resolveTheme, t, ThemeSelectForm } from "@/modules/theme";
+import {
+  LayoutSelectForm,
+  PreferencesSectionErrorBoundary,
+  resolveShellLayout,
+  resolveTheme,
+  t,
+  ThemeSelectForm,
+} from "@/modules/theme";
 
 async function PendingHouseholdDeletionsContent({ session }: { session: HouseholdSession }) {
   const households = await getPendingHouseholdDeletions(session);
@@ -53,7 +60,10 @@ export default async function PreferencesPage({
   return (
     <>
       <PageHeader overline={t.preferences.overline} title={t.preferences.title} />
-      <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
+      <div className="flex flex-col gap-6 md:flex-row md:flex-wrap md:gap-10">
+        <ThemeSelectForm currentTheme={resolveTheme(session.theme)} />
+        <LayoutSelectForm currentLayout={resolveShellLayout(session.layout)} />
+      </div>
       <TourPreferencesForm autoStart={tourState.autoStart} />
       {pushNotifications ? <PushNotificationsSection {...pushNotifications} /> : null}
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDataShellValues, parseThemeCssBlocks } from "./css-theme-tokens";
+import {
+  parseDataShellValues,
+  parseThemeColorSchemes,
+  parseThemeCssBlocks,
+} from "./css-theme-tokens";
 
 describe("parseThemeCssBlocks", () => {
   it("parses a :root-combined selector into its theme name", () => {
@@ -67,6 +71,29 @@ describe("parseThemeCssBlocks", () => {
 
   it("returns an empty object for CSS with no theme blocks", () => {
     expect(parseThemeCssBlocks("body { color: red; }")).toEqual({});
+  });
+});
+
+describe("parseThemeColorSchemes", () => {
+  it("reads each theme block's color-scheme declaration", () => {
+    const css = `
+      :root,
+      [data-theme="caderno"] {
+        color-scheme: light;
+        --bg: #f4efe6;
+      }
+
+      [data-theme="lamparina"] {
+        --bg: #1c1916;
+        color-scheme: dark;
+      }
+
+      [data-theme="painel"] {
+        --bg: #f3f4f6;
+      }
+    `;
+
+    expect(parseThemeColorSchemes(css)).toEqual({ caderno: "light", lamparina: "dark" });
   });
 });
 

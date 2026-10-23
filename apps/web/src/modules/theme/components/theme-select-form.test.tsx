@@ -20,4 +20,12 @@ describe("ThemeSelectForm", () => {
       within(screen.getByRole("combobox")).queryByText(t.preferences.themeNames.painel),
     ).not.toBeNull();
   });
+
+  it("previews the current theme with a swatch scoped to that theme's tokens", () => {
+    const { container } = render(<ThemeSelectForm currentTheme="lamparina" />);
+
+    const swatch = container.querySelector(".theme-swatch");
+    expect(swatch?.getAttribute("data-theme")).toBe("lamparina");
+    expect(swatch?.getAttribute("aria-hidden")).toBe("true");
+  });
 });

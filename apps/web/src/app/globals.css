@@ -56,6 +56,7 @@
 
 :root,
 [data-theme="caderno"] {
+  color-scheme: light;
   --bg: #f4efe6;
   --surface: #fbf8f2;
   --surface-2: #ece5d8;
@@ -80,6 +81,7 @@
 }
 
 [data-theme="painel"] {
+  color-scheme: light;
   --bg: #f3f4f6;
   --surface: #ffffff;
   --surface-2: #eef4fc;
@@ -104,6 +106,7 @@
 }
 
 [data-theme="sala"] {
+  color-scheme: light;
   --bg: #f8f6f2;
   --surface: #ffffff;
   --surface-2: #eeeae3;
@@ -125,6 +128,106 @@
   --elevation: 0 1px 2px rgba(38, 35, 31, 0.06), 0 8px 24px -16px rgba(38, 35, 31, 0.18);
   --density-body: 15px;
   --density-row: 44px;
+}
+
+[data-theme="varanda"] {
+  color-scheme: light;
+  --bg: #edf2ec;
+  --surface: #f8faf6;
+  --surface-2: #e0e8de;
+  --line: #cbd7c8;
+  --line-soft: #dfe7dc;
+  --ink: #1f2a24;
+  --muted: #55635a;
+  --accent: #1d6584;
+  --accent-hover: #164f68;
+  --accent-soft: #dcebf1;
+  --chart-1: #2b74a6;
+  --chart-2: #c25f30;
+  --warning: #6f5410;
+  --danger: #a3302a;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-nunito-sans), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-body);
+  --radius: 12px;
+  --elevation: 0 1px 2px rgba(31, 42, 36, 0.05), 0 6px 20px -14px rgba(31, 42, 36, 0.2);
+  --density-body: 15px;
+  --density-row: 44px;
+}
+
+[data-theme="nitido"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ebebeb;
+  --line: #767676;
+  --line-soft: #c4c4c4;
+  --ink: #000000;
+  --muted: #3b3b3b;
+  --accent: #0047b3;
+  --accent-hover: #00327d;
+  --accent-soft: #e3ecfb;
+  --chart-1: #00703c;
+  --chart-2: #6a2fb0;
+  --warning: #614700;
+  --danger: #b00020;
+  --font-display: var(--font-lexend), system-ui, sans-serif;
+  --font-body: var(--font-lexend), system-ui, sans-serif;
+  --font-mono: var(--font-body);
+  --radius: 4px;
+  --elevation: none;
+  --density-body: 16px;
+  --density-row: 48px;
+}
+
+[data-theme="lamparina"] {
+  color-scheme: dark;
+  --bg: #1c1916;
+  --surface: #24201b;
+  --surface-2: #302a23;
+  --line: #3f372e;
+  --line-soft: #2e2923;
+  --ink: #eee6d8;
+  --muted: #b3a898;
+  --accent: #e6ac5c;
+  --accent-hover: #f0c283;
+  --accent-soft: #3a2e1f;
+  --chart-1: #6dbb85;
+  --chart-2: #a99bf0;
+  --warning: #d8c372;
+  --danger: #f2907f;
+  --font-display: var(--font-source-serif-4), Georgia, serif;
+  --font-body: var(--font-source-sans-3), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-body);
+  --radius: 6px;
+  --elevation: none;
+  --density-body: 14px;
+  --density-row: 40px;
+}
+
+[data-theme="cofre"] {
+  color-scheme: dark;
+  --bg: #10151b;
+  --surface: #161c24;
+  --surface-2: #1f2731;
+  --line: #2b3542;
+  --line-soft: #202833;
+  --ink: #e4e9ef;
+  --muted: #98a4b1;
+  --accent: #4cc490;
+  --accent-hover: #74d6aa;
+  --accent-soft: #15302a;
+  --chart-1: #5aa8f0;
+  --chart-2: #d6a85a;
+  --warning: #e3c25e;
+  --danger: #ff8d82;
+  --font-display: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
+  --font-body: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), monospace;
+  --radius: 8px;
+  --elevation: 0 0 0 1px var(--line);
+  --density-body: 13px;
+  --density-row: 36px;
 }
 
 @layer base {
@@ -285,9 +388,61 @@
     color: var(--muted);
   }
 
+  .app-shell-dock-header {
+    display: none;
+  }
+
+  .theme-swatch {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+    padding: 3px 5px;
+  }
+
+  .theme-swatch > span {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+  }
+
+  .theme-swatch > span:nth-child(1) {
+    background: var(--ink);
+  }
+
+  .theme-swatch > span:nth-child(2) {
+    background: var(--accent);
+  }
+
+  .theme-swatch > span:nth-child(3) {
+    background: var(--chart-2);
+  }
+
   @media (width < 768px) {
     html:has(.app-shell-tabbar) {
       scroll-padding-bottom: 64px;
+    }
+
+    html:has(.app-shell[data-shell="dock"]) {
+      scroll-padding-bottom: 96px;
+    }
+
+    .app-shell[data-shell="dock"] .app-shell-content {
+      padding-bottom: 96px;
+    }
+
+    .app-shell[data-shell="dock"] .app-shell-tabbar {
+      position: fixed;
+      right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: 12px;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 12px);
+      box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--ink) 35%, transparent);
+      padding-inline: 4px;
     }
   }
 
@@ -386,6 +541,71 @@
       flex: 1;
       align-items: center;
       gap: 4px;
+    }
+
+    html:has(.app-shell[data-shell="dock"]) {
+      scroll-padding-bottom: 112px;
+    }
+
+    .app-shell[data-shell="dock"] {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas: "header" "content";
+    }
+
+    .app-shell-dock-header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      max-width: 1120px;
+      margin-inline: auto;
+      padding: 20px 32px 0;
+    }
+
+    .app-shell[data-shell="dock"] .app-shell-content {
+      width: 100%;
+      max-width: 1120px;
+      margin-inline: auto;
+      padding-bottom: 120px;
+    }
+
+    .app-shell-nav[data-shell="dock"] {
+      position: fixed;
+      top: auto;
+      bottom: 20px;
+      left: 50%;
+      z-index: 20;
+      transform: translateX(-50%);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 12px);
+      background: var(--surface);
+      padding: 6px;
+      box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--ink) 35%, transparent);
+    }
+
+    .app-shell-dock-list {
+      display: flex;
+      align-items: stretch;
+      gap: 2px;
+    }
+
+    .app-shell-nav[data-shell="dock"] .app-shell-nav-link {
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      min-width: 84px;
+      min-height: 52px;
+      border-radius: calc(var(--radius) + 6px);
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .app-shell-nav[data-shell="dock"] .app-shell-nav-link svg {
+      width: 18px;
+      height: 18px;
     }
   }
 

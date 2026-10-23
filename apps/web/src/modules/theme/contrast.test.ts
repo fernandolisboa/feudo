@@ -4,13 +4,18 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { contrastRatio } from "./contrast-ratio";
-import { parseDataShellValues, parseThemeCssBlocks } from "./css-theme-tokens";
-import { shellLayoutFor, THEME_NAMES } from "./tokens";
+import {
+  parseDataShellValues,
+  parseThemeColorSchemes,
+  parseThemeCssBlocks,
+} from "./css-theme-tokens";
+import { colorSchemeFor, SHELL_LAYOUTS, THEME_NAMES } from "./tokens";
 
 const GLOBALS_CSS_PATH = fileURLToPath(new URL("../../app/globals.css", import.meta.url));
 const globalsCss = readFileSync(GLOBALS_CSS_PATH, "utf-8");
 const themeCssBlocks = parseThemeCssBlocks(globalsCss);
 const dataShellValues = parseDataShellValues(globalsCss);
+const themeColorSchemes = parseThemeColorSchemes(globalsCss);
 
 const MINIMUM_TEXT_CONTRAST = 4.5;
 const MINIMUM_CHART_CONTRAST = 3;
@@ -48,9 +53,14 @@ describe("theme registry and globals.css agree", () => {
     expect(Object.keys(themeCssBlocks).sort()).toEqual([...THEME_NAMES].sort());
   });
 
-  it("defines a data-shell selector for every shell layout the registry uses", () => {
-    const usedShells = new Set(THEME_NAMES.map((theme) => shellLayoutFor(theme)));
-    for (const shell of usedShells) {
+  it("declares each theme's color-scheme as the registry's scheme, so native controls follow it", () => {
+    for (const theme of THEME_NAMES) {
+      expect(themeColorSchemes[theme]).toBe(colorSchemeFor(theme));
+    }
+  });
+
+  it("defines a data-shell selector for every shell layout", () => {
+    for (const shell of SHELL_LAYOUTS) {
       expect(dataShellValues.has(shell)).toBe(true);
     }
   });

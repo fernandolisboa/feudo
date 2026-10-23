@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { ActionState } from "@/lib/action-state";
 
-import { updateTheme } from "./service";
+import { updateLayout, updateTheme } from "./service";
 import { t } from "./strings";
 
 export async function updateThemeAction(
@@ -21,5 +21,22 @@ export async function updateThemeAction(
       return { status: "error", message: t.preferences.unauthenticated };
     case "invalid_theme":
       return { status: "error", message: t.preferences.invalid };
+  }
+}
+
+export async function updateLayoutAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const outcome = await updateLayout({ layout: formData.get("layout") });
+
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/", "layout");
+      return { status: "success", message: t.preferences.layoutSaved };
+    case "unauthenticated":
+      return { status: "error", message: t.preferences.unauthenticated };
+    case "invalid_layout":
+      return { status: "error", message: t.preferences.layoutInvalid };
   }
 }

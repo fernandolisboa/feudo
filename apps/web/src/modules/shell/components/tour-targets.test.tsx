@@ -7,6 +7,8 @@ vi.mock("@/modules/auth", () => ({ SignOutMenuItem: () => null }));
 vi.mock("../actions", () => ({ recordTourOutcomeAction: vi.fn() }));
 vi.mock("./offline-notice", () => ({ OfflineNotice: () => null }));
 
+import { SHELL_LAYOUTS } from "@/modules/theme";
+
 import { TOURS } from "../tours";
 import { AppShell } from "./app-shell";
 
@@ -26,7 +28,7 @@ afterEach(() => {
 const PAGE_TARGETS = new Set(["overview.accounts"]);
 
 describe("guided tour targets", () => {
-  it.each(["sidebar", "topnav"] as const)(
+  it.each(SHELL_LAYOUTS)(
     "the %s shell renders every shell target of the overview tour",
     (shell) => {
       const { container } = render(

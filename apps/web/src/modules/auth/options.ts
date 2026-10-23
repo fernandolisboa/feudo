@@ -410,6 +410,12 @@ export function buildAuthOptions(
           // import theme at runtime (modules/theme owns theme validity).
           defaultValue: "caderno",
         },
+        layout: {
+          type: "string",
+          required: false,
+          input: false,
+          defaultValue: "sidebar",
+        },
         deletionRequestedAt: {
           type: "date",
           required: false,

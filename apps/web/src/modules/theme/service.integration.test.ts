@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCurrentSessionMock = vi.hoisted(() => vi.fn());
@@ -9,7 +9,7 @@ import type { Database } from "@/platform/db/client";
 import { user } from "@/modules/auth/schema";
 import { withTestDb } from "@/platform/db/test/harness";
 
-import { updateTheme } from "./service";
+import { updateLayout, updateTheme } from "./service";
 
 beforeEach(() => {
   getCurrentSessionMock.mockReset();
@@ -75,6 +75,49 @@ describe("updateTheme isolation", () => {
 
       const [row] = await db.select({ theme: user.theme }).from(user).where(eq(user.id, userId));
       expect(row?.theme).toBe("caderno");
+    });
+  });
+});
+
+describe("updateLayout isolation", () => {
+  it("only changes the signed-in user's own layout, never another user's", async () => {
+    await withTestDb(async (db) => {
+      const userAId = "layout-isolation-user-a";
+      const userBId = "layout-isolation-user-b";
+      await insertUser(db, userAId, "layout-isolation-a@example.com");
+      await insertUser(db, userBId, "layout-isolation-b@example.com");
+
+      getCurrentSessionMock.mockResolvedValue({
+        userId: userAId,
+        name: "User A",
+        email: "layout-isolation-a@example.com",
+        theme: "caderno",
+        layout: "sidebar",
+      });
+      expect(await updateLayout({ layout: "dock" })).toEqual({ status: "ok" });
+
+      const rows = await db
+        .select({ id: user.id, layout: user.layout, theme: user.theme })
+        .from(user)
+        .where(inArray(user.id, [userAId, userBId]))
+        .orderBy(user.id);
+      expect(rows).toEqual([
+        { id: userAId, layout: "dock", theme: "caderno" },
+        { id: userBId, layout: "sidebar", theme: "caderno" },
+      ]);
+    });
+  });
+
+  it("returns unauthenticated and writes nothing without a session", async () => {
+    await withTestDb(async (db) => {
+      const userId = "layout-isolation-user-c";
+      await insertUser(db, userId, "layout-isolation-c@example.com");
+      getCurrentSessionMock.mockResolvedValue(null);
+
+      expect(await updateLayout({ layout: "topnav" })).toEqual({ status: "unauthenticated" });
+
+      const [row] = await db.select({ layout: user.layout }).from(user).where(eq(user.id, userId));
+      expect(row?.layout).toBe("sidebar");
     });
   });
 });

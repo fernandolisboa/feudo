@@ -15,6 +15,7 @@ const BASE_DOCUMENT: ExportDocument = {
     termsVersion: "2026-10-03",
     termsAcceptedAt: "2026-01-01T00:00:00.000Z",
     theme: "caderno",
+    layout: "sidebar",
   },
   sessions: [
     {
