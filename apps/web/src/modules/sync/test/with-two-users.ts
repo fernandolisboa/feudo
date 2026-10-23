@@ -49,6 +49,7 @@ export async function seedUser(
       email: `${id}@example.com`,
       householdId,
       theme: "caderno",
+      layout: "sidebar",
       termsVersion: TERMS_VERSION,
     },
   };

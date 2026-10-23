@@ -3,8 +3,16 @@ import { eq } from "drizzle-orm";
 import type { Database } from "@/platform/db/client";
 import { user } from "@/modules/auth/schema";
 
-import type { ThemeName } from "./tokens";
+import type { ShellLayout, ThemeName } from "./tokens";
 
 export async function setUserTheme(db: Database, userId: string, theme: ThemeName): Promise<void> {
   await db.update(user).set({ theme }).where(eq(user.id, userId));
+}
+
+export async function setUserLayout(
+  db: Database,
+  userId: string,
+  layout: ShellLayout,
+): Promise<void> {
+  await db.update(user).set({ layout }).where(eq(user.id, userId));
 }

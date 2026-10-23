@@ -19,6 +19,7 @@ const ownerSession: HouseholdSession = {
   email: "owner@example.com",
   householdId: "household-1",
   theme: "caderno",
+  layout: "sidebar",
   termsVersion: "test",
 };
 

@@ -11,7 +11,17 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-export const themeEnum = pgEnum("theme", ["caderno", "painel", "sala"]);
+export const themeEnum = pgEnum("theme", [
+  "caderno",
+  "painel",
+  "sala",
+  "lamparina",
+  "cofre",
+  "varanda",
+  "nitido",
+]);
+
+export const shellLayoutEnum = pgEnum("shell_layout", ["sidebar", "topnav", "dock"]);
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -22,6 +32,7 @@ export const user = pgTable("user", {
   termsVersion: text("terms_version").notNull(),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }).notNull(),
   theme: themeEnum("theme").notNull().default("caderno"),
+  layout: shellLayoutEnum("layout").notNull().default("sidebar"),
   toursAutoStart: boolean("tours_auto_start").notNull().default(true),
   // Owned by the privacy slice (ADR-0008): set when the user asks to delete
   // their account, cleared if they cancel within the grace, and the row is

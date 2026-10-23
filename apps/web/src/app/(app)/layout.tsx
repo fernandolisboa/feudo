@@ -13,13 +13,13 @@ import {
   readSidebarCollapsed,
 } from "@/modules/shell";
 import { CategorizationNudge } from "@/modules/ledger";
-import { resolveTheme, shellLayoutFor } from "@/modules/theme";
+import { resolveShellLayout } from "@/modules/theme";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await requireHouseholdSession();
-  const { name, email, theme, householdId } = session;
+  const { name, email, layout, householdId } = session;
 
-  const shell = shellLayoutFor(resolveTheme(theme));
+  const shell = resolveShellLayout(layout);
   const sidebarCollapsed = shell === "sidebar" ? await readSidebarCollapsed() : false;
   const [switcherProps, tourState, offline] = await Promise.all([
     getHouseholdSwitcherProps(householdId),

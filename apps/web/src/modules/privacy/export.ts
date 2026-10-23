@@ -27,6 +27,7 @@ export type ExportDocument = {
     termsVersion: string;
     termsAcceptedAt: string;
     theme: string;
+    layout: string;
   };
   sessions: Array<{
     createdAt: string;
@@ -195,6 +196,7 @@ export async function buildExportDocument(
       termsVersion: userRow.termsVersion,
       termsAcceptedAt: userRow.termsAcceptedAt.toISOString(),
       theme: userRow.theme,
+      layout: userRow.layout,
     },
     sessions: sessions.map((entry) => ({
       createdAt: entry.createdAt.toISOString(),

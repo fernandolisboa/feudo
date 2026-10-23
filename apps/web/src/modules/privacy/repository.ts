@@ -125,6 +125,7 @@ export type ExportUserRow = {
   termsVersion: string;
   termsAcceptedAt: Date;
   theme: string;
+  layout: string;
 };
 
 // The export's own "user" section (#25): read directly off auth's schema,
@@ -145,6 +146,7 @@ export async function getExportUser(
       termsVersion: user.termsVersion,
       termsAcceptedAt: user.termsAcceptedAt,
       theme: user.theme,
+      layout: user.layout,
     })
     .from(user)
     .where(eq(user.id, userId))

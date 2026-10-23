@@ -17,6 +17,7 @@ const SESSION: HouseholdSession = {
   email: "ana@example.com",
   householdId: "household-1",
   theme: "caderno",
+  layout: "sidebar",
   termsVersion: TERMS_VERSION,
 };
 
@@ -34,6 +35,7 @@ const EMPTY_DOCUMENT: ExportDocument = {
     termsVersion: TERMS_VERSION,
     termsAcceptedAt: EXPORTED_AT.toISOString(),
     theme: "caderno",
+    layout: "sidebar",
   },
   sessions: [],
   tours: { autoStart: true, items: [] },

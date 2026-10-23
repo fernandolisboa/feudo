@@ -30,6 +30,7 @@ const SESSION = {
   name: "Ana",
   email: "ana@example.com",
   theme: "caderno" as const,
+  layout: "sidebar",
   termsVersion: "test",
 };
 

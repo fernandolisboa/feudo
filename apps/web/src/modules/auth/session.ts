@@ -16,13 +16,16 @@ export type CurrentSession = {
   email: string;
   householdId: string | null;
   theme: string;
+  layout: string;
   termsVersion: string;
 };
 
-// The theme column's DB default guarantees a value once a user exists;
-// deciding which strings are valid theme names is modules/theme's job
-// (resolveTheme), not auth's — auth must not import theme at runtime.
+// The theme and layout columns' DB defaults guarantee a value once a user
+// exists; deciding which strings are valid is modules/theme's job
+// (resolveTheme, resolveShellLayout), not auth's — auth must not import
+// theme at runtime.
 const RAW_THEME_FALLBACK = "caderno";
+const RAW_LAYOUT_FALLBACK = "sidebar";
 
 // A session's activeOrganizationId is only ever a hint: it can be stale
 // (membership revoked or the household deleted since it was set) or absent
@@ -89,6 +92,7 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
     email: session.user.email,
     householdId,
     theme: session.user.theme ?? RAW_THEME_FALLBACK,
+    layout: session.user.layout ?? RAW_LAYOUT_FALLBACK,
     termsVersion: session.user.termsVersion,
   };
 });

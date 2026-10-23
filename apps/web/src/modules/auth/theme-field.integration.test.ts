@@ -22,6 +22,11 @@ async function themeColumnFor(db: Database, email: string): Promise<string | und
   return row?.theme;
 }
 
+async function layoutColumnFor(db: Database, email: string): Promise<string | undefined> {
+  const [row] = await db.select({ layout: user.layout }).from(user).where(eq(user.email, email));
+  return row?.layout;
+}
+
 // A malicious or naive client can send any JSON body to /api/auth/sign-up/email
 // directly, bypassing our own signUpFormSchema entirely — this exercises that
 // raw HTTP path, not the typed api.signUpEmail() wrapper our own service.ts
@@ -78,6 +83,27 @@ describe("sign-up ignores a client-supplied theme (Better Auth's theme field is 
       expect(status).toBe(200);
       expect(signedUpUser?.id).toBeTruthy();
       expect(await themeColumnFor(db, email)).toBe("caderno");
+    });
+  });
+});
+
+describe("sign-up ignores a client-supplied layout (Better Auth's layout field is input: false)", () => {
+  it("keeps the sidebar default when the client sends a layout", async () => {
+    await withTestDb(async (db) => {
+      const email = "layout-valid@example.com";
+
+      const { status, user: signedUpUser } = await rawSignUp({
+        name: "Layout Valid",
+        email,
+        password: "correct-horse",
+        termsVersion: TERMS_VERSION,
+        callbackURL: "/entrar",
+        layout: "dock",
+      });
+
+      expect(status).toBe(200);
+      expect(signedUpUser?.id).toBeTruthy();
+      expect(await layoutColumnFor(db, email)).toBe("sidebar");
     });
   });
 });

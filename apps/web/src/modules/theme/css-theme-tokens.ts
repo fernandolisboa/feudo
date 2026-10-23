@@ -32,6 +32,18 @@ export function parseThemeCssBlocks(css: string): Record<string, CssCustomProper
   return themes;
 }
 
+export function parseThemeColorSchemes(css: string): Record<string, string> {
+  const schemes: Record<string, string> = {};
+  for (const match of css.matchAll(THEME_BLOCK_PATTERN)) {
+    const themeName = match[1];
+    const scheme = match[2]?.match(/(?:^|;)\s*color-scheme:\s*([a-z]+)/)?.[1];
+    if (themeName && scheme) {
+      schemes[themeName] = scheme;
+    }
+  }
+  return schemes;
+}
+
 export function parseDataShellValues(css: string): Set<string> {
   const values = new Set<string>();
   for (const match of css.matchAll(DATA_SHELL_PATTERN)) {

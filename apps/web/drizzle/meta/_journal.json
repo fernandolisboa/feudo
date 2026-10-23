@@ -239,6 +239,13 @@
       "when": 1792699908416,
       "tag": "0033_categorization_deferral",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792749589241,
+      "tag": "0034_user_layout_and_more_themes",
+      "breakpoints": true
     }
   ]
 }

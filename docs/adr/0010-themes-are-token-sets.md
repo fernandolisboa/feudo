@@ -14,3 +14,23 @@ The owner wants users to pick a look, and the three direction sketches from Phas
 - A theme may move the navigation (sidebar or top bar) and restyle any component through tokens (`--elevation`, `--radius`, density), but it cannot change component anatomy: the accounts list is one table component in every theme, the page headline is one component. Swapping a table for a card grid would be a new component decision, not a theme.
 - The AppShell is tested in both layouts plus the mobile bottom-tab variant.
 - `theme` writes `user.theme` directly (a scoped update by the session's own user id), a documented exception to ADR-0001's "only the `auth` and `households` modules touch Better Auth"; the column is a UI preference, not identity or tenancy, and carries no isolation risk.
+
+## Amendment 2026-10-23: the layout is its own preference
+
+The owner asked for more themes and more layouts, chosen independently. The shell layout is no
+longer a field of the theme: it is a second per-user column, `user.layout` (`sidebar | topnav |
+dock`, default `sidebar`), picked on Preferências next to the theme. The migration that added it
+set `topnav` for users already on Sala, so nobody's screen changed on deploy. A theme now carries
+`scheme: light | dark` instead of `shell`; dark themes also put `.dark` on `<html>` and declare
+`color-scheme: dark`, so shadcn's `dark:` variants and native controls follow the tokens.
+
+- Themes: Caderno, Painel, Sala, Varanda, Nítido (high contrast, larger type), Lamparina (dark) and
+  Cofre (dark). Adding a theme is still a `[data-theme]` block, a `THEME_NAMES` entry, a
+  `themeRegistry` scheme, `strings.themeNames`/`themeHints` and an enum migration.
+- Layouts: `sidebar` and `topnav` as before; `dock` is a slim header plus a floating navigation bar
+  at the bottom with the content in a centered 1120px column, and on phones it floats the bottom
+  tab bar. Under 768px every layout still uses the bottom tab bar.
+- Adding a layout is an AppShell branch, a `[data-shell]` block in `globals.css`, a
+  `SHELL_LAYOUTS` entry and an enum migration; the contrast test checks every layout has CSS.
+- The theme picker previews each theme with a swatch rendered under that theme's own
+  `data-theme`, so the preview reads the real tokens instead of a copy of them.

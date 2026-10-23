@@ -28,8 +28,10 @@ vi.mock("@/modules/theme", async (importOriginal) => {
   return {
     t: actual.t,
     resolveTheme: actual.resolveTheme,
+    resolveShellLayout: actual.resolveShellLayout,
     PreferencesSectionErrorBoundary: actual.PreferencesSectionErrorBoundary,
     ThemeSelectForm: () => <p>Tema</p>,
+    LayoutSelectForm: () => <p>Layout</p>,
   };
 });
 

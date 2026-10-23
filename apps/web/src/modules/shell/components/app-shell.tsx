@@ -5,6 +5,7 @@ import type { ShellLayout } from "@/modules/theme";
 import type { OfflineNoticeProps } from "../offline-notice-props";
 import type { TourState } from "../tour-state";
 
+import { DockNav } from "./dock-nav";
 import { MobileHeader } from "./mobile-header";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { NAV_ITEMS } from "../nav-items";
@@ -37,19 +38,32 @@ export function AppShell({
 }) {
   const userMenu = <UserMenu name={userName} email={userEmail} />;
 
-  return (
-    <TourProvider initialState={tourState}>
-      <div className="app-shell" data-shell={shell}>
-        {shell === "sidebar" ? (
+  function renderNav(): ReactNode {
+    switch (shell) {
+      case "sidebar":
+        return (
           <SidebarNav
             items={NAV_ITEMS}
             initialCollapsed={sidebarCollapsed}
             userMenu={userMenu}
             householdSwitcher={householdSwitcher}
           />
-        ) : (
+        );
+      case "topnav":
+        return (
           <TopNav items={NAV_ITEMS} userMenu={userMenu} householdSwitcher={householdSwitcher} />
-        )}
+        );
+      case "dock":
+        return (
+          <DockNav items={NAV_ITEMS} userMenu={userMenu} householdSwitcher={householdSwitcher} />
+        );
+    }
+  }
+
+  return (
+    <TourProvider initialState={tourState}>
+      <div className="app-shell" data-shell={shell}>
+        {renderNav()}
 
         <MobileHeader userMenu={userMenu} householdSwitcher={householdSwitcher} />
 
