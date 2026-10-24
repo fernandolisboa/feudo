@@ -23,6 +23,7 @@ function buildProps(overrides: Partial<OverviewPageProps> = {}): OverviewPagePro
     monthLabel: "setembro de 2026",
     previousMonth: "2026-08",
     nextMonth: null,
+    latestMonth: "2026-09",
     hasAccounts: true,
     inProgress: false,
     incomeCentavos: 850000,

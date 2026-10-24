@@ -9,6 +9,7 @@ function props(overrides: Partial<OverviewPageProps> = {}): OverviewPageProps {
     monthLabel: "setembro de 2026",
     previousMonth: "2026-08",
     nextMonth: "2026-10",
+    latestMonth: "2026-10",
     hasAccounts: true,
     inProgress: false,
     incomeCentavos: 1_240_000,

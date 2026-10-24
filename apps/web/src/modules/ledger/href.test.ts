@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { transactionsHref, transactionsRouteParams, transactionsSpreadsheetHref } from "./href";
+import {
+  transactionsHref,
+  transactionsRouteParams,
+  transactionsSpreadsheetHref,
+  withMonth,
+} from "./href";
+import { overviewHref } from "./overview-href";
 
 const BASE = {
   month: "2026-09",
@@ -115,5 +121,23 @@ describe("transactionsSpreadsheetHref", () => {
         "xlsx",
       ),
     ).toBe("/api/transactions/spreadsheet?de=2026-07-06&ate=2026-10-17&formato=xlsx");
+  });
+});
+
+describe("withMonth", () => {
+  it("swaps the month and keeps every other filter in place", () => {
+    const href = transactionsHref({ ...BASE, accountId: "acc 1", kind: "fixed", search: "água" });
+
+    expect(withMonth(href, "2025-03")).toBe(
+      "/transacoes?mes=2025-03&conta=acc+1&tipo=fixed&busca=%C3%A1gua",
+    );
+  });
+
+  it("swaps the month of the overview link", () => {
+    expect(withMonth(overviewHref("2026-10"), "2026-02")).toBe("/?mes=2026-02");
+  });
+
+  it("adds the month to a link that has no query yet", () => {
+    expect(withMonth("/transacoes", "2026-01")).toBe("/transacoes?mes=2026-01");
   });
 });

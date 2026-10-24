@@ -7,18 +7,17 @@ import {
 } from "@feudo/core";
 import { z } from "zod";
 
-import { UNCATEGORIZED_FILTER } from "./href";
+import { MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
 import { decodeSubcategoryRef } from "./subcategory-ref";
 
 export const TRANSACTIONS_PAGE_SIZE = 50;
 
 // isYearMonth's own pattern accepts any four-digit year: "0050-03" parses
 // but Date.UTC folds years 0-99 into 1900-1999 downstream (formatYearMonth,
-// shortMonthLabel), and "0000-01" makes shiftYearMonth's own arithmetic
+// formatShortMonth), and "0000-01" makes shiftYearMonth's own arithmetic
 // throw. Bounding the year here, in the one schema both / and /transacoes
 // parse their `mes` param with, keeps every caller's month math (year * 12
 // + ...) inside a range it was written for.
-const MIN_YEAR_MONTH_YEAR = 1970;
 const MAX_YEAR_MONTH_YEAR = 9999;
 
 function isBoundedYearMonth(value: string): value is YearMonth {

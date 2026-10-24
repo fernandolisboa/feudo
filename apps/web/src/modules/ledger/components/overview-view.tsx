@@ -126,7 +126,10 @@ export function OverviewHeader(props: OverviewPageProps) {
       title={headline(props)}
       actions={
         <MonthSwitcher
+          month={props.month}
           monthLabel={props.monthLabel}
+          latestMonth={props.latestMonth}
+          monthHref={overviewHref(props.month)}
           previousHref={overviewHref(props.previousMonth)}
           nextHref={props.nextMonth ? overviewHref(props.nextMonth) : null}
         />

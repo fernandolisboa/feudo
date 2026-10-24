@@ -118,6 +118,24 @@ export function yearMonthDayRange(yearMonth: YearMonth): IsoDateRange {
   return { from: `${yearMonth}-01`, to: `${yearMonth}-${pad(lastDay)}` };
 }
 
+export function formatShortMonth(yearMonth: YearMonth): string {
+  const { year, month } = parts(yearMonth);
+  const label = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(year, month - 1, 1)),
+  );
+  return label.replace(/\.$/, "");
+}
+
+export function yearOf(yearMonth: YearMonth): number {
+  return parts(yearMonth).year;
+}
+
+export function monthsOfYear(year: number): YearMonth[] {
+  return Array.from({ length: 12 }, (_, index) =>
+    parseYearMonth(`${String(year)}-${pad(index + 1)}`),
+  );
+}
+
 export function formatYearMonth(yearMonth: YearMonth): string {
   const { year, month } = parts(yearMonth);
   return new Intl.DateTimeFormat("pt-BR", {

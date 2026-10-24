@@ -40,6 +40,7 @@ export type TransactionsPageProps = {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
+  latestMonth: YearMonth;
   range: IsoDateRange | null;
   periodLabel: string | null;
   todayIso: string;
@@ -222,6 +223,7 @@ async function buildTransactionsPageProps(
     monthLabel: formatYearMonth(month),
     previousMonth: shiftYearMonth(month, -1),
     nextMonth: month < currentMonth ? shiftYearMonth(month, 1) : null,
+    latestMonth: currentMonth,
     range,
     periodLabel,
     todayIso,

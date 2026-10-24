@@ -1,23 +1,31 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { YearMonth } from "@feudo/core";
 
 import { Button } from "@/ui/button";
 
 import { t } from "../strings";
+import { MonthPicker } from "./month-picker";
 
 export function MonthSwitcher({
+  month,
   monthLabel,
+  latestMonth,
+  monthHref,
   previousHref,
   nextHref,
   tourTarget,
 }: {
+  month: YearMonth;
   monthLabel: string;
+  latestMonth: YearMonth;
+  monthHref: string;
   previousHref: string;
   nextHref: string | null;
   tourTarget?: string;
 }) {
   return (
-    <div className="flex items-center gap-1" data-tour={tourTarget}>
+    <div className="flex shrink-0 items-center gap-1" data-tour={tourTarget}>
       <Button
         variant="ghost"
         size="icon"
@@ -26,7 +34,12 @@ export function MonthSwitcher({
       >
         <ChevronLeft aria-hidden="true" />
       </Button>
-      <span className="font-heading min-w-[9.5rem] text-center text-[15px]">{monthLabel}</span>
+      <MonthPicker
+        month={month}
+        monthLabel={monthLabel}
+        latestMonth={latestMonth}
+        monthHref={monthHref}
+      />
       {nextHref ? (
         <Button
           variant="ghost"

@@ -4,16 +4,19 @@ import {
   InvalidIsoDateError,
   InvalidYearMonthError,
   calendarDaysBetween,
+  formatShortMonth,
   formatYearMonth,
   isoDateToUtcMidnight,
   isYearMonth,
   localDateOf,
+  monthsOfYear,
   padDayRange,
   parseYearMonth,
   shiftIsoDate,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,
+  yearOf,
 } from "./year-month";
 
 const INVALID_ISO_DATES = ["2026-9-28", "2026/09/28", "not-a-date", "", "2026-02-31", "2026-13-01"];
@@ -94,6 +97,32 @@ describe("formatYearMonth", () => {
   it("formats in Brazilian Portuguese", () => {
     expect(formatYearMonth("2026-09")).toBe("setembro de 2026");
     expect(formatYearMonth("2027-01")).toBe("janeiro de 2027");
+  });
+});
+
+describe("formatShortMonth", () => {
+  it("abbreviates the month in Brazilian Portuguese without the trailing period", () => {
+    expect(formatShortMonth("2026-09")).toBe("set");
+    expect(formatShortMonth("2026-02")).toBe("fev");
+    expect(formatShortMonth("2026-05")).toBe("mai");
+  });
+});
+
+describe("monthsOfYear", () => {
+  it("lists January through December of the year in order", () => {
+    const months = monthsOfYear(2026);
+
+    expect(months).toHaveLength(12);
+    expect(months[0]).toBe("2026-01");
+    expect(months[9]).toBe("2026-10");
+    expect(months[11]).toBe("2026-12");
+  });
+});
+
+describe("yearOf", () => {
+  it("reads the calendar year of a month", () => {
+    expect(yearOf("2026-10")).toBe(2026);
+    expect(yearOf("1970-01")).toBe(1970);
   });
 });
 

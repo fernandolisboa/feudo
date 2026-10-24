@@ -16,6 +16,10 @@ export type TransactionsRouteBase = Omit<TransactionsRoute, "page">;
 
 export const UNCATEGORIZED_FILTER = "sem";
 
+export const MONTH_PARAM = "mes";
+
+export const MIN_YEAR_MONTH_YEAR = 1970;
+
 export const TRANSACTIONS_PATH = "/transacoes";
 
 export function transactionsRouteParams(view: TransactionsRoute): [string, string][] {
@@ -24,7 +28,7 @@ export function transactionsRouteParams(view: TransactionsRoute): [string, strin
         ["de", view.range.from],
         ["ate", view.range.to],
       ]
-    : [["mes", view.month]];
+    : [[MONTH_PARAM, view.month]];
   if (view.accountId) {
     entries.push(["conta", view.accountId]);
   }
@@ -63,4 +67,12 @@ export function transactionsSpreadsheetHref(
     ["formato", format],
   ]);
   return `${TRANSACTIONS_SPREADSHEET_ROUTE}?${params.toString()}`;
+}
+
+export function withMonth(href: string, month: YearMonth): string {
+  const queryStart = href.indexOf("?");
+  const path = queryStart === -1 ? href : href.slice(0, queryStart);
+  const params = new URLSearchParams(queryStart === -1 ? "" : href.slice(queryStart + 1));
+  params.set(MONTH_PARAM, month);
+  return `${path}?${params.toString()}`;
 }
