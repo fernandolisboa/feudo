@@ -18,7 +18,7 @@ import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
 import type { HouseholdSession } from "@/modules/households";
-import type { PageSize } from "@/ui/page-size";
+import type { PageSize } from "@/lib/page-size";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";

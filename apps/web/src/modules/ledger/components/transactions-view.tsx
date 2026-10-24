@@ -5,7 +5,7 @@ import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { PageNav, paginationStatus } from "@/ui/page-nav";
-import { SMALLEST_PAGE_SIZE } from "@/ui/page-size";
+import { SMALLEST_PAGE_SIZE } from "@/lib/page-size";
 import { interpolate } from "@/lib/interpolate";
 
 import { GUIDED_CATEGORIZATION_PATH, transactionsHref, type TransactionsRouteBase } from "../href";

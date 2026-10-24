@@ -16,7 +16,7 @@ const en = {
     },
     pagination: {
       nav: "Access pages",
-      status: "Page {page} of {pages} · {total} accesses",
+      status: "Page {page} of {pages} · latest {total} accesses",
       rowsPerPage: "Rows per page",
       previous: "Previous",
       next: "Next",
@@ -42,7 +42,7 @@ const ptBR = {
     },
     pagination: {
       nav: "Páginas de acessos",
-      status: "Página {page} de {pages} · {total} acessos",
+      status: "Página {page} de {pages} · últimos {total} acessos",
       rowsPerPage: "Linhas por página",
       previous: "Anteriores",
       next: "Próximos",

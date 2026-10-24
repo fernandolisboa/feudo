@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { Button } from "./button";
 import { PageNav, paginationStatus } from "./page-nav";
-import { SMALLEST_PAGE_SIZE, pageAfterResize, type PageSize } from "./page-size";
+import { SMALLEST_PAGE_SIZE, pageAfterResize, type PageSize } from "@/lib/page-size";
 import { PageSizeSelect } from "./page-size-select";
 import { Table, TableBody, TableHeader } from "./table";
 

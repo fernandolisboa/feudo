@@ -28,7 +28,7 @@ describe("RecentAccessTable", () => {
 
     expect(listedKinds()).toHaveLength(10);
     expect(screen.getByRole("navigation", { name: t.recentAccess.pagination.nav })).toBeDefined();
-    expect(screen.getByText("Página 1 de 3 · 25 acessos")).toBeDefined();
+    expect(screen.getByText("Página 1 de 3 · últimos 25 acessos")).toBeDefined();
     expect(container.querySelector("[data-stack]")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: t.recentAccess.pagination.next }));

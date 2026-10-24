@@ -14,13 +14,12 @@ import {
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import type { PageSize } from "@/lib/page-size";
 
 import { DEFAULT_TRANSACTIONS_PAGE_SIZE, UNCATEGORIZED_FILTER } from "./href";
 import { readHouseholdLedger } from "./ledger-read";
 import { createHouseholdLedgerRepository, type LedgerAccount } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
-import type { PageSize } from "@/ui/page-size";
-
 import { transactionsSearchParamsSchema, type TransactionsSearchParams } from "./validation";
 
 export type FilteredTransactions = {

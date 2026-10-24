@@ -7,7 +7,7 @@ import {
 } from "@feudo/core";
 import { z } from "zod";
 
-import { PAGE_SIZE_OPTIONS } from "@/ui/page-size";
+import { PAGE_SIZE_OPTIONS } from "@/lib/page-size";
 
 import { MAX_YEAR_MONTH_YEAR, MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
 import { decodeSubcategoryRef } from "./subcategory-ref";

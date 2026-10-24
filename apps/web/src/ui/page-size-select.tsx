@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 
-import { PAGE_SIZE_OPTIONS, isPageSize, type PageSize } from "./page-size";
+import { PAGE_SIZE_OPTIONS, isPageSize, type PageSize } from "@/lib/page-size";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 
 const ITEMS = PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: String(size) }));

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import { pageAfterResize } from "@/ui/page-size";
+import { pageAfterResize } from "@/lib/page-size";
 import { PageSizeSelect } from "@/ui/page-size-select";
 
 import { transactionsHref, type TransactionsRoute } from "../href";

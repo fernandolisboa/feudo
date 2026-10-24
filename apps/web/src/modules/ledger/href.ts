@@ -1,5 +1,5 @@
 import type { IsoDateRange, Kind, ProductCategoryId, YearMonth } from "@feudo/core";
-import type { PageSize } from "@/ui/page-size";
+import type { PageSize } from "@/lib/page-size";
 
 import type { SpreadsheetFormat } from "./spreadsheet";
 
