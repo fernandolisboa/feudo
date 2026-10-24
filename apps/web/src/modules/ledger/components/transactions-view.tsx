@@ -9,7 +9,6 @@ import { interpolate } from "@/lib/interpolate";
 
 import { GUIDED_CATEGORIZATION_PATH, transactionsHref, type TransactionsRouteBase } from "../href";
 import type { TransactionsPageProps } from "../page-props";
-import { TRANSACTIONS_PAGE_SIZE } from "../validation";
 import { MonthSwitcher } from "./month-switcher";
 import { PeriodSwitcher } from "./period-switcher";
 import { SpreadsheetMenu } from "./spreadsheet-menu";
@@ -115,6 +114,7 @@ export function TransactionsView({
   transactions,
   total,
   page,
+  pageCount,
   hasMore,
 }: TransactionsPageProps) {
   const isRange = range !== null;
@@ -222,12 +222,7 @@ export function TransactionsView({
           {page > 1 || hasMore ? (
             <PageNav
               label={t.pagination.label}
-              status={paginationStatus(
-                t.pagination.page,
-                page,
-                Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE)),
-                total,
-              )}
+              status={paginationStatus(t.pagination.page, page, pageCount, total)}
               previous={
                 page > 1 ? (
                   <Button

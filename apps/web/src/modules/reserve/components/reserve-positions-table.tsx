@@ -9,7 +9,7 @@ import { ReserveMarkDialog } from "./reserve-mark-dialog";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
-export const POSITIONS_PAGE_SIZE = 10;
+const POSITIONS_PAGE_SIZE = 10;
 
 export function ReservePositionsTable({
   positions,

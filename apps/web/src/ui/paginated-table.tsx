@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentProps, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "./button";
 import { PageNav, paginationStatus } from "./page-nav";
@@ -19,14 +19,13 @@ export function PaginatedTable({
   pageSize,
   labels,
   stackOnNarrow = false,
-  ...tableProps
 }: {
   header: ReactNode;
   rows: ReactNode[];
   pageSize: number;
   labels: PaginationLabels;
   stackOnNarrow?: boolean;
-} & Omit<ComponentProps<"table">, "children">) {
+}) {
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const [requestedPage, setPage] = useState(1);
   const page = Math.min(requestedPage, pageCount);
@@ -34,7 +33,7 @@ export function PaginatedTable({
 
   return (
     <>
-      <Table stackOnNarrow={stackOnNarrow} {...tableProps}>
+      <Table stackOnNarrow={stackOnNarrow}>
         <TableHeader>{header}</TableHeader>
         <TableBody>{rows.slice(start, start + pageSize)}</TableBody>
       </Table>
@@ -46,6 +45,7 @@ export function PaginatedTable({
             <Button
               variant="outline"
               size="sm"
+              focusableWhenDisabled
               disabled={page === 1}
               onClick={() => {
                 setPage(page - 1);
@@ -58,6 +58,7 @@ export function PaginatedTable({
             <Button
               variant="outline"
               size="sm"
+              focusableWhenDisabled
               disabled={page === pageCount}
               onClick={() => {
                 setPage(page + 1);

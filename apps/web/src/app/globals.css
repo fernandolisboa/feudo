@@ -672,6 +672,7 @@
   }
 
   [data-stack] [data-slot="table-row"] {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
@@ -729,7 +730,12 @@
   }
 
   [data-stack] [data-card="hidden"] {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   [data-stack] [data-card-only] {

@@ -57,6 +57,7 @@ export type TransactionsPageProps = {
   transactions: TransactionRowView[];
   total: number;
   page: number;
+  pageCount: number;
   hasMore: boolean;
 };
 
@@ -254,6 +255,7 @@ async function buildTransactionsPageProps(
       .map((row) => toRowView(row, taxonomy, rowById)),
     total,
     page,
+    pageCount: lastPage,
     hasMore: start + TRANSACTIONS_PAGE_SIZE < total,
   };
 }

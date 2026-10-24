@@ -57,8 +57,15 @@ describe("Table", () => {
   it("keeps table semantics explicit so stacked rows still read as rows and cells", () => {
     renderTable(true);
 
-    expect(screen.getByRole("table")).toBeDefined();
-    expect(screen.getAllByRole("row")).toHaveLength(2);
-    expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+    expect(screen.getByRole("table").getAttribute("role")).toBe("table");
+    for (const row of screen.getAllByRole("row")) {
+      expect(row.getAttribute("role")).toBe("row");
+    }
+    for (const cell of screen.getAllByRole("cell")) {
+      expect(cell.getAttribute("role")).toBe("cell");
+    }
+    for (const header of screen.getAllByRole("columnheader")) {
+      expect(header.getAttribute("role")).toBe("columnheader");
+    }
   });
 });

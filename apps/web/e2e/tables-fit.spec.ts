@@ -6,7 +6,7 @@ import { signUpVerifyAndSignIn, uniqueEmail } from "./support/auth";
 // a card, a foreign account and two investments (fake-fixtures.ts).
 const FAKE_ITEM_BANCO_FIXTURE = "0f1e2d3c-4b5a-4a6b-8c7d-8e9f0a1b2c3d";
 
-const PAGES = ["/?aba=contas", "/transacoes?mes=2026-09", "/reserva", "/casa"];
+const PAGES = ["/?aba=contas", "/transacoes?mes=2026-09", "/reserva", "/bancos", "/casa"];
 
 async function sidewaysOverflow(page: Page): Promise<number[]> {
   return page.evaluate(() => [
@@ -58,6 +58,17 @@ test("tables fit the screen: no sideways scroll, rows become cards on a phone", 
     }
   }
 
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/transacoes?mes=2026-09");
+  const searchBox = await page.getByRole("searchbox", { name: "Buscar transações" }).boundingBox();
+  const periodForm = await page.getByRole("form", { name: "Período" }).boundingBox();
+  expect(Math.abs((periodForm?.y ?? 0) - (searchBox?.y ?? -100))).toBeLessThan(24);
+  await page.goto("/?aba=contas");
+  await expect(
+    page.locator("[data-slot=table-container] [data-slot=table-body] tr").first(),
+  ).toHaveCSS("display", "table-row");
+
+  await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/?aba=contas");
   const accountRow = page
     .locator("[data-slot=table-container][data-stack] [data-slot=table-body] tr")

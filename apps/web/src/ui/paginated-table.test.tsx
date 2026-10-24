@@ -48,7 +48,10 @@ describe("PaginatedTable", () => {
     expect(bodyRowNames()[0]).toBe("Conta 1");
     expect(screen.getByRole("navigation", { name: "Páginas de contas" })).toBeDefined();
     expect(screen.getByText("Página 1 de 2 · 16 contas")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Anteriores" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Anteriores" })).toHaveProperty(
+      "ariaDisabled",
+      "true",
+    );
   });
 
   it("moves to the next page and back", () => {
@@ -65,7 +68,7 @@ describe("PaginatedTable", () => {
       "Conta 16",
     ]);
     expect(screen.getByText("Página 2 de 2 · 16 contas")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Próximas" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Próximas" })).toHaveProperty("ariaDisabled", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Anteriores" }));
 

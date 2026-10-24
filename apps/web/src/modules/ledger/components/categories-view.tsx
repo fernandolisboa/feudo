@@ -13,7 +13,7 @@ import { KindSelect } from "./kind-select";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
-export const RULES_PAGE_SIZE = 20;
+const RULES_PAGE_SIZE = 20;
 
 export function CategoriesView({ categories, rules, suggestions }: CategoriesPageProps) {
   return (
