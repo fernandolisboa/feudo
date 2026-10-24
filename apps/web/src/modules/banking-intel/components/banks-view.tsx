@@ -28,7 +28,7 @@ const CANDIDATE_GRID_COLS: Record<number, string> = {
 
 function Review({ review }: { review: ReviewView }) {
   return (
-    <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-[12px] tabular-nums">
+    <span className="text-muted-foreground inline-flex flex-wrap items-center gap-2 text-[12px] tabular-nums">
       {review.label}
       {review.stale ? <Badge variant="outline">{t.candidates.stale}</Badge> : null}
     </span>
@@ -98,10 +98,13 @@ function CandidateCard({ candidate }: { candidate: CandidateView }) {
 function ReviewedRow({ row }: { row: ReviewedBankRow }) {
   return (
     <TableRow className="h-[var(--density-row)]">
-      <TableCell className="text-muted-foreground text-right tabular-nums">
+      <TableCell
+        label={t.reviewed.position}
+        className="text-muted-foreground text-right tabular-nums"
+      >
         {row.positionLabel}
       </TableCell>
-      <TableCell>
+      <TableCell card="title">
         <div className="flex flex-col gap-0.5 py-1">
           <span className="flex flex-wrap items-center gap-2">
             <Link href={row.href} className={BANK_LINK_CLASS}>
@@ -116,8 +119,10 @@ function ReviewedRow({ row }: { row: ReviewedBankRow }) {
           ) : null}
         </div>
       </TableCell>
-      <TableCell className="text-right tabular-nums">{row.scoreLabel}</TableCell>
-      <TableCell>
+      <TableCell card="aside" className="text-right tabular-nums">
+        {row.scoreLabel}
+      </TableCell>
+      <TableCell label={t.reviewed.reviewedAt}>
         <Review review={row.review} />
       </TableCell>
     </TableRow>
@@ -134,7 +139,7 @@ function ReviewedTable({ reviewed }: { reviewed: ReviewedBankRow[] }) {
         title={t.reviewed.title}
         actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
       />
-      <Table>
+      <Table stackOnNarrow>
         <TableHeader>
           <TableRow>
             <TableHead className={`${HEAD_CLASS} w-[1%] text-right`}>
@@ -151,7 +156,11 @@ function ReviewedTable({ reviewed }: { reviewed: ReviewedBankRow[] }) {
           ))}
           {unmetRows.length > 0 ? (
             <TableRow className="bg-muted/40 h-[var(--density-row)]">
-              <TableCell colSpan={4} className="text-muted-foreground text-[12px] font-medium">
+              <TableCell
+                card="title"
+                colSpan={4}
+                className="text-muted-foreground text-[12px] font-medium"
+              >
                 {interpolate(t.reviewed.notMetHeading, "{count}", String(unmetRows.length))}
               </TableCell>
             </TableRow>

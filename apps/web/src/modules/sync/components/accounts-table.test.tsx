@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../actions", () => ({ relabelAccountAction: vi.fn() }));
 
 import type { HouseholdAccount } from "../repository";
-import { AccountsTable } from "./accounts-table";
+import { ACCOUNTS_PAGE_SIZE, AccountsTable } from "./accounts-table";
 
 afterEach(() => {
   cleanup();
@@ -83,5 +83,54 @@ describe("AccountsTable closed accounts", () => {
     expect(screen.getByText("Encerrada em 11/09/2026").className).not.toContain("text-warning");
     expect(screen.queryByText("10/09/2026, 06:10")).toBeNull();
     expect(screen.getByText("R$ 0,00")).toBeDefined();
+  });
+});
+
+describe("AccountsTable pages and cards", () => {
+  it("shows ten accounts per page instead of growing without limit", () => {
+    const accounts = Array.from({ length: ACCOUNTS_PAGE_SIZE + 6 }, (_, index) => ({
+      ...base,
+      id: `acc-${String(index)}`,
+      name: `Conta ${String(index + 1)}`,
+    }));
+    render(
+      <AccountsTable
+        accounts={accounts}
+        viewerUserId="someone-else"
+        timeZone="America/Sao_Paulo"
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("Conta 10")).toBeDefined();
+    expect(screen.queryByText("Conta 11")).toBeNull();
+    expect(screen.getByText("Página 1 de 2 · 16 contas")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Próximas" }));
+
+    expect(screen.getByText("Conta 16")).toBeDefined();
+    expect(screen.queryByText("Conta 10")).toBeNull();
+  });
+
+  it("leads each card with the account and labels every other line", () => {
+    render(
+      <AccountsTable
+        accounts={[base]}
+        viewerUserId="user-1"
+        timeZone="America/Sao_Paulo"
+        now={NOW}
+      />,
+    );
+
+    const cells = screen.getAllByRole("cell");
+    expect(cells.map((cell) => cell.dataset.card ?? cell.dataset.label)).toEqual([
+      "title",
+      "Rótulo",
+      "Conectada por",
+      "Atualização",
+      "Saldo",
+      "actions",
+    ]);
+    expect(cells[0]?.textContent).toBe("Conta correnteItaú · Conta corrente");
   });
 });
