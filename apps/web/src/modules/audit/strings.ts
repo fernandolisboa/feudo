@@ -14,6 +14,13 @@ const en = {
       kind: "Type",
       when: "When",
     },
+    pagination: {
+      nav: "Access pages",
+      status: "Page {page} of {pages} · {total} accesses",
+      rowsPerPage: "Rows per page",
+      previous: "Previous",
+      next: "Next",
+    },
   },
 };
 
@@ -32,6 +39,13 @@ const ptBR = {
     table: {
       kind: "Tipo",
       when: "Quando",
+    },
+    pagination: {
+      nav: "Páginas de acessos",
+      status: "Página {page} de {pages} · {total} acessos",
+      rowsPerPage: "Linhas por página",
+      previous: "Anteriores",
+      next: "Próximos",
     },
   },
 } satisfies typeof en;

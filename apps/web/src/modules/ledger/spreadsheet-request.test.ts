@@ -66,6 +66,7 @@ function filtered(
     selectedKind: null,
     searchQuery: null,
     requestedPage: 1,
+    pageSize: 20,
     kinds: { overrides: new Map(), householdSubcategories: new Map() },
     monthRows: listed,
     padded: listed,

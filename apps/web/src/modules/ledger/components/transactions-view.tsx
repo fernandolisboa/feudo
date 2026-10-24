@@ -5,6 +5,7 @@ import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { PageNav, paginationStatus } from "@/ui/page-nav";
+import { SMALLEST_PAGE_SIZE } from "@/ui/page-size";
 import { interpolate } from "@/lib/interpolate";
 
 import { GUIDED_CATEGORIZATION_PATH, transactionsHref, type TransactionsRouteBase } from "../href";
@@ -13,6 +14,7 @@ import { MonthSwitcher } from "./month-switcher";
 import { PeriodSwitcher } from "./period-switcher";
 import { SpreadsheetMenu } from "./spreadsheet-menu";
 import { TransactionsFilterBar } from "./transactions-filter-bar";
+import { TransactionsPageSizeSelect } from "./transactions-page-size-select";
 import { TransactionsTable } from "./transactions-table";
 import { t } from "../strings";
 
@@ -115,6 +117,7 @@ export function TransactionsView({
   transactions,
   total,
   page,
+  pageSize,
   pageCount,
   hasMore,
 }: TransactionsPageProps) {
@@ -129,6 +132,7 @@ export function TransactionsView({
     category: selectedCategory,
     kind: selectedKind,
     search: searchQuery,
+    pageSize,
   };
   const scopeLabel = periodLabel ?? monthLabel;
   const emptyMessage =
@@ -228,10 +232,11 @@ export function TransactionsView({
       ) : (
         <>
           <TransactionsTable transactions={transactions} groups={categoryGroups} />
-          {page > 1 || hasMore ? (
+          {total > SMALLEST_PAGE_SIZE ? (
             <PageNav
               label={t.pagination.label}
               status={paginationStatus(t.pagination.page, page, pageCount, total)}
+              pageSize={<TransactionsPageSizeSelect route={{ ...route, page }} />}
               previous={
                 page > 1 ? (
                   <Button

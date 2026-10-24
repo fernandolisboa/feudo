@@ -4,11 +4,14 @@ import { useState, type ReactNode } from "react";
 
 import { Button } from "./button";
 import { PageNav, paginationStatus } from "./page-nav";
+import { SMALLEST_PAGE_SIZE, pageAfterResize, type PageSize } from "./page-size";
+import { PageSizeSelect } from "./page-size-select";
 import { Table, TableBody, TableHeader } from "./table";
 
 export type PaginationLabels = {
   nav: string;
   status: string;
+  rowsPerPage: string;
   previous: string;
   next: string;
 };
@@ -16,16 +19,17 @@ export type PaginationLabels = {
 export function PaginatedTable({
   header,
   rows,
-  pageSize,
+  pageSize: defaultPageSize,
   labels,
   stackOnNarrow = false,
 }: {
   header: ReactNode;
   rows: ReactNode[];
-  pageSize: number;
+  pageSize: PageSize;
   labels: PaginationLabels;
   stackOnNarrow?: boolean;
 }) {
+  const [pageSize, setPageSize] = useState<PageSize>(defaultPageSize);
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const [requestedPage, setPage] = useState(1);
   const page = Math.min(requestedPage, pageCount);
@@ -37,35 +41,49 @@ export function PaginatedTable({
         <TableHeader>{header}</TableHeader>
         <TableBody>{rows.slice(start, start + pageSize)}</TableBody>
       </Table>
-      {pageCount > 1 ? (
+      {rows.length > SMALLEST_PAGE_SIZE ? (
         <PageNav
           label={labels.nav}
           status={paginationStatus(labels.status, page, pageCount, rows.length)}
-          previous={
-            <Button
-              variant="outline"
-              size="sm"
-              focusableWhenDisabled
-              disabled={page === 1}
-              onClick={() => {
-                setPage(page - 1);
+          pageSize={
+            <PageSizeSelect
+              label={labels.rowsPerPage}
+              value={pageSize}
+              onChange={(next) => {
+                setPage(pageAfterResize(page, pageSize, next));
+                setPageSize(next);
               }}
-            >
-              {labels.previous}
-            </Button>
+            />
+          }
+          previous={
+            pageCount > 1 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                focusableWhenDisabled
+                disabled={page === 1}
+                onClick={() => {
+                  setPage(page - 1);
+                }}
+              >
+                {labels.previous}
+              </Button>
+            ) : null
           }
           next={
-            <Button
-              variant="outline"
-              size="sm"
-              focusableWhenDisabled
-              disabled={page === pageCount}
-              onClick={() => {
-                setPage(page + 1);
-              }}
-            >
-              {labels.next}
-            </Button>
+            pageCount > 1 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                focusableWhenDisabled
+                disabled={page === pageCount}
+                onClick={() => {
+                  setPage(page + 1);
+                }}
+              >
+                {labels.next}
+              </Button>
+            ) : null
           }
         />
       ) : null}

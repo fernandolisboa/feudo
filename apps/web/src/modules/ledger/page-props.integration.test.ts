@@ -16,7 +16,7 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 import { createCategorizationRepository } from "./categorization-repository";
 import { getTransactionsPageProps } from "./page-props";
 import { t } from "./strings";
-import { TRANSACTIONS_PAGE_SIZE } from "./validation";
+import { DEFAULT_TRANSACTIONS_PAGE_SIZE } from "./href";
 
 import type { Database } from "@/platform/db/client";
 
@@ -216,7 +216,7 @@ describe("getTransactionsPageProps (integration)", () => {
 
   it("computes the uncategorized summary over the whole month even when the row sits on another page", async () => {
     await withTwoUsers(async ({ db, userA }) => {
-      const categorized = Array.from({ length: TRANSACTIONS_PAGE_SIZE }, (_, index) =>
+      const categorized = Array.from({ length: DEFAULT_TRANSACTIONS_PAGE_SIZE }, (_, index) =>
         seedTransaction({
           providerTransactionId: `cat-${String(index)}`,
           date: "2026-09-20",
@@ -242,8 +242,8 @@ describe("getTransactionsPageProps (integration)", () => {
 
       const props = await getTransactionsPageProps(userA.session, { mes: "2026-09" }, NOW);
 
-      expect(props.total).toBe(TRANSACTIONS_PAGE_SIZE + 1);
-      expect(props.transactions).toHaveLength(TRANSACTIONS_PAGE_SIZE);
+      expect(props.total).toBe(DEFAULT_TRANSACTIONS_PAGE_SIZE + 1);
+      expect(props.transactions).toHaveLength(DEFAULT_TRANSACTIONS_PAGE_SIZE);
       expect(props.hasMore).toBe(true);
       expect(props.transactions.some((row) => row.description === "TRANSACAO DESCONHECIDA")).toBe(
         false,
@@ -1327,7 +1327,7 @@ describe("getTransactionsPageProps (integration)", () => {
 
   it("paginates the filtered result, not the whole month", async () => {
     await withTwoUsers(async ({ db, userA }) => {
-      const matching = Array.from({ length: TRANSACTIONS_PAGE_SIZE + 1 }, (_, index) =>
+      const matching = Array.from({ length: DEFAULT_TRANSACTIONS_PAGE_SIZE + 1 }, (_, index) =>
         seedTransaction({
           providerTransactionId: `match-${String(index)}`,
           date: "2026-09-10",
@@ -1356,8 +1356,8 @@ describe("getTransactionsPageProps (integration)", () => {
         { mes: "2026-09", busca: "mercado" },
         NOW,
       );
-      expect(page1.total).toBe(TRANSACTIONS_PAGE_SIZE + 1);
-      expect(page1.transactions).toHaveLength(TRANSACTIONS_PAGE_SIZE);
+      expect(page1.total).toBe(DEFAULT_TRANSACTIONS_PAGE_SIZE + 1);
+      expect(page1.transactions).toHaveLength(DEFAULT_TRANSACTIONS_PAGE_SIZE);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await getTransactionsPageProps(

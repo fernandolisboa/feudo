@@ -18,6 +18,7 @@ import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
 import type { HouseholdSession } from "@/modules/households";
+import type { PageSize } from "@/ui/page-size";
 
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import type { TransactionRowView } from "./components/transactions-table";
@@ -27,7 +28,7 @@ import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
 import { readFilteredTransactions } from "./transactions-read";
-import { TRANSACTIONS_PAGE_SIZE, type TransactionsSearchParams } from "./validation";
+import type { TransactionsSearchParams } from "./validation";
 
 export type UncategorizedSummaryView = { count: number; amountLabel: string };
 
@@ -58,6 +59,7 @@ export type TransactionsPageProps = {
   transactions: TransactionRowView[];
   total: number;
   page: number;
+  pageSize: PageSize;
   pageCount: number;
   hasMore: boolean;
 };
@@ -185,6 +187,7 @@ async function buildTransactionsPageProps(
     selectedKind,
     searchQuery,
     requestedPage,
+    pageSize,
     kinds,
     monthRows,
     padded,
@@ -208,9 +211,9 @@ async function buildTransactionsPageProps(
     })),
   );
   const total = listed.length;
-  const lastPage = Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE));
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(requestedPage, lastPage);
-  const start = (page - 1) * TRANSACTIONS_PAGE_SIZE;
+  const start = (page - 1) * pageSize;
   const totalsCurrency = fallbackCurrency(monthRows);
   const periodLabel = range
     ? interpolateAll(t.period.rangeLabel, {
@@ -253,11 +256,12 @@ async function buildTransactionsPageProps(
       options: category.subcategories.map(({ value, label }) => ({ value, label })),
     })),
     transactions: listed
-      .slice(start, start + TRANSACTIONS_PAGE_SIZE)
+      .slice(start, start + pageSize)
       .map((row) => toRowView(row, taxonomy, rowById)),
     total,
     page,
+    pageSize,
     pageCount: lastPage,
-    hasMore: start + TRANSACTIONS_PAGE_SIZE < total,
+    hasMore: start + pageSize < total,
   };
 }

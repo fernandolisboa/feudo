@@ -71,11 +71,16 @@ export function ReservePositionsTable({
               </TableCell>
               <TableCell
                 label={t.positions.liquidity}
-                className={position.liquidityUnknown ? "text-warning" : undefined}
+                className={
+                  position.liquidityUnknown ? "text-warning whitespace-nowrap" : "whitespace-nowrap"
+                }
               >
                 {position.liquidityLabel}
               </TableCell>
-              <TableCell label={t.positions.tax} className="text-muted-foreground tabular-nums">
+              <TableCell
+                label={t.positions.tax}
+                className="text-muted-foreground [overflow-wrap:normal] tabular-nums"
+              >
                 {position.taxLabel}
               </TableCell>
               <TableCell
@@ -84,7 +89,7 @@ export function ReservePositionsTable({
               >
                 {position.realYieldLabel}
               </TableCell>
-              <TableCell label={t.positions.reserve}>
+              <TableCell label={t.positions.reserve} className="whitespace-nowrap">
                 {position.isReserve ? (
                   <Badge>{t.positions.inReserve}</Badge>
                 ) : (

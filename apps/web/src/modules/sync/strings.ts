@@ -72,6 +72,7 @@ const en = {
     pagination: {
       nav: "Account pages",
       status: "Page {page} of {pages} · {total} accounts",
+      rowsPerPage: "Rows per page",
       previous: "Previous",
       next: "Next",
     },
@@ -286,6 +287,7 @@ const ptBR = {
     pagination: {
       nav: "Páginas de contas",
       status: "Página {page} de {pages} · {total} contas",
+      rowsPerPage: "Linhas por página",
       previous: "Anteriores",
       next: "Próximas",
     },

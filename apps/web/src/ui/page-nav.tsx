@@ -18,11 +18,13 @@ export function paginationStatus(
 export function PageNav({
   label,
   status,
+  pageSize,
   previous,
   next,
 }: {
   label: string;
   status: string;
+  pageSize?: ReactNode;
   previous: ReactNode;
   next: ReactNode;
 }) {
@@ -31,7 +33,8 @@ export function PageNav({
       <span className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
         {status}
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {pageSize}
         {previous}
         {next}
       </div>

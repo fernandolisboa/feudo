@@ -11,6 +11,7 @@ export function transactionsRouteFixture(
     category: null,
     kind: null,
     search: null,
+    pageSize: 20,
     ...overrides,
   };
 }

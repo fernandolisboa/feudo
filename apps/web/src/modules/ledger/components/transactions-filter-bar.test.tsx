@@ -48,6 +48,7 @@ describe("TransactionsFilterBar", () => {
       category: "housing",
       kind: "fixed",
       search: null,
+      pageSize: 20,
     }).filter(([name]) => name !== "busca" && name !== "pagina");
     expect(hiddenInputs).toEqual(expected);
     expect(hiddenInputs).toEqual([

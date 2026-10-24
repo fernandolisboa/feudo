@@ -74,6 +74,7 @@ const transactionsProps: TransactionsPageProps = {
   ],
   total: 1,
   page: 1,
+  pageSize: 20,
   pageCount: 1,
   hasMore: false,
 };

@@ -12,7 +12,23 @@ const PAGES = [
   "/reserva?aba=contas",
   "/bancos?aba=todos",
   "/casa?aba=pessoas",
+  "/casa?aba=acessos",
 ];
+
+// A short value like the liquidity must stay on one line while the account
+// name column still has room to wrap.
+async function wrappedShortCells(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("[data-slot=table-cell][data-label=Liquidez]")]
+      .filter((cell) => {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+        return lines.size > 1;
+      })
+      .map((cell) => cell.textContent),
+  );
+}
 
 async function sidewaysOverflow(page: Page): Promise<number[]> {
   return page.evaluate(() => [
@@ -73,6 +89,9 @@ test("tables fit the screen: no sideways scroll, rows become cards on a phone", 
   await expect(
     page.locator("[data-slot=table-container]:visible [data-slot=table-body] tr").first(),
   ).toHaveCSS("display", "table-row");
+  await page.goto("/reserva?aba=contas");
+  await expect(page.locator("[data-slot=table-container]:visible").first()).toBeVisible();
+  expect(await wrappedShortCells(page)).toEqual([]);
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/?aba=contas");
