@@ -69,6 +69,12 @@ const en = {
       liquidity_unknown: "in the reserve, liquidity unknown: confirm",
     },
     empty: "No account or investment can hold the reserve yet.",
+    pagination: {
+      nav: "Account and investment pages",
+      status: "Page {page} of {pages} · {total} accounts and investments",
+      previous: "Previous",
+      next: "Next",
+    },
   },
   liquidity: {
     daily: "up to D+1",
@@ -256,6 +262,12 @@ const ptBR = {
       liquidity_unknown: "está na reserva, liquidez desconhecida, confirme",
     },
     empty: "Nenhuma conta ou investimento pode guardar a reserva ainda.",
+    pagination: {
+      nav: "Páginas de contas e investimentos",
+      status: "Página {page} de {pages} · {total} contas e investimentos",
+      previous: "Anteriores",
+      next: "Próximos",
+    },
   },
   liquidity: {
     daily: "até D+1",

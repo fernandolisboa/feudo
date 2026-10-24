@@ -13,9 +13,7 @@ import {
 } from "./categorize-transaction-dialog";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
-const DESKTOP_ONLY_CLASS = "hidden md:table-cell";
-
-function mobileMetaLine(transaction: TransactionRowView): string {
+function cardMetaLine(transaction: TransactionRowView): string {
   const categoryLabel = transaction.category
     ? transaction.category.label
     : t.category.uncategorized;
@@ -43,15 +41,13 @@ export function TransactionsTable({
   groups: SubcategoryOptionGroup[];
 }) {
   return (
-    <Table>
+    <Table stackOnNarrow>
       <TableHeader>
         <TableRow>
-          <TableHead className={`${HEAD_CLASS} ${DESKTOP_ONLY_CLASS}`}>{t.table.date}</TableHead>
+          <TableHead className={HEAD_CLASS}>{t.table.date}</TableHead>
           <TableHead className={HEAD_CLASS}>{t.table.description}</TableHead>
-          <TableHead className={`${HEAD_CLASS} ${DESKTOP_ONLY_CLASS}`}>
-            {t.table.category}
-          </TableHead>
-          <TableHead className={`${HEAD_CLASS} ${DESKTOP_ONLY_CLASS}`}>{t.table.account}</TableHead>
+          <TableHead className={HEAD_CLASS}>{t.table.category}</TableHead>
+          <TableHead className={HEAD_CLASS}>{t.table.account}</TableHead>
           <TableHead className={`${HEAD_CLASS} text-right`}>{t.table.amount}</TableHead>
           <TableHead>
             <span className="sr-only">{t.categorize.action}</span>
@@ -61,16 +57,19 @@ export function TransactionsTable({
       <TableBody>
         {transactions.map((transaction, index) => (
           <TableRow key={transaction.id} className="h-[var(--density-row)]">
-            <TableCell className={`text-muted-foreground tabular-nums ${DESKTOP_ONLY_CLASS}`}>
+            <TableCell
+              card="hidden"
+              className="text-muted-foreground whitespace-nowrap tabular-nums"
+            >
               {formatIsoDate(transaction.date)}
             </TableCell>
-            <TableCell className="font-medium">
+            <TableCell card="title" className="font-medium">
               <div>{transaction.description}</div>
-              <div className="text-muted-foreground mt-0.5 text-[12px] font-normal md:hidden">
-                {mobileMetaLine(transaction)}
+              <div data-card-only className="text-muted-foreground mt-0.5 text-[12px] font-normal">
+                {cardMetaLine(transaction)}
               </div>
             </TableCell>
-            <TableCell className={DESKTOP_ONLY_CLASS}>
+            <TableCell card="hidden">
               {transaction.category ? (
                 <Tooltip>
                   <TooltipTrigger render={<span tabIndex={0} />}>
@@ -86,16 +85,20 @@ export function TransactionsTable({
                 <span className="text-warning">{t.category.uncategorized}</span>
               )}
             </TableCell>
-            <TableCell className={`text-muted-foreground ${DESKTOP_ONLY_CLASS}`}>
+            <TableCell card="hidden" className="text-muted-foreground">
               {transaction.institutionName} · {transaction.accountName}
             </TableCell>
-            <TableCell className="font-heading text-right tabular-nums">
+            <TableCell
+              card="aside"
+              className="font-heading text-right whitespace-nowrap tabular-nums"
+            >
               {formatMoney({
                 amountCentavos: transaction.amountCentavos,
                 currency: transaction.currency,
               })}
             </TableCell>
             <TableCell
+              card="actions"
               className="text-right"
               data-tour={index === 0 ? "transactions.category" : undefined}
             >

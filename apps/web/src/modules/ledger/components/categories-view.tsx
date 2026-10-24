@@ -1,6 +1,7 @@
 import { Badge } from "@/ui/badge";
 import { SectionHeader } from "@/ui/section-header";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { PaginatedTable } from "@/ui/paginated-table";
+import { TableCell, TableHead, TableRow } from "@/ui/table";
 import { interpolate } from "@/lib/interpolate";
 
 import { changeSubcategoryKindAction, removeRuleAction } from "../actions";
@@ -11,6 +12,8 @@ import { FormActionButton } from "./form-action-button";
 import { KindSelect } from "./kind-select";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
+
+const RULES_PAGE_SIZE = 20;
 
 export function CategoriesView({ categories, rules, suggestions }: CategoriesPageProps) {
   return (
@@ -59,8 +62,11 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
         {rules.length === 0 ? (
           <p className="text-muted-foreground text-[13px]">{t.categoriesPage.rulesEmpty}</p>
         ) : (
-          <Table>
-            <TableHeader>
+          <PaginatedTable
+            stackOnNarrow
+            pageSize={RULES_PAGE_SIZE}
+            labels={t.categoriesPage.ruleTable.pagination}
+            header={
               <TableRow>
                 <TableHead className={HEAD_CLASS}>{t.categoriesPage.ruleTable.pattern}</TableHead>
                 <TableHead className={HEAD_CLASS}>{t.categoriesPage.ruleTable.direction}</TableHead>
@@ -69,29 +75,34 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
                   <span className="sr-only">{t.categoriesPage.removeRule}</span>
                 </TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.map((rule) => (
-                <TableRow key={rule.id} className="h-[var(--density-row)]">
-                  <TableCell className="font-mono text-[13px]">{rule.pattern}</TableCell>
-                  <TableCell className="text-muted-foreground">{rule.appliesTo}</TableCell>
-                  <TableCell>{rule.target}</TableCell>
-                  <TableCell className="text-right">
-                    <FormActionButton
-                      action={removeRuleAction}
-                      fields={{ ruleId: rule.id }}
-                      label={t.categoriesPage.removeRule}
-                      ariaLabel={interpolate(
-                        t.categoriesPage.removeRuleFor,
-                        "{pattern}",
-                        rule.pattern,
-                      )}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+            }
+            rows={rules.map((rule) => (
+              <TableRow key={rule.id} className="h-[var(--density-row)]">
+                <TableCell card="title" className="font-mono text-[13px]">
+                  {rule.pattern}
+                </TableCell>
+                <TableCell
+                  label={t.categoriesPage.ruleTable.direction}
+                  className="text-muted-foreground"
+                >
+                  {rule.appliesTo}
+                </TableCell>
+                <TableCell label={t.categoriesPage.ruleTable.target}>{rule.target}</TableCell>
+                <TableCell card="actions" className="text-right">
+                  <FormActionButton
+                    action={removeRuleAction}
+                    fields={{ ruleId: rule.id }}
+                    label={t.categoriesPage.removeRule}
+                    ariaLabel={interpolate(
+                      t.categoriesPage.removeRuleFor,
+                      "{pattern}",
+                      rule.pattern,
+                    )}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          />
         )}
       </section>
 

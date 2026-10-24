@@ -60,7 +60,7 @@ export function PendingInvitationsTable({
   }
 
   return (
-    <Table data-tour="household.invitations">
+    <Table stackOnNarrow data-tour="household.invitations">
       <TableHeader>
         <TableRow>
           <TableHead className="text-muted-foreground text-[11px] tracking-wide uppercase">
@@ -80,7 +80,7 @@ export function PendingInvitationsTable({
       <TableBody>
         {invitations.map((invitation) => (
           <TableRow key={invitation.id} className="h-[var(--density-row)]">
-            <TableCell className="text-muted-foreground">
+            <TableCell card="title" className="text-muted-foreground">
               <div className="flex flex-col gap-1">
                 <span>{invitation.email}</span>
                 {invitation.deliveryFailedAt ? (
@@ -90,13 +90,16 @@ export function PendingInvitationsTable({
                 ) : null}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell label={t.casa.table.role}>
               <Badge variant="outline">{t.casa.roles[invitation.role]}</Badge>
             </TableCell>
-            <TableCell className="text-muted-foreground tabular-nums">
+            <TableCell
+              label={t.casa.table.expires}
+              className="text-muted-foreground whitespace-nowrap tabular-nums"
+            >
               {formatShortDate(invitation.expiresAt, timeZone)}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell card="actions" className="text-right">
               <div className="flex items-start justify-end gap-2">
                 {invitation.deliveryFailedAt ? (
                   <ResendInvitationButton invitationId={invitation.id} />

@@ -37,6 +37,7 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     transactions: [],
     total: 0,
     page: 1,
+    pageCount: 1,
     hasMore: false,
     ...overrides,
   };
@@ -332,6 +333,7 @@ describe("TransactionsView", () => {
           range: { from: "2026-07-06", to: "2026-10-17" },
           periodLabel: "06/07/2026 a 17/10/2026",
           total: 60,
+          pageCount: 2,
           hasMore: true,
           transactions: [
             {
@@ -362,6 +364,7 @@ describe("TransactionsView", () => {
 
     const older = screen.getByRole("link", { name: t.pagination.older });
     expect(older.getAttribute("href")).toBe("/transacoes?de=2026-07-06&ate=2026-10-17&pagina=2");
+    expect(screen.getByText("Página 1 de 2 · 60 transações")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar 60 transações" }));
     const excel = await screen.findByRole("menuitem", { name: "Planilha do Excel (.xlsx)" });

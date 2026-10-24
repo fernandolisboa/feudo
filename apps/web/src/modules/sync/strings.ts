@@ -62,14 +62,18 @@ const en = {
     foreignSectionTitle: "Accounts in other currencies",
     foreignNote: "Shown apart and left out of every total.",
     table: {
-      institution: "Institution",
       account: "Account",
-      type: "Type",
       label: "Label",
       connectedBy: "Connected by",
       updated: "Last update",
       balance: "Balance",
       actions: "Actions",
+    },
+    pagination: {
+      nav: "Account pages",
+      status: "Page {page} of {pages} · {total} accounts",
+      previous: "Previous",
+      next: "Next",
     },
     types: {
       checking: "Checking",
@@ -272,14 +276,18 @@ const ptBR = {
     foreignSectionTitle: "Contas em outras moedas",
     foreignNote: "Mostradas à parte e fora de qualquer total.",
     table: {
-      institution: "Instituição",
       account: "Conta",
-      type: "Tipo",
       label: "Rótulo",
       connectedBy: "Conectada por",
       updated: "Atualização",
       balance: "Saldo",
       actions: "Ações",
+    },
+    pagination: {
+      nav: "Páginas de contas",
+      status: "Página {page} de {pages} · {total} contas",
+      previous: "Anteriores",
+      next: "Próximas",
     },
     types: {
       checking: "Conta corrente",
