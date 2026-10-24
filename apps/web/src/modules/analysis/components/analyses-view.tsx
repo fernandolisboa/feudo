@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { AnalysesPageProps, AnalysisDetailView, AnalysisHistoryItem } from "../page-props";
 import { ANALYSES_PATH } from "../paths";
 import { t } from "../strings";
+import { InputsUsed } from "./inputs-used";
 import { RequestAnalysisControl } from "./request-analysis-control";
 
 const SUBHEAD_CLASS = "text-muted-foreground mb-2 text-[11px] tracking-[0.08em] uppercase";
@@ -24,26 +25,6 @@ function Paragraphs({ paragraphs }: { paragraphs: string[] }) {
         </p>
       ))}
     </div>
-  );
-}
-
-function InputsUsed({ inputs }: { inputs: AnalysisDetailView["inputsUsed"] }) {
-  return (
-    <aside className="lg:sticky lg:top-6 lg:self-start">
-      <SectionHeader title={t.panel.inputsUsed} />
-      <dl className="divide-border border-border divide-y border-b text-[13px]">
-        {inputs.map((input) => (
-          <div
-            key={input.key}
-            className="flex flex-col gap-1 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
-          >
-            <dt className="text-muted-foreground">{input.label}</dt>
-            <dd className="font-heading tabular-nums sm:text-right">{input.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="text-muted-foreground mt-3 text-[12px]">{t.analyses.inputsAside}</p>
-    </aside>
   );
 }
 

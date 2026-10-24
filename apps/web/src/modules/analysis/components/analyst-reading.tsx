@@ -5,13 +5,14 @@ import { SectionHeader } from "@/ui/section-header";
 
 import type { AnalystReadingProps, AnalystReadingView } from "../page-props";
 import { t } from "../strings";
+import { InputsUsed } from "./inputs-used";
 import { RequestAnalysisControl } from "./request-analysis-control";
 
 const SUBHEAD_CLASS = "text-muted-foreground mb-2 text-[11px] tracking-[0.08em] uppercase";
 
 function Summary({ reading }: { reading: AnalystReadingView }) {
   return (
-    <article className="flex max-w-[68ch] flex-col gap-5">
+    <article className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-col gap-2">
         <p className="text-muted-foreground text-[13px]">{reading.title}</p>
         <p className="font-heading text-[18px] leading-snug whitespace-pre-line">
@@ -40,7 +41,10 @@ export function AnalystReading({ reading, remaining, limit, inProgress }: Analys
     <section>
       <SectionHeader title={t.panel.title} />
       {reading ? (
-        <Summary reading={reading} />
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,68ch)_minmax(0,1fr)]">
+          <Summary reading={reading} />
+          {reading.inputsUsed.length > 0 ? <InputsUsed inputs={reading.inputsUsed} /> : null}
+        </div>
       ) : (
         <p className="font-heading max-w-[60ch] text-[18px]">{t.panel.empty}</p>
       )}
