@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
-export const TAB_PARAM = "aba";
+const TAB_PARAM = "aba";
 
 export type PageTab = {
   value: string;

@@ -194,7 +194,7 @@ export function AnalysesOff() {
       <PageHeader overline={t.analyses.overline} title={t.off.title} />
       <Notice
         action={
-          <Button variant="outline" size="sm" render={<Link href="/casa" />}>
+          <Button variant="outline" size="sm" render={<Link href="/casa?aba=analista" />}>
             {t.off.link}
           </Button>
         }
