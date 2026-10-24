@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -186,6 +186,7 @@ describe("ReserveView", () => {
             indicatorsLabel: "Taxas ao ano: CDI 14,9% · Selic 15% · IPCA em 12 meses 5,2%",
           },
         })}
+        initialTab="onde-guardar"
       />,
     );
 
@@ -238,6 +239,7 @@ describe("ReserveView", () => {
             },
           ],
         })}
+        initialTab="contas"
       />,
     );
 
@@ -248,6 +250,41 @@ describe("ReserveView", () => {
     );
     expect(screen.getByText(t.positions.inReserve)).not.toBeNull();
     expect(screen.getByRole("button", { name: "Ajustar LCI Fixture 92% CDI" })).not.toBeNull();
+  });
+
+  it("splits the page into summary, placement, accounts and the analyst's reading tabs", () => {
+    window.history.replaceState(null, "", "/reserva");
+    render(<ReserveView {...buildProps()} analystReading={<p>leitura do analista</p>} />);
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      t.tabs.summary,
+      t.tabs.placement,
+      t.tabs.accounts,
+      t.tabs.reading,
+    ]);
+    expect(screen.getByText(t.tiles.target).closest("[hidden]")).toBeNull();
+    expect(screen.getByText(t.positions.title).closest("[hidden]")).not.toBeNull();
+    expect(screen.getByText("leitura do analista").closest("[hidden]")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: t.tabs.accounts }));
+    expect(screen.getByText(t.positions.title).closest("[hidden]")).toBeNull();
+    expect(window.location.search).toBe("?aba=contas");
+  });
+
+  it("leaves the analyst's tab out when the household has no analyst", () => {
+    render(<ReserveView {...buildProps()} />);
+
+    expect(screen.queryByRole("tab", { name: t.tabs.reading })).toBeNull();
+  });
+
+  it("shows no tabs before a bank is connected", () => {
+    render(
+      <ReserveView
+        {...buildProps({ hasAccounts: false, headline: t.headline.noAccounts, tiles: null })}
+      />,
+    );
+
+    expect(screen.queryByRole("tablist")).toBeNull();
   });
 
   it("shows positions and the ranking even before there is a target", () => {
