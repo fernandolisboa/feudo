@@ -52,11 +52,13 @@ const MODEL_ID_PATTERN = new RegExp(
   `^claude-(${AI_FAMILIES.join("|")})-(\\d+)-(\\d+)(?:-\\d{8})?$`,
 );
 
+export type InputUsed = { key: string; label: string; value: string };
+
 type ReadingBase = {
   title: string;
   tradeOffs: string[];
   counterArgument: string;
-  inputsUsed: { key: string; label: string; value: string }[];
+  inputsUsed: InputUsed[];
   meta: string[];
 };
 
@@ -64,6 +66,7 @@ export type AnalystReadingView = {
   title: string;
   summary: string;
   counterArgument: string;
+  inputsUsed: InputUsed[];
   meta: string[];
   href: string;
 };
@@ -166,22 +169,26 @@ function parseStored(row: StoredAnalysis): { input: AnalysisInput; output: Analy
   return input.success && output.success ? { input: input.data, output: output.data } : null;
 }
 
+function inputsUsed(input: AnalysisInput, output: AnalysisOutput): InputUsed[] {
+  const factsByKey = new Map(input.facts.map((fact) => [fact.key, fact]));
+  return [...new Set(output.citedKeys)].flatMap((key) => {
+    const fact = factsByKey.get(key);
+    return fact ? [{ key, label: fact.label, value: fact.value }] : [];
+  });
+}
+
 function baseView(
   row: StoredAnalysis,
   input: AnalysisInput,
   output: AnalysisOutput,
   timeZone: string,
 ): ReadingBase {
-  const factsByKey = new Map(input.facts.map((fact) => [fact.key, fact]));
   const name = modelName(row.model);
   return {
     title: readingTitle(row),
     tradeOffs: output.tradeOffs,
     counterArgument: output.counterArgument,
-    inputsUsed: [...new Set(output.citedKeys)].flatMap((key) => {
-      const fact = factsByKey.get(key);
-      return fact ? [{ key, label: fact.label, value: fact.value }] : [];
-    }),
+    inputsUsed: inputsUsed(input, output),
     meta: [
       ...generatedAt(row.completedAt, timeZone),
       ...(name === null ? [] : [name]),
@@ -197,13 +204,14 @@ export function readingView(row: StoredAnalysis, timeZone: string): AnalystReadi
   if (parsed === null) {
     return null;
   }
-  const { output } = parsed;
+  const { input, output } = parsed;
   const name = modelName(row.model);
   return {
     title: readingTitle(row),
     // analyst-v1 readings have no summary: their first paragraph stands in.
     summary: output.summary ?? splitParagraphs(output.reading)[0] ?? output.reading,
     counterArgument: output.counterArgument,
+    inputsUsed: inputsUsed(input, output),
     meta: [...generatedAt(row.completedAt, timeZone), ...(name === null ? [] : [name])],
     href: `${ANALYSES_PATH}?${READING_PARAM}=${encodeURIComponent(row.id)}`,
   };
