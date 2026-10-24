@@ -13,6 +13,10 @@ function props(overrides: Partial<AnalystReadingProps> = {}): AnalystReadingProp
       title: "Leitura mensal de setembro de 2026",
       summary: "Setembro fechou no azul e a reserva segue no caminho.",
       counterArgument: "Concentrar tem risco.",
+      inputsUsed: [
+        { key: "ledger.income", label: "Renda em setembro", value: "R$ 12.400,00" },
+        { key: "ledger.spending", label: "Gastos em setembro", value: "R$ 9.850,35" },
+      ],
       meta: ["gerada em 01/10/2026, 08:12", "Opus 5.5"],
       href: "/analises",
     },
@@ -43,11 +47,23 @@ describe("AnalystReading", () => {
     );
   });
 
-  it("leaves the trade-offs and the figures used to Análises", () => {
+  it("shows the figures the reading used beside it, and leaves the trade-offs to Análises", () => {
     render(<AnalystReading {...props()} />);
 
+    expect(screen.getByRole("heading", { name: "Números usados" })).toBeDefined();
+    expect(screen.getByText("Renda em setembro")).toBeDefined();
+    expect(screen.getByText("R$ 9.850,35")).toBeDefined();
     expect(screen.queryByText("Prós e contras")).toBeNull();
-    expect(screen.queryByText(/Números usados/)).toBeNull();
+  });
+
+  it("drops the figures panel when the reading cited none", () => {
+    const base = props().reading;
+    if (base === null) {
+      throw new Error("fixture has a reading");
+    }
+    render(<AnalystReading {...props({ reading: { ...base, inputsUsed: [] } })} />);
+
+    expect(screen.queryByRole("heading", { name: "Números usados" })).toBeNull();
   });
 
   it("invites the first reading when there is none", () => {
