@@ -29,15 +29,34 @@ describe("readingView", () => {
   it("summarizes the reading with its counter-argument, figures used, provenance and a link to Análises", () => {
     const view = readingView(stored({ promptVersion: "analyst-v2" }), "America/Sao_Paulo");
 
-    expect(view).toEqual({
+    const { inputsUsed, ...rest } = view ?? { inputsUsed: [] };
+    expect(rest).toEqual({
       title: "Leitura mensal de setembro de 2026",
       summary: FIXTURE_OUTPUT.summary,
       counterArgument: FIXTURE_OUTPUT.counterArgument,
-      inputsUsed: analysisDetailView(stored({ promptVersion: "analyst-v2" }), "America/Sao_Paulo")
-        ?.inputsUsed,
       meta: ["gerada em 01/10/2026, 08:12", "Opus 5.5"],
       href: "/analises?leitura=a-1",
     });
+    expect(inputsUsed).toHaveLength(FIXTURE_OUTPUT.citedKeys.length);
+    expect(inputsUsed[0]).toEqual({
+      key: "ledger.income",
+      label: "Renda em setembro de 2026",
+      value: "R$ 12.400,00",
+    });
+  });
+
+  it("lists each cited figure once and drops a citation with no matching fact", () => {
+    const view = readingView(
+      stored({
+        output: {
+          ...FIXTURE_OUTPUT,
+          citedKeys: ["ledger.income", "ledger.income", "ledger.unknown"],
+        },
+      }),
+      "America/Sao_Paulo",
+    );
+
+    expect(view?.inputsUsed.map((input) => input.key)).toEqual(["ledger.income"]);
   });
 
   it("renders a version this deploy has never pinned as Family X.Y", () => {
