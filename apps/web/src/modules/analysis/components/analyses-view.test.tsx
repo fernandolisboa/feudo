@@ -134,6 +134,8 @@ describe("AnalysesView", () => {
       "O analista está desativado",
     );
     expect(screen.getByText(/registra uma chave da Anthropic em Casa/)).toBeDefined();
-    expect(screen.getByRole("link", { name: "Ir para Casa" }).getAttribute("href")).toBe("/casa");
+    expect(screen.getByRole("link", { name: "Ir para Casa" }).getAttribute("href")).toBe(
+      "/casa?aba=analista",
+    );
   });
 });

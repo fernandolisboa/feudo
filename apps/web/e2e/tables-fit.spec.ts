@@ -6,7 +6,13 @@ import { signUpVerifyAndSignIn, uniqueEmail } from "./support/auth";
 // a card, a foreign account and two investments (fake-fixtures.ts).
 const FAKE_ITEM_BANCO_FIXTURE = "0f1e2d3c-4b5a-4a6b-8c7d-8e9f0a1b2c3d";
 
-const PAGES = ["/?aba=contas", "/transacoes?mes=2026-09", "/reserva", "/bancos", "/casa"];
+const PAGES = [
+  "/?aba=contas",
+  "/transacoes?mes=2026-09",
+  "/reserva?aba=contas",
+  "/bancos?aba=todos",
+  "/casa?aba=pessoas",
+];
 
 async function sidewaysOverflow(page: Page): Promise<number[]> {
   return page.evaluate(() => [
@@ -51,7 +57,7 @@ test("tables fit the screen: no sideways scroll, rows become cards on a phone", 
     await page.setViewportSize({ width, height: 900 });
     for (const path of PAGES) {
       await page.goto(path);
-      await expect(page.locator("[data-slot=table-container]").first()).toBeVisible();
+      await expect(page.locator("[data-slot=table-container]:visible").first()).toBeVisible();
       for (const overflow of await sidewaysOverflow(page)) {
         expect(overflow, `${path} at ${String(width)}px`).toBeLessThanOrEqual(0);
       }
@@ -65,13 +71,13 @@ test("tables fit the screen: no sideways scroll, rows become cards on a phone", 
   expect(Math.abs((periodForm?.y ?? 0) - (searchBox?.y ?? -100))).toBeLessThan(24);
   await page.goto("/?aba=contas");
   await expect(
-    page.locator("[data-slot=table-container] [data-slot=table-body] tr").first(),
+    page.locator("[data-slot=table-container]:visible [data-slot=table-body] tr").first(),
   ).toHaveCSS("display", "table-row");
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/?aba=contas");
   const accountRow = page
-    .locator("[data-slot=table-container][data-stack] [data-slot=table-body] tr")
+    .locator("[data-slot=table-container][data-stack]:visible [data-slot=table-body] tr")
     .first();
   await expect(accountRow).toHaveCSS("display", "grid");
 });

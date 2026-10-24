@@ -5,6 +5,7 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
+import { PageTabs, type PageTab } from "@/ui/page-tabs";
 import { SectionHeader } from "@/ui/section-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { interpolate } from "@/lib/interpolate";
@@ -128,7 +129,101 @@ function ReviewedRow({ row }: { row: ReviewedBankRow }) {
   );
 }
 
-export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
+function ReviewedTable({ reviewed }: { reviewed: ReviewedBankRow[] }) {
+  const metRows = reviewed.filter((row) => row.unmetLabel === null);
+  const unmetRows = reviewed.filter((row) => row.unmetLabel !== null);
+
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title={t.reviewed.title}
+        actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
+      />
+      <Table stackOnNarrow>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={`${HEAD_CLASS} w-[1%] text-right`}>
+              {t.reviewed.position}
+            </TableHead>
+            <TableHead className={HEAD_CLASS}>{t.reviewed.bank}</TableHead>
+            <TableHead className={`${HEAD_CLASS} text-right`}>{t.reviewed.score}</TableHead>
+            <TableHead className={HEAD_CLASS}>{t.reviewed.reviewedAt}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {metRows.map((row) => (
+            <ReviewedRow key={row.institutionId} row={row} />
+          ))}
+          {unmetRows.length > 0 ? (
+            <TableRow className="bg-muted/40 h-[var(--density-row)]">
+              <TableCell
+                card="title"
+                colSpan={4}
+                className="text-muted-foreground text-[12px] font-medium"
+              >
+                {interpolate(t.reviewed.notMetHeading, "{count}", String(unmetRows.length))}
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {unmetRows.map((row) => (
+            <ReviewedRow key={row.institutionId} row={row} />
+          ))}
+        </TableBody>
+      </Table>
+    </section>
+  );
+}
+
+function WeightsSection({
+  canManage,
+  weightsAreCustom,
+  weights,
+  options,
+}: Pick<BanksPageProps, "canManage" | "weightsAreCustom" | "weights" | "options">) {
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title={t.weights.title}
+        actions={
+          <span className="text-muted-foreground text-[12px]">
+            {weightsAreCustom ? t.weights.custom : t.weights.defaults}
+          </span>
+        }
+      />
+      {canManage ? (
+        <CriteriaWeightsEditor
+          weights={weights}
+          options={options}
+          weightsAreCustom={weightsAreCustom}
+        />
+      ) : (
+        <>
+          <ul className="divide-border flex flex-col divide-y border-y">
+            {weights.map((entry) => (
+              <li key={entry.criterion} className="flex flex-col gap-1 py-2">
+                <div className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto_auto] items-center gap-3">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="text-[14px]">{entry.label}</span>
+                    <span className="text-muted-foreground text-[12px]">{entry.help}</span>
+                  </div>
+                  <span className="text-muted-foreground text-[12px] tabular-nums">
+                    {interpolate(t.weights.share, "{share}", String(entry.share))}
+                  </span>
+                  <span className="text-[14px]">{entry.levelLabel}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="text-muted-foreground mt-3 text-[13px]">{t.weights.readOnly}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+export function BanksView(
+  props: BanksPageProps & { analystNote?: ReactNode; initialTab?: string },
+) {
   const {
     headline,
     canManage,
@@ -144,20 +239,67 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
     candidates,
     reviewed,
     analystNote,
+    initialTab,
   } = props;
 
-  const metRows = reviewed.filter((row) => row.unmetLabel === null);
-  const unmetRows = reviewed.filter((row) => row.unmetLabel !== null);
+  const tabs: PageTab[] = [
+    {
+      value: "candidatos",
+      label: t.tabs.candidates,
+      content: (
+        <>
+          <section className="mb-8">
+            <SectionHeader
+              title={t.candidates.title}
+              actions={
+                <span className="text-muted-foreground text-[12px]">{t.candidates.meta}</span>
+              }
+            />
+            <div
+              className={`bg-border grid gap-px overflow-hidden rounded-lg border ${
+                CANDIDATE_GRID_COLS[candidates.length] ?? "md:grid-cols-3"
+              }`}
+            >
+              {candidates.map((candidate) => (
+                <CandidateCard key={candidate.institutionId} candidate={candidate} />
+              ))}
+            </div>
+          </section>
+          {analystNote}
+        </>
+      ),
+    },
+    { value: "todos", label: t.tabs.reviewed, content: <ReviewedTable reviewed={reviewed} /> },
+    {
+      value: "tipos-de-conta",
+      label: t.tabs.accountTypes,
+      content: canManage ? (
+        <AccountTypeFilterPanel filter={accountTypeFilter} />
+      ) : (
+        <AccountTypeFilterReadOnly filter={accountTypeFilter} />
+      ),
+    },
+    {
+      value: "pesos",
+      label: t.tabs.weights,
+      content: (
+        <>
+          <WeightsSection
+            canManage={canManage}
+            weightsAreCustom={weightsAreCustom}
+            weights={weights}
+            options={options}
+          />
+          <p className="text-muted-foreground max-w-[68ch] text-[12px]">{t.method}</p>
+        </>
+      ),
+    },
+  ];
 
   return (
     <>
       <PageHeader overline={t.overline} title={headline} />
 
-      {canManage ? (
-        <AccountTypeFilterPanel filter={accountTypeFilter} />
-      ) : (
-        <AccountTypeFilterReadOnly filter={accountTypeFilter} />
-      )}
       <p className="text-muted-foreground mb-6 text-[13px]">{accountTypeFilterSummary}</p>
 
       {baselineNotice ? (
@@ -176,101 +318,7 @@ export function BanksView(props: BanksPageProps & { analystNote?: ReactNode }) {
       {unrecognizedNotice ? <Notice>{unrecognizedNotice}</Notice> : null}
       {overridesNotice ? <Notice>{overridesNotice}</Notice> : null}
 
-      <section className="mb-8">
-        <SectionHeader
-          title={t.candidates.title}
-          actions={<span className="text-muted-foreground text-[12px]">{t.candidates.meta}</span>}
-        />
-        <div
-          className={`bg-border grid gap-px overflow-hidden rounded-lg border ${
-            CANDIDATE_GRID_COLS[candidates.length] ?? "md:grid-cols-3"
-          }`}
-        >
-          {candidates.map((candidate) => (
-            <CandidateCard key={candidate.institutionId} candidate={candidate} />
-          ))}
-        </div>
-      </section>
-
-      {analystNote}
-
-      <section className="mb-8">
-        <SectionHeader
-          title={t.reviewed.title}
-          actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
-        />
-        <Table stackOnNarrow>
-          <TableHeader>
-            <TableRow>
-              <TableHead className={`${HEAD_CLASS} w-[1%] text-right`}>
-                {t.reviewed.position}
-              </TableHead>
-              <TableHead className={HEAD_CLASS}>{t.reviewed.bank}</TableHead>
-              <TableHead className={`${HEAD_CLASS} text-right`}>{t.reviewed.score}</TableHead>
-              <TableHead className={HEAD_CLASS}>{t.reviewed.reviewedAt}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {metRows.map((row) => (
-              <ReviewedRow key={row.institutionId} row={row} />
-            ))}
-            {unmetRows.length > 0 ? (
-              <TableRow className="bg-muted/40 h-[var(--density-row)]">
-                <TableCell
-                  card="title"
-                  colSpan={4}
-                  className="text-muted-foreground text-[12px] font-medium"
-                >
-                  {interpolate(t.reviewed.notMetHeading, "{count}", String(unmetRows.length))}
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {unmetRows.map((row) => (
-              <ReviewedRow key={row.institutionId} row={row} />
-            ))}
-          </TableBody>
-        </Table>
-      </section>
-
-      <section className="mb-8">
-        <SectionHeader
-          title={t.weights.title}
-          actions={
-            <span className="text-muted-foreground text-[12px]">
-              {weightsAreCustom ? t.weights.custom : t.weights.defaults}
-            </span>
-          }
-        />
-        {canManage ? (
-          <CriteriaWeightsEditor
-            weights={weights}
-            options={options}
-            weightsAreCustom={weightsAreCustom}
-          />
-        ) : (
-          <>
-            <ul className="divide-border flex flex-col divide-y border-y">
-              {weights.map((entry) => (
-                <li key={entry.criterion} className="flex flex-col gap-1 py-2">
-                  <div className="grid min-h-[var(--density-row)] grid-cols-[1fr_auto_auto] items-center gap-3">
-                    <div className="flex min-w-0 flex-col">
-                      <span className="text-[14px]">{entry.label}</span>
-                      <span className="text-muted-foreground text-[12px]">{entry.help}</span>
-                    </div>
-                    <span className="text-muted-foreground text-[12px] tabular-nums">
-                      {interpolate(t.weights.share, "{share}", String(entry.share))}
-                    </span>
-                    <span className="text-[14px]">{entry.levelLabel}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p className="text-muted-foreground mt-3 text-[13px]">{t.weights.readOnly}</p>
-          </>
-        )}
-      </section>
-
-      <p className="text-muted-foreground max-w-[68ch] text-[12px]">{t.method}</p>
+      <PageTabs label={t.tabs.label} tabs={tabs} initialTab={initialTab} />
     </>
   );
 }

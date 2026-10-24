@@ -33,6 +33,13 @@ const en = {
   casa: {
     overline: "Household",
     title: "Members and invites",
+    tabs: {
+      label: "Household sections",
+      people: "People",
+      analyst: "Analyst",
+      access: "Recent access",
+      delete: "Delete",
+    },
     membersSectionTitle: "Members",
     inviteAction: "Invite",
     inviteDialog: {
@@ -184,6 +191,13 @@ const ptBR = {
   casa: {
     overline: "Casa",
     title: "Membros e convites",
+    tabs: {
+      label: "Partes da casa",
+      people: "Pessoas",
+      analyst: "Analista",
+      access: "Acessos",
+      delete: "Excluir",
+    },
     membersSectionTitle: "Membros",
     inviteAction: "Convidar",
     inviteDialog: {

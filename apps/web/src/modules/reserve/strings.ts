@@ -1,5 +1,12 @@
 const en = {
   overline: "Reserve",
+  tabs: {
+    label: "Reserve sections",
+    summary: "Summary",
+    placement: "Where to keep it",
+    accounts: "Accounts",
+    reading: "Analyst's reading",
+  },
   headline: {
     target: "Your target is {amount}.",
     estimate: "Your estimated target is {amount}.",
@@ -186,6 +193,13 @@ const en = {
 
 const ptBR = {
   overline: "Reserva",
+  tabs: {
+    label: "Partes da reserva",
+    summary: "Resumo",
+    placement: "Onde guardar",
+    accounts: "Contas",
+    reading: "Leitura do analista",
+  },
   headline: {
     target: "Sua meta é {amount}.",
     estimate: "Sua meta estimada é {amount}.",

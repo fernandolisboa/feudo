@@ -22,6 +22,7 @@ test("account deletion signs out at once and can be cancelled by signing in agai
   await signUpVerifyAndSignIn(page, request, baseURL, credentials);
 
   await page.goto("/preferencias");
+  await page.getByRole("tab", { name: "Dados e cadastro" }).click();
   await page.getByRole("button", { name: "Excluir meu cadastro" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(`Casa de ${credentials.name}`, { exact: false })).toBeVisible();

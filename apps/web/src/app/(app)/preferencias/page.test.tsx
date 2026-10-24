@@ -41,10 +41,14 @@ import PreferencesPage from "./page";
 
 const originalConsoleError = console.error;
 
-async function renderPage() {
+async function renderPage(searchParams: { aba?: string; exportacao?: string } = { aba: "dados" }) {
   return render(
-    await resolveServerTree(await PreferencesPage({ searchParams: Promise.resolve({}) })),
+    await resolveServerTree(await PreferencesPage({ searchParams: Promise.resolve(searchParams) })),
   );
+}
+
+function isShown(text: string): boolean {
+  return screen.getByText(text).closest("[hidden]") === null;
 }
 
 beforeEach(() => {
@@ -92,5 +96,23 @@ describe("PreferencesPage", () => {
     expect(screen.getByText(/Não deu para carregar esta parte agora/)).not.toBeNull();
     expect(screen.getByRole("button", { name: "Baixar meus dados" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Excluir meu cadastro" })).not.toBeNull();
+  });
+
+  it("opens on the general tab, with the data and account tab one click away", async () => {
+    await renderPage({});
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Geral",
+      "Dados e cadastro",
+    ]);
+    expect(isShown("Tema")).toBe(true);
+    expect(isShown("Baixar meus dados")).toBe(false);
+  });
+
+  it("lands on the data tab when the export comes back refused for the rate limit", async () => {
+    await renderPage({ exportacao: "limite" });
+
+    expect(isShown("Baixar meus dados")).toBe(true);
+    expect(isShown("Tema")).toBe(false);
   });
 });
