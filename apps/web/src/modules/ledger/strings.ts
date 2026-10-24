@@ -236,7 +236,7 @@ const en = {
   },
   pagination: {
     label: "Pages",
-    page: "Page {page}",
+    page: "Page {page} of {pages} · {total} transactions",
     newer: "Newer",
     older: "Older",
   },
@@ -350,6 +350,12 @@ const en = {
       any: "Incoming and outgoing",
       credit: "Incoming",
       debit: "Outgoing",
+      pagination: {
+        nav: "Rule pages",
+        status: "Page {page} of {pages} · {total} rules",
+        previous: "Previous",
+        next: "Next",
+      },
     },
     removeRule: "Remove",
     removeRuleFor: "Remove the rule for {pattern}",
@@ -585,7 +591,7 @@ const ptBR = {
   },
   pagination: {
     label: "Páginas",
-    page: "Página {page}",
+    page: "Página {page} de {pages} · {total} transações",
     newer: "Mais recentes",
     older: "Mais antigas",
   },
@@ -699,6 +705,12 @@ const ptBR = {
       any: "Entradas e saídas",
       credit: "Entradas",
       debit: "Saídas",
+      pagination: {
+        nav: "Páginas de regras",
+        status: "Página {page} de {pages} · {total} regras",
+        previous: "Anteriores",
+        next: "Próximas",
+      },
     },
     removeRule: "Remover",
     removeRuleFor: "Remover a regra de {pattern}",

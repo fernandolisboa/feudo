@@ -24,7 +24,7 @@ export function MembersTable({
   const isLastMember = members.length === 1;
 
   return (
-    <Table data-tour="household.members">
+    <Table stackOnNarrow data-tour="household.members">
       <TableHeader>
         <TableRow>
           <TableHead className="text-muted-foreground text-[11px] tracking-wide uppercase">
@@ -47,17 +47,24 @@ export function MembersTable({
       <TableBody>
         {members.map((member) => (
           <TableRow key={member.id} className="h-[var(--density-row)]">
-            <TableCell className="font-medium">{member.name}</TableCell>
-            <TableCell className="text-muted-foreground">{member.email}</TableCell>
-            <TableCell>
+            <TableCell card="title" className="font-medium">
+              {member.name}
+            </TableCell>
+            <TableCell label={t.casa.table.email} className="text-muted-foreground">
+              {member.email}
+            </TableCell>
+            <TableCell label={t.casa.table.role}>
               <Badge variant={member.role === "owner" ? "default" : "outline"}>
                 {roleLabel(member.role)}
               </Badge>
             </TableCell>
-            <TableCell className="text-muted-foreground tabular-nums">
+            <TableCell
+              label={t.casa.table.joined}
+              className="text-muted-foreground whitespace-nowrap tabular-nums"
+            >
               {formatShortDate(member.joinedAt, timeZone)}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell card="actions" className="text-right">
               <MemberRowActions
                 member={member}
                 currentUserId={currentUserId}

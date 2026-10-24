@@ -42,7 +42,7 @@ export function TransactionsFilterBar({
         action="/transacoes"
         method="get"
         data-offline-read
-        className="w-full md:w-72 md:flex-none"
+        className="w-full md:w-auto md:min-w-44 md:flex-[1_1_11rem]"
       >
         {hiddenParams.map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />

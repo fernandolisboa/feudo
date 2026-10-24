@@ -636,6 +636,107 @@
   }
 }
 
+/* Tables never scroll sideways: cells wrap, and a table that opts in with
+   data-stack turns each row into a card once its own box is narrow. Unlayered
+   so the card layout wins over the row-height and border utilities. */
+[data-slot="table-container"] {
+  container: table / inline-size;
+}
+
+[data-slot="table-cell"] {
+  overflow-wrap: anywhere;
+}
+
+[data-slot="table"] [data-card-only] {
+  display: none;
+}
+
+@container table (width < 48rem) {
+  [data-stack] > [data-slot="table"] {
+    display: block;
+  }
+
+  [data-stack] [data-slot="table-header"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  [data-stack] [data-slot="table-body"] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  [data-stack] [data-slot="table-row"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 6px 12px;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 12px;
+  }
+
+  [data-stack] [data-slot="table-cell"] {
+    grid-column: 1 / -1;
+    padding: 0;
+    text-align: right;
+  }
+
+  [data-stack] [data-slot="table-cell"][data-label]::before {
+    content: attr(data-label);
+    float: left;
+    margin-right: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: inherit;
+  }
+
+  [data-stack] [data-card="title"] {
+    grid-column: 1;
+    grid-row: 1;
+    text-align: left;
+  }
+
+  [data-stack] [data-card="aside"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  [data-stack] [data-card="actions"] {
+    justify-self: end;
+  }
+
+  [data-stack] [data-slot="table-row"]:has(> [data-card="aside"]) > [data-card="title"] {
+    grid-row: 1 / span 2;
+  }
+
+  [data-stack] [data-slot="table-row"]:has(> [data-card="aside"]) > [data-card="actions"] {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+  }
+
+  [data-stack] [data-slot="table-row"]:not(:has(> [data-card="aside"])) > [data-card="actions"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  [data-stack] [data-card="hidden"] {
+    display: none;
+  }
+
+  [data-stack] [data-card-only] {
+    display: block;
+  }
+}
+
 .tour-scrim {
   position: fixed;
   inset: 0;

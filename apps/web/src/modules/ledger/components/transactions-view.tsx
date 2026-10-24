@@ -4,10 +4,12 @@ import { Landmark, Tags } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
+import { PageNav, paginationStatus } from "@/ui/page-nav";
 import { interpolate } from "@/lib/interpolate";
 
 import { GUIDED_CATEGORIZATION_PATH, transactionsHref, type TransactionsRouteBase } from "../href";
 import type { TransactionsPageProps } from "../page-props";
+import { TRANSACTIONS_PAGE_SIZE } from "../validation";
 import { MonthSwitcher } from "./month-switcher";
 import { PeriodSwitcher } from "./period-switcher";
 import { SpreadsheetMenu } from "./spreadsheet-menu";
@@ -218,15 +220,16 @@ export function TransactionsView({
         <>
           <TransactionsTable transactions={transactions} groups={categoryGroups} />
           {page > 1 || hasMore ? (
-            <nav
-              aria-label={t.pagination.label}
-              className="mt-3 flex items-center justify-between gap-2"
-            >
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {interpolate(t.pagination.page, "{page}", String(page))}
-              </span>
-              <div className="flex items-center gap-2">
-                {page > 1 ? (
+            <PageNav
+              label={t.pagination.label}
+              status={paginationStatus(
+                t.pagination.page,
+                page,
+                Math.max(1, Math.ceil(total / TRANSACTIONS_PAGE_SIZE)),
+                total,
+              )}
+              previous={
+                page > 1 ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -234,8 +237,10 @@ export function TransactionsView({
                   >
                     {t.pagination.newer}
                   </Button>
-                ) : null}
-                {hasMore ? (
+                ) : null
+              }
+              next={
+                hasMore ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -243,9 +248,9 @@ export function TransactionsView({
                   >
                     {t.pagination.older}
                   </Button>
-                ) : null}
-              </div>
-            </nav>
+                ) : null
+              }
+            />
           ) : null}
         </>
       )}

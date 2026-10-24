@@ -362,6 +362,7 @@ describe("TransactionsView", () => {
 
     const older = screen.getByRole("link", { name: t.pagination.older });
     expect(older.getAttribute("href")).toBe("/transacoes?de=2026-07-06&ate=2026-10-17&pagina=2");
+    expect(screen.getByText("Página 1 de 2 · 60 transações")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar 60 transações" }));
     const excel = await screen.findByRole("menuitem", { name: "Planilha do Excel (.xlsx)" });

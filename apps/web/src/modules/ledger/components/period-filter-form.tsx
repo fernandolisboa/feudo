@@ -28,35 +28,35 @@ export function PeriodFilterForm({
       method="get"
       data-offline-read
       aria-label={t.period.label}
-      className="flex flex-col gap-2 sm:flex-row sm:items-end"
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex md:flex-none"
     >
       {hiddenParams.map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="transactions-period-from">{t.period.from}</Label>
-          <Input
-            id="transactions-period-from"
-            name="de"
-            type="date"
-            max={todayIso}
-            required
-            defaultValue={route.range?.from ?? ""}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="transactions-period-to">{t.period.to}</Label>
-          <Input
-            id="transactions-period-to"
-            name="ate"
-            type="date"
-            max={todayIso}
-            defaultValue={route.range?.to ?? ""}
-          />
-        </div>
-      </div>
-      <Button type="submit" variant="outline" size="sm">
+      <Label htmlFor="transactions-period-from" className="text-muted-foreground font-normal">
+        {t.period.from}
+      </Label>
+      <Input
+        id="transactions-period-from"
+        name="de"
+        type="date"
+        max={todayIso}
+        required
+        defaultValue={route.range?.from ?? ""}
+        className="md:w-36"
+      />
+      <Label htmlFor="transactions-period-to" className="text-muted-foreground font-normal">
+        {t.period.to}
+      </Label>
+      <Input
+        id="transactions-period-to"
+        name="ate"
+        type="date"
+        max={todayIso}
+        defaultValue={route.range?.to ?? ""}
+        className="md:w-36"
+      />
+      <Button type="submit" variant="outline" size="sm" className="col-span-full">
         {t.period.apply}
       </Button>
     </form>
