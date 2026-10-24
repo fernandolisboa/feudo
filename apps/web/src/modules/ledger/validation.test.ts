@@ -86,6 +86,16 @@ describe("month search params bounds", () => {
 });
 
 describe("transactionsSearchParamsSchema filters", () => {
+  it("reads linhas only as one of the offered rows-per-page options", () => {
+    expect(transactionsSearchParamsSchema.parse({ linhas: "50" })).toMatchObject({ linhas: 50 });
+    expect(transactionsSearchParamsSchema.parse({ linhas: "100" })).toMatchObject({ linhas: 100 });
+    for (const linhas of ["7", "0", "-10", "1000", "abc", "20.5"]) {
+      expect(transactionsSearchParamsSchema.parse({ linhas })).toMatchObject({
+        linhas: undefined,
+      });
+    }
+  });
+
   it("trims a search query and truncates it instead of rejecting it", () => {
     expect(transactionsSearchParamsSchema.parse({ busca: "  mercado  " })).toMatchObject({
       busca: "mercado",

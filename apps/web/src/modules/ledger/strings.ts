@@ -241,6 +241,7 @@ const en = {
   pagination: {
     label: "Pages",
     page: "Page {page} of {pages} · {total} transactions",
+    rowsPerPage: "Rows per page",
     newer: "Newer",
     older: "Older",
   },
@@ -357,6 +358,7 @@ const en = {
       pagination: {
         nav: "Rule pages",
         status: "Page {page} of {pages} · {total} rules",
+        rowsPerPage: "Rows per page",
         previous: "Previous",
         next: "Next",
       },
@@ -600,6 +602,7 @@ const ptBR = {
   pagination: {
     label: "Páginas",
     page: "Página {page} de {pages} · {total} transações",
+    rowsPerPage: "Linhas por página",
     newer: "Mais recentes",
     older: "Mais antigas",
   },
@@ -716,6 +719,7 @@ const ptBR = {
       pagination: {
         nav: "Páginas de regras",
         status: "Página {page} de {pages} · {total} regras",
+        rowsPerPage: "Linhas por página",
         previous: "Anteriores",
         next: "Próximas",
       },

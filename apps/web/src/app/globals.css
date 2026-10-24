@@ -645,13 +645,18 @@
 
 /* Tables never scroll sideways: cells wrap, and a table that opts in with
    data-stack turns each row into a card once its own box is narrow. Unlayered
-   so the card layout wins over the row-height and border utilities. */
+   so the card layout wins over the row-height and border utilities. The
+   wrap rule alone sits in the base layer so a short-value cell can opt out
+   with a utility: "anywhere" shrinks a column's minimum width to one letter,
+   and the table then breaks "22,5%" while a long name keeps the room. */
 [data-slot="table-container"] {
   container: table / inline-size;
 }
 
-[data-slot="table-cell"] {
-  overflow-wrap: anywhere;
+@layer base {
+  [data-slot="table-cell"] {
+    overflow-wrap: anywhere;
+  }
 }
 
 [data-slot="table"] [data-card-only] {

@@ -1,4 +1,6 @@
 import type { IsoDateRange, Kind, ProductCategoryId, YearMonth } from "@feudo/core";
+import type { PageSize } from "@/lib/page-size";
+
 import type { SpreadsheetFormat } from "./spreadsheet";
 
 export type TransactionsRoute = {
@@ -10,9 +12,12 @@ export type TransactionsRoute = {
   category: ProductCategoryId | null;
   kind: Kind | null;
   search: string | null;
+  pageSize: PageSize;
 };
 
 export type TransactionsRouteBase = Omit<TransactionsRoute, "page">;
+
+export const DEFAULT_TRANSACTIONS_PAGE_SIZE: PageSize = 20;
 
 export const UNCATEGORIZED_FILTER = "sem";
 
@@ -44,6 +49,9 @@ export function transactionsRouteParams(view: TransactionsRoute): [string, strin
   if (view.search) {
     entries.push(["busca", view.search]);
   }
+  if (view.pageSize !== DEFAULT_TRANSACTIONS_PAGE_SIZE) {
+    entries.push(["linhas", String(view.pageSize)]);
+  }
   if (view.page > 1) {
     entries.push(["pagina", String(view.page)]);
   }
@@ -64,7 +72,7 @@ export function transactionsSpreadsheetHref(
   format: SpreadsheetFormat,
 ): string {
   const params = new URLSearchParams([
-    ...transactionsRouteParams({ ...view, page: 1 }),
+    ...transactionsRouteParams({ ...view, page: 1, pageSize: DEFAULT_TRANSACTIONS_PAGE_SIZE }),
     ["formato", format],
   ]);
   return `${TRANSACTIONS_SPREADSHEET_ROUTE}?${params.toString()}`;

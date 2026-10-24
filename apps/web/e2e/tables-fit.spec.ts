@@ -12,7 +12,31 @@ const PAGES = [
   "/reserva?aba=contas",
   "/bancos?aba=todos",
   "/casa?aba=pessoas",
+  "/casa?aba=acessos",
 ];
+
+// A short value (liquidity, a one-word tax rate) must stay on one line while
+// the account name column still has room to wrap.
+async function shortCells(page: Page): Promise<{ checked: number; wrapped: string[] }> {
+  return page.evaluate(() => {
+    const cells = [
+      ...document.querySelectorAll(
+        "[data-slot=table-cell][data-label=Liquidez], [data-slot=table-cell][data-label=IR]",
+      ),
+    ].filter(
+      (cell) => !/\s/.test(cell.textContent.trim()) || cell.matches("[data-label=Liquidez]"),
+    );
+    const wrapped = cells
+      .filter((cell) => {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+        return lines.size > 1;
+      })
+      .map((cell) => cell.textContent);
+    return { checked: cells.length, wrapped };
+  });
+}
 
 async function sidewaysOverflow(page: Page): Promise<number[]> {
   return page.evaluate(() => [
@@ -73,6 +97,12 @@ test("tables fit the screen: no sideways scroll, rows become cards on a phone", 
   await expect(
     page.locator("[data-slot=table-container]:visible [data-slot=table-body] tr").first(),
   ).toHaveCSS("display", "table-row");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/reserva?aba=contas");
+  await expect(page.locator("[data-slot=table-container]:visible").first()).toBeVisible();
+  const reserveCells = await shortCells(page);
+  expect(reserveCells.checked).toBeGreaterThan(0);
+  expect(reserveCells.wrapped).toEqual([]);
 
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/?aba=contas");

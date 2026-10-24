@@ -17,7 +17,7 @@ export type FinancialDataAccessExportRow = {
   accessedAt: Date;
 };
 
-export const RECENT_ACCESS_LIMIT = 20;
+export const RECENT_ACCESS_LIMIT = 100;
 
 // Every repository is constructed with the household and user taken from
 // the session (ADR-0001, amended 2026-10-03 #27): no method below accepts a

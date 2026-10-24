@@ -14,8 +14,9 @@ import {
 import { getDb } from "@/platform/db/client";
 import type { HouseholdSession } from "@/modules/households";
 import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import type { PageSize } from "@/lib/page-size";
 
-import { UNCATEGORIZED_FILTER } from "./href";
+import { DEFAULT_TRANSACTIONS_PAGE_SIZE, UNCATEGORIZED_FILTER } from "./href";
 import { readHouseholdLedger } from "./ledger-read";
 import { createHouseholdLedgerRepository, type LedgerAccount } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
@@ -33,6 +34,7 @@ export type FilteredTransactions = {
   selectedKind: Kind | null;
   searchQuery: string | null;
   requestedPage: number;
+  pageSize: PageSize;
   kinds: KindContext;
   monthRows: ResolvedLedgerRow[];
   padded: ResolvedLedgerRow[];
@@ -159,6 +161,7 @@ export async function readFilteredTransactions(
     selectedKind,
     searchQuery,
     requestedPage: params.pagina ?? 1,
+    pageSize: params.linhas ?? DEFAULT_TRANSACTIONS_PAGE_SIZE,
     kinds,
     monthRows,
     padded,

@@ -2,13 +2,36 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import type { TransactionsPageProps } from "../page-props";
 import { t } from "../strings";
 import { TransactionsView } from "./transactions-view";
 
 const oneAccount = [{ id: "acc-1", name: "Conta corrente", institutionName: "Banco Fixture" }];
+
+const ROW: TransactionsPageProps["transactions"][number] = {
+  id: "tx-1",
+  date: "2026-09-15",
+  description: "COMPRA NO MERCADO",
+  amountCentavos: -5000,
+  currency: "BRL",
+  accountName: "Conta corrente",
+  institutionName: "Banco Fixture",
+  category: null,
+  categorize: {
+    id: "tx-1",
+    description: "COMPRA NO MERCADO",
+    amountLabel: "R$ 50,00",
+    type: "debit",
+    subcategoryValue: null,
+    isManual: false,
+    isInternalTransfer: false,
+    hasTransferMark: false,
+    suggestedPattern: "COMPRA NO MERCADO",
+  },
+};
 
 afterEach(() => {
   cleanup();
@@ -38,6 +61,7 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     transactions: [],
     total: 0,
     page: 1,
+    pageSize: 20,
     pageCount: 1,
     hasMore: false,
     ...overrides,
@@ -326,6 +350,64 @@ describe("TransactionsView", () => {
     expect(screen.getByText("Nada registrado de 06/07/2026 a 17/10/2026.")).not.toBeNull();
   });
 
+  it("lets the reader pick the rows per page, keeping the first visible row and every filter", async () => {
+    push.mockClear();
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          total: 72,
+          page: 4,
+          pageCount: 4,
+          hasMore: false,
+          transactions: [ROW],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: t.pagination.newer }).getAttribute("href")).toBe(
+      "/transacoes?mes=2026-09&pagina=3",
+    );
+    fireEvent.click(screen.getByRole("combobox", { name: t.pagination.rowsPerPage }));
+    const option = await screen.findByRole("option", { name: "50" });
+    fireEvent.pointerDown(option, { pointerType: "mouse" });
+    fireEvent.mouseDown(option);
+    fireEvent.pointerUp(option, { pointerType: "mouse" });
+    fireEvent.mouseUp(option);
+    fireEvent.click(option);
+
+    expect(push).toHaveBeenCalledWith("/transacoes?mes=2026-09&linhas=50&pagina=2");
+  });
+
+  it("keeps a chosen rows per page in the page links", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          total: 72,
+          pageSize: 50,
+          pageCount: 2,
+          hasMore: true,
+          transactions: [ROW],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: t.pagination.older }).getAttribute("href")).toBe(
+      "/transacoes?mes=2026-09&linhas=50&pagina=2",
+    );
+  });
+
+  it("shows no page navigation when every transaction fits on the smallest page", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, total: 10, transactions: [ROW] })}
+      />,
+    );
+
+    expect(screen.queryByRole("navigation", { name: t.pagination.label })).toBeNull();
+  });
+
   it("carries the active range, not the month, through pagination and the spreadsheet links", async () => {
     render(
       <TransactionsView
@@ -336,29 +418,7 @@ describe("TransactionsView", () => {
           total: 60,
           pageCount: 2,
           hasMore: true,
-          transactions: [
-            {
-              id: "tx-1",
-              date: "2026-09-15",
-              description: "COMPRA NO MERCADO",
-              amountCentavos: -5000,
-              currency: "BRL",
-              accountName: "Conta corrente",
-              institutionName: "Banco Fixture",
-              category: null,
-              categorize: {
-                id: "tx-1",
-                description: "COMPRA NO MERCADO",
-                amountLabel: "R$ 50,00",
-                type: "debit",
-                subcategoryValue: null,
-                isManual: false,
-                isInternalTransfer: false,
-                hasTransferMark: false,
-                suggestedPattern: "COMPRA NO MERCADO",
-              },
-            },
-          ],
+          transactions: [ROW],
         })}
       />,
     );

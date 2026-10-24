@@ -88,6 +88,7 @@ export function TransactionsFilterBar({
                 category: null,
                 kind: null,
                 search: null,
+                pageSize: route.pageSize,
               })}
             />
           }

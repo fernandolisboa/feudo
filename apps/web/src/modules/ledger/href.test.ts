@@ -17,9 +17,19 @@ const BASE = {
   category: null,
   kind: null,
   search: null,
+  pageSize: 20,
 } as const;
 
 describe("transactionsHref", () => {
+  it("carries linhas only when the rows per page differ from the default, before pagina", () => {
+    expect(transactionsHref({ ...BASE, pageSize: 20, page: 2 })).toBe(
+      "/transacoes?mes=2026-09&pagina=2",
+    );
+    expect(transactionsHref({ ...BASE, pageSize: 50, page: 2 })).toBe(
+      "/transacoes?mes=2026-09&linhas=50&pagina=2",
+    );
+  });
+
   it("always carries the month and only the non-default filters", () => {
     expect(transactionsHref(BASE)).toBe("/transacoes?mes=2026-09");
     expect(
@@ -111,6 +121,12 @@ describe("transactionsSpreadsheetHref", () => {
     );
     expect(transactionsSpreadsheetHref({ ...BASE, uncategorizedOnly: true }, "csv")).toBe(
       "/api/transactions/spreadsheet?mes=2026-09&categoria=sem&formato=csv",
+    );
+  });
+
+  it("never carries the rows per page: the file always holds every row", () => {
+    expect(transactionsSpreadsheetHref({ ...BASE, pageSize: 50 }, "xlsx")).toBe(
+      "/api/transactions/spreadsheet?mes=2026-09&formato=xlsx",
     );
   });
 

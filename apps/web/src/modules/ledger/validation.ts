@@ -7,10 +7,10 @@ import {
 } from "@feudo/core";
 import { z } from "zod";
 
+import { PAGE_SIZE_OPTIONS } from "@/lib/page-size";
+
 import { MAX_YEAR_MONTH_YEAR, MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
 import { decodeSubcategoryRef } from "./subcategory-ref";
-
-export const TRANSACTIONS_PAGE_SIZE = 50;
 
 // isYearMonth's own pattern accepts any four-digit year: "0050-03" parses
 // but Date.UTC folds years 0-99 into 1900-1999 downstream (formatYearMonth,
@@ -28,6 +28,11 @@ function isBoundedYearMonth(value: string): value is YearMonth {
 const yearMonthSchema = z.string().refine(isBoundedYearMonth).optional().catch(undefined);
 const accountIdSchema = z.string().trim().min(1).max(64).optional().catch(undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).optional().catch(undefined);
+const pageSizeSchema = z.coerce
+  .number()
+  .pipe(z.literal([...PAGE_SIZE_OPTIONS]))
+  .optional()
+  .catch(undefined);
 
 // z.iso.date() already rejects an impossible calendar day ("2026-02-30");
 // the same bounded-year contract as yearMonthSchema on top of it, so a
@@ -66,6 +71,7 @@ export const transactionsSearchParamsSchema = z.object({
   mes: yearMonthSchema,
   conta: accountIdSchema,
   pagina: pageSchema,
+  linhas: pageSizeSchema,
   categoria: categoryFilterSchema,
   tipo: kindFilterSchema,
   busca: searchQuerySchema,
