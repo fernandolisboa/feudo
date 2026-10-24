@@ -140,7 +140,8 @@ actions), Popover, Tooltip, Toast, Sheet (mobile menu), Table, Badge (tags), Pro
 Form controls.
 
 Domain components (custom): AppShell, PageHeader, StatTile, SectionHeader, BarList,
-MonthlyBars (two-series SVG, legend + last-month labels), AccountsTable, Notice, MonthSwitcher,
+MonthlyBars (two-series SVG, legend + last-month labels), AccountsTable, Notice, MonthSwitcher (the label opens a
+year/month picker; months after the current one are disabled),
 StepRail (onboarding; deferred until onboarding is more than the one-step household-creation form
 in #10 — today's `/comecar` is a single Card, not a rail), ReserveCoverage (target, current,
 progress), PlacementRanking (ranked rows

@@ -118,6 +118,10 @@ export function yearMonthDayRange(yearMonth: YearMonth): IsoDateRange {
   return { from: `${yearMonth}-01`, to: `${yearMonth}-${pad(lastDay)}` };
 }
 
+// pt-BR short month names ("set.", "ago.") carry a trailing period Feudo
+// never uses in a chart axis or the month picker (DESIGN.md's formatting rules); UTC keeps the
+// month's own first day from shifting into the neighboring month in a
+// negative time zone.
 export function formatShortMonth(yearMonth: YearMonth): string {
   const { year, month } = parts(yearMonth);
   const label = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(

@@ -48,7 +48,7 @@ export function MonthPicker({
           <Button
             variant="ghost"
             aria-label={interpolate(t.monthSwitcher.choose, "{month}", monthLabel)}
-            className="font-heading min-w-[10.5rem] text-[15px] font-normal"
+            className="font-heading min-w-[12rem] text-[15px] font-normal"
           />
         }
       >
@@ -102,7 +102,7 @@ export function MonthPicker({
                   <Button
                     variant={selected ? "default" : "ghost"}
                     aria-label={label}
-                    aria-current={selected ? "date" : undefined}
+                    aria-current={selected ? "page" : undefined}
                     className="w-full"
                     render={
                       <Link

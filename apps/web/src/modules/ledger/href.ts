@@ -19,6 +19,7 @@ export const UNCATEGORIZED_FILTER = "sem";
 export const MONTH_PARAM = "mes";
 
 export const MIN_YEAR_MONTH_YEAR = 1970;
+export const MAX_YEAR_MONTH_YEAR = 9999;
 
 export const TRANSACTIONS_PATH = "/transacoes";
 

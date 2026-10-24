@@ -68,10 +68,6 @@ export type OverviewPageProps = {
   series: MonthlyBarPointView[];
 };
 
-// pt-BR short month names ("set.", "ago.") carry a trailing period Feudo
-// never uses in a chart axis (DESIGN.md's formatting rules); UTC keeps the
-// month's own first day from shifting into the neighboring month in a
-// negative time zone.
 function joinMonthLabels(months: readonly YearMonth[]): string {
   const labels = months.map(formatYearMonth);
   if (labels.length <= 1) {

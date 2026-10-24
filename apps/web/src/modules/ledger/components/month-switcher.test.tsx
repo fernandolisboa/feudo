@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { MonthSwitcher } from "./month-switcher";
@@ -45,7 +45,7 @@ describe("MonthSwitcher month picker", () => {
 
     await screen.findByText("2026");
     const october = screen.getByRole("link", { name: "outubro de 2026" });
-    expect(october.getAttribute("aria-current")).toBe("date");
+    expect(october.getAttribute("aria-current")).toBe("page");
     expect(october.textContent).toBe("out");
     expect(screen.getByRole("link", { name: "janeiro de 2026" }).getAttribute("href")).toBe(
       "/transacoes?mes=2026-01&conta=acc-1",
@@ -85,13 +85,32 @@ describe("MonthSwitcher month picker", () => {
     expect(screen.getByRole("button", { name: "Próximo ano" })).toHaveProperty("disabled", false);
   });
 
+  it("reopens on the shown month's year after stepping away from it", async () => {
+    renderSwitcher();
+    openPicker("outubro de 2026");
+    fireEvent.click(await screen.findByRole("button", { name: "Ano anterior" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ano anterior" }));
+    screen.getByText("2024");
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    openPicker("outubro de 2026");
+
+    await screen.findByText("2026");
+    expect(screen.getByRole("link", { name: "outubro de 2026" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
   it("opens an earlier month on its own year", async () => {
     renderSwitcher("2025-03");
     openPicker("março de 2025");
 
     await screen.findByText("2025");
     expect(screen.getByRole("link", { name: "março de 2025" }).getAttribute("aria-current")).toBe(
-      "date",
+      "page",
     );
   });
 

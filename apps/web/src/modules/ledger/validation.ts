@@ -7,7 +7,7 @@ import {
 } from "@feudo/core";
 import { z } from "zod";
 
-import { MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
+import { MAX_YEAR_MONTH_YEAR, MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
 import { decodeSubcategoryRef } from "./subcategory-ref";
 
 export const TRANSACTIONS_PAGE_SIZE = 50;
@@ -17,9 +17,8 @@ export const TRANSACTIONS_PAGE_SIZE = 50;
 // formatShortMonth), and "0000-01" makes shiftYearMonth's own arithmetic
 // throw. Bounding the year here, in the one schema both / and /transacoes
 // parse their `mes` param with, keeps every caller's month math (year * 12
-// + ...) inside a range it was written for.
-const MAX_YEAR_MONTH_YEAR = 9999;
-
+// + ...) inside a range it was written for. The bounds live in href.ts so
+// the month picker stops at the same years.
 function isBoundedYearMonth(value: string): value is YearMonth {
   if (!isYearMonth(value)) return false;
   const year = Number(value.slice(0, 4));

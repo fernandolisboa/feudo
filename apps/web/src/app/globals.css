@@ -353,9 +353,8 @@
     border-bottom: 1px solid var(--line);
   }
 
-  /* A long headline wraps beside the actions instead of pushing them onto
-     their own row; they only drop below it once the heading has less than
-     20rem left, which is what happens on a phone. */
+  /* Without a basis the headline's full length sets the row width and a long
+     one ("…gastou mais do que recebeu em outubro…") pushes the actions below. */
   .page-header-heading {
     flex: 1 1 20rem;
     min-width: 0;
