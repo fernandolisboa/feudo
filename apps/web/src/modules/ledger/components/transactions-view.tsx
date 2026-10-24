@@ -164,9 +164,14 @@ export function TransactionsView({
                 }
               />
             )}
-            <Button variant="ghost" size="sm" render={<Link href="/categorias" />}>
+            <Button
+              variant="ghost"
+              size="sm"
+              title={t.categoriesLink}
+              render={<Link href="/categorias" />}
+            >
               <Tags className="size-4" />
-              {t.categoriesLink}
+              <span className="md:max-xl:sr-only">{t.categoriesLink}</span>
             </Button>
             {total > 0 ? <SpreadsheetMenu view={route} total={total} /> : null}
           </>

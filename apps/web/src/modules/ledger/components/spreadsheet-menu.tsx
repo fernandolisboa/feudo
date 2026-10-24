@@ -30,7 +30,7 @@ export function SpreadsheetMenu({
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="ghost" size="sm" aria-label={label} />}>
         <Download className="size-4" />
-        {t.spreadsheet.trigger}
+        <span className="md:max-xl:sr-only">{t.spreadsheet.trigger}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto">
         <DropdownMenuGroup>
