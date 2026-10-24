@@ -18,11 +18,18 @@ async function AnalystBanksNoteContent({ session }: { session: HouseholdSession 
   return props ? <AnalystBanksNote {...props} /> : null;
 }
 
-async function BanksContent({ session }: { session: HouseholdSession }) {
+async function BanksContent({
+  session,
+  initialTab,
+}: {
+  session: HouseholdSession;
+  initialTab: string | undefined;
+}) {
   const props = await getBanksPageProps(session);
   return (
     <BanksView
       {...props}
+      initialTab={initialTab}
       analystNote={
         <AnalystReadingErrorBoundary>
           <Suspense fallback={null}>
@@ -34,13 +41,18 @@ async function BanksContent({ session }: { session: HouseholdSession }) {
   );
 }
 
-export default async function BanksPage() {
+export default async function BanksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
   const session = await requireHouseholdSession();
+  const { aba } = await searchParams;
 
   return (
     <BanksErrorBoundary>
       <Suspense fallback={<BanksSkeleton />}>
-        <BanksContent session={session} />
+        <BanksContent session={session} initialTab={aba} />
       </Suspense>
     </BanksErrorBoundary>
   );

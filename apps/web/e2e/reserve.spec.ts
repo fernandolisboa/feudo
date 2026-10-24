@@ -59,6 +59,10 @@ test("reserve target, placement ranking, marking positions and coverage", async 
     .filter({ has: page.getByRole("columnheader", { name: "Custo fixo" }) });
   await expect(monthlyTable.getByRole("cell", { name: "R$ 1.500,00" })).toHaveCount(3);
 
+  const tab = (name: string) => page.getByRole("tab", { name });
+
+  await tab("Onde guardar").click();
+  await expect(page).toHaveURL(/\/reserva\?aba=onde-guardar$/);
   const ranking = page.getByRole("list", { name: "Onde colocar os próximos reais" });
   const alsoRanked = page.getByRole("list", { name: "Também avaliados" });
   await expect(ranking.getByRole("listitem")).toHaveCount(2);
@@ -73,6 +77,7 @@ test("reserve target, placement ranking, marking positions and coverage", async 
     page.getByText("Taxas ao ano: CDI 13,4% · Selic 13,4% · IPCA em 12 meses 5%"),
   ).toBeVisible();
 
+  await tab("Contas").click();
   const cdbRow = page.getByRole("row", { name: /^CDB Liquidez Diária 100% CDI/ });
   await expect(cdbRow).toContainText("confirme");
   await cdbRow.getByRole("button", { name: "Ajustar CDB Liquidez Diária 100% CDI" }).click();
@@ -85,17 +90,21 @@ test("reserve target, placement ranking, marking positions and coverage", async 
 
   await expect(cdbRow).toContainText("até D+1");
   await expect(cdbRow).toContainText("faz parte");
+  await tab("Onde guardar").click();
   await expect(ranking.getByRole("listitem")).toHaveCount(3);
   await expect(ranking.getByRole("listitem").nth(0)).toContainText("CDB Liquidez Diária 100% CDI");
   await expect(ranking.getByRole("listitem").nth(0)).toContainText("6,1% a.a.");
   await expect(alsoRanked).toHaveCount(0);
 
+  await tab("Resumo").click();
+  await expect(page).toHaveURL(/\/reserva$/);
   const coverage = page.getByRole("progressbar", {
     name: "Quanto da meta da reserva está coberto",
   });
   await expect(page.getByText("R$ 4.000,00 de R$ 9.000,00")).toBeVisible();
   await expect(coverage).toBeVisible();
 
+  await tab("Contas").click();
   const savingsRow = page.getByRole("row", { name: /^Poupança/ });
   await savingsRow.getByRole("button", { name: "Ajustar Poupança" }).click();
   const savingsDialog = page.getByRole("dialog", { name: "Poupança" });
@@ -103,6 +112,7 @@ test("reserve target, placement ranking, marking positions and coverage", async 
   await savingsDialog.getByRole("button", { name: "Salvar" }).click();
   await expect(savingsDialog).toHaveCount(0);
   await expect(savingsRow).toContainText("faz parte");
+  await tab("Resumo").click();
   await expect(page.getByText("R$ 7.000,00 de R$ 9.000,00")).toBeVisible();
 
   await page.getByRole("combobox", { name: "Meses de reserva" }).click();
@@ -110,7 +120,9 @@ test("reserve target, placement ranking, marking positions and coverage", async 
   await expect(page.getByRole("heading", { name: "Sua meta é R$ 4.500,00." })).toBeVisible();
   await expect(page.getByText("R$ 7.000,00 de R$ 4.500,00")).toBeVisible();
 
+  await tab("Contas").click();
   await page.reload();
+  await expect(tab("Contas")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "Sua meta é R$ 4.500,00." })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Meses de reserva" })).toHaveText(/^3(?!\d)/);
   await expect(cdbRow).toContainText("faz parte");

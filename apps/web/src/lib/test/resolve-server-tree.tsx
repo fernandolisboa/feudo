@@ -30,8 +30,29 @@ export async function resolveServerTree(node: ReactNode): Promise<ReactNode> {
       return <Rejected />;
     }
   }
-  if (element.props.children === undefined) {
-    return element;
+  return cloneElement(element, (await resolveProp(element.props)) as typeof element.props);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+// Slots reach client components through any prop, not only children (a tab
+// list takes [{ content: <AsyncSection /> }]), so every prop is walked.
+async function resolveProp(value: unknown): Promise<unknown> {
+  if (Array.isArray(value)) {
+    return Promise.all(value.map(resolveProp));
   }
-  return cloneElement(element, { children: await resolveServerTree(element.props.children) });
+  if (isValidElement(value)) {
+    return resolveServerTree(value);
+  }
+  if (isPlainObject(value)) {
+    const entries = await Promise.all(
+      Object.entries(value).map(async ([key, entry]) => [key, await resolveProp(entry)] as const),
+    );
+    return Object.fromEntries(entries);
+  }
+  return value;
 }

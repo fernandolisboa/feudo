@@ -4,6 +4,7 @@ import {
   AnalystReading,
   AnalystReadingErrorBoundary,
   getAnalystReadingProps,
+  isAnalysisEnabled,
 } from "@/modules/analysis";
 import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
 import {
@@ -22,28 +23,46 @@ async function AnalystReadingContent({ session }: { session: HouseholdSession })
   return props ? <AnalystReading {...props} /> : null;
 }
 
-async function ReserveContent({ session }: { session: HouseholdSession }) {
+async function ReserveContent({
+  session,
+  initialTab,
+  analysisEnabled,
+}: {
+  session: HouseholdSession;
+  initialTab: string | undefined;
+  analysisEnabled: boolean;
+}) {
   const props = await getReservePageProps(session);
-  return <ReserveView {...props} />;
+  return (
+    <ReserveView
+      {...props}
+      initialTab={initialTab}
+      analystReading={
+        analysisEnabled ? (
+          <AnalystReadingErrorBoundary>
+            <Suspense fallback={null}>
+              <AnalystReadingContent session={session} />
+            </Suspense>
+          </AnalystReadingErrorBoundary>
+        ) : undefined
+      }
+    />
+  );
 }
 
-export default async function ReservePage() {
+export default async function ReservePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
   const session = await requireHouseholdSession();
+  const [{ aba }, analysisEnabled] = await Promise.all([searchParams, isAnalysisEnabled(session)]);
 
   return (
-    <>
-      <ReserveErrorBoundary>
-        <Suspense fallback={<ReserveSkeleton />}>
-          <ReserveContent session={session} />
-        </Suspense>
-      </ReserveErrorBoundary>
-      <div className="mt-10">
-        <AnalystReadingErrorBoundary>
-          <Suspense fallback={null}>
-            <AnalystReadingContent session={session} />
-          </Suspense>
-        </AnalystReadingErrorBoundary>
-      </div>
-    </>
+    <ReserveErrorBoundary>
+      <Suspense fallback={<ReserveSkeleton />}>
+        <ReserveContent session={session} initialTab={aba} analysisEnabled={analysisEnabled} />
+      </Suspense>
+    </ReserveErrorBoundary>
   );
 }

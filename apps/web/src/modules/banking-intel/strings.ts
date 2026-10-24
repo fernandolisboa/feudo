@@ -1,5 +1,12 @@
 const en = {
   overline: "Banks",
+  tabs: {
+    label: "Bank sections",
+    candidates: "Candidates",
+    reviewed: "All banks",
+    accountTypes: "Account types",
+    weights: "Weights",
+  },
   headline: {
     candidate: "{bank} is the bank that best fits the household's weights.",
     noCandidate: "No bank outside the ones you already use has a score with these weights.",
@@ -233,6 +240,13 @@ const en = {
 
 const ptBR = {
   overline: "Bancos",
+  tabs: {
+    label: "Partes da comparação",
+    candidates: "Candidatos",
+    reviewed: "Todos os bancos",
+    accountTypes: "Tipos de conta",
+    weights: "Pesos",
+  },
   headline: {
     candidate: "{bank} é o banco que mais combina com os pesos da casa.",
     noCandidate: "Nenhum banco além dos que vocês já usam tem nota com esses pesos.",

@@ -235,7 +235,7 @@ describe("BanksView", () => {
   });
 
   it("lists every reviewed bank, with those that don't meet the filter under their own sub-heading", () => {
-    render(<BanksView {...buildProps()} />);
+    render(<BanksView {...buildProps()} initialTab="todos" />);
 
     const table = within(screen.getByRole("table"));
     const rows = table.getAllByRole("row").slice(1);
@@ -258,16 +258,37 @@ describe("BanksView", () => {
     expect(within(bradesco).getByText("53")).not.toBeNull();
   });
 
-  it("places the analyst's note between the candidates and the full list", () => {
+  it("puts the analyst's note under the candidates, on the tab it opens on", () => {
     render(<BanksView {...buildProps()} analystNote={<p>Nota do analista</p>} />);
 
     const note = screen.getByText("Nota do analista");
     const candidates = screen.getByRole("heading", { name: t.candidates.title });
-    const reviewed = screen.getByRole("heading", { name: t.reviewed.title });
     expect(
       candidates.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(note.compareDocumentPosition(reviewed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(note.closest("[hidden]")).toBeNull();
+    expect(screen.queryByRole("heading", { name: t.reviewed.title })).toBeNull();
+  });
+
+  it("splits the page into candidates, all banks, account types and weights tabs", () => {
+    window.history.replaceState(null, "", "/bancos");
+    render(<BanksView {...buildProps()} />);
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      t.tabs.candidates,
+      t.tabs.reviewed,
+      t.tabs.accountTypes,
+      t.tabs.weights,
+    ]);
+    expect(screen.getByRole("tab", { name: t.tabs.candidates }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+    expect(screen.getByText("Mostrando todos os 13 bancos.")).not.toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: t.tabs.weights }));
+    expect(screen.getByRole("heading", { name: t.weights.title })).not.toBeNull();
+    expect(window.location.search).toBe("?aba=pesos");
   });
 
   it("offers to connect a bank when the household has no accounts", () => {
@@ -307,7 +328,7 @@ describe("BanksView", () => {
   });
 
   it("shows the weights and the filter read-only to a member who cannot manage the household", () => {
-    render(<BanksView {...buildProps({ canManage: false })} />);
+    render(<BanksView {...buildProps({ canManage: false })} initialTab="pesos" />);
 
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.getByText("Muito alto")).not.toBeNull();
@@ -317,7 +338,7 @@ describe("BanksView", () => {
   });
 
   it("gives an owner or admin one level control per criterion, plus the comparison settings sliders", () => {
-    render(<BanksView {...buildProps()} />);
+    render(<BanksView {...buildProps()} initialTab="pesos" />);
 
     expect(screen.getAllByRole("combobox")).toHaveLength(WEIGHTS.length);
     expect(screen.getByRole("combobox", { name: "Tarifas" })).not.toBeNull();
@@ -328,7 +349,7 @@ describe("BanksView", () => {
   });
 
   it("resets custom weights to the product defaults", async () => {
-    render(<BanksView {...buildProps({ weightsAreCustom: true })} />);
+    render(<BanksView {...buildProps({ weightsAreCustom: true })} initialTab="pesos" />);
 
     expect(screen.getByText(t.weights.custom)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: t.weights.reset }));
@@ -340,7 +361,7 @@ describe("BanksView", () => {
 
   it("shows the server's refusal next to the weights", async () => {
     resetCriteriaWeightsActionMock.mockResolvedValue({ status: "error", message: t.errors.failed });
-    render(<BanksView {...buildProps({ weightsAreCustom: true })} />);
+    render(<BanksView {...buildProps({ weightsAreCustom: true })} initialTab="pesos" />);
 
     fireEvent.click(screen.getByRole("button", { name: t.weights.reset }));
 

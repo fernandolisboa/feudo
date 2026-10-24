@@ -2,6 +2,11 @@ const en = {
   preferences: {
     title: "Preferences",
     overline: "Settings",
+    tabs: {
+      label: "Preference sections",
+      general: "General",
+      data: "Data and account",
+    },
     sectionError: {
       message: "Couldn't load this part right now. Check your connection and try again.",
       retry: "Try again",
@@ -51,6 +56,11 @@ const ptBR = {
   preferences: {
     title: "Preferências",
     overline: "Configurações",
+    tabs: {
+      label: "Partes das preferências",
+      general: "Geral",
+      data: "Dados e cadastro",
+    },
     sectionError: {
       message: "Não deu para carregar esta parte agora. Confira sua conexão e tente de novo.",
       retry: "Tentar de novo",
