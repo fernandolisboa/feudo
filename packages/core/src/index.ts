@@ -30,14 +30,17 @@ export type { IsoDateRange, YearMonth } from "./ledger/year-month";
 export {
   InvalidIsoDateError,
   InvalidYearMonthError,
+  formatShortMonth,
   formatYearMonth,
   isYearMonth,
   localDateOf,
+  monthsOfYear,
   parseYearMonth,
   shiftIsoDate,
   shiftYearMonth,
   yearMonthDayRange,
   yearMonthOf,
+  yearOf,
 } from "./ledger/year-month";
 
 export type {

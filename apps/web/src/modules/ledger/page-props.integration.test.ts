@@ -99,6 +99,7 @@ describe("getTransactionsPageProps (integration)", () => {
       expect(filtered).toMatchObject({
         month: "2026-08",
         nextMonth: "2026-09",
+        latestMonth: "2026-09",
         selectedAccountId: savings,
         total: 1,
       });

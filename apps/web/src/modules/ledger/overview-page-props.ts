@@ -3,6 +3,7 @@ import {
   formatBasisPointsPercent,
   formatCompactReais,
   formatMoney,
+  formatShortMonth,
   formatYearMonth,
   HOUSEHOLD_CURRENCY,
   shiftYearMonth,
@@ -49,6 +50,7 @@ export type OverviewPageProps = {
   monthLabel: string;
   previousMonth: YearMonth;
   nextMonth: YearMonth | null;
+  latestMonth: YearMonth;
   hasAccounts: boolean;
   inProgress: boolean;
   incomeCentavos: number;
@@ -65,17 +67,6 @@ export type OverviewPageProps = {
   categorySpending: CategoryBarView[];
   series: MonthlyBarPointView[];
 };
-
-// pt-BR short month names ("set.", "ago.") carry a trailing period Feudo
-// never uses in a chart axis (DESIGN.md's formatting rules); UTC keeps the
-// month's own first day from shifting into the neighboring month in a
-// negative time zone.
-function shortMonthLabel(month: YearMonth): string {
-  const [year, monthNumber] = month.split("-");
-  const date = new Date(Date.UTC(Number(year), Number(monthNumber) - 1, 1));
-  const label = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(date);
-  return label.replace(/\.$/, "");
-}
 
 function joinMonthLabels(months: readonly YearMonth[]): string {
   const labels = months.map(formatYearMonth);
@@ -164,7 +155,7 @@ function categoryBars(spendingByCategory: readonly CategorySpending[]): Category
 function seriesPoints(series: readonly MonthlyPoint[]): MonthlyBarPointView[] {
   return series.map((point) => ({
     month: point.month,
-    shortLabel: shortMonthLabel(point.month),
+    shortLabel: formatShortMonth(point.month),
     monthLabel: formatYearMonth(point.month),
     incomeCentavos: point.incomeCentavos,
     spendingCentavos: point.spendingCentavos,
@@ -243,6 +234,7 @@ export async function buildOverviewPageProps(
     monthLabel: formatYearMonth(month),
     previousMonth: shiftYearMonth(month, -1),
     nextMonth: month < currentMonth ? shiftYearMonth(month, 1) : null,
+    latestMonth: currentMonth,
     hasAccounts: accounts.length > 0,
     inProgress: month === currentMonth,
     incomeCentavos: dashboard.totals.incomeCentavos,

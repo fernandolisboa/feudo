@@ -353,6 +353,13 @@
     border-bottom: 1px solid var(--line);
   }
 
+  /* Without a basis the headline's full length sets the row width and a long
+     one ("…gastou mais do que recebeu em outubro…") pushes the actions below. */
+  .page-header-heading {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+
   .page-header-overline {
     font-size: 11px;
     letter-spacing: 0.08em;

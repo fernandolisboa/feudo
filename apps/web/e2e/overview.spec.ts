@@ -55,4 +55,30 @@ test("overview dashboard shows the month's headline and totals from the synced f
   await expect(overviewMain.getByText("R$ 8.500,00").first()).toBeVisible();
   await expect(overviewMain.getByText("Gastos").first()).toBeVisible();
   await expect(overviewMain.getByText("R$ 1.192,80").first()).toBeVisible();
+
+  // At 1024px the headline's full length plus the month switcher overflow the
+  // content column, which used to push the switcher onto its own row.
+  const headline = page.getByRole("heading", { name: /da renda em setembro de 2026/ });
+  const monthButton = page.getByRole("button", { name: "Escolher mês, setembro de 2026" });
+  await page.setViewportSize({ width: 1024, height: 900 });
+  const desktopHeadline = await headline.boundingBox();
+  const desktopButton = await monthButton.boundingBox();
+  expect(desktopButton?.y ?? Infinity).toBeLessThan(
+    (desktopHeadline?.y ?? 0) + (desktopHeadline?.height ?? 0),
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const phoneHeadline = await headline.boundingBox();
+  const phoneButton = await monthButton.boundingBox();
+  expect(phoneButton?.y ?? 0).toBeGreaterThanOrEqual(
+    (phoneHeadline?.y ?? Infinity) + (phoneHeadline?.height ?? 0),
+  );
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await monthButton.click();
+  await page.getByRole("button", { name: "Ano anterior" }).click();
+  await page.getByRole("link", { name: "dezembro de 2025" }).click();
+  await expect(page).toHaveURL(/\?mes=2025-12$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Escolher mês, dezembro de 2025" })).toBeVisible();
 });

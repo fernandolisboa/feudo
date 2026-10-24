@@ -34,6 +34,7 @@ const transactionsProps: TransactionsPageProps = {
   monthLabel: "setembro de 2026",
   previousMonth: "2026-08",
   nextMonth: null,
+  latestMonth: "2026-09",
   range: null,
   periodLabel: null,
   todayIso: "2026-10-17",

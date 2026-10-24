@@ -11,7 +11,7 @@ export function PageHeader({
 }) {
   return (
     <div className="page-header">
-      <div>
+      <div className="page-header-heading">
         <p className="page-header-overline">{overline}</p>
         <h1 className="page-header-title">{title}</h1>
       </div>

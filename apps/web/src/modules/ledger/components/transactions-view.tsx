@@ -97,6 +97,7 @@ export function TransactionsView({
   monthLabel,
   previousMonth,
   nextMonth,
+  latestMonth,
   range,
   periodLabel,
   todayIso,
@@ -157,7 +158,10 @@ export function TransactionsView({
             ) : (
               <MonthSwitcher
                 tourTarget="transactions.month"
+                month={month}
                 monthLabel={monthLabel}
+                latestMonth={latestMonth}
+                monthHref={transactionsHref({ ...route, page: 1 })}
                 previousHref={transactionsHref({ ...route, month: previousMonth, page: 1 })}
                 nextHref={
                   nextMonth ? transactionsHref({ ...route, month: nextMonth, page: 1 }) : null

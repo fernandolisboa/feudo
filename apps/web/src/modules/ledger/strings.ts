@@ -190,6 +190,10 @@ const en = {
   monthSwitcher: {
     previous: "Previous month",
     next: "Next month",
+    choose: "Choose month, {month}",
+    pickerTitle: "Go to month",
+    previousYear: "Previous year",
+    nextYear: "Next year",
   },
   period: {
     label: "Period",
@@ -545,6 +549,10 @@ const ptBR = {
   monthSwitcher: {
     previous: "Mês anterior",
     next: "Próximo mês",
+    choose: "Escolher mês, {month}",
+    pickerTitle: "Ir para o mês",
+    previousYear: "Ano anterior",
+    nextYear: "Próximo ano",
   },
   period: {
     label: "Período",

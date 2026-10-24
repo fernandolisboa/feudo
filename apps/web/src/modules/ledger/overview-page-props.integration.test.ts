@@ -373,6 +373,9 @@ describe("getOverviewPageProps (integration)", () => {
 
       const clamped = await getOverviewPageProps(userA.session, { mes: "2026-12" }, NOW);
       expect(clamped.month).toBe("2026-09");
+
+      const earlier = await getOverviewPageProps(userA.session, { mes: "2025-03" }, NOW);
+      expect(earlier.latestMonth).toBe("2026-09");
     });
   });
 
