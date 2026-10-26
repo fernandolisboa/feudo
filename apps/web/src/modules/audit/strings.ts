@@ -18,8 +18,9 @@ const en = {
       nav: "Access pages",
       status: "Page {page} of {pages} · latest {total} accesses",
       rowsPerPage: "Rows per page",
-      previous: "Previous",
-      next: "Next",
+      previous: "Previous page",
+      next: "Next page",
+      page: "Page {page}",
     },
   },
 };
@@ -44,8 +45,9 @@ const ptBR = {
       nav: "Páginas de acessos",
       status: "Página {page} de {pages} · últimos {total} acessos",
       rowsPerPage: "Linhas por página",
-      previous: "Anteriores",
-      next: "Próximos",
+      previous: "Página anterior",
+      next: "Próxima página",
+      page: "Página {page}",
     },
   },
 } satisfies typeof en;

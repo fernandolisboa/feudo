@@ -53,7 +53,7 @@ describe("getTransactionsPageProps (integration)", () => {
         selectedAccountId: null,
         total: 1,
         page: 1,
-        hasMore: false,
+        pageCount: 1,
       });
       expect(props.transactions.map((transaction) => transaction.date)).toEqual(["2026-09-30"]);
       expect(props.accounts.map((account) => account.name)).toEqual(["Conta corrente"]);
@@ -125,7 +125,7 @@ describe("getTransactionsPageProps (integration)", () => {
         { mes: "2026-08", pagina: "7" },
         NOW,
       );
-      expect(pastTheEnd).toMatchObject({ page: 1, pageCount: 1, total: 2, hasMore: false });
+      expect(pastTheEnd).toMatchObject({ page: 1, pageCount: 1, total: 2 });
       expect(pastTheEnd.transactions).toHaveLength(2);
     });
   });
@@ -244,7 +244,7 @@ describe("getTransactionsPageProps (integration)", () => {
 
       expect(props.total).toBe(DEFAULT_TRANSACTIONS_PAGE_SIZE + 1);
       expect(props.transactions).toHaveLength(DEFAULT_TRANSACTIONS_PAGE_SIZE);
-      expect(props.hasMore).toBe(true);
+      expect(props.pageCount).toBe(2);
       expect(props.transactions.some((row) => row.description === "TRANSACAO DESCONHECIDA")).toBe(
         false,
       );
@@ -1358,7 +1358,7 @@ describe("getTransactionsPageProps (integration)", () => {
       );
       expect(page1.total).toBe(DEFAULT_TRANSACTIONS_PAGE_SIZE + 1);
       expect(page1.transactions).toHaveLength(DEFAULT_TRANSACTIONS_PAGE_SIZE);
-      expect(page1.hasMore).toBe(true);
+      expect(page1.pageCount).toBe(2);
 
       const page2 = await getTransactionsPageProps(
         userA.session,
@@ -1366,7 +1366,7 @@ describe("getTransactionsPageProps (integration)", () => {
         NOW,
       );
       expect(page2.transactions).toHaveLength(1);
-      expect(page2.hasMore).toBe(false);
+      expect(page2.page).toBe(2);
     });
   });
 

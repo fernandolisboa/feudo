@@ -73,8 +73,9 @@ const en = {
       nav: "Account and investment pages",
       status: "Page {page} of {pages} · {total} accounts and investments",
       rowsPerPage: "Rows per page",
-      previous: "Previous",
-      next: "Next",
+      previous: "Previous page",
+      next: "Next page",
+      page: "Page {page}",
     },
   },
   liquidity: {
@@ -267,8 +268,9 @@ const ptBR = {
       nav: "Páginas de contas e investimentos",
       status: "Página {page} de {pages} · {total} contas e investimentos",
       rowsPerPage: "Linhas por página",
-      previous: "Anteriores",
-      next: "Próximos",
+      previous: "Página anterior",
+      next: "Próxima página",
+      page: "Página {page}",
     },
   },
   liquidity: {

@@ -61,7 +61,6 @@ export type TransactionsPageProps = {
   page: number;
   pageSize: PageSize;
   pageCount: number;
-  hasMore: boolean;
 };
 
 // A total with nothing in it still reads as a full sentence rather than an
@@ -262,6 +261,5 @@ async function buildTransactionsPageProps(
     page,
     pageSize,
     pageCount: lastPage,
-    hasMore: start + pageSize < total,
   };
 }
