@@ -106,7 +106,7 @@ describe("AccountsTable pages and cards", () => {
     expect(screen.queryByText("Conta 11")).toBeNull();
     expect(screen.getByText("Página 1 de 2 · 16 contas")).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Próximas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página 2" }));
 
     expect(screen.getByText("Conta 16")).toBeDefined();
     expect(screen.queryByText("Conta 10")).toBeNull();

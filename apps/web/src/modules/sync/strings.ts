@@ -73,8 +73,9 @@ const en = {
       nav: "Account pages",
       status: "Page {page} of {pages} · {total} accounts",
       rowsPerPage: "Rows per page",
-      previous: "Previous",
-      next: "Next",
+      previous: "Previous page",
+      next: "Next page",
+      page: "Page {page}",
     },
     types: {
       checking: "Checking",
@@ -288,8 +289,9 @@ const ptBR = {
       nav: "Páginas de contas",
       status: "Página {page} de {pages} · {total} contas",
       rowsPerPage: "Linhas por página",
-      previous: "Anteriores",
-      next: "Próximas",
+      previous: "Página anterior",
+      next: "Próxima página",
+      page: "Página {page}",
     },
     types: {
       checking: "Conta corrente",

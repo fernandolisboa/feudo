@@ -2,18 +2,16 @@
 
 import { useState, type ReactNode } from "react";
 
-import { Button } from "./button";
 import { PageNav, paginationStatus } from "./page-nav";
+import { PageNumbers, type PageNumberLabels } from "./page-numbers";
 import { SMALLEST_PAGE_SIZE, pageAfterResize, type PageSize } from "@/lib/page-size";
 import { PageSizeSelect } from "./page-size-select";
 import { Table, TableBody, TableHeader } from "./table";
 
-export type PaginationLabels = {
+export type PaginationLabels = PageNumberLabels & {
   nav: string;
   status: string;
   rowsPerPage: string;
-  previous: string;
-  next: string;
 };
 
 export function PaginatedTable({
@@ -55,34 +53,9 @@ export function PaginatedTable({
               }}
             />
           }
-          previous={
+          pages={
             pageCount > 1 ? (
-              <Button
-                variant="outline"
-                size="sm"
-                focusableWhenDisabled
-                disabled={page === 1}
-                onClick={() => {
-                  setPage(page - 1);
-                }}
-              >
-                {labels.previous}
-              </Button>
-            ) : null
-          }
-          next={
-            pageCount > 1 ? (
-              <Button
-                variant="outline"
-                size="sm"
-                focusableWhenDisabled
-                disabled={page === pageCount}
-                onClick={() => {
-                  setPage(page + 1);
-                }}
-              >
-                {labels.next}
-              </Button>
+              <PageNumbers page={page} pageCount={pageCount} labels={labels} onSelect={setPage} />
             ) : null
           }
         />

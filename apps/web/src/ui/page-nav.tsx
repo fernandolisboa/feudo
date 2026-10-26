@@ -19,14 +19,12 @@ export function PageNav({
   label,
   status,
   pageSize,
-  previous,
-  next,
+  pages,
 }: {
   label: string;
   status: string;
   pageSize?: ReactNode;
-  previous: ReactNode;
-  next: ReactNode;
+  pages: ReactNode;
 }) {
   return (
     <nav aria-label={label} className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -35,8 +33,7 @@ export function PageNav({
       </span>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {pageSize}
-        {previous}
-        {next}
+        {pages}
       </div>
     </nav>
   );

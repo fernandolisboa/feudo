@@ -63,7 +63,6 @@ function buildProps(overrides: Partial<TransactionsPageProps> = {}): Transaction
     page: 1,
     pageSize: 20,
     pageCount: 1,
-    hasMore: false,
     ...overrides,
   };
 }
@@ -359,13 +358,12 @@ describe("TransactionsView", () => {
           total: 72,
           page: 4,
           pageCount: 4,
-          hasMore: false,
           transactions: [ROW],
         })}
       />,
     );
 
-    expect(screen.getByRole("link", { name: t.pagination.newer }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: t.pagination.previous }).getAttribute("href")).toBe(
       "/transacoes?mes=2026-09&pagina=3",
     );
     fireEvent.click(screen.getByRole("combobox", { name: t.pagination.rowsPerPage }));
@@ -387,14 +385,60 @@ describe("TransactionsView", () => {
           total: 72,
           pageSize: 50,
           pageCount: 2,
-          hasMore: true,
           transactions: [ROW],
         })}
       />,
     );
 
-    expect(screen.getByRole("link", { name: t.pagination.older }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: t.pagination.next }).getAttribute("href")).toBe(
       "/transacoes?mes=2026-09&linhas=50&pagina=2",
+    );
+  });
+
+  it("numbers the pages, linking each one and marking the current page", () => {
+    render(
+      <TransactionsView
+        {...buildProps({
+          accounts: oneAccount,
+          total: 200,
+          page: 5,
+          pageCount: 10,
+          transactions: [ROW],
+        })}
+      />,
+    );
+
+    const nav = screen.getByRole("navigation", { name: t.pagination.label });
+    const hrefs = within(nav)
+      .getAllByRole("link")
+      .map((link) => [link.getAttribute("aria-label"), link.getAttribute("href")]);
+    expect(hrefs).toEqual([
+      ["Página anterior", "/transacoes?mes=2026-09&pagina=4"],
+      ["Página 1", "/transacoes?mes=2026-09"],
+      ["Página 4", "/transacoes?mes=2026-09&pagina=4"],
+      ["Página 5", "/transacoes?mes=2026-09&pagina=5"],
+      ["Página 6", "/transacoes?mes=2026-09&pagina=6"],
+      ["Página 10", "/transacoes?mes=2026-09&pagina=10"],
+      ["Próxima página", "/transacoes?mes=2026-09&pagina=6"],
+    ]);
+    expect(within(nav).getByRole("link", { name: "Página 5" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+  });
+
+  it("disables the previous arrow on the first page", () => {
+    render(
+      <TransactionsView
+        {...buildProps({ accounts: oneAccount, total: 60, pageCount: 3, transactions: [ROW] })}
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: t.pagination.previous })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t.pagination.previous }).getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(screen.getByRole("link", { name: t.pagination.next }).getAttribute("href")).toBe(
+      "/transacoes?mes=2026-09&pagina=2",
     );
   });
 
@@ -417,14 +461,13 @@ describe("TransactionsView", () => {
           periodLabel: "06/07/2026 a 17/10/2026",
           total: 60,
           pageCount: 2,
-          hasMore: true,
           transactions: [ROW],
         })}
       />,
     );
 
-    const older = screen.getByRole("link", { name: t.pagination.older });
-    expect(older.getAttribute("href")).toBe("/transacoes?de=2026-07-06&ate=2026-10-17&pagina=2");
+    const next = screen.getByRole("link", { name: t.pagination.next });
+    expect(next.getAttribute("href")).toBe("/transacoes?de=2026-07-06&ate=2026-10-17&pagina=2");
     expect(screen.getByText("Página 1 de 2 · 60 transações")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Exportar 60 transações" }));

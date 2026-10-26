@@ -5,6 +5,7 @@ import { Button } from "@/ui/button";
 import { Notice } from "@/ui/notice";
 import { PageHeader } from "@/ui/page-header";
 import { PageNav, paginationStatus } from "@/ui/page-nav";
+import { PageNumbers } from "@/ui/page-numbers";
 import { SMALLEST_PAGE_SIZE } from "@/lib/page-size";
 import { interpolate } from "@/lib/interpolate";
 
@@ -119,7 +120,6 @@ export function TransactionsView({
   page,
   pageSize,
   pageCount,
-  hasMore,
 }: TransactionsPageProps) {
   const isRange = range !== null;
   const hasOtherFilters =
@@ -235,28 +235,16 @@ export function TransactionsView({
           {total > SMALLEST_PAGE_SIZE ? (
             <PageNav
               label={t.pagination.label}
-              status={paginationStatus(t.pagination.page, page, pageCount, total)}
+              status={paginationStatus(t.pagination.status, page, pageCount, total)}
               pageSize={<TransactionsPageSizeSelect route={{ ...route, page }} />}
-              previous={
-                page > 1 ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    render={<Link href={transactionsHref({ ...route, page: page - 1 })} />}
-                  >
-                    {t.pagination.newer}
-                  </Button>
-                ) : null
-              }
-              next={
-                hasMore ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    render={<Link href={transactionsHref({ ...route, page: page + 1 })} />}
-                  >
-                    {t.pagination.older}
-                  </Button>
+              pages={
+                pageCount > 1 ? (
+                  <PageNumbers
+                    page={page}
+                    pageCount={pageCount}
+                    labels={t.pagination}
+                    hrefFor={(target) => transactionsHref({ ...route, page: target })}
+                  />
                 ) : null
               }
             />

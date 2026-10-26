@@ -76,7 +76,6 @@ const transactionsProps: TransactionsPageProps = {
   page: 1,
   pageSize: 20,
   pageCount: 1,
-  hasMore: false,
 };
 
 describe("guided tour targets", () => {
