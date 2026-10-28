@@ -80,6 +80,7 @@ export type ReviewedBankRow = {
   overriddenLabel: string | null;
   unmetLabel: string | null;
   offeredTypesLine: string | null;
+  score: number | null;
   scoreLabel: string;
   review: ReviewView;
 };
@@ -89,6 +90,7 @@ export type CandidateView = {
   href: string;
   rankLabel: string;
   name: string;
+  score: number | null;
   scoreLabel: string;
   review: ReviewView;
   pros: string[];
@@ -320,6 +322,7 @@ function reviewedRows(
     ),
     unmetLabel: unmetLabel(score.unmetRequirements),
     offeredTypesLine: offeredAccountTypesLine(householdAccountTypes(score.institutionId, profiles)),
+    score: score.score,
     scoreLabel: scoreLabel(score.score),
     review: reviewView(score.reviewedAt, today),
   }));
@@ -338,6 +341,7 @@ function candidateView(
     href: bankHref(candidate.institutionId),
     rankLabel: interpolate(t.candidates.rank, "{rank}", String(index + 1)),
     name: institutionName(candidate.institutionId),
+    score: candidate.score,
     scoreLabel: scoreLabel(candidate.score),
     review: reviewView(candidate.reviewedAt, today),
     pros: candidate.pros.map(comparisonLine),

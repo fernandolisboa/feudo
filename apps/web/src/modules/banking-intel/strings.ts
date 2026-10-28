@@ -40,7 +40,6 @@ const en = {
     title: "Candidates",
     meta: "score from 0 to 100 with the household's weights",
     rank: "#{rank}",
-    scoreOf: "out of 100",
     reviewedAt: "Reviewed on {date}",
     stale: "review older than 180 days",
     pros: "For",
@@ -158,6 +157,7 @@ const en = {
   },
   method:
     "The score is the weighted mean of the household's seven criteria; a criterion with insufficient evidence is left out of the mean and shown as such. Account types are a filter, not part of the score: a bank missing a type the household marked as required is listed after the others and never becomes a candidate, even with a good score. A type Feudo could not find a source for counts as not having it. Scores and account types come from sources Feudo cites and reviews, and they are not a recommendation.",
+  stars: { label: "Score {score} out of 100", value: "{score}/100" },
   analysisFacts: {
     weights: "Household criteria weights",
     weight: "{criterion} {level} ({share}%)",
@@ -286,7 +286,6 @@ const ptBR = {
     title: "Candidatos",
     meta: "nota de 0 a 100 com os pesos da casa",
     rank: "{rank}º",
-    scoreOf: "de 100",
     reviewedAt: "Revisado em {date}",
     stale: "revisão com mais de 180 dias",
     pros: "A favor",
@@ -411,6 +410,7 @@ const ptBR = {
   },
   method:
     "A nota é a média ponderada dos sete critérios da casa; um critério com evidência insuficiente fica fora da média e aparece indicado. Tipos de conta são um filtro, não fazem parte da nota: um banco sem um tipo que a casa marcou como obrigatório entra depois dos outros na lista e nunca é candidato, mesmo com uma nota boa. Um tipo que o Feudo não encontrou fonte para conta como não tendo. As notas e os tipos de conta vêm de fontes citadas e revisadas pelo Feudo e não são uma recomendação.",
+  stars: { label: "Nota {score} de 100", value: "{score}/100" },
   analysisFacts: {
     weights: "Pesos dos critérios da casa",
     weight: "{criterion} {level} ({share}%)",

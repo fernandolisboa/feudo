@@ -109,6 +109,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         href: "/bancos/nubank",
         rankLabel: "1º",
         name: "Nubank",
+        score: 77,
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
         pros: ["Tarifas: 100 contra 40 (Itaú)"],
@@ -122,6 +123,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         href: "/bancos/btg",
         rankLabel: "2º",
         name: "BTG Pactual",
+        score: 76,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
         pros: [],
@@ -141,6 +143,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         unmetLabel: null,
         overriddenLabel: null,
         offeredTypesLine: "conjunta · compartilhada (só no Ultravioleta)",
+        score: 77,
         scoreLabel: "77",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -153,6 +156,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         unmetLabel: null,
         overriddenLabel: null,
         offeredTypesLine: null,
+        score: 76,
         scoreLabel: "76",
         review: { label: "Revisado em 01/03/2026", stale: true },
       },
@@ -165,6 +169,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         unmetLabel: null,
         overriddenLabel: null,
         offeredTypesLine: null,
+        score: 60,
         scoreLabel: "60",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -177,6 +182,7 @@ function buildProps(overrides: Partial<BanksPageProps> = {}): BanksPageProps {
         unmetLabel: "não tem: conta MEI",
         overriddenLabel: null,
         offeredTypesLine: "conjunta",
+        score: 53,
         scoreLabel: "53",
         review: { label: "Revisado em 09/09/2026", stale: false },
       },
@@ -223,7 +229,7 @@ describe("BanksView", () => {
     render(<BanksView {...buildProps()} />);
 
     const nubank = within(screen.getByRole("article", { name: "Nubank" }));
-    expect(nubank.getByText("77")).not.toBeNull();
+    expect(nubank.getByRole("button", { name: "Nota 77 de 100" })).not.toBeNull();
     expect(nubank.getByText("Revisado em 09/09/2026")).not.toBeNull();
     expect(nubank.getByText("Tarifas: 100 contra 40 (Itaú)")).not.toBeNull();
     expect(nubank.getByText(interpolate(t.candidates.noCons, "{threshold}", "10"))).not.toBeNull();
@@ -251,11 +257,25 @@ describe("BanksView", () => {
 
     const itau = table.getByRole("row", { name: /Itaú/ });
     expect(within(itau).getByText("3º")).not.toBeNull();
-    expect(within(itau).getByText("60")).not.toBeNull();
+    expect(within(itau).getByRole("button", { name: "Nota 60 de 100" })).not.toBeNull();
     expect(within(itau).getByText("Revisado em 09/09/2026")).not.toBeNull();
 
     const bradesco = table.getByRole("row", { name: /Bradesco/ });
-    expect(within(bradesco).getByText("53")).not.toBeNull();
+    expect(within(bradesco).getByRole("button", { name: "Nota 53 de 100" })).not.toBeNull();
+  });
+
+  it("says a bank has insufficient evidence instead of drawing empty stars", () => {
+    const props = buildProps();
+    const reviewed = props.reviewed.map((row) =>
+      row.institutionId === "bradesco"
+        ? { ...row, score: null, scoreLabel: t.candidates.noScore }
+        : row,
+    );
+    render(<BanksView {...props} reviewed={reviewed} initialTab="todos" />);
+
+    const bradesco = within(screen.getByRole("row", { name: /Bradesco/ }));
+    expect(bradesco.getByText(t.candidates.noScore)).not.toBeNull();
+    expect(bradesco.queryByRole("button", { name: /^Nota/ })).toBeNull();
   });
 
   it("puts the analyst's note under the candidates, on the tab it opens on", () => {
