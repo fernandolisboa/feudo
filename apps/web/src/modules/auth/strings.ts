@@ -1,7 +1,6 @@
 const en = {
   signUp: {
     title: "Create your sign-up",
-    subtitle: "Sign up to start managing your household's finances.",
     nameLabel: "Name",
     emailLabel: "Email",
     passwordLabel: "Password",
@@ -26,7 +25,6 @@ const en = {
   },
   signIn: {
     title: "Sign in",
-    subtitle: "Enter your email and password to access your household.",
     emailLabel: "Email",
     passwordLabel: "Password",
     submit: "Sign in",
@@ -54,7 +52,6 @@ const en = {
   },
   resetPassword: {
     title: "Choose a new password",
-    subtitle: "Enter a new password for your sign-up.",
     passwordLabel: "New password",
     submit: "Save new password",
     invalidOrExpired: "This link is invalid or has expired. Request a new one.",
@@ -123,7 +120,6 @@ const en = {
 const ptBR = {
   signUp: {
     title: "Crie seu cadastro",
-    subtitle: "Cadastre-se para começar a organizar as finanças da sua casa.",
     nameLabel: "Nome",
     emailLabel: "E-mail",
     passwordLabel: "Senha",
@@ -148,7 +144,6 @@ const ptBR = {
   },
   signIn: {
     title: "Entrar",
-    subtitle: "Informe seu e-mail e sua senha para acessar sua casa.",
     emailLabel: "E-mail",
     passwordLabel: "Senha",
     submit: "Entrar",
@@ -176,7 +171,6 @@ const ptBR = {
   },
   resetPassword: {
     title: "Defina uma nova senha",
-    subtitle: "Informe uma nova senha para o seu cadastro.",
     passwordLabel: "Nova senha",
     submit: "Salvar nova senha",
     invalidOrExpired: "Este link é inválido ou expirou. Peça um novo link.",

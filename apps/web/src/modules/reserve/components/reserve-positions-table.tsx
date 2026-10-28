@@ -20,10 +20,7 @@ export function ReservePositionsTable({
 }) {
   return (
     <section className="mb-8">
-      <SectionHeader
-        title={t.positions.title}
-        actions={<span className="text-muted-foreground text-[12px]">{t.positions.meta}</span>}
-      />
+      <SectionHeader title={t.positions.title} />
       {positions.length === 0 ? (
         <p className="font-heading text-[15px]">{t.positions.empty}</p>
       ) : (

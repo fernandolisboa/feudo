@@ -278,12 +278,7 @@ export function BankDetailView(props: BankDetailPageProps) {
       {paymentInstitutionNotice ? <Notice>{paymentInstitutionNotice}</Notice> : null}
 
       <section className="mb-8">
-        <SectionHeader
-          title={t.detail.criteriaTitle}
-          actions={
-            <span className="text-muted-foreground text-[12px]">{t.detail.criteriaMeta}</span>
-          }
-        />
+        <SectionHeader title={t.detail.criteriaTitle} />
         <ul className="divide-border flex flex-col divide-y border-y">
           {props.criteria.map((item) => (
             <CriterionBlock
@@ -301,12 +296,7 @@ export function BankDetailView(props: BankDetailPageProps) {
       </section>
 
       <section className="mb-8">
-        <SectionHeader
-          title={t.accountTypes.sectionTitle}
-          actions={
-            <span className="text-muted-foreground text-[12px]">{t.accountTypes.sectionMeta}</span>
-          }
-        />
+        <SectionHeader title={t.accountTypes.sectionTitle} />
         <ul className="divide-border flex flex-col divide-y border-y">
           {props.accountTypes.map((item) => (
             <AccountTypeBlock

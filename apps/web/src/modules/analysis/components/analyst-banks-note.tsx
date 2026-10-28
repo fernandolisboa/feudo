@@ -9,14 +9,7 @@ import { t } from "../strings";
 export function AnalystBanksNote({ paragraphs, source, href }: AnalystBanksNoteProps) {
   return (
     <section className="mb-8">
-      <SectionHeader
-        title={t.banksNote.title}
-        actions={
-          <span className="text-muted-foreground hidden text-[12px] sm:inline">
-            {t.banksNote.meta}
-          </span>
-        }
-      />
+      <SectionHeader title={t.banksNote.title} />
       <div className="flex max-w-[68ch] flex-col gap-3">
         {paragraphs.map((paragraph, index) => (
           <p key={index} className="text-[15px] leading-relaxed whitespace-pre-line">
