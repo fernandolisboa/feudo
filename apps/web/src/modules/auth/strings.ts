@@ -1,7 +1,6 @@
 const en = {
   signUp: {
     title: "Create your sign-up",
-    subtitle: "Sign up to start managing your household's finances.",
     nameLabel: "Name",
     emailLabel: "Email",
     passwordLabel: "Password",
@@ -121,7 +120,6 @@ const en = {
 const ptBR = {
   signUp: {
     title: "Crie seu cadastro",
-    subtitle: "Cadastre-se para começar a organizar as finanças da sua casa.",
     nameLabel: "Nome",
     emailLabel: "E-mail",
     passwordLabel: "Senha",

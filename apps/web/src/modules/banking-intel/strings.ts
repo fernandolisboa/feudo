@@ -172,7 +172,7 @@ const en = {
   detail: {
     back: "All banks",
     score: "Score",
-    scoreMeta: "out of 100 with the household's weights",
+    scoreMeta: "out of 100",
     position: "Position",
     positionMeta: "among {count} reviewed banks",
     guarantee: "Guarantee",
@@ -421,7 +421,7 @@ const ptBR = {
   detail: {
     back: "Todos os bancos",
     score: "Nota",
-    scoreMeta: "de 100 com os pesos da casa",
+    scoreMeta: "de 100",
     position: "Posição",
     positionMeta: "entre {count} bancos avaliados",
     guarantee: "Garantia",

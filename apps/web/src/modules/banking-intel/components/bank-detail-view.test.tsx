@@ -75,7 +75,7 @@ function buildProps(overrides: Partial<BankDetailPageProps> = {}): BankDetailPag
     tag: "vocês usam",
     unmetLabel: null,
     stats: [
-      { label: "Nota", value: "71", meta: "de 100 com os pesos da casa" },
+      { label: "Nota", value: "71", meta: "de 100" },
       { label: "Posição", value: "7º", meta: "entre 13 bancos avaliados" },
       { label: "Garantia", value: "FGC", meta: "por conglomerado: NUBANK" },
     ],
