@@ -77,6 +77,12 @@ describe("AnalysesView", () => {
     expect(screen.getByText(/prompt analyst-v2/)).toBeDefined();
   });
 
+  it("lists the figures used with no aside under them", () => {
+    render(<AnalysesView {...props()} />);
+
+    expect(screen.queryByText("Todos estes números aparecem nas telas do Feudo.")).toBeNull();
+  });
+
   it("shows an analyst-v1 reading under one heading, titled by the reading", () => {
     render(<AnalysesView {...props({ reading: reading({ summary: null, banks: [] }) })} />);
 

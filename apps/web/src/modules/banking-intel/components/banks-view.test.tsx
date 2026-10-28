@@ -225,6 +225,12 @@ describe("BanksView", () => {
     expect(screen.getByText("Mostrando todos os 13 bancos.")).not.toBeNull();
   });
 
+  it("heads the candidates and the reviewed banks without a caption beside the title", () => {
+    render(<BanksView {...buildProps()} />);
+
+    expect(screen.queryByText("nota de 0 a 100 com os pesos da casa")).toBeNull();
+  });
+
   it("shows each candidate with its score, review date, pros, cons and missing evidence", () => {
     render(<BanksView {...buildProps()} />);
 

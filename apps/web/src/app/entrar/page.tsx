@@ -25,7 +25,7 @@ export default async function SignInPage({
   }
 
   return (
-    <AuthShell title={t.signIn.title} subtitle={t.signIn.subtitle}>
+    <AuthShell title={t.signIn.title}>
       <ClearOfflineCopies />
       <SignInForm next={nextPath} />
     </AuthShell>

@@ -75,6 +75,12 @@ describe("GuidedCategorizationView", () => {
     expect(screen.getByText("Entrada")).toBeTruthy();
   });
 
+  it("goes straight from the progress to the transaction, with no explainer above it", () => {
+    render(<GuidedCategorizationView {...props({ items: [item({})] })} />);
+
+    expect(screen.queryByText(/Uma de cada vez/)).toBeNull();
+  });
+
   it("states the suggestion and its reason, and preselects it", () => {
     const { container } = render(<GuidedCategorizationView {...props({})} />);
 

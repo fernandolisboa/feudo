@@ -303,4 +303,10 @@ describe("ReserveView", () => {
     expect(screen.getByText(t.positions.title)).not.toBeNull();
     expect(screen.queryByText(t.monthlyTable.title)).toBeNull();
   });
+
+  it("heads the accounts and investments without a caption beside the title", () => {
+    render(<ReserveView {...buildProps()} />);
+
+    expect(screen.queryByText("marque o que faz parte da reserva")).toBeNull();
+  });
 });

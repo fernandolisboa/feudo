@@ -475,8 +475,6 @@ const en = {
       one: "1 transaction left to categorize",
       many: "{count} transactions left to categorize",
     },
-    intro:
-      "One at a time, largest amounts first. Each one you categorize goes into the overview's numbers. The ones you leave for later go to the end.",
     progress: "{done} of {total} categorized",
     credit: "Money in",
     debit: "Money out",
@@ -837,8 +835,6 @@ const ptBR = {
       one: "Falta 1 transação para categorizar",
       many: "Faltam {count} transações para categorizar",
     },
-    intro:
-      "Uma de cada vez, das de maior valor para as menores. Cada uma que você categoriza já entra nos números da Visão geral. As que você deixar para depois vão para o fim da fila.",
     progress: "{done} de {total} categorizadas",
     credit: "Entrada",
     debit: "Saída",

@@ -30,7 +30,6 @@ const en = {
     readingOnlySection: "Reading",
     banksSection: "Banks",
     banksLink: "Open the bank comparison",
-    inputsAside: "Every figure here appears on Feudo's own screens.",
     earlier: "This is an earlier reading. The household's figures may have changed since.",
     latest: "See the newest",
     history: "Readings",
@@ -40,7 +39,6 @@ const en = {
   },
   banksNote: {
     title: "What the analyst says",
-    meta: "read against the household's month and reserve",
     more: "See the full reading",
   },
   outcomes: {
@@ -143,7 +141,6 @@ const ptBR = {
     readingOnlySection: "Leitura",
     banksSection: "Bancos",
     banksLink: "Abrir a comparação de bancos",
-    inputsAside: "Todos estes números aparecem nas telas do Feudo.",
     earlier: "Esta é uma leitura anterior. Os números da casa podem ter mudado desde então.",
     latest: "Ver a mais recente",
     history: "Leituras",
@@ -153,7 +150,6 @@ const ptBR = {
   },
   banksNote: {
     title: "O que o analista diz",
-    meta: "lido junto com o mês e a reserva da casa",
     more: "Ver a leitura completa",
   },
   outcomes: {

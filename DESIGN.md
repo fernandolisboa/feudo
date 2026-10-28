@@ -23,7 +23,9 @@ shadows, one accent used sparingly, dense enough for a desktop that is open ever
   the mobile header.
 - **Page**: overline (section · period) + serif headline that states the month's fact in one
   sentence, actions on the right; then sections separated by hairlines with a serif section title
-  and a right-aligned meta or action.
+  and, when needed, a right-aligned action or state (such as which weights apply). No caption that
+  restates or explains the section, and no explainer paragraph under a headline: the tour and the
+  guide carry the explanations.
 - **Data**: stat tiles in a 4-column hairline grid; bar lists for magnitudes; tables with an
   uppercase 11px header row and 40px rows; notices as bordered panels with an icon and one action.
   Tables never scroll sideways: cells wrap to the full width, and a table narrower than 48rem turns

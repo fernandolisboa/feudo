@@ -24,7 +24,7 @@ export default async function SignUpPage({
   }
 
   return (
-    <AuthShell title={t.signUp.title} subtitle={t.signUp.subtitle}>
+    <AuthShell title={t.signUp.title}>
       <SignUpForm next={nextPath} />
     </AuthShell>
   );

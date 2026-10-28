@@ -18,7 +18,6 @@ export function InputsUsed({ inputs }: { inputs: InputUsed[] }) {
           </div>
         ))}
       </dl>
-      <p className="text-muted-foreground mt-3 text-[12px]">{t.analyses.inputsAside}</p>
     </aside>
   );
 }

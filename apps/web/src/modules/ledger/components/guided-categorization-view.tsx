@@ -260,7 +260,6 @@ export function GuidedCategorizationView({
         </div>
       ) : (
         <div className="flex max-w-2xl flex-col gap-4">
-          <p className="text-muted-foreground text-[13px]">{t.guided.intro}</p>
           <Progress value={total > 0 ? Math.round((done / total) * 100) : 0}>
             <span className="text-muted-foreground text-xs tabular-nums">
               {interpolateAll(t.guided.progress, {

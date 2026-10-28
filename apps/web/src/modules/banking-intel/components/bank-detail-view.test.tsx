@@ -75,7 +75,7 @@ function buildProps(overrides: Partial<BankDetailPageProps> = {}): BankDetailPag
     tag: "vocês usam",
     unmetLabel: null,
     stats: [
-      { label: "Nota", value: "71", meta: "de 100 com os pesos da casa" },
+      { label: "Nota", value: "71", meta: "de 100" },
       { label: "Posição", value: "7º", meta: "entre 13 bancos avaliados" },
       { label: "Garantia", value: "FGC", meta: "por conglomerado: NUBANK" },
     ],
@@ -117,6 +117,12 @@ describe("BankDetailView", () => {
     );
     expect(within(fees).getByText("Revisado em 09/09/2026")).not.toBeNull();
     expect(screen.getByRole("link", { name: t.detail.back }).getAttribute("href")).toBe("/bancos");
+  });
+
+  it("heads the criteria and the account types without a caption beside the title", () => {
+    render(<BankDetailView {...buildProps()} />);
+
+    expect(screen.queryByText("o que o Feudo encontrou e onde")).toBeNull();
   });
 
   it("shows every account type with its status, condition and the household's correction, asking whether to take a newer review", async () => {
