@@ -31,9 +31,22 @@ describe("ScoreStars", () => {
   it("shows the score out of 100 on tap, where hover never happens", async () => {
     render(<ScoreStars score={63} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Nota 63 de 100" }));
+    const stars = screen.getByRole("button", { name: "Nota 63 de 100" });
+    fireEvent.pointerDown(stars, { pointerType: "touch" });
+    fireEvent.click(stars);
 
     expect(await screen.findByText("63/100")).not.toBeNull();
+  });
+
+  it("shows the score out of 100 from the keyboard", async () => {
+    render(<ScoreStars score={63} />);
+
+    const stars = screen.getByRole("button", { name: "Nota 63 de 100" });
+    stars.focus();
+    fireEvent.keyDown(stars, { key: "Enter" });
+    fireEvent.click(stars);
+
+    expect(await screen.findByRole("dialog", { name: "Nota 63 de 100" })).not.toBeNull();
   });
 
   it("shows the score out of 100 on hover", async () => {

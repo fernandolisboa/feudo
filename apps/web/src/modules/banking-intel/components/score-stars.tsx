@@ -29,7 +29,7 @@ function Star({ fill, size }: { fill: number; size: keyof typeof STAR_SIZE }) {
       />
       <span
         className="absolute inset-y-0 left-0 overflow-hidden"
-        style={{ width: `${String(fill * 100)}%` }}
+        style={{ width: `${String(Math.round(fill * 100))}%` }}
       >
         <StarIcon
           aria-hidden
@@ -51,12 +51,13 @@ export function ScoreStars({
   size?: keyof typeof STAR_SIZE;
 }) {
   const value = String(score);
+  const label = interpolate(t.stars.label, "{score}", value);
   return (
     <Popover>
       <PopoverTrigger
         openOnHover
         delay={0}
-        aria-label={interpolate(t.stars.label, "{score}", value)}
+        aria-label={label}
         className="focus-visible:ring-ring/50 inline-flex h-11 cursor-default items-center gap-0.5 rounded-sm outline-none focus-visible:ring-3 md:h-9"
       >
         {starFills(score).map((fill, index) => (
@@ -65,6 +66,7 @@ export function ScoreStars({
       </PopoverTrigger>
       <PopoverContent
         side="top"
+        aria-label={label}
         className="bg-foreground text-background w-auto rounded-md px-3 py-1.5 text-[12px] tabular-nums shadow-none ring-0"
       >
         {interpolate(t.stars.value, "{score}", value)}
