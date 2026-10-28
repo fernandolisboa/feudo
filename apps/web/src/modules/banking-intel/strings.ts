@@ -38,7 +38,6 @@ const en = {
   },
   candidates: {
     title: "Candidates",
-    meta: "score from 0 to 100 with the household's weights",
     rank: "#{rank}",
     scoreOf: "out of 100",
     reviewedAt: "Reviewed on {date}",
@@ -56,7 +55,6 @@ const en = {
   },
   reviewed: {
     title: "All reviewed banks",
-    meta: "score from 0 to 100 with the household's weights",
     position: "Position",
     bank: "Bank",
     score: "Score",
@@ -130,7 +128,6 @@ const en = {
       and: "and",
     },
     sectionTitle: "Account types",
-    sectionMeta: "what Feudo found and where",
     correct: "Correct",
     editOwn: "Edit change",
     undo: "Undo change",
@@ -186,7 +183,6 @@ const en = {
     paymentInstitution:
       "The account is held by a payment institution, so the balance in it is not covered by the FGC.",
     criteriaTitle: "Criteria",
-    criteriaMeta: "what Feudo found and where",
     weight: "Weight: {level} · {share}% of the score",
     sources: "Sources",
     primary: "primary source",
@@ -284,7 +280,6 @@ const ptBR = {
   },
   candidates: {
     title: "Candidatos",
-    meta: "nota de 0 a 100 com os pesos da casa",
     rank: "{rank}º",
     scoreOf: "de 100",
     reviewedAt: "Revisado em {date}",
@@ -302,7 +297,6 @@ const ptBR = {
   },
   reviewed: {
     title: "Todos os bancos avaliados",
-    meta: "nota de 0 a 100 com os pesos da casa",
     position: "Posição",
     bank: "Banco",
     score: "Nota",
@@ -383,7 +377,6 @@ const ptBR = {
       and: "e",
     },
     sectionTitle: "Tipos de conta",
-    sectionMeta: "o que o Feudo encontrou e onde",
     correct: "Corrigir",
     editOwn: "Editar alteração",
     undo: "Desfazer alteração",
@@ -439,7 +432,6 @@ const ptBR = {
     paymentInstitution:
       "A conta fica numa instituição de pagamento, então o saldo parado nela não tem cobertura do FGC.",
     criteriaTitle: "Critérios",
-    criteriaMeta: "o que o Feudo encontrou e onde",
     weight: "Peso: {level} · {share}% da nota",
     sources: "Fontes",
     primary: "fonte primária",

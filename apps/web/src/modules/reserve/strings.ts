@@ -52,7 +52,6 @@ const en = {
   },
   positions: {
     title: "Accounts and investments",
-    meta: "mark what makes up the reserve",
     account: "Account",
     balance: "Balance",
     liquidity: "Liquidity",
@@ -247,7 +246,6 @@ const ptBR = {
   },
   positions: {
     title: "Contas e investimentos",
-    meta: "marque o que faz parte da reserva",
     account: "Conta",
     balance: "Saldo",
     liquidity: "Liquidez",

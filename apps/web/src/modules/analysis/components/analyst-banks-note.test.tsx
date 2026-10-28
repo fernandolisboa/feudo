@@ -25,4 +25,12 @@ describe("AnalystBanksNote", () => {
       "/analises",
     );
   });
+
+  it("heads the note without a caption beside the title", () => {
+    render(
+      <AnalystBanksNote paragraphs={["Sem motivo para trocar."]} source="" href="/analises" />,
+    );
+
+    expect(screen.queryByText("lido junto com o mês e a reserva da casa")).toBeNull();
+  });
 });

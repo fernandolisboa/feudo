@@ -8,10 +8,7 @@ export default async function ResetPasswordPage({
   const { token } = await searchParams;
 
   return (
-    <AuthShell
-      title={t.resetPassword.title}
-      subtitle={token ? t.resetPassword.subtitle : undefined}
-    >
+    <AuthShell title={t.resetPassword.title}>
       <ResetPasswordFlow token={token} />
     </AuthShell>
   );

@@ -119,6 +119,12 @@ describe("BankDetailView", () => {
     expect(screen.getByRole("link", { name: t.detail.back }).getAttribute("href")).toBe("/bancos");
   });
 
+  it("heads the criteria and the account types without a caption beside the title", () => {
+    render(<BankDetailView {...buildProps()} />);
+
+    expect(screen.queryByText("o que o Feudo encontrou e onde")).toBeNull();
+  });
+
   it("shows every account type with its status, condition and the household's correction, asking whether to take a newer review", async () => {
     render(<BankDetailView {...buildProps()} />);
 

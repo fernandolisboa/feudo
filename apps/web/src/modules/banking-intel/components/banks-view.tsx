@@ -135,10 +135,7 @@ function ReviewedTable({ reviewed }: { reviewed: ReviewedBankRow[] }) {
 
   return (
     <section className="mb-8">
-      <SectionHeader
-        title={t.reviewed.title}
-        actions={<span className="text-muted-foreground text-[12px]">{t.reviewed.meta}</span>}
-      />
+      <SectionHeader title={t.reviewed.title} />
       <Table stackOnNarrow>
         <TableHeader>
           <TableRow>
@@ -249,12 +246,7 @@ export function BanksView(
       content: (
         <>
           <section className="mb-8">
-            <SectionHeader
-              title={t.candidates.title}
-              actions={
-                <span className="text-muted-foreground text-[12px]">{t.candidates.meta}</span>
-              }
-            />
+            <SectionHeader title={t.candidates.title} />
             <div
               className={`bg-border grid gap-px overflow-hidden rounded-lg border ${
                 CANDIDATE_GRID_COLS[candidates.length] ?? "md:grid-cols-3"
