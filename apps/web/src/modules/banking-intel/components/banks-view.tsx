@@ -14,6 +14,7 @@ import type { BanksPageProps, CandidateView, ReviewedBankRow, ReviewView } from 
 import { t } from "../strings";
 import { AccountTypeFilterPanel, AccountTypeFilterReadOnly } from "./account-type-filter-panel";
 import { CriteriaWeightsEditor } from "./criteria-weights-editor";
+import { ScoreStars } from "./score-stars";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
@@ -32,6 +33,14 @@ function Review({ review }: { review: ReviewView }) {
       {review.label}
       {review.stale ? <Badge variant="outline">{t.candidates.stale}</Badge> : null}
     </span>
+  );
+}
+
+function Score({ score, label, size }: { score: number | null; label: string; size: "sm" | "lg" }) {
+  return score === null ? (
+    <span className="text-muted-foreground text-[13px]">{label}</span>
+  ) : (
+    <ScoreStars score={score} size={size} />
   );
 }
 
@@ -72,10 +81,9 @@ function CandidateCard({ candidate }: { candidate: CandidateView }) {
             {candidate.name}
           </Link>
         </h3>
-        <p className="flex items-baseline gap-1">
-          <span className="font-heading text-[26px] tabular-nums">{candidate.scoreLabel}</span>
-          <span className="text-muted-foreground text-[13px]">{t.candidates.scoreOf}</span>
-        </p>
+        <div>
+          <Score score={candidate.score} label={candidate.scoreLabel} size="lg" />
+        </div>
         <Review review={candidate.review} />
       </div>
       <ComparisonList
@@ -119,8 +127,8 @@ function ReviewedRow({ row }: { row: ReviewedBankRow }) {
           ) : null}
         </div>
       </TableCell>
-      <TableCell card="aside" className="text-right tabular-nums">
-        {row.scoreLabel}
+      <TableCell card="aside" className="text-right">
+        <Score score={row.score} label={row.scoreLabel} size="sm" />
       </TableCell>
       <TableCell label={t.reviewed.reviewedAt}>
         <Review review={row.review} />
