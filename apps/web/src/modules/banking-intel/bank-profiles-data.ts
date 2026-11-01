@@ -309,10 +309,26 @@ export const BANK_PROFILES_DATASET = {
         jointInvestment: {
           status: "not-found",
           evidence:
-            "No source was found describing a joint investment account inside NuInvest; Nubank's investment pages describe only individual holdings.",
+            "No source was found describing a joint investment account in the Nubank app, where the NuInvest investments now live (the NuInvest app was folded into it in May 2024); Nubank says it does not offer joint accounts, and its investment pages describe only individual holdings.",
           summaryPtBr:
-            "Não foi encontrada fonte que descreva uma conta de investimento conjunta dentro da NuInvest; as páginas de investimentos do Nubank descrevem apenas posições individuais.",
-          reviewedAt: "2026-10-13",
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no app do Nubank, onde hoje ficam os investimentos da NuInvest (o app NuInvest foi incorporado a ele em maio de 2024); o Nubank diz que não oferece conta conjunta, e suas páginas de investimentos descrevem apenas posições individuais.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://blog.nubank.com.br/nu-invest-tudo-sobre/",
+              kind: "primary",
+              finding:
+                "NuInvest stays the broker but its app is integrated into the Nubank app, with a dedicated investments area; from 7 May the NuInvest app stopped accepting purchases.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.idinheiro.com.br/investimentos/corretoras/nu-invest/",
+              kind: "secondary",
+              finding:
+                "Guide updated 07/08/2025: a NuInvest account can no longer be opened; clients invest through the Nubank app.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         mei: {
           status: "offered",
@@ -550,12 +566,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/posso-ter-uma-conta-conjunta-no-inter",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "'Atualmente, não é possível ter uma conta conjunta no Inter. A instituição oferece apenas contas individuais vinculadas ao CPF.'",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -563,14 +579,47 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access or shared-balance product was found; Inter offers only a cartão adicional (additional credit card) for a partner, which shares the card limit, not the account.",
           summaryPtBr:
             "Não foi encontrado produto de acesso ou saldo compartilhado; o Inter oferece apenas um cartão adicional para o parceiro, que compartilha o limite do cartão, não a conta.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://ajuda.inter.co/cartao/como-pedir-o-cartao-adicional",
+              kind: "primary",
+              finding:
+                "Additional card: it can only be requested with credit active and the limit is shared between holder and dependents.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/inter/nao-consigo-acesso-sendo-procurador_KAny8KeBk2s5QU-l/",
+              kind: "secondary",
+              finding:
+                "Inter reply to a procurador: it cannot allow third parties access to the dependent's account; only a 30-day statement was sent.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         jointInvestment: {
           status: "not-found",
-          evidence: "No source was found describing a joint investment account at Inter.",
+          evidence:
+            "No source was found describing a joint investment account at Inter. Its Comunidades de Investimento let up to 20 investors pool balances to unlock higher CDB rates, but each investor keeps their own investments and the volume is not visible to the community, so it is a rate-tier feature rather than a joint account.",
           summaryPtBr:
-            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Inter.",
-          reviewedAt: "2026-10-13",
+            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Inter. As Comunidades de Investimento deixam até 20 investidores somarem saldos para liberar taxas maiores em CDB, mas cada investidor mantém seus próprios investimentos e o volume não fica visível para a comunidade, então é um recurso de faixa de rentabilidade e não uma conta conjunta.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://inter.co/pra-voce/investimentos/comunidade-de-investimentos/",
+              kind: "primary",
+              finding:
+                "Investment communities: a combined volume from R$ 250,000 earns a higher rate for everyone; each investor's volume is not visible to the community and movements are shared only by choice.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://blog.inter.co/crie-sua-comunidade-de-investimento/",
+              kind: "primary",
+              finding:
+                "A community has up to 20 investors; the group total sets the rate tier (for example +0.5% of CDI on a CDB when the group holds R$ 251,000), even if one member holds little.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         mei: {
           status: "offered",
@@ -582,12 +631,26 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.inter.co/abrir-conta-mei",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "MEI account '100% digital e gratuita', 'livre de tarifas', opened from PF Super App. Updated 11/07/2023.",
             },
+            {
+              url: "https://inter.co/empresas/conta-digital/mei/",
+              kind: "primary",
+              finding:
+                "Inter Empresas MEI page: digital, completely free MEI account, with the Inter Loop points programme.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/como-abrir-uma-conta-mei-no-inter",
+              kind: "primary",
+              finding:
+                "Help centre: the Conta Digital MEI is for MEI companies with a CNPJ regular at the Receita Federal.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -693,12 +756,85 @@ export const BANK_PROFILES_DATASET = {
           reviewedAt: "2026-11-01",
         },
         security: {
-          status: "insufficient-evidence",
-          reason:
-            "No Itaú-specific incident or security-feature evidence was found; absence of findings is not a clean record.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "Itaú documents the iToken (temporary codes tied to the phone, activated by facial recognition), facial biometrics to confirm identity, a Modo Protegido (safe places and Wi-Fi networks, plus a value above which facial biometrics is mandatory outside them), a Segurança area in the Superapp (passwords, trusted device with iToken, card block, virtual card, transaction limit adjustment including at night) and an ISO 27001 certification of its online privacy management system. No confirmed breach of Itaú's systems was found: the 7 August 2023 outage was stated by the bank to be internal with no external attack, and complaints about data leaks are answered with 'no leak identified' and attributed to social engineering and phone-number spoofing (a December alert about two spoofed official numbers, year not shown in the excerpt). Absence of findings is not a clean record.",
           summaryPtBr:
-            "Não há evidência suficiente. Não foram encontrados incidentes nem recursos de segurança específicos do Itaú. Não achar nada não significa histórico limpo.",
-          reviewedAt: "2026-09-09",
+            "O Itaú documenta o iToken (códigos temporários ligados ao celular, ativados por reconhecimento facial), a biometria facial para confirmar a identidade, um Modo Protegido (locais e redes Wi-Fi seguros, com um valor acima do qual a biometria facial é obrigatória fora deles), uma área de Segurança no Superapp (senhas, dispositivo de confiança com iToken, bloqueio de cartão, cartão virtual e ajuste de limites de transação, inclusive à noite) e a certificação ISO 27001 do seu sistema de gestão da privacidade online. Não foi encontrada violação confirmada dos sistemas do Itaú: o banco declarou que a queda de 7 de agosto de 2023 foi interna, sem ataque externo, e as reclamações sobre vazamento são respondidas com 'nenhum vazamento identificado' e atribuídas a engenharia social e falsificação de número de telefone (um alerta de dezembro sobre dois números oficiais falsificados, sem o ano no trecho lido). Não achar nada não significa histórico limpo.",
+          citations: [
+            {
+              url: "https://www.itau.com.br/seguranca/itoken",
+              kind: "primary",
+              finding:
+                "iToken generates temporary codes to validate digital transactions, activated by facial recognition in the app, cancellable if the phone is lost; the online privacy management system holds ISO 27001.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.itau.com.br/seguranca/area-de-seguranca",
+              kind: "primary",
+              finding:
+                "Área de Segurança groups password management, facial image to confirm identity, a trusted device protected by iToken and digital wallets.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.itau.com.br/privacidade/biometria-facial",
+              kind: "primary",
+              finding:
+                "Facial biometrics is used only to authenticate the user and prevent fraud; Itaú says it adapts security levels to fraud risk.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://feito.itau.com.br/seguranca-do-seu-jeito-personalize-as-funcoes-no-superapp/",
+              kind: "primary",
+              finding:
+                "Superapp security area: iToken plus authorised device, facial recognition, password and access management, card block, virtual card; users can toggle facial biometrics, geolocation and when iToken is used.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://feito.itau.com.br/alerta-contra-o-golpe-da-biometria/",
+              kind: "primary",
+              finding:
+                "Transaction limits can be reduced in the app, especially at night; the bank warns about the biometrics scam and says its system ties access to the holder on the registered device.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.melhorescartoes.com.br/itau-modo-protegido-ferramenta.html",
+              kind: "secondary",
+              finding:
+                "Modo Protegido: customers set safe places and Wi-Fi networks and a maximum value above which facial biometrics is mandatory outside them (undated).",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://blog.itau.com.br/efake/efalso-itau-fora-do-ar-por-conta-de-ataque-hacker",
+              kind: "primary",
+              finding:
+                "Itaú's statement on the 7 August 2023 outage: internal instability, no external attack of any kind, customer data safe.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/apos-ficar-fora-do-ar-itau-nega-ataque-cibernetico-e-tem-sistemas-normalizados-258882/",
+              kind: "secondary",
+              finding:
+                "Press coverage of the same outage: Itaú denied a cyber attack and normalised its systems the next day.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/noticias/itau-alerta-golpistas-usaram-numero-oficial-para-roubar-dados-de-clientes/",
+              kind: "secondary",
+              finding:
+                "Itaú alerted customers on 15 December (year not shown) that scammers spoofed two official phone numbers; the article says this does not imply an intrusion into the bank's systems or a leak of customer data.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/itau/vazamento-de-dados-pessoais_QE22NuXRin7xZ5TK/",
+              kind: "secondary",
+              finding:
+                "Itaú reply to a leak complaint: no data leak identified at the bank; reminds customers never to share the iToken code and lists the chip, token, biometrics and monitoring it uses.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -773,52 +909,120 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-corrente/como-faco-para-abrir-uma-conta-corrente-no-itau",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "'Para abrir uma conta-conjunta, todos os titulares devem ir à agência com os documentos.'",
             },
             {
               url: "https://www.itau.com.br/_arquivosestaticos/Itau/PDF/para-voce/conta-corrente/condicoes-gerais-da-conta-universal-itau.pdf",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Conta Universal terms define joint 'E/OU' (one signature suffices) and 'E' (all holders must sign) accounts, with every holder jointly liable.",
             },
+            {
+              url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-conjunta/como-incluir-um-titular-na-minha-conta-e-ter-uma-conta-conjunta",
+              kind: "primary",
+              finding:
+                "A second holder is added at any Itaú branch with the original and a copy of RG and CPF; a provisional debit card is issued and the holder is included in about 10 business days.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.itau.com.br/contas/conta-corrente",
+              kind: "primary",
+              finding:
+                "Online account opening does not yet cover joint current accounts; for more account options, go to a branch.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
           evidence:
-            "No shared-access product such as a procurador or a shared balance was found; Itaú's cofrinhos can receive Pix contributions from other people, but that is not a shared account.",
+            "No shared-access product such as a shared balance or an invited user was found. Itaú's FAQ on adding a procurador describes a power of attorney (accepted if issued in the last 36 months; in a joint account only one holder can grant it and the procurador represents only that holder), which is a legal mandate rather than a shared-account product; Itaú's cofrinhos can receive Pix contributions from other people, but that is not a shared account.",
           summaryPtBr:
-            "Não foi encontrado produto de acesso compartilhado, como procurador ou saldo compartilhado; os cofrinhos do Itaú podem receber contribuições via Pix de outras pessoas, mas isso não é uma conta compartilhada.",
-          reviewedAt: "2026-10-13",
+            "Não foi encontrado produto de acesso compartilhado, como saldo compartilhado ou usuário convidado. O FAQ do Itaú sobre incluir um procurador descreve uma procuração (aceita se emitida nos últimos 36 meses; em conta conjunta, só um dos titulares pode concedê-la e o procurador representa apenas ele), que é um mandato legal e não um produto de conta compartilhada; os cofrinhos do Itaú podem receber contribuições via Pix de outras pessoas, mas isso não é uma conta compartilhada.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://www.itau.com.br/atendimento-itau/para-voce/conta-corrente/como-faco-para-incluir-um-procurador-na-conta",
+              kind: "primary",
+              finding:
+                "Procurador: only powers of attorney issued in the last 36 months are accepted; in joint accounts only one holder can grant one and the procurador represents only that holder.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         jointInvestment: {
           status: "not-found",
-          evidence: "No source was found describing a joint investment account at Itaú.",
+          evidence:
+            "No source was found describing a joint brokerage or investment account at íon or Itaú Corretora. Itaú's poupança page says a joint savings account can be solidária or simples, but that is the savings account that comes with every joint Conta Universal (current and savings under one number, per its terms) and is already covered by the joint account type, so the status stays not-found.",
           summaryPtBr:
-            "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Itaú.",
-          reviewedAt: "2026-10-13",
+            "Não foi encontrada fonte que descreva uma conta conjunta de corretora ou de investimentos no íon ou na Itaú Corretora. A página de poupança do Itaú diz que uma poupança conjunta pode ser solidária ou simples, mas essa é a poupança que acompanha toda Conta Universal conjunta (conta corrente e poupança sob um único número, segundo os termos) e já está coberta pelo tipo de conta conjunta, então o status segue como não encontrado.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://www.itau.com.br/investimentos/poupanca",
+              kind: "primary",
+              finding:
+                "Poupança page: a joint account allows shared management of the resources and must be set up as solidária or simples; FGC cover up to R$ 250,000.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         mei: {
-          status: "not-found",
-          conditionPtBr: "Emps ainda não é para MEI",
+          status: "offered",
+          conditionPtBr: "plano pago, isentável",
           evidence:
-            "Itaú Emps, the free digital PJ account, says 'Por enquanto o Emps é para pequenas empresas que não sejam MEI' and 'Ainda não [para MEI], mas estamos trabalhando'; no other current source confirms or rules out a MEI account at Itaú.",
+            "Itaú Empresas, the full PJ account, opens online with CNPJ and CPF plus facial validation: its App Store listing is titled 'Conta MEI e PJ' and tells MEIs to open the account on the website, and Itaú's own business blog and a feito.itau article list MEI among eligible CNPJs. It is a paid plan: the Plano Adapt is a fixed monthly package that can be waived through sales received, investments (from R$ 280,000 invested for Plano Adapt 1) or payroll. Itaú Emps, the free digital PJ account, still says 'Por enquanto o Emps é para pequenas empresas que não sejam MEI'.",
           summaryPtBr:
-            "O Itaú Emps, a conta PJ digital gratuita, diz 'Por enquanto o Emps é para pequenas empresas que não sejam MEI' e 'Ainda não [para MEI], mas estamos trabalhando'; nenhuma outra fonte atual confirma ou descarta uma conta MEI no Itaú.",
+            "O Itaú Empresas, a conta PJ completa, abre online com CNPJ e CPF e validação facial: a página do app na App Store se chama 'Conta MEI e PJ' e orienta o MEI a abrir a conta pelo site, e o blog empresarial do próprio Itaú e um texto do feito.itau listam o MEI entre os CNPJs aceitos. É um plano pago: o Plano Adapt tem mensalidade fixa, que pode ser zerada com vendas recebidas, investimentos (a partir de R$ 280 mil no Plano Adapt 1) ou folha de pagamento. O Itaú Emps, a conta PJ digital gratuita, ainda diz que 'Por enquanto o Emps é para pequenas empresas que não sejam MEI'.",
           citations: [
             {
               url: "https://www.itau.com.br/emps",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
-                "Itaú Emps is a free digital PJ account, but 'Por enquanto o Emps é para pequenas empresas que não sejam MEI'.",
+                "Itaú Emps, the free digital PJ account, still says 'Por enquanto o Emps é para pequenas empresas que não sejam MEI' and 'Ainda não, mas estamos trabalhando para liberar também para MEIs'.",
+            },
+            {
+              url: "https://www.itau.com.br/empresas/abra-sua-conta",
+              kind: "primary",
+              finding:
+                "Itaú Empresas: open the PJ account with CNPJ and CPF and facial validation; Plano Adapt is a fixed monthly package, waivable through sales received, investments (from R$ 280,000 for Plano Adapt 1) or payroll.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://apps.apple.com/pt/app/ita%C3%BA-empresas-conta-mei-e-pj/id348274534",
+              kind: "primary",
+              finding:
+                "App Store listing 'Itaú Empresas: Conta MEI e PJ': 'Se você é MEI e deseja abrir conta, acesse o site e faça a abertura de conta online'.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://blog.itau.com.br/empresas/quem-pode-abrir-conta-pj",
+              kind: "primary",
+              finding:
+                "Any company with an active CNPJ can open a business account, including MEIs; MEI uses the CCMEI as its document.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://feito.itau.com.br/itau-empresas-abra-sua-conta-e-simplifique-a-gestao-do-seu-negocio/",
+              kind: "primary",
+              finding:
+                "Itaú Empresas sign-up needs an active CNPJ (MEI, microenterprise or small or medium company), started on the website or in the Itaú Empresas app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/guias/conta-gratuita-mei-sem-taxas/",
+              kind: "secondary",
+              finding:
+                "Tecnoblog comparison: Itaú's MEI account is not free (service baskets from R$ 118 at the time of the guide, whose date was not checked).",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -895,8 +1099,36 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Ágora.",
             },
+            {
+              url: "https://banco.bradesco/html/classic/portal-investimentos/agora-investimentos.shtm",
+              kind: "primary",
+              finding:
+                "Ágora is Bradesco's investment house, reachable from the Bradesco app and internet banking, with a simplified sign-up for account holders; investments count toward the campaigns that waive the service basket fee; more than 1,600 products from R$ 1, and brokerage waived for stocks, options, BDRs, ETFs and FIIs on the Ágora home broker since 18 September 2023.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banco.bradesco/html/classic/portal-investimentos/index.shtm",
+              kind: "primary",
+              finding:
+                "Bradesco investments portal lists CDB, LCA, LCI, LIG, Poupança Fácil, funds, Ágora and private pension.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banco.bradesco/html/classic/produtos-servicos/investimentos/tesouro-direto.shtm",
+              kind: "primary",
+              finding:
+                "Tesouro Direto from R$ 36 through Ágora, with no custody fee from Ágora and only the B3 charge of 0.25% a year.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/agora-corretora/plataforma-agora-bradesco-informacoes-divergentes-sobre-tesouro-direto-e-e_6X00P2mYqt1xdk0l/",
+              kind: "secondary",
+              finding:
+                "Customer complaint that the Bradesco app hand-off to Ágora is confusing and that the Treasury offer on Ágora differs from the official Treasury site, which fits the extra step between the two brands.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
@@ -946,17 +1178,24 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://contec.org.br/bradesco-financiamentos-relata-possivel-vazamento-de-dados-de-53-mil-clientes/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "2022 leak.",
             },
             {
               url: "https://canaltech.com.br/seguranca/bradesco-dados-clientes-expostosu-nidade-eua-256554/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "2023 incident.",
             },
+            {
+              url: "https://www.reclameaqui.com.br/bradesco/suspeita-de-vazamento-de-dados-e-acesso-indevido-a-informacoes-bancarias-apos-ligacao-editado-pelo-reclame-aqui_iZBNNGS9lG0y-8QN/",
+              kind: "secondary",
+              finding:
+                "April 2026 bank reply to a customer: after analysis the bank says no data leak occurred and attributes the fraud call to social engineering with spoofed numbers; no new confirmed incident was found in 2026 searches.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -987,17 +1226,38 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://banco.bradesco/html/exclusive/produtos-servicos/tarifas/index.shtm",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Tariff page.",
             },
             {
-              url: "https://www.reclameaqui.com.br/bradesco/bradesco-nao-autoriza-alteracao-limite-pix-noturno",
+              url: "https://www.reclameaqui.com.br/bradesco/bradesco-nao-autoriza-alteracao-limite-pix-noturno_p1bfjaqxLUTB1zNM/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Complaint, anecdotal.",
             },
+            {
+              url: "https://banco.bradesco/html/prime/produtos-servicos/tarifas/index.shtm",
+              kind: "primary",
+              finding:
+                "Bradesco Prime tariff page: according to the volume invested, the monthly service basket fee can be waived by up to 100%.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/bradesco/nao-consigo-alterar-meu-limite-pix-no-aplicativo__e0UoOai7-Fp93PF/",
+              kind: "secondary",
+              finding:
+                "Bradesco reply to a customer: the night period starts at 20h or 22h and lasts until 6h, the start time is adjustable in the app, limit increases take 24 to 48 hours and reductions are immediate.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/03/bradesco-prime-2026-requisitos-isencao-de-tarifas-e-melhores-cartoes-com-pontos-livelo-que-nao-expiram/",
+              kind: "secondary",
+              finding:
+                "October 2026: Prime service basket 100% waived with R$ 150,000 invested at the bank; card annuity waivers also depend on spend or investments.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -1029,27 +1289,36 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://banco.bradesco/assets/classic/pdf/produtos-servicos/tipos-de-conta/regulamento-para-abertura-de-contas-de-depositos-produtos-e-servicos-pessoa-fisica.pdf",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Regulation 1.408-7E (04/2026) 2.4.2 defines joint types 'e' (simples) and 'e/ou' (solidária); holders are jointly liable for credit limits.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
           evidence:
-            "No shared-access product was found; Bradesco offers additional credit cards and nextJoy for minors, neither of which shares access to the holder's own current account.",
+            "No shared-access product was found; Bradesco offers additional credit cards and nextJoy for minors, neither of which shares access to the holder's own current account. A procurador holding a notarized power of attorney can register biometrics and a password at Bradesco ATMs, but that is a legal mandate handled at a branch, not a shared-account product.",
           summaryPtBr:
-            "Não foi encontrado produto de acesso compartilhado; o Bradesco oferece cartões adicionais e o nextJoy para menores, nenhum dos quais compartilha o acesso à conta corrente do titular.",
-          reviewedAt: "2026-10-13",
+            "Não foi encontrado produto de acesso compartilhado; o Bradesco oferece cartões adicionais e o nextJoy para menores, nenhum dos quais compartilha o acesso à conta corrente do titular. Um procurador com procuração em cartório pode cadastrar biometria e senha nos caixas eletrônicos do Bradesco, mas isso é um mandato legal tratado na agência, não um produto de conta compartilhada.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://banco.bradesco/html/classic/canais-digitais/caixa-eletronico/",
+              kind: "primary",
+              finding:
+                "A procurador with a notarized power of attorney goes to a branch to register biometrics and an exclusive password for ATM use; this is a mandate, not an app-level shared account.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at Bradesco.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Bradesco.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
@@ -1062,12 +1331,19 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://banco.bradesco/mei/",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "MEI account opened in the app without a branch; MEI service basket free for 12 months; first annual card fee free.",
             },
+            {
+              url: "https://tecnoblog.net/guias/conta-gratuita-mei-sem-taxas/",
+              kind: "secondary",
+              finding:
+                "Tecnoblog guide: Bradesco gives the MEI account only 12 months of exemption, after which the service basket is charged monthly.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -1134,9 +1410,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Search snippets put the main app at 4.4 to 4.6 stars on Google Play; the listing was not read directly.",
+            "The App Store listing shows 4.8 stars from about 4.3 million ratings (read directly); the Google Play listing shows no rating to automated reads, and the earlier 4.4 to 4.6 range from search snippets was not re-read. Confirmed 2026 instability: 13 January (credit card and login, about 106 Downdetector reports), 1 February (Pix and app login, about 459 reports at the peak), 21 February (app and internet banking, about 114 reports), 26 June (BB confirmed its digital channels were unavailable in the late afternoon, card operations unaffected) and 23 August (Central Bank-confirmed Pix instability across many banks, BB among those cited).",
           summaryPtBr:
-            "Trechos de busca indicam de 4,4 a 4,6 estrelas para o app principal no Google Play. A página não foi lida diretamente.",
+            "A página do app na App Store mostra 4,8 estrelas, com cerca de 4,3 milhões de avaliações (lida diretamente); a página do Google Play não mostra nota em leituras automáticas, e a faixa anterior de 4,4 a 4,6 vinda de trechos de busca não foi relida. Instabilidades confirmadas em 2026: 13 de janeiro (cartão de crédito e login, cerca de 106 relatos no Downdetector), 1º de fevereiro (Pix e login no app, cerca de 459 relatos no pico), 21 de fevereiro (app e internet banking, cerca de 114 relatos), 26 de junho (o BB confirmou a indisponibilidade dos canais digitais no fim da tarde, sem impacto nas operações de cartão) e 23 de agosto (instabilidade do Pix confirmada pelo Banco Central em vários bancos, com o BB entre os citados).",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=br.com.bb.android",
@@ -1144,15 +1420,95 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Rating range from search snippets.",
             },
+            {
+              url: "https://apps.apple.com/br/app/bb-banco-cart%C3%A3o-cr%C3%A9dito/id330984271",
+              kind: "primary",
+              finding: "App Store listing: 4.8 stars, about 4.3 million ratings.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=br.com.bb.android&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing read again: it shows the app description but no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/apps/banco-do-brasil-fora-do-ar-app-tem-instabilidade-nesta-sexta-feira-26/",
+              kind: "secondary",
+              finding:
+                "26 June 2026: BB confirmed unavailable digital channels in the late afternoon, card operations not affected; Downdetector showed the problem did not hit other banks.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/100433/banco-do-brasil-fora-do-ar-servicos-apresentam-instabilidade-hoje-neste-domingo-dia-1-de-fevereiro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "1 February 2026: Pix, app login and mobile banking instability, about 459 Downdetector reports at the peak.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/101122/banco-do-brasil-fora-do-ar-servicos-apresentam-instabilidade-hoje-neste-sabado-dia-21-de-fevereiro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "21 February 2026: app and internet banking instability, about 114 Downdetector reports.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/99912/banco-do-brasil-fora-do-ar-servicos-apresentam-instabilidade-hoje-nesta-terca-feira-dia-13-de-janeiro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "13 January 2026: credit card and login instability, about 106 Downdetector reports.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, Banco do Brasil among them.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "No citable source was found; the research left this criterion unscored.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "Banco do Brasil's own biometrics page describes facial and fingerprint validation with image-authenticity and liveness checks as an extra layer in physical and digital channels, and the BB blog says facial biometrics is used to authorize devices and transactions; new devices are otherwise released with a QR code at a BB ATM. Searches in this run found no confirmed Banco do Brasil data breach; customers' complaints about fraud calls are answered by the bank as external social engineering, not a leak, and absence of findings is not a clean record.",
           summaryPtBr:
-            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
-          reviewedAt: "2026-09-09",
+            "A página de biometria do próprio Banco do Brasil descreve validação biométrica facial e digital, com verificação de autenticidade da imagem e de prova de vida, como camada extra nos canais físicos e digitais, e o blog do BB diz que a biometria facial é usada para autorizar dispositivos e transações; novos aparelhos também são liberados com QR Code em um caixa eletrônico do BB. As buscas desta rodada não encontraram vazamento de dados confirmado no Banco do Brasil; as reclamações de clientes sobre ligações de golpistas são respondidas pelo banco como engenharia social externa, não como vazamento, e a ausência de achados não equivale a um histórico limpo.",
+          citations: [
+            {
+              url: "https://www.bb.com.br/site/pra-voce/seguranca/solucoes-de-seguranca/biometria-pf/",
+              kind: "primary",
+              finding:
+                "Biometrics page: facial and fingerprint validation, image-authenticity checks and liveness checks as an additional layer of security in physical and digital channels.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://blog.bb.com.br/biometria-facial/",
+              kind: "primary",
+              finding:
+                "BB blog: facial recognition is an extra layer against fraud, to be used to authorize devices, financial transactions and limit increases; registered in App BB under Meu Perfil > Segurança.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/banco-do-brasil/vazamento-de-dados-pessoais_WdZFQk1OuR06DRbj/",
+              kind: "secondary",
+              finding:
+                "Bank reply to a customer who suspected a leak after a fraud call: BB says it never calls to ask for app installs or passwords and points to its security guide; no leak was confirmed.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.idinheiro.com.br/bancos/erros-no-aplicativo-do-banco-do-brasil/",
+              kind: "secondary",
+              finding:
+                "Updated 17 September 2026: a blocked device must be released at a BB ATM with a QR code; biometric or device checks can block access.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -1176,24 +1532,38 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 40,
           evidence:
-            "Night Pix limit R$ 1,000 with up to 48 hours to raise; several complaints about salary portability requests denied or delayed up to 10 business days.",
+            "Night Pix limit R$ 1,000, which a customer can raise to R$ 3,000; the start of the night period can move to 22h. An increase must be confirmed in a second channel (ATM with biometrics or BB Code) and takes effect 24 hours later, while a reduction is immediate. Complaints in 2026 still describe salary portability requests refused or delayed, within the regulatory limit of 10 business days.",
           summaryPtBr:
-            "Limite do Pix noturno de R$ 1.000, com até 48 horas para aumentar. Há várias reclamações sobre pedidos de portabilidade de salário negados ou atrasados em até 10 dias úteis.",
+            "Limite do Pix noturno de R$ 1.000, que o cliente pode elevar até R$ 3.000; o início do período noturno pode passar para as 22h. O aumento precisa ser confirmado em outro canal (caixa eletrônico com biometria ou BB Code) e vale 24 horas depois, enquanto a redução é imediata. Reclamações de 2026 ainda descrevem pedidos de portabilidade de salário recusados ou atrasados, dentro do prazo regulatório de 10 dias úteis.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/contas/aumentar-limite-pix-no-banco-do-brasil/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Pix limit.",
             },
             {
               url: "https://www.reclameaqui.com.br/banco-do-brasil/dificuldade-e-demora-na-portabilidade-de-salario-do-banco-do-brasil-para-caixa_IEEubtKvDiobXRvP/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Portability complaint.",
             },
+            {
+              url: "https://www.reclameaqui.com.br/banco-do-brasil/aumento-de-limite-pix-nao-efetivado-apos-autorizacao-no-caixa-eletronico_tbjCK-aVetWpTdc5/",
+              kind: "secondary",
+              finding:
+                "Bank reply: night limit raisable to R$ 3,000, night start movable from 20h to 22h in App BB, new limits 24 hours after confirmation; branch requests take effect immediately.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/banco-do-brasil/recusa-na-portabilidade-de-salario-do-banco-do-brasil-para-a-caixa-impedindo-o-recebimento-do-pagamento_SyxUYMfslvNTiDGx/",
+              kind: "secondary",
+              finding:
+                "2026 complaint: salary portability to Caixa refused on the same day it was requested; the bank says the salary account was not yet open and the employer differed.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -1226,12 +1596,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.bb.com.br/conta-conjunta-dez-perguntas-e-respostas-que-voce-precisa-conhecer/",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Anyone 18+, no family tie needed, up to 4 holders; each holder can have their own credit card and accesses the account individually via App BB or Internet Banking.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -1239,14 +1609,14 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access product was found; BB's Cofrinho lets the owner share a Pix link so others contribute to a pot, but that is not shared access to the account itself.",
           summaryPtBr:
             "Não foi encontrado produto de acesso compartilhado; o Cofrinho do BB permite que o titular compartilhe um link de Pix para que outras pessoas contribuam para uma meta, mas isso não é acesso compartilhado à conta em si.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at Banco do Brasil.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Banco do Brasil.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
@@ -1258,12 +1628,19 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bb.com.br/site/pro-seu-negocio/contas/conta-pj-digital/",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Conta PJ Digital for MEI/EI/SLU opened in app; Plano Digital without monthly fee.",
             },
+            {
+              url: "https://blog.bb.com.br/conta-pj-para-mei-simplifique-a-gestao-do-seu-negocio/",
+              kind: "primary",
+              finding:
+                "BB blog guide: the MEI Conta PJ Digital is opened online in App BB (Quero ser cliente > Produtos para empresa), with the CCMEI and an active CNPJ.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -1306,26 +1683,61 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 40,
           evidence:
-            "CDB (prefixed, Flex, progressive), Tesouro Direto and poupança: mostly own or government paper, no sign of an open platform.",
+            "CDB (CDI-linked from R$ 200, prefixed from R$ 1,000, progressive, IPCA+), LCI, LCA, funds and poupança, all Caixa paper or Caixa-distributed, plus Tesouro Direto, where Caixa waives its custody fee but orders go through the Tesouro Direto site rather than the app, and the Ações Online home broker for shares and real estate funds, which has no custody fee but charges brokerage under the tariff table. No sign of an open third-party platform.",
           summaryPtBr:
-            "CDB (prefixado, Flex, progressivo), Tesouro Direto e poupança. São, na maioria, papéis próprios ou do governo, sem sinal de plataforma aberta.",
+            "CDB (pós-fixado a partir de R$ 200, prefixado a partir de R$ 1.000, progressivo e IPCA+), LCI, LCA, fundos e poupança, todos emitidos ou distribuídos pela Caixa, além do Tesouro Direto, em que a Caixa dispensa a taxa de custódia, mas as ordens passam pelo site do Tesouro Direto e não pelo app, e do home broker Ações Online para ações e fundos imobiliários, sem taxa de custódia, mas com corretagem conforme a tabela de tarifas. Sem sinal de plataforma aberta de terceiros.",
           citations: [
             {
               url: "https://www.caixa.gov.br/investimentos/Paginas/default.aspx",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Investment products.",
             },
+            {
+              url: "https://www.caixa.gov.br/voce/poupanca-e-investimentos/cdb/cdb-flex/paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "CDB CAIXA DI: CDI-linked, from R$ 200, FGC cover up to R$ 250,000, invested from a Caixa current account.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/voce/poupanca-e-investimentos/tesouro-direto/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Tesouro Direto: operations are made on the Tesouro Direto site, Caixa acts as custody agent and waives its custody fee; account holders only.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/voce/poupanca-e-investimentos/acoes-online/custos-operacionais/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Ações Online: Caixa waives custody and inactivity fees; brokerage is charged under the tariff table.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/voce/contas/Documents/tabela-de-tarifas.pdf",
+              kind: "primary",
+              finding:
+                "Tariff table disclosed 1 October 2026: brokerage fee applies on shares, PIBB units and real estate fund units.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/tesouro-direto-nao-esta-disponivel-no-app_zzXR8nIiA6_J9jaw/",
+              kind: "secondary",
+              finding:
+                "Customer complaint: Tesouro Direto does not appear in the Caixa app; Caixa replies that it is reached through the website, then the Tesouro Direto site.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
           score: 40,
           evidence:
-            "A secondary source names Caixa among the worst-rated bank apps on both stores; Caixa Tem users report crashes after updates. No exact rating.",
+            "A secondary source names Caixa among the worst-rated bank apps on both stores; Caixa Tem users report crashes after updates. The App CAIXA and CAIXA Tem listings were read again but show no rating figure to automated reads, so there is still no exact rating. Instability found in 2026: 19 January (login and Pix), 8 May (about 744 Downdetector reports), 4 July (about 100), 23 August (Central Bank-confirmed Pix instability across banks, Caixa among them), 26 and 27 August (App CAIXA about 1,000 reports on the 26th and Caixa Tem up to about 1,600, still more than 760 on the 27th, with payment days for benefits affected; Caixa said it normalized the system) and 14 October (about 150).",
           summaryPtBr:
-            "Uma fonte secundária cita a Caixa entre os apps de banco pior avaliados nas duas lojas. Usuários do Caixa Tem relatam travamentos após atualizações. Sem nota exata.",
+            "Uma fonte secundária cita a Caixa entre os apps de banco pior avaliados nas duas lojas, e usuários do Caixa Tem relatam travamentos após atualizações. As páginas do App CAIXA e do CAIXA Tem foram relidas, mas não mostram nota em leituras automáticas, então continua sem nota exata. Instabilidades encontradas em 2026: 19 de janeiro (login e Pix), 8 de maio (cerca de 744 relatos no Downdetector), 4 de julho (cerca de 100), 23 de agosto (instabilidade do Pix confirmada pelo Banco Central em vários bancos, com a Caixa entre eles), 26 e 27 de agosto (App CAIXA com cerca de 1.000 relatos no dia 26 e Caixa Tem com até cerca de 1.600, ainda mais de 760 no dia 27, em dias de pagamento de benefícios; a Caixa disse ter normalizado o sistema) e 14 de outubro (cerca de 150).",
           citations: [
             {
               url: "https://seucreditodigital.com.br/banrisul-e-caixa-sao-piores-apps-de-banco-no-google-play-store-e-app-store/",
@@ -1333,24 +1745,122 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Store ranking coverage.",
             },
+            {
+              url: "https://apps.apple.com/br/app/caixa/id490813624",
+              kind: "secondary",
+              finding:
+                "App Store listing for App CAIXA read again: description and update notes, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=br.com.gabba.Caixa&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing for App CAIXA read again: user reviews include login, device-registration and account-opening complaints; no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://dol.com.br/noticias/brasil/961121/caixa-tem-apresenta-instabilidade-pelo-segundo-dia-e-acumula-reclamacoes",
+              kind: "secondary",
+              finding:
+                "27 August 2026: Caixa Tem unstable for a second day, more than 760 Downdetector reports; more than 1,600 the day before.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://exame.com/invest/minhas-financas/o-caixa-tem-esta-fora-do-ar-usuarios-reclamam-de-instabilidade-no-app-pelo-2o-dia-consecutivo/",
+              kind: "secondary",
+              finding:
+                "Exame, updated 27 August 2026: Caixa Tem instability since 26 August; Caixa says the system was normalized.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/107545/caixa-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-quarta-dia-26-de-agosto-de-2026.html",
+              kind: "secondary",
+              finding:
+                "26 August 2026: app, login and website instability, about 1,000 Downdetector reports at the peak.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/110620/caixa-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-quarta-feira-dia-14-de-outubro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "14 October 2026: app, login and transfers instability, about 150 Downdetector reports.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/105082/caixa-fora-do-ar-hoje-servicos-apresentam-instabilidade-neste-sabado-dia-4-de-julho-de-2026.html",
+              kind: "secondary",
+              finding:
+                "4 July 2026: login, app and transfer instability, about 100 Downdetector reports.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/103253/caixa-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-sexta-feira-dia-8-de-maio-de-2026.html",
+              kind: "secondary",
+              finding:
+                "8 May 2026: login, app and transfer instability, about 744 Downdetector reports.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/100062/caixa-fora-do-ar-servicos-apresentam-instabilidade-hoje-nesta-segunda-feira-dia-19-de-janeiro-de-2026.html",
+              kind: "secondary",
+              finding: "19 January 2026: app login, internet banking login and Pix instability.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, Caixa among them.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         security: {
           status: "scored",
           score: 60,
-          evidence: "Dedicated biometrics page; fingerprint authentication at ATMs.",
+          evidence:
+            "Dedicated biometrics page (fingerprint authentication at ATMs, facial biometrics in the apps) and a security page describing app blocks on rooted, developer-mode or insecure-keyboard devices and two separate passwords for internet banking. The Central Bank reported a leak of registration data tied to 644 Pix keys under Caixa's responsibility (no passwords, balances or movements; Caixa called it a one-off incident, fixed it and notified customers; the excerpts read do not state the year); a 2026 Caixa reply to a customer says it has no record of an incident involving that customer's data.",
           summaryPtBr:
-            "Página dedicada à biometria e autenticação por impressão digital nos caixas eletrônicos.",
+            "Página dedicada à biometria (impressão digital nos caixas eletrônicos e biometria facial nos apps) e página de segurança que descreve bloqueio dos apps em aparelhos com root, modo desenvolvedor ou teclado inseguro e duas senhas separadas no internet banking. O Banco Central divulgou um vazamento de dados cadastrais ligados a 644 chaves Pix sob responsabilidade da Caixa (sem senhas, saldos ou movimentações; a Caixa o chamou de incidente pontual, corrigiu e notificou os clientes; os trechos lidos não informam o ano); em 2026, a Caixa respondeu a um cliente que não há registro de incidente com os dados dele.",
           citations: [
             {
               url: "https://www.caixa.gov.br/seguranca/biometria/Paginas/default.aspx",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Biometrics.",
             },
+            {
+              url: "https://www.caixa.gov.br/seguranca/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Security page: apps block devices with developer mode, insecure keyboards, root or jailbreak; guidance on lost or stolen devices and the Celular Seguro programme.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/seguranca/na-internet/paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Internet banking and apps use two separate passwords, one for access and one for transactions.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/caixa-teve-vazamento-de-dados-pix-de-cliente-diz-banco-central/",
+              kind: "secondary",
+              finding:
+                "Central Bank alert: leak of registration data for more than 600 Pix keys of Caixa customers; Caixa says 644 keys, a one-off incident, fixed, customers notified; no passwords, movements or balances.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/vazamento-de-senha-e-falta-de-notificacao-da-caixa-lgpd_sgaxHeTolaaePNrU/",
+              kind: "secondary",
+              finding:
+                "2026 Caixa reply to a customer whose password appeared in a public breach list: no record of a security incident or leak under Caixa's custody.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -1374,9 +1884,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Night Pix limit R$ 1,500 and the night window can start at 22h. No portability or closure friction evidence was gathered.",
+            "Night Pix limit R$ 1,000 for individuals, the market default (an earlier R$ 1,500 figure from a secondary source is not confirmed by Caixa's own FAQ); the night window can start at 22h, increases take 24 to 48 hours, reductions are immediate and a branch request is immediate. CAIXA Tem accounts have a fixed limit that cannot be raised, and a higher App CAIXA limit needs the Mobile Forte device validation at an ATM. Salary portability to Caixa takes up to 5 business days. No complaint evidence about account closure friction was gathered.",
           summaryPtBr:
-            "Limite do Pix noturno de R$ 1.500, e o horário noturno pode começar às 22h. Não foram levantadas evidências de dificuldade para portabilidade ou encerramento da conta.",
+            "Limite do Pix noturno de R$ 1.000 para pessoas físicas, o padrão do mercado (o valor anterior de R$ 1.500, vindo de fonte secundária, não é confirmado pelo FAQ da própria Caixa); o horário noturno pode começar às 22h, o aumento leva de 24 a 48 horas, a redução é imediata e o pedido na agência vale na hora. As contas do CAIXA Tem têm limite fixo, que não pode ser aumentado, e um limite maior no App CAIXA exige a validação do aparelho (Mobile Forte) em um caixa eletrônico. A portabilidade de salário para a Caixa leva até 5 dias úteis. Não foram levantadas reclamações sobre dificuldade para encerrar a conta.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/bancos/quais-sao-os-limites-de-ted-e-pix/",
@@ -1384,8 +1894,36 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Pix limits.",
             },
+            {
+              url: "https://www.caixa.gov.br/pix/perguntas-frequentes/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Pix FAQ: night start can move from 20h to 22h; increases processed in 24 to 48 hours under BCB Resolution 142/21, reductions immediate; Mobile Forte raises limits for the registered smartphone.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/dificuldade-em-aumentar-limite-pix-e-problemas-com-atendimento-telefonico-da-caixa_D6lDIB8IrK2vlNuX/",
+              kind: "secondary",
+              finding:
+                "Caixa reply: individuals' night limit to third parties is automatically R$ 1,000; increases through digital channels take 24 to 48 hours, branch requests are immediate.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/faleconosco/como-podemos-te-ajudar/pix/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Help page: CAIXA Tem users currently have a fixed Pix limit that cannot be increased; App CAIXA users can raise it with Mobile Forte.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/voce/salario-na-caixa/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Salary portability to Caixa can be requested in the app and takes up to 5 business days to be accepted by the origin bank.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -1411,14 +1949,14 @@ export const BANK_PROFILES_DATASET = {
           status: "offered",
           conditionPtBr: "corrente ou poupança",
           evidence:
-            "Caixa's account-opening contract defines joint current and savings accounts, solidária (any holder moves alone) or não-solidária (all must act together), each holder with their own app login by CPF.",
+            "Caixa's account-opening contract defines joint current and savings accounts, solidária (any holder moves alone) or não-solidária (all must act together), each holder with their own app login by CPF. A Caixa reply to a customer adds that investments in a joint account are visible and movable only by the first holder.",
           summaryPtBr:
-            "O contrato de abertura de conta da Caixa define contas correntes e poupanças conjuntas, solidárias (qualquer titular movimenta sozinho) ou não solidárias (todos precisam agir juntos). Cada titular tem seu próprio login no app, pelo CPF.",
+            "O contrato de abertura de conta da Caixa define contas correntes e poupanças conjuntas, solidárias (qualquer titular movimenta sozinho) ou não solidárias (todos precisam agir juntos). Cada titular tem seu próprio login no app, pelo CPF. Uma resposta da Caixa a um cliente acrescenta que os investimentos de uma conta conjunta só aparecem e só podem ser movimentados pelo primeiro titular.",
           citations: [
             {
               url: "https://www.caixa.gov.br/Downloads/contas-pessoa-fisica/Contrato-Pessoa-Fisica-10-11-2021.pdf",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Cláusulas Gerais (37.105 v023) define joint current/savings accounts as solidária or não-solidária; a holder can leave without the others' authorisation, adding one needs all of them.",
             },
@@ -1428,8 +1966,15 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-13",
               finding: "Each joint holder registers their own user and access password by CPF.",
             },
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/restricao-de-acesso-a-investimentos-em-conta-conjunta-da-caixa-economica-fe_VGNFyTxEwG6myxWo/",
+              kind: "secondary",
+              finding:
+                "Caixa reply: in joint accounts, consultation and movement of investments are available only to the first holder because investments are registered in that person's name.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -1437,31 +1982,48 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access product was found in App CAIXA beyond additional credit cards, which share a card limit, not account access.",
           summaryPtBr:
             "Não foi encontrado produto de acesso compartilhado no App CAIXA além dos cartões adicionais, que compartilham o limite do cartão, não o acesso à conta.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
-          status: "not-found",
-          evidence: "No source was found describing a joint investment account at Caixa.",
+          status: "not-offered",
+          evidence:
+            "Caixa itself says that in a joint account the investments are registered exclusively in the first holder's name, and only that holder can see or move them, so there is no joint investing.",
           summaryPtBr:
-            "Não foi encontrada fonte que descreva uma conta de investimento conjunta na Caixa.",
-          reviewedAt: "2026-10-13",
+            "A própria Caixa diz que, em uma conta conjunta, os investimentos são registrados exclusivamente no nome do primeiro titular, e só ele pode vê-los ou movimentá-los, então não há investimento conjunto.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/restricao-de-acesso-a-investimentos-em-conta-conjunta-da-caixa-economica-fe_VGNFyTxEwG6myxWo/",
+              kind: "secondary",
+              finding:
+                "Caixa reply to a joint-account holder: investments are registered exclusively in the first holder's name and are available only to that holder in digital channels.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         mei: {
           status: "offered",
           evidence:
-            "Conta Digital MEI through the CAIXA Tem app has no maintenance fee when opened digitally and offers unlimited free Pix; it requires a CAIXA Tem PF digital savings account and an active MEI CNPJ.",
+            "Conta Digital MEI through the CAIXA Tem app has no maintenance fee when opened digitally and offers unlimited free Pix; it requires a CAIXA Tem PF digital savings account (the Poupança Social Digital is not eligible until upgraded) and an active MEI CNPJ, and it is opened only in the app.",
           summaryPtBr:
-            "A Conta Digital MEI pelo app CAIXA Tem não tem taxa de manutenção quando aberta digitalmente e tem Pix ilimitado grátis; exige uma conta poupança digital CAIXA Tem de pessoa física e um CNPJ MEI ativo.",
+            "A Conta Digital MEI pelo app CAIXA Tem não tem taxa de manutenção quando aberta digitalmente e tem Pix ilimitado grátis; exige uma conta poupança digital CAIXA Tem de pessoa física (a Poupança Social Digital não é elegível até passar por upgrade) e um CNPJ MEI ativo, e é aberta apenas no app.",
           citations: [
             {
               url: "https://www.caixa.gov.br/empresa/contas/conta-mei/Paginas/default.aspx",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Conta Digital MEI CAIXA Tem: no maintenance fee when opened digitally; free Pix; requires CAIXA Tem PF savings and active MEI; one per CNPJ.",
             },
+            {
+              url: "https://www.reclameaqui.com.br/caixa-economica-federal/erro-persistente-na-criacao-de-conta-mei-pelo-caixa-tem-sem-suporte-via-telefone-ou-agencia_Kj_o10fFaiy_lLVs/",
+              kind: "secondary",
+              finding:
+                "Caixa reply: the MEI PJ account is opened exclusively in the CAIXA Tem app and requires an active CAIXA Tem savings account; the Poupança Social Digital is not eligible and must be upgraded first.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -1517,8 +2079,9 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.toroinvestimentos.com.br/institucional/toro-santander-corretora/",
               kind: "primary",
-              checkedAt: "2026-09-09",
-              finding: "Toro merger.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Toro became Santander Corretora: an open platform with Bolsa (shares, BDRs, FIIs, ETFs), fixed income (Tesouro Direto, LCI, LCA, LC, debentures, CRI, CRA) and funds from Santander and third parties; the migration ran from December 2025 to February 2026.",
             },
             {
               url: "https://www.santander.com.br/investimentos/produtos-da-corretora",
@@ -1526,32 +2089,135 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Brokerage products.",
             },
+            {
+              url: "https://investimentos.santander.com.br/corretora/nova-experiencia",
+              kind: "primary",
+              finding:
+                "Santander Corretora: open platform with more than 500 fixed-income assets and 1,000 funds, shares and Tesouro Direto migrated at no cost; investments there still count for the bank's fee-waiver policy.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.toroinvestimentos.com.br/conta-santander-toro",
+              kind: "primary",
+              finding:
+                "Santander Corretora: zero brokerage on main B3 assets (shares, FIIs, ETFs, BDRs), more than 1,000 funds, IPOs; B3 fees still apply.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
           score: 40,
           evidence:
-            "The only rating found (4.10, 1.4 million ratings) belongs to Santander Way, removed from Google Play on 2026-06-23; no rating for the main app.",
+            "No rating could be read for the main app: the Santander Brasil Google Play and App Store listings show descriptions and developer replies but no rating figure to automated reads. The only rating found earlier (4.10 from 1.4 million ratings) belongs to Santander Way, which the Play listing now says was integrated into the Santander Brasil app. Instability found in 2026: 6 February (about 140 Downdetector reports, app and Pix), 8 February and 11 to 12 February (customers unable to open the app, per Reclame Aqui complaints answered by the bank), 19 March (app down for hours, per a complaint) and 23 August (Central Bank-confirmed Pix instability across banks, Santander among them).",
           summaryPtBr:
-            "A única nota encontrada (4,10, com 1,4 milhão de avaliações) é do Santander Way, retirado do Google Play em 23 de junho de 2026. Não há nota para o app principal.",
+            "Não foi possível ler nota do app principal: as páginas do Santander Brasil no Google Play e na App Store mostram descrições e respostas do desenvolvedor, mas nenhuma nota em leituras automáticas. A única nota encontrada antes (4,10, com 1,4 milhão de avaliações) é do Santander Way, que a página do Play agora diz ter sido integrado ao app Santander Brasil. Instabilidades encontradas em 2026: 6 de fevereiro (cerca de 140 relatos no Downdetector, app e Pix), 8 de fevereiro e 11 a 12 de fevereiro (clientes sem conseguir abrir o app, segundo reclamações no Reclame Aqui respondidas pelo banco), 19 de março (app fora do ar por horas, segundo uma reclamação) e 23 de agosto (instabilidade do Pix confirmada pelo Banco Central em vários bancos, com o Santander entre eles).",
           citations: [
             {
               url: "https://apps.apple.com/br/app/banco-santander-brasil/id613365711",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "App Store listing.",
+              checkedAt: "2026-11-01",
+              finding:
+                "App Store listing read again: update notes and privacy details, no rating figure to automated reads.",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.santander.app&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing for Santander Brasil: Way integrated into the main app; no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/100586/santander-fora-do-ar-servicos-apresentam-instabilidade-hoje-nesta-sexta-feira-dia-6-de-fevereiro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "6 February 2026: personal-banking app, business website and Pix instability, about 140 Downdetector reports at the peak.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/santander-fora-do-ar-08022026_hmGW7V9cqiJPqCgH/",
+              kind: "secondary",
+              finding:
+                "8 February 2026: customer unable to access the app; the bank's reply points to cache clearing and re-enabling the device.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/aplicativo-do-banco-santander-fora-do-ar-impede-pagamento-de-aluguel_XwBao2rFIF68vmE-/",
+              kind: "secondary",
+              finding:
+                "12 February 2026: customer says the app has not opened since the day before.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/santander-sistema-fora-do-ar-e-falha-no-aplicativo-impedem-transacoes-bancarias_89Sx2QhTfaqvRhSF/",
+              kind: "secondary",
+              finding:
+                "19 March 2026 complaint: app and system down for hours; the bank's 24 March reply says access was normalized.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, Santander among them.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "No citable source was found; the research left this criterion unscored.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "Santander's own pages describe ID Santander, a two-step verification that replaced the key-fob token and is mandatory for every account holder, facial biometrics for transactions and device enabling, and an Immediate Block service for lost devices with identity layers on the request. In May 2024 an attack on a third-party provider exposed bank details and passwords of customers and former employees in Chile, Spain and Uruguay; Santander says Brazilian customers were not affected. On 4 September 2025 a hacker attack briefly disturbed Pix via QR Code, with no funds diverted and no data leak according to the bank. Customers' fraud complaints are answered as social engineering, not a leak; no confirmed leak of Brazilian customer data was found, and absence of findings is not a clean record.",
           summaryPtBr:
-            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
-          reviewedAt: "2026-09-09",
+            "As páginas do próprio Santander descrevem o ID Santander, uma verificação em duas etapas que substituiu o token chaveiro e é obrigatória para todos os correntistas, a biometria facial para transações e habilitação de aparelhos e o Bloqueio Imediato para aparelhos perdidos, com camadas de confirmação de identidade no pedido. Em maio de 2024, um ataque a um provedor terceirizado expôs dados bancários e senhas de clientes e ex-funcionários no Chile, na Espanha e no Uruguai; o Santander diz que clientes brasileiros não foram afetados. Em 4 de setembro de 2025, um ataque hacker perturbou por pouco tempo o Pix por QR Code, sem desvio de recursos nem vazamento de dados, segundo o banco. As reclamações de fraude de clientes são respondidas como engenharia social, não como vazamento; não foi encontrado vazamento confirmado de dados de clientes brasileiros, e a ausência de achados não equivale a um histórico limpo.",
+          citations: [
+            {
+              url: "https://www.santander.com.br/blog/seguranca-digital-santander",
+              kind: "primary",
+              finding:
+                "Santander blog: ID Santander is a two-step verification that replaced the key-fob token; facial biometrics; Immediate Block with identity layers; encryption and two-factor authentication.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.santander.com.br/biometria-facial",
+              kind: "primary",
+              finding:
+                "Facial biometrics are registered in the app under Configurações > Segurança; Immediate Block is offered for lost or stolen devices.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.santander.com.br/blog/autenticacao-em-dois-fatores",
+              kind: "primary",
+              finding:
+                "Two two-factor options in the app, facial biometrics and ID Santander; facial biometrics recommended.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/banco-santander-confirma-vazamento-de-dados-de-clientes-apos-ataque-289443/",
+              kind: "secondary",
+              finding:
+                "May 2024: attack on a third-party provider exposed customer and former-employee data in Chile, Spain and Uruguay; the Brazilian unit says Brazilian customers were not affected.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2025/09/06/santander-sofre-ataque-hacker-pix-via-qr-code-apresenta-instabilidade-veja-detalhes/",
+              kind: "secondary",
+              finding:
+                "4 September 2025: hacker attack caused momentary instability in Pix via QR Code; the bank said no funds were diverted and no data leaked.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/inseguranca-vazamento-de-dados-pessoais_8dKPCRwKVCTV9xtb/",
+              kind: "secondary",
+              finding:
+                "Bank reply to a customer alleging a leak: the contested transactions were made with the password and ID validation, which are the customer's responsibility; the bank does not call customers to ask for data.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -1575,24 +2241,52 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 20,
           evidence:
-            "Package fee zeroed only with R$ 50,000 to R$ 80,000 invested or salary portability; several complaints about unilateral account closure and obstructed portability.",
+            "The service package fee is waived only with R$ 80,000 (Conta Plus) or R$ 150,000 (Select Plus) invested at the bank, and halved with R$ 80,000 or a salary portability, under the bonus programme disclosed on 24 December 2025. 2026 complaints still describe accounts closed unilaterally 'for lack of commercial interest' (a 10 March 2026 letter, with the bank citing clause 14 of the contract), a preventive block of products on 16 January 2026 and obstructed salary portability.",
           summaryPtBr:
-            "A tarifa do pacote só é zerada com R$ 50.000 a R$ 80.000 investidos ou com portabilidade de salário. Há várias reclamações sobre encerramento de conta feito pelo banco por conta própria e sobre portabilidade dificultada.",
+            "A tarifa do pacote de serviços só é zerada com R$ 80.000 (Conta Plus) ou R$ 150.000 (Select Plus) investidos no banco, e cai pela metade com R$ 80.000 ou com portabilidade de salário, conforme o programa de bonificação divulgado em 24 de dezembro de 2025. Reclamações de 2026 ainda descrevem contas encerradas pelo banco por conta própria 'por desinteresse comercial' (uma carta de 10 de março de 2026, com o banco citando a cláusula 14 do contrato), um bloqueio preventivo de produtos em 16 de janeiro de 2026 e portabilidade de salário dificultada.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/santander/encerramento-unilateral-de-conta-salario-e-dificuldade-para-receber-salario_G8b-M8HBKb55CxV3/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Closure complaint.",
             },
             {
               url: "https://cms.santander.com.br/sites/WPS/documentos/Urlarq-Programa-Bonificacao-Conta-Plus-Select/25-10-01_191640_programa-bonificacao-conta-plus-select.pdf",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Fee bonus programme.",
             },
+            {
+              url: "https://cms.santander.com.br/sites/WPS/documentos/arq-tarifas-e-pacotes-pessoa-fisica-lista3-conta-plus-select/25-12-24_140851_programa-de-bonificacao-conta-plus-e-select-3.pdf",
+              kind: "primary",
+              finding:
+                "Bonus programme of 24 December 2025: Conta Plus package fee free from R$ 80,000 invested; Select Plus 50% off from R$ 80,000 or salary portability and free from R$ 150,000; benefits not cumulative.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.santander.com.br/select/conta/",
+              kind: "primary",
+              finding:
+                "Select account: package R$ 99.95 a month, 50% off from R$ 80,000 and free from R$ 150,000 of eligible investments.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/encerramento-unilateral-de-contas-santander-por-desinteresse-comercial_nGOXoPwTzdM090xI/",
+              kind: "secondary",
+              finding:
+                "Complaint about a 10 March 2026 letter closing accounts unilaterally for commercial disinterest; the bank cites clause 14 of the contract and says closure is definitive.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/encerramento-de-conta-dificuldades-para-receber-salario-e-impedimento-de-portabilidade-no-santander_k1iAHRzqjuKCJiAj/",
+              kind: "secondary",
+              finding:
+                "Complaint about account closure and obstructed portability; the bank replies that closure is allowed by clause 14 and that the portability was concluded on 20 August 2025.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -1628,8 +2322,22 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Terms 1614-S06 (10/2025) define joint 'OU'/'E' types; clause 7.2: one debit card issued per holder.",
             },
+            {
+              url: "https://cms.santander.com.br/sites/WPS/documentos/arq-condicoes-gerais-conta-corrente/25-10-23_134811_condicoes-gerais-conta-corrente.pdf",
+              kind: "primary",
+              finding:
+                "General terms (October 2025): joint accounts of type 'OU' (either holder) or 'E' (together); clause 2.1 movement by holders alone or together; clause 7.2 one debit card per holder.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/santander/conta-conjunta_5Gc2lV2M1dVWzGGU/",
+              kind: "secondary",
+              finding:
+                "Santander reply: a joint account is contracted only at branches with the holders present.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -1637,7 +2345,7 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access product was found beyond the joint account itself and an additional credit card, which shares a card limit, not account access.",
           summaryPtBr:
             "Não foi encontrado produto de acesso compartilhado além da própria conta conjunta e de um cartão adicional, que compartilha o limite do cartão, não o acesso à conta.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-offered",
@@ -1653,16 +2361,23 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Terms 1614-S06 (10/2025) clause 3.9.1: 'As informações relacionadas à Conta Conjunta serão acessadas e conhecidas por qualquer um dos titulares, com exceção de investimento ou aplicação financeira que fica restrito a um dos titulares.'",
             },
+            {
+              url: "https://cms.santander.com.br/sites/WPS/documentos/arq-condicoes-gerais-conta-corrente/25-10-23_134811_condicoes-gerais-conta-corrente.pdf",
+              kind: "primary",
+              finding:
+                "General terms (October 2025) clause 3.9.1: joint-account information is visible to every holder except investments and financial applications, which stay restricted to one holder.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
           conditionPtBr: "R$ 69, isentável",
           evidence:
-            "Conta MEI+ is opened in the app or site without a branch, with a monthly fee of R$ 69,00 that can be fully waived by registering the CNPJ as a Pix key plus 5 payments a month, and R$ 1.000/month billed on a Getnet card machine.",
+            "Conta MEI+ is opened in the app or site without a branch, with a monthly fee of R$ 69,00 that is fully waived by paying the DAS through automatic debit in a Santander Empresas account, or by combining the CNPJ as a Pix key plus 5 payments a month (50%) with R$ 1.000/month billed on a Getnet card machine (50%).",
           summaryPtBr:
-            "A Conta MEI+ é aberta no app ou no site, sem agência, com mensalidade de R$ 69,00 que pode ser totalmente isenta ao cadastrar o CNPJ como chave Pix e fazer 5 pagamentos por mês, mais R$ 1.000 por mês faturados em uma maquininha Getnet.",
+            "A Conta MEI+ é aberta no app ou no site, sem agência, com mensalidade de R$ 69,00 totalmente isenta ao pagar o DAS em débito automático em uma conta Santander Empresas, ou ao combinar o CNPJ como chave Pix mais 5 pagamentos por mês (50%) com R$ 1.000 por mês faturados em uma maquininha Getnet (50%).",
           citations: [
             {
               url: "https://www.santander.com.br/empresas/contas/mei/",
@@ -1671,8 +2386,22 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Conta MEI+ opened via app/site; R$ 69,00 monthly fee, waivable 100% under Pix-key, payments and Getnet criteria.",
             },
+            {
+              url: "https://www.santander.com.br/conta-pessoa-juridica/mei",
+              kind: "primary",
+              finding:
+                "Conta MEI+: R$ 69,00 monthly fee, 100% waived by DAS in automatic debit; opened 100% online with the CNPJ and a selfie.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.santander.com.br/pacotes-servicos-santander-pj/conta-mei",
+              kind: "primary",
+              finding:
+                "MEI+ package: DAS in automatic debit gives 100% exemption, or Pix key plus 5 payments (50%) and R$ 1,000 on Getnet (50%); the discount applies two months after the activity.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -1718,50 +2447,108 @@ export const BANK_PROFILES_DATASET = {
         },
         investmentAccess: {
           status: "scored",
-          score: 60,
-          evidence: "C6 Invest offers fixed income for all profiles; no product count found.",
+          score: 80,
+          evidence:
+            "C6 Invest in the same app: CDB from R$ 20 (CDI-linked, prefixed, IPCA+), Letras Financeiras, repurchase agreements, Tesouro Direto from R$ 30 with no brokerage, more than 250 funds from R$ 1, shares, FIIs, ETFs, BDRs and futures with zero brokerage and custody, private pension, and C6 Global Invest for US shares, ETFs, REITs and time deposits. C6 charges no custody fee on fixed income.",
           summaryPtBr:
-            "O C6 Invest oferece renda fixa para todos os perfis. Não foi encontrado o número de produtos.",
+            "C6 Invest no mesmo app: CDB a partir de R$ 20 (pós-fixado, prefixado e IPCA+), Letras Financeiras, compromissadas, Tesouro Direto a partir de R$ 30 sem corretagem, mais de 250 fundos a partir de R$ 1, ações, FIIs, ETFs, BDRs e mercado futuro com corretagem e custódia zero, previdência privada e o C6 Global Invest para ações americanas, ETFs, REITs e time deposits. O C6 não cobra taxa de custódia na renda fixa.",
           citations: [
             {
               url: "https://www.c6bank.com.br/c6-invest/renda-fixa/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Fixed income page.",
             },
+            {
+              url: "https://www.c6bank.com.br/c6-invest/",
+              kind: "primary",
+              finding:
+                "C6 Invest brings shares, funds, CDBs, Tesouro Direto and private pension into one app; no custody fee on fixed income and zero brokerage and custody on equities.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/tesouro-direto/",
+              kind: "primary",
+              finding: "Tesouro Direto from R$ 30 with no brokerage in the C6 app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/blog/c6-bank-amplia-horario-para-aplicacao-e-resgate-de-cdbs",
+              kind: "primary",
+              finding:
+                "More than 250 funds in several categories, equities (shares, ETFs, BDRs, FIIs, futures) and private pension on the C6 platform.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/home/",
+              kind: "primary",
+              finding:
+                "C6 Global Invest: US shares, ADRs, ETFs, REITs, treasuries and time deposits through the app.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
           reason:
-            "Sources disagree (Google Play 4.8 versus 3.6) and no citable page pinned the rating.",
+            "No rating figure could be read for the C6 Bank app: the App Store and Google Play listings show descriptions and reviews but no rating to automated reads, and earlier sources disagreed (Google Play 4.8 versus 3.6).",
           summaryPtBr:
-            "Não há evidência suficiente. As fontes divergem (Google Play 4,8 contra 3,6) e nenhuma página citável confirmou a nota.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. Nenhuma nota do app do C6 Bank pôde ser lida: as páginas da App Store e do Google Play mostram descrições e avaliações, mas nenhuma nota em leituras automáticas, e fontes anteriores divergiam (Google Play 4,8 contra 3,6).",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://apps.apple.com/br/app/c6-bank-cart%C3%A3o-conta-e-mais/id1463463143",
+              kind: "secondary",
+              finding:
+                "App Store listing read again: description and update notes, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.c6bank.app&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing read again: description only, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         security: {
           status: "scored",
           score: 80,
           evidence:
-            "New devices need password plus facial recognition, and the app disables itself on a device if another face is detected; hardware-bound in-app token.",
+            "New devices need password plus facial recognition, and the app disables itself on a device if another face is detected; hardware-bound in-app token; Locais Seguros and Contatos Seguros limit investments and night transfers to registered places and contacts; facial biometrics with liveness at account opening. A secondary article (undated in the excerpt read) reports a fraud that diverted R$ 23 million through a flaw in the investments system, schemes by third-party contractor staff and a hacked Twitter profile; these incidents were not weighed in the earlier score and are left for review.",
           summaryPtBr:
-            "Dispositivos novos exigem senha e reconhecimento facial, e o app se desativa no aparelho se outro rosto for detectado. O token dentro do app é vinculado ao hardware.",
+            "Dispositivos novos exigem senha e reconhecimento facial, e o app se desativa no aparelho se outro rosto for detectado; o token dentro do app é vinculado ao hardware; Locais Seguros e Contatos Seguros limitam investimentos e transferências noturnas a locais e contatos cadastrados; a biometria facial com prova de vida é usada na abertura da conta. Uma reportagem secundária (sem data no trecho lido) relata uma fraude que desviou R$ 23 milhões por uma falha no sistema de investimentos, esquemas de funcionários de terceirizadas e um perfil do Twitter invadido; esses incidentes não tinham sido considerados na nota anterior e ficam para revisão.",
           citations: [
             {
               url: "https://www.c6bank.com.br/blog/6-recursos-de-seguranca-que-o-c6-bank-usa-para-proteger-o-cliente",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Security features.",
             },
             {
               url: "https://www.c6bank.com.br/portal-de-seguranca/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Security portal.",
             },
+            {
+              url: "https://www.c6bank.com.br/blog/recursos-de-seguranca-do-c6-bank",
+              kind: "primary",
+              finding:
+                "Locais Seguros, Contatos Seguros, geolocation sharing, card block and contactless toggle in the app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/noticias/em-meio-a-criticas-c6-bank-lista-recursos-de-seguranca-para-clientes/",
+              kind: "secondary",
+              finding:
+                "Tecnoblog (undated in the excerpt): reports a R$ 23 million fraud through a flaw in the investments system, contractor-staff schemes with more than R$ 50 million diverted and a hacked Twitter profile, alongside the bank's list of security features.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -1785,9 +2572,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Card annuity waiver tied to R$ 50,000 in C6 CDBs; daily-liquidity CDB redeems only on business days 07:30 to 19:00, credited within 24 business hours.",
+            "Card annuity waiver tied to use of the card or investments made through the app (R$ 50,000 in C6 CDBs in the earlier read). Night Pix limit R$ 1,000 per transaction, the night start can move between 20h and 23h30, and a limit increase is applied only after 24 hours (10h of the next business day if asked on a Friday, Saturday or holiday eve). Daily-liquidity CDB redeems in the app on business days 07:30 to 19:00, while the Limite Garantido CDB credits in 2 business days.",
           summaryPtBr:
-            "A isenção da anuidade do cartão depende de R$ 50.000 em CDBs do C6. O CDB com liquidez diária só é resgatado em dias úteis, das 7h30 às 19h, com crédito em até 24 horas úteis.",
+            "A isenção da anuidade do cartão depende de uso do cartão ou de investimentos feitos pelo app (R$ 50.000 em CDBs do C6 na leitura anterior). Limite do Pix noturno de R$ 1.000 por transação, com início do período noturno ajustável entre 20h e 23h30, e o aumento do limite só vale depois de 24 horas (10h do próximo dia útil se pedido em sexta, sábado ou véspera de feriado). O CDB de liquidez diária é resgatado no app em dias úteis, das 7h30 às 19h, e o CDB Limite Garantido credita em 2 dias úteis.",
           citations: [
             {
               url: "https://seucreditodigital.com.br/c6-bank-aumenta-remuneracao-do-cdb-liquidez-diaria-confira-quanto/",
@@ -1795,8 +2582,36 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "CDB redemption rules.",
             },
+            {
+              url: "https://www.c6bank.com.br/blog/o-que-e-o-horario-noturno-e-como-ajustar",
+              kind: "primary",
+              finding:
+                "Night default R$ 1,000 per transaction for Pix, TED and TEF; the night start can be set between 20h and 23h30, the end stays at 6h.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/blog/limite-de-transferencia-como-ajustar-no-c6-bank",
+              kind: "primary",
+              finding:
+                "Limit increases take 24 hours (10h next business day from Friday, Saturday or holiday eve), a Central Bank requirement.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/c6-invest/renda-fixa/",
+              kind: "primary",
+              finding:
+                "Daily-liquidity CDB redeems in the app with same-day credit, 07:30 to 19:00 on business days; Limite Garantido takes 2 business days; prefixed and IPCA+ CDBs have no early redemption.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/limite-garantido/",
+              kind: "primary",
+              finding:
+                "Limite Garantido CDB: redemption 07:30 to 19:00 on business days, paid within 2 business days, only if not committed to card spending.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -1828,20 +2643,20 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.c6bank.com.br/blog/conta-conjunta",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Fetch blocked (403); search snippet: C6 has no conta conjunta, offers conta compartilhada; transactions made in the titular's name; invitee must be a C6 client.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "offered",
           conditionPtBr: "uma pessoa convidada",
           evidence:
-            "C6 offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder.",
+            "C6 offers Conta Compartilhada: the holder invites one other C6 client as a procurador who moves the account independently from their own login, without becoming a co-holder. The product is subject to the bank's analysis and is not available to every account.",
           summaryPtBr:
-            "O C6 oferece a Conta Compartilhada: o titular convida outro cliente do C6 como procurador, que movimenta a conta de forma independente, com o próprio login, sem se tornar cotitular.",
+            "O C6 oferece a Conta Compartilhada: o titular convida outro cliente do C6 como procurador, que movimenta a conta de forma independente, com o próprio login, sem se tornar cotitular. O produto está sujeito à análise do banco e não está disponível para todas as contas.",
           citations: [
             {
               url: "https://ajuda.c6bank.com.br/s/article/O-que-%C3%A9-conta-compartilhada",
@@ -1850,15 +2665,29 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "'A Conta Compartilhada é quando uma pessoa física compartilha sua conta corrente com uma outra pessoa... convidado, com poderes de procurador... movimentação de crédito, débito... de forma independente.'",
             },
+            {
+              url: "https://www.c6bank.com.br/blog/conta-conjunta",
+              kind: "primary",
+              finding:
+                "C6 blog: no joint account, but Conta Compartilhada (subject to analysis) lets the holder invite another C6 client to move money independently.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/c6-bank/dificuldade-em-abrir-conta-conjunta-no-c6-bank_gE07vmJZnqnGUI6g/",
+              kind: "secondary",
+              finding:
+                "C6 reply: the shared-account feature is not eligible for every customer's registration.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at C6.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no C6.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
@@ -1875,8 +2704,22 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "MEI R$ 12/month with waiver criteria (Pix receipts, investments, card spend, Pix keys, etc.).",
             },
+            {
+              url: "https://www.c6bank.com.br/blog/tipos-de-conta-c6-bank",
+              kind: "primary",
+              finding:
+                "C6 MEI: R$ 12 monthly fee unless exemption criteria are met, such as Pix receipts, card spend, R$ 500 in Limite Garantido or R$ 3,000 in other C6 CDBs.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.c6bank.com.br/blog/como-abrir-uma-conta-mei-no-c6-bank",
+              kind: "primary",
+              finding:
+                "C6 MEI account opened in the app; R$ 12 monthly fee charged only when exemption criteria are not met.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -1931,33 +2774,129 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 100,
           evidence:
-            "Investment bank at the core; its app lists 1,000+ products (not checked against a BTG page).",
+            "Investment bank at the core. The BTG Pactual Investimentos app offers Tesouro Direto, CDBs and other fixed income with several issuers and indexers, funds (fixed income, equities, FX, multimarket), shares, FIIs, FX and private pension; its Google Play listing advertises zero brokerage on shares, FIIs and BDRs, while secondary guides still describe a brokerage table, and most fixed income starts at R$ 1,000 against R$ 1 for funds.",
           summaryPtBr:
-            "Banco de investimentos no centro do negócio. O app lista mais de 1.000 produtos (não conferido em página do BTG).",
+            "Banco de investimentos no centro do negócio. O app BTG Pactual Investimentos oferece Tesouro Direto, CDBs e outros papéis de renda fixa com vários emissores e indexadores, fundos (renda fixa, ações, câmbio e multimercado), ações, FIIs, câmbio e previdência privada; a página do Google Play anuncia corretagem zero em ações, FIIs e BDRs, enquanto guias secundários ainda descrevem uma tabela de corretagem, e a maior parte da renda fixa começa em R$ 1.000, contra R$ 1 nos fundos.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.btg.pactual.digital.mobile",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "App description.",
             },
+            {
+              url: "https://apps.apple.com/br/app/btg-pactual-investimentos/id1041958375",
+              kind: "primary",
+              finding:
+                "App Store description: Tesouro, CDBs, funds, shares, FIIs, FX and private pension in the BTG Pactual Investimentos app, with advisers.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.btg.pactual.digital.mobile&hl=en_US",
+              kind: "primary",
+              finding:
+                "Google Play description: zero brokerage on shares, FIIs and BDRs, recommended portfolios, loans with investment collateral.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.idinheiro.com.br/investimentos/btg-pactual-como-investir/",
+              kind: "secondary",
+              finding:
+                "Guide: funds from R$ 1, most fixed income from R$ 1,000, shares with a brokerage fee (R$ 4.50 in the guide) plus B3 costs.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
           reason:
-            "Only one search snippet (4.7 App Store, 4.6 Google Play) and BTG splits across several apps.",
+            "No rating figure could be read: the BTG Pactual Banking and BTG Pactual Investimentos listings on both stores show descriptions and reviews but no rating to automated reads, the earlier single snippet (4.7 App Store, 4.6 Google Play) was not confirmed, and BTG splits across separate Banking, Investimentos and Trader apps.",
           summaryPtBr:
-            "Não há evidência suficiente. Há só um trecho de busca (4,7 na App Store, 4,6 no Google Play), e o BTG se divide em vários apps.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. Nenhuma nota pôde ser lida: as páginas do BTG Pactual Banking e do BTG Pactual Investimentos nas duas lojas mostram descrições e avaliações, mas nenhuma nota em leituras automáticas, o trecho de busca anterior (4,7 na App Store, 4,6 no Google Play) não foi confirmado, e o BTG se divide em apps separados de Banking, Investimentos e Trader.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://play.google.com/store/apps/details?id=com.btg.pactual.banking&hl=en_US",
+              kind: "secondary",
+              finding:
+                "BTG Pactual Banking Google Play listing: description and user reviews (including false root detection complaints), no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://apps.apple.com/us/app/btg-pactual-banking/id1467956990",
+              kind: "secondary",
+              finding:
+                "BTG Pactual Banking App Store listing: description only, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.btg.pactual.homebroker.mobile&hl=en_US",
+              kind: "secondary",
+              finding: "BTG Pactual Trader listing: the bank says it keeps separate apps for now.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "No citable source was found; the research left this criterion unscored.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "BTG's help pages describe a one-time token bound to the device, a facial or fingerprint biometric check on top of login and password, a selfie registered at account opening that is independent of the device, notices when a new device accesses the account, and a safe-place mode for the investments menu. Confirmed incidents: the Central Bank reported a leak of registration data tied to 8,032 Pix keys between 23 July and 5 August 2024 (BTG says its systems were not breached and only agency and account data appeared in CPF-based queries), and on Sunday 22 March 2026 a cyber attack diverted about R$ 100 million from the bank, with Pix suspended for a day; BTG says no customer account was accessed and no customer data was exposed. The score reflects documented controls with confirmed incidents and is left for review.",
           summaryPtBr:
-            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
-          reviewedAt: "2026-09-09",
+            "As páginas de ajuda do BTG descrevem um token de uso único vinculado ao aparelho, uma checagem de biometria facial ou digital além de login e senha, uma selfie cadastrada na abertura da conta e independente do aparelho, avisos quando um novo aparelho acessa a conta e um modo lugar seguro para o menu de investimentos. Incidentes confirmados: o Banco Central divulgou um vazamento de dados cadastrais ligados a 8.032 chaves Pix entre 23 de julho e 5 de agosto de 2024 (o BTG diz que seus sistemas não foram invadidos e que só apareceram dados de agência e conta em consultas feitas com CPFs), e em domingo, 22 de março de 2026, um ataque cibernético desviou cerca de R$ 100 milhões do banco, com o Pix suspenso por um dia; o BTG diz que nenhuma conta de cliente foi acessada e nenhum dado de cliente foi exposto. A nota reflete controles documentados com incidentes confirmados e fica para revisão.",
+          citations: [
+            {
+              url: "https://banking.btgpactual.com/ajuda/acessoaconta/seguranca",
+              kind: "primary",
+              finding:
+                "Help page: besides login and password the device needs the token active, and the app still requires a facial or fingerprint validation; a notification is sent whenever a new device accesses the account.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://empresas.btgpactual.com/seguranca",
+              kind: "primary",
+              finding:
+                "BTG Empresas security page: one-time token bound to authorised devices; a selfie registered at opening, independent of the device, validates sensitive operations.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banking.btgpactual.com/",
+              kind: "primary",
+              finding:
+                "BTG Banking page: access with facial recognition or fingerprint, a safe-place mode for the investments menu, a virtual card with a dynamic security code.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/bc-notifica-vazamento-de-dados-de-8-mil-chaves-pix-do-btg-pactual/",
+              kind: "secondary",
+              finding:
+                "Central Bank notice of registration data tied to about 8,000 Pix keys; BTG says CPF-based queries showed only agency and account data and that no system was breached.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/macroeconomia/vazamento-de-dados-de-pix-notificacoes-do-bc-subiram-de-1-para-10-em-2024/",
+              kind: "secondary",
+              finding:
+                "Central Bank 2024 list: 8,032 Pix keys at BTG Pactual between 23 July and 5 August 2024.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://seucreditodigital.com.br/ataque-hacker-atinge-btg/",
+              kind: "secondary",
+              finding:
+                "Hacker attack on BTG on Sunday the 22nd diverted about R$ 100 million from the bank; Pix was suspended; the bank says no customer account access or personal data exposure.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/macroeconomia/btg-pactual-suspende-operacoes-pix-apos-verificar-atividades-atipicas/",
+              kind: "secondary",
+              finding:
+                "BTG suspended Pix operations as a precaution after atypical activity; the bank says no customer account was accessed and no customer data was exposed.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -1981,9 +2920,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 40,
           evidence:
-            "Card annuity waiver needs R$ 120,000 invested, the steepest asset pull among the large banks. Pix limit and closure friction were not researched.",
+            "Card fee discounts scale with relationship: R$ 10 off per R$ 10,000 invested or R$ 1,000 of monthly spend, with the cashback Black fee reaching zero at R$ 50,000 invested or R$ 5,000 of spend, so the earlier single R$ 120,000 threshold no longer describes the card. The account has no maintenance fee; Pix limits are customised in the app with increases analysed within about 4 hours, the night limit follows the R$ 1,000 default with one 2026 complaint about a refused increase, and salary portability to BTG is offered. No closure friction evidence was gathered.",
           summaryPtBr:
-            "A isenção da anuidade do cartão exige R$ 120.000 investidos, a maior exigência de patrimônio entre os grandes bancos. Limite do Pix e dificuldade para encerrar a conta não foram pesquisados.",
+            "Os descontos na mensalidade do cartão crescem com o relacionamento: R$ 10 de desconto a cada R$ 10.000 investidos ou R$ 1.000 de gasto mensal, e a mensalidade do Black com cashback chega a zero com R$ 50.000 investidos ou R$ 5.000 de gastos, então o patamar único anterior de R$ 120.000 não descreve mais o cartão. A conta não tem tarifa de manutenção; os limites do Pix são personalizados no app, com aumentos analisados em cerca de 4 horas, o limite noturno segue o padrão de R$ 1.000, com uma reclamação de 2026 sobre aumento recusado, e a portabilidade de salário para o BTG é oferecida. Não foram levantadas evidências de dificuldade para encerrar a conta.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-black-btg-pactual/",
@@ -1991,8 +2930,50 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Waiver conditions.",
             },
+            {
+              url: "https://banking.btgpactual.com/cartao-de-credito/cartao-black",
+              kind: "primary",
+              finding:
+                "Black card modular fee: discount of R$ 10 per R$ 10,000 invested or R$ 1,000 spent monthly; Black with cashback goes to zero with R$ 50,000 invested or R$ 5,000 spend.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://exame.com/invest/btg-insights/mensalidade-zero-com-r-50-mil-investidos-como-funciona-o-black-com-cashback-do-btg-pactual/",
+              kind: "secondary",
+              finding:
+                "Exame: zero monthly fee with R$ 50,000 invested on the Black with cashback.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banking.btgpactual.com/ajuda/contacorrente/limitesdetransferencia",
+              kind: "primary",
+              finding:
+                "Help page: transfer limits are customised by each client in the Central de segurança of the app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/btg-mais/mentiras-e-enrolacoes-sobre-aumento-do-pix-noturno_M_RuDqP0_TCI5FfC/",
+              kind: "secondary",
+              finding:
+                "Complaint and BTG reply: the night Pix limit is R$ 1,000 by Central Bank rule and the bank analyses increases by risk profile.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/btg-mais/btg-tira-meu-limite-de-pix_LfPA0kzglfDc-WHQ/",
+              kind: "secondary",
+              finding:
+                "BTG reply: Pix limit changes are made in the app (Meus limites da conta > Pix) and analysed in up to 4 hours.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banking.btgpactual.com/",
+              kind: "primary",
+              finding:
+                "BTG Banking page: current account with no opening or maintenance fee, 4 free withdrawals a month, free and unlimited Pix and transfers.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -2024,9 +3005,9 @@ export const BANK_PROFILES_DATASET = {
         joint: {
           status: "not-offered",
           evidence:
-            "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead.",
+            "BTG Pactual Banking's FAQ says a joint current account 'não é possível' and offers Conta Compartilhada instead; a 2026 BTG reply to a customer repeats that all accounts are individual and tied to a single CPF, and the help page stresses that a joint account would involve co-ownership.",
           summaryPtBr:
-            "O FAQ do BTG Pactual Banking diz que conta corrente conjunta 'não é possível' e oferece a Conta Compartilhada em seu lugar.",
+            "O FAQ do BTG Pactual Banking diz que conta corrente conjunta 'não é possível' e oferece a Conta Compartilhada em seu lugar; uma resposta do BTG a um cliente em 2026 repete que todas as contas são individuais e vinculadas a um único CPF, e a página de ajuda ressalta que uma conta conjunta envolveria cotitularidade.",
           citations: [
             {
               url: "https://banking.btgpactual.com/services/api/faq",
@@ -2035,8 +3016,22 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "'Por enquanto, não é possível abrir uma conta conjunta pelo BTG Pactual Banking'; Conta Compartilhada gives an invited representative full access except Investments and Financing, not co-ownership.",
             },
+            {
+              url: "https://banking.btgpactual.com/ajuda/contacorrente/contacompartilhada",
+              kind: "primary",
+              finding:
+                "Help page: Conta Compartilhada lets one person grant another access without co-ownership, unlike a joint account that involves co-ownership; the account remains the holder's legal responsibility.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/btg-mais/impossibilidade-de-abertura-de-conta-para-acesso-a-investimentos-conjuntos_7ZTxikPe82qwYkD4/",
+              kind: "secondary",
+              finding:
+                "BTG reply: the bank does not offer a joint account; all accounts are individual and tied exclusively to the holder's CPF.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "offered",
@@ -2053,25 +3048,46 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Representative has full access except Investments/Financing menus; not co-ownership; invite flow by CPF, name, email, phone; either side can revoke at any time.",
             },
+            {
+              url: "https://banking.btgpactual.com/ajuda/contacorrente/contacompartilhada",
+              kind: "primary",
+              finding:
+                "Help page: the invited representative can query the holder's account and perform various functions; the holder cannot access the representative's account unless invited in turn; access can be deactivated in the app.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
-          status: "not-found",
+          status: "not-offered",
           evidence:
-            "Whether a joint investment account exists at BTG Pactual Investimentos is not verified: the Banking FAQ hints that some legacy or advisor joint investment accounts may exist, while a secondary guide from September 2025 says BTG does not offer one.",
+            "BTG told a customer that it does not offer a joint account and that all accounts are individual and tied to the holder's CPF, which it applied to a request for joint access to investments; a secondary guide dated September 2025 also says there is no joint BTG Investimentos account. A separate older complaint shows a customer who asked for a joint investment account at BTG Pactual Investimentos and waited for weeks, so legacy or adviser-assisted cases cannot be ruled out.",
           summaryPtBr:
-            "Não está verificado se existe uma conta de investimento conjunta na BTG Pactual Investimentos: o FAQ do Banking sugere que contas conjuntas de investimento legadas ou via assessor podem existir, enquanto um guia secundário de setembro de 2025 diz que a BTG não oferece essa opção.",
+            "O BTG disse a um cliente que não oferece conta conjunta e que todas as contas são individuais e vinculadas ao CPF do titular, o que aplicou a um pedido de acesso conjunto a investimentos; um guia secundário de setembro de 2025 também diz que não existe conta conjunta no BTG Investimentos. Uma reclamação separada e mais antiga mostra um cliente que pediu uma conta de investimento conjunta no BTG Pactual Investimentos e esperou semanas, então casos antigos ou via assessor não podem ser descartados.",
           citations: [
             {
               url: "https://guiadoinvestidor.com.br/guias/conta-conjunta-btg-pactual/",
               kind: "secondary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Guide dated 2025-09-23: no traditional joint account; Conta Compartilhada; no joint investment account ('No momento, a resposta é não').",
             },
+            {
+              url: "https://www.reclameaqui.com.br/btg-mais/impossibilidade-de-abertura-de-conta-para-acesso-a-investimentos-conjuntos_7ZTxikPe82qwYkD4/",
+              kind: "secondary",
+              finding:
+                "BTG reply to a customer who wanted joint access to investments: no joint account is offered, all accounts are individual and tied to the holder's CPF.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/btg-pactual-digital/abertura-de-conta-conjunta_UHWljBD32gqOd3S_/",
+              kind: "secondary",
+              finding:
+                "Older complaint: a customer waited almost a month for a joint investment account at BTG Pactual Investimentos, which the bank said was in internal security verification.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
@@ -2087,8 +3103,15 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Conta Digital PJ 'livre de taxas', available to MEI, LTDA, S.A.; 'Tarifa zero de manutenção'; FAQ confirms MEI and 'isenta de tarifas de manutenção'.",
             },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.btg.business&hl=en_US",
+              kind: "primary",
+              finding:
+                "BTG Pactual Empresas app: free digital business account with 100% online management; Pix, TEDs and boletos at no additional cost.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -2138,25 +3161,89 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.xpi.com.br/",
               kind: "primary",
-              checkedAt: "2026-09-09",
-              finding: "XP platform.",
+              checkedAt: "2026-11-01",
+              finding:
+                "XP platform: shares, CDB, LCA and LCI, COE, CRI and CRA, funds, futures, Tesouro and more in one account.",
+            },
+            {
+              url: "https://www.xpi.com.br/produtos/",
+              kind: "primary",
+              finding:
+                "XP products page: real estate funds, futures, public offers and structured strategies alongside fixed income and equities.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://guiadoinvestidor.com.br/guias/corretoras/xp-investimentos/",
+              kind: "secondary",
+              finding:
+                "Guide: no fee for account opening or maintenance, custody, COE or transfers; XP waives its own Tesouro Direto fee; brokerage on shares varies by segment and campaign.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
-          reason: "No store rating was gathered for the XP app.",
+          reason:
+            "No rating figure could be read: the XP Investimentos, XP Trader and XP Empresas listings on both stores show descriptions and reviews but no rating to automated reads, and XP splits across several apps.",
           summaryPtBr:
-            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app da XP.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. Nenhuma nota pôde ser lida: as páginas do XP Investimentos, do XP Trader e do XP Empresas nas duas lojas mostram descrições e avaliações, mas nenhuma nota em leituras automáticas, e a XP se divide em vários apps.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://apps.apple.com/br/app/xp-investimentos/id1300713021",
+              kind: "secondary",
+              finding:
+                "App Store listing for the XP app read: no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=br.com.xp.carteira&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing for the XP app read: new-app description, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "XP security features were not researched.",
+          status: "scored",
+          score: 40,
+          evidence:
+            "Confirmed leak: on 22 March 2025 a database hosted at an external XP supplier was accessed without authorisation, exposing customers' registration data (name, phone, email, birth date, postcode, marital status, gender, job title, nationality) and their XP account number, balance, position, adviser name and credit limit for March; XP says no password, electronic signature, biometrics, CPF or document was reached, no account was accessed and no transaction was made, and the Clear brokerage was also notified. XP's security page describes device authorisation by a security token with facial validation or SMS token, personalised Pix and TED limits, alerts on suspected scams and temporary cards.",
           summaryPtBr:
-            "Não há evidência suficiente. Os recursos de segurança da XP não foram pesquisados.",
-          reviewedAt: "2026-09-09",
+            "Vazamento confirmado: em 22 de março de 2025, uma base de dados hospedada em um fornecedor externo da XP teve acesso não autorizado, expondo dados cadastrais dos clientes (nome, telefone, e-mail, data de nascimento, CEP, estado civil, gênero, cargo, nacionalidade) e o número da conta na XP, o saldo, a posição, o nome do assessor e o limite de crédito de março; a XP diz que nenhuma senha, assinatura eletrônica, biometria, CPF ou documento foi alcançado, que nenhuma conta foi acessada e que nenhuma operação foi feita, e a corretora Clear também avisou seus clientes. A página de segurança da XP descreve a autorização do aparelho por token de segurança com validação facial ou token por SMS, limites de Pix e TED personalizáveis, alertas de suspeita de golpe e cartões temporários.",
+          citations: [
+            {
+              url: "https://lps.xpi.com.br/seguranca-xp/",
+              kind: "primary",
+              finding:
+                "XP security page: device authorised through a security token with facial validation or SMS token; customisable Pix and TED limits; alerts on suspected scams; temporary cards.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/xp-comunica-vazamento-de-dados-incluindo-saldo-da-conta-aos-clientes/",
+              kind: "secondary",
+              finding:
+                "XP notified customers (and Clear customers) of unauthorised access to a database at an external supplier on 22 March 2025, exposing account number, balance, credit limit and registration data; no accounts accessed.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/macroeconomia/xp-informa-acesso-indevido-a-dados-de-clientes/",
+              kind: "secondary",
+              finding:
+                "XP statement: no leak of passwords, electronic signatures, tokens or access credentials; the exposed data listed includes registration data, account number, balance, position, adviser name and credit limit.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://guiadoinvestidor.com.br/noticias/vazamento-dados-xp-mar-2025/",
+              kind: "secondary",
+              finding:
+                "Guide reproducing XP's notice: incident learned of on 22 March 2025, access blocked, no password, signature, biometrics, CPF or ID accessed.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -2193,9 +3280,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 40,
           evidence:
-            "Card benefits (lounges, Investback rate) depend on R$ 50,000 invested at XP or R$ 3,000 monthly spend; no exit friction found for the account itself.",
+            "Card benefits (lounges, Investback rate) depend on R$ 50,000 invested at XP or R$ 3,000 monthly spend. The deposit contract lets XP close the digital account, including after 6 months without movement, which also ends the linked card, credit and FX products, and 2026 complaints describe accounts closed 'for commercial disinterest' with the customer told to move the balance to another institution. Pix limits follow the Central Bank rules and the customer can set them in the app, with increases taking effect after a minimum delay.",
           summaryPtBr:
-            "Os benefícios do cartão (salas VIP, taxa do Investback) dependem de R$ 50.000 investidos na XP ou R$ 3.000 de gastos por mês. Não foi encontrada dificuldade para sair da conta em si.",
+            "Os benefícios do cartão (salas VIP, taxa do Investback) dependem de R$ 50.000 investidos na XP ou R$ 3.000 de gastos por mês. O contrato da conta permite que a XP encerre a conta digital, inclusive após 6 meses sem movimentação, o que também encerra os produtos de cartão, crédito e câmbio ligados a ela, e reclamações de 2026 descrevem contas encerradas 'por desinteresse comercial', com o cliente orientado a transferir o saldo para outra instituição. Os limites do Pix seguem as regras do Banco Central e o cliente pode ajustá-los no app, com aumentos valendo após um prazo mínimo.",
           citations: [
             {
               url: "https://guiadoinvestidor.com.br/guias/cartao-xp-visa-infinite/",
@@ -2203,8 +3290,36 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Benefit conditions.",
             },
+            {
+              url: "https://www.xpi.com.br/documentos/contrato-de-abertura-de-conta-banco-xp-s-a/",
+              kind: "primary",
+              finding:
+                "Account contract summary: either party may close the digital account; closure may end the linked card, credit, insurance, FX and digital-asset products.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.xpi.com.br/documentos/termos-e-condicoes-conta-digital/",
+              kind: "primary",
+              finding:
+                "Digital account contract: Pix limits follow the Central Bank, customers set their own limits in the app, with a minimum delay before an increase.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/xp-investimentos/reativacao-de-conta-encerrada-por-desinteresse-comercial-e-contestacoes-de-pix_h5N0-ONFdPGfAQef/",
+              kind: "secondary",
+              finding:
+                "XP reply quoting clause 18.2: the bank may close the digital account by notice, or if the customer does not use it for 6 months with no balance.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/xp-investimentos/transacao-cancelada_uXC78jZIN1vlta5r/",
+              kind: "secondary",
+              finding:
+                "2026 complaint: account blocked on 1 June and closed on 17 July 2026 for commercial disinterest; the bank says the customer was informed and must move the balance to another bank.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -2230,9 +3345,9 @@ export const BANK_PROFILES_DATASET = {
           status: "not-offered",
           conditionPtBr: "Conta Digital não tem opção conjunta",
           evidence:
-            "The Conta Digital, XP's everyday account, explicitly has no joint option; XP's only joint product is the investment account.",
+            "The Conta Digital, XP's everyday account, explicitly has no joint option, and a 2025 XP reply says moving a Conta Digital as a joint account is not yet available; XP's only joint product is the investment account.",
           summaryPtBr:
-            "A Conta Digital, a conta do dia a dia da XP, não tem opção conjunta, e isso é dito de forma explícita; o único produto conjunto da XP é a conta de investimentos.",
+            "A Conta Digital, a conta do dia a dia da XP, não tem opção conjunta, e isso é dito de forma explícita; uma resposta da XP em 2025 diz que a movimentação da Conta Digital como conta conjunta ainda não está disponível; o único produto conjunto da XP é a conta de investimentos.",
           citations: [
             {
               url: "https://atendimento.xpi.com.br/categoria/conta-digital/duvidas-gerais",
@@ -2241,8 +3356,15 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Article 2499: 'A Conta digital permitirá conta conjunta?' answered not available.",
             },
+            {
+              url: "https://www.reclameaqui.com.br/xp-investimentos/conta-conjunta-que-nao-permite-movimentacao_rn0E_JuPXrOJGw6P/",
+              kind: "secondary",
+              finding:
+                "XP reply (5 March 2025): moving the Conta Digital as a joint account is not yet available; the Conta Conjunta Investimento links two people to one investment account.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -2250,7 +3372,7 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access product was found beyond the joint investment account and additional cards, which share a card limit, not account access.",
           summaryPtBr:
             "Não foi encontrado produto de acesso compartilhado além da conta de investimento conjunta e dos cartões adicionais, que compartilham o limite do cartão, não o acesso à conta.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "offered",
@@ -2263,12 +3385,26 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://atendimento.xpi.com.br/categoria/minha-conta-e-login/conta-investimento-conjunta",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Conta Investimento Conjunta links two people to one investment account, PF only, one co-holder maximum, requested through the advisor.",
             },
+            {
+              url: "https://guiadoinvestidor.com.br/guias/conta-conjunta-xp/",
+              kind: "secondary",
+              finding:
+                "Guide: Conta Conjunta Investimento links exactly one co-holder, is requested through an adviser and accepted digitally by both; not usable for everyday payments.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/xp-investimentos/conta-conjunta-que-nao-permite-movimentacao_rn0E_JuPXrOJGw6P/",
+              kind: "secondary",
+              finding:
+                "XP reply: the Conta Conjunta Investimento lets the co-holder access and operate the investment account once both approve in the logged area.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "not-found",
@@ -2280,12 +3416,19 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://altarendablog.com.br/2026/09/29/xp-libera-nova-conta-para-empresas-que-nao-cobra-mensalidade-e-ainda-da-acesso-a-um-visa-infinite-sem-anuidade-analise-definitiva/",
               kind: "secondary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "2026-09-29 review: no opening/monthly fee, no minimum; boletos and cash withdrawals charged; opens via cadastro.xpempresas.com.br or app; MEI not explicitly mentioned in XP FAQ.",
             },
+            {
+              url: "https://conteudos.xpi.com.br/aprenda-a-investir/relatorios/xp-empresas/",
+              kind: "secondary",
+              finding:
+                "XP content page: the PJ account is aimed mainly at mid-size companies with revenue above R$ 20 million; MEI is not mentioned.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -2340,9 +3483,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 40,
           evidence:
-            "Poupança and cooperative-issued fixed income; no open investment platform found (not researched exhaustively).",
+            "Poupança and cooperative-issued RDC, plus LCI, LCA, Letras Financeiras, Tesouro Direto (with a custody-fee exemption for Sicoob investors), DI-referenced and equity funds and an investments platform in the app; which products a member sees depends on the cooperative, since not every cooperative offers every RDC type. No open third-party investment platform was found.",
           summaryPtBr:
-            "Poupança e renda fixa emitida pelas cooperativas. Não foi encontrada plataforma de investimentos aberta (pesquisa não exaustiva).",
+            "Poupança e RDC emitido pelas cooperativas, além de LCI, LCA, Letras Financeiras, Tesouro Direto (com isenção da taxa de custódia para investidores do Sicoob), fundos referenciados DI e de ações e uma plataforma de investimentos no app; os produtos que o associado vê dependem da cooperativa, pois nem toda cooperativa oferece todos os tipos de RDC. Não foi encontrada plataforma aberta de investimentos de terceiros.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/contas-voce/-/asset_publisher/LMoNGCDcFEXS/content/id/1164656",
@@ -2350,16 +3493,37 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Poupança page.",
             },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/investimentos-voce/-/asset_publisher/CkzUFuuzBPzi/content/id/189155780",
+              kind: "primary",
+              finding:
+                "Fixed income page: RDC issued only by cooperatives, LCI, LCA, LF and Tesouro Direto with an exclusive custody-fee exemption for Sicoob investors; an investments platform for applications.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/investimentos-voce",
+              kind: "primary",
+              finding:
+                "Investments page: RDC prefixed or CDI-linked, rate set by each cooperative, not every cooperative offers prefixed RDC; poupança, RDC, LCA and funds.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoobcoopmil/investimentos-voce",
+              kind: "primary",
+              finding:
+                "A cooperative's investments page: RDC, LCI and LCA, poupança, Tesouro Direto, DI-referenced funds and equity funds.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
           score: 80,
           evidence:
-            "App Store rating 4.9; Sicoob reports second place in an app-satisfaction ranking across both stores.",
+            "App Store rating 4.9 and Google Play rating 4.8 with more than 20 million downloads, both stated in Sicoob's own store listings (not independently measured); Sicoob also reported second place in an app-satisfaction ranking across both stores. The separate Sicoob Moob engagement app is listed at 4.0 on Google Play.",
           summaryPtBr:
-            "Nota 4,9 na App Store. O Sicoob informa o segundo lugar em um ranking de satisfação de apps nas duas lojas.",
+            "Nota 4,9 na App Store e 4,8 no Google Play, com mais de 20 milhões de downloads, ambas informadas nas próprias páginas do Sicoob nas lojas (não medidas de forma independente); o Sicoob também informou o segundo lugar em um ranking de satisfação de apps nas duas lojas. O app separado Sicoob Moob aparece com 4,0 no Google Play.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/noticias/-/asset_publisher/xAioIawpOI5S/content/id/48620204",
@@ -2367,15 +3531,73 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Sicoob press release.",
             },
+            {
+              url: "https://apps.apple.com/br/app/sicoob/id416696406",
+              kind: "primary",
+              finding: "App Store listing text: rated 4.9 on the App Store.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=br.com.sicoobnet&hl=en_US",
+              kind: "primary",
+              finding:
+                "Google Play listing text: rated 4.8 in reviews, more than 20 million downloads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/developer?id=Sicoob+Confedera%C3%A7%C3%A3o&hl=en_US",
+              kind: "secondary",
+              finding: "Developer page: Sicoob Moob at 4.0 stars.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "Sicoob security features were not researched.",
+          status: "scored",
+          score: 40,
+          evidence:
+            "Sicoob describes three layers of protection (network defences, device registration with facial biometrics in use since April 2020, and AI that can deny a transaction or ask for a new facial check), a 24/7 security operations centre, day and night limits set by the member and a Modo Guardião that asks for facial biometrics when the app is used outside registered Wi-Fi. Confirmed incidents: Sicoob confirmed a cyber attack on a Monday the 24th (the excerpt read gives no month or year) that a ransomware group claimed with more than 1 TB of data, saying cooperative and member transactions run in a separate structure whose integrity was preserved, and Sicoob Centro Oeste BR issued an official notice that on 16 December 2024 an information-security incident compromised the confidentiality of certain information.",
           summaryPtBr:
-            "Não há evidência suficiente. Os recursos de segurança do Sicoob não foram pesquisados.",
-          reviewedAt: "2026-09-09",
+            "O Sicoob descreve três camadas de proteção (defesas de rede, cadastro de dispositivos com biometria facial, em uso desde abril de 2020, e inteligência artificial que pode negar uma transação ou pedir nova checagem facial), um centro de operações de segurança 24 horas, limites diurnos e noturnos definidos pelo associado e um Modo Guardião que pede biometria facial quando o app é usado fora de redes Wi-Fi cadastradas. Incidentes confirmados: o Sicoob confirmou um ataque cibernético em uma segunda-feira, dia 24 (o trecho lido não informa mês nem ano), reivindicado por um grupo de ransomware com mais de 1 TB de dados, dizendo que as transações das cooperativas e dos associados rodam em estrutura separada, com a integridade preservada, e o Sicoob Centro Oeste BR divulgou um comunicado oficial dizendo que em 16 de dezembro de 2024 um incidente de segurança da informação comprometeu a confidencialidade de certas informações.",
+          citations: [
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/noticias/-/asset_publisher/xAioIawpOI5S/content/id/165476942",
+              kind: "primary",
+              finding:
+                "Sicoob news: three-layer protection, facial biometrics for device release since April 2020, AI validation of transactions, 24/7 SOC, day and night limits.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoobcredisul/noticias/-/asset_publisher/xAioIawpOI5S/content/id/267681089",
+              kind: "primary",
+              finding:
+                "Modo Guardião: outside registered Wi-Fi networks the app limits transactions to the member's chosen values and asks for facial biometrics for larger ones.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/dicas-seguranca",
+              kind: "primary",
+              finding:
+                "Security tips page: computer registration for internet banking, virtual keyboard, guidance on fraud contacts.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/documents/135597389/244187555/Comunicac%CC%A7a%CC%83o+-+Sicoob-Centro+Br++(1).pdf/f4e32358-1267-c06c-cc00-4a6f9b89513b?t=1738620111858",
+              kind: "primary",
+              finding:
+                "Official notice from Sicoob Centro Oeste BR: on 16 December 2024 it identified an information-security incident that compromised the confidentiality of certain information.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://canaltech.com.br/seguranca/sicoob-confirma-que-sofreu-ataque-cibernetico-nesta-segunda-24-293831/",
+              kind: "secondary",
+              finding:
+                "Sicoob confirmed a cyber attack on a Monday the 24th; a ransomware group claimed more than 1 TB of data; Sicoob says transactions are processed in a separate structure and integrity is preserved.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "insufficient-evidence",
@@ -2411,11 +3633,32 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/sicoob/nao-devolucao-do-capital-social-e-saldos-apos-encerramento-de-conta-sicoob_04EzznmlwbInzASY/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Complaint thread.",
             },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/contas-voce",
+              kind: "primary",
+              finding:
+                "The capital quota is paid on opening, kept in a capital account that cannot be moved like a current account; contributions and withdrawal conditions follow each cooperative's statute.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/sicoob/resgate-conta-capital-apos-encerramento-de-conta_u8fmmG4aOLvkEmna/",
+              kind: "secondary",
+              finding:
+                "Cooperative reply: immediate redemption of quotas is not possible, it is a statutory rule decided at the general assembly, which can be the next year.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/sicoob/devolucao-do-capital-inicial_F-Lcf0Dkd6qpgm_d/",
+              kind: "secondary",
+              finding:
+                "Cooperative reply quoting its statute: quotas returned after the assembly approves the balance of the year of exit, in up to 60 monthly instalments above a small amount.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -2452,8 +3695,15 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "'Como faço para abrir uma conta conjunta?': both must go in person to a cooperative with proof of residence, income, ID and CPF.",
             },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/contas-voce/-/most_viewed_assets/EWVRVG56fx5a/content/id/1197104",
+              kind: "primary",
+              finding:
+                "'Como faço para abrir uma conta conjunta?': both people go in person to a cooperative with the listed documents.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -2461,22 +3711,22 @@ export const BANK_PROFILES_DATASET = {
             "No shared-access product was found on the national site beyond additional Sicoobcard cards, which share a card limit, not account access.",
           summaryPtBr:
             "Não foi encontrado produto de acesso compartilhado no site nacional além dos cartões adicionais Sicoobcard, que compartilham o limite do cartão, não o acesso à conta.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at Sicoob.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Sicoob.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
           conditionPtBr: "preço por cooperativa",
           evidence:
-            "Sicoob lists MEI among its account types and offers a fully digital opening flow in App Sicoob; cost depends on the tariff package set by each cooperative.",
+            "Sicoob lists MEI among its account types and its Associação Digital page offers PF or MEI opening 100% in the app (the national FAQ on MEI still says to go in person to a cooperative, so the flow varies by cooperative); cost depends on the tariff package set by each cooperative.",
           summaryPtBr:
-            "O Sicoob lista a conta MEI entre os seus tipos de conta e oferece abertura totalmente digital pelo App Sicoob; o custo depende do pacote de tarifas definido por cada cooperativa.",
+            "O Sicoob lista a conta MEI entre os seus tipos de conta e a página de Associação Digital oferece a abertura de conta PF ou MEI 100% pelo app (o FAQ nacional sobre MEI ainda diz para ir pessoalmente a uma cooperativa, então o fluxo varia por cooperativa); o custo depende do pacote de tarifas definido por cada cooperativa.",
           citations: [
             {
               url: "https://www.sicoob.com.br/web/sicoob/faq-geral/-/most_viewed_assets/lZeezSQ9cmrj/content/como-faco-para-abrir-uma-conta-para-minha-empresa-pessoa-juridic-2/20128",
@@ -2485,8 +3735,28 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Lists account types 'PF, PJ, MEI, poupança e conjunta'; opening 'pode ser feito de maneira totalmente digital' via App Sicoob or at a cooperative.",
             },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/associacaodigital",
+              kind: "primary",
+              finding: "Associação digital: open a PF or MEI account 100% in the app, free.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/contas-voce/-/most_viewed_assets/EWVRVG56fx5a/content/id/1197081",
+              kind: "primary",
+              finding:
+                "National FAQ: to open an MEI account, go in person to a cooperative with the listed documents.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoobcredirural/contadigital",
+              kind: "primary",
+              finding:
+                "A cooperative's digital account page: PF and MEI accounts opened entirely in the app from anywhere in Brazil.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -2548,32 +3818,115 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "CDBs through Cofrinho at 100% CDI or more; no broker-style access to stocks, funds or Tesouro found.",
+            "PicPay Invest in the same app: CDBs (Cofrinho at 102% of CDI, Cofrinho Turbinado at 121% within limits, CDBs from R$ 100), other fixed income, Tesouro Direto and other public bonds, investment funds, private pension, private credit, BDRs and crypto, advertised without brokerage fee; no home-broker access to Brazilian shares was found.",
           summaryPtBr:
-            "CDBs pelo Cofrinho a 100% do CDI ou mais. Não foi encontrado acesso a ações, fundos ou Tesouro como numa corretora.",
+            "PicPay Invest no mesmo app: CDBs (Cofrinho a 102% do CDI, Cofrinho Turbinado a 121% dentro de limites, CDBs a partir de R$ 100), outros títulos de renda fixa, Tesouro Direto e outros títulos públicos, fundos de investimento, previdência privada, crédito privado, BDRs e cripto, anunciados sem taxa de corretagem; não foi encontrado acesso de home broker a ações brasileiras.",
           citations: [
             {
               url: "https://meajuda.picpay.com/hc/pt-br/articles/7141763591571-O-que-%C3%A9-CDB-e-como-ele-funciona-no-PicPay",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Help centre, read through a search snippet.",
+              checkedAt: "2026-11-01",
+              finding:
+                "CDB of the account and Cofrinhos has a 3-year term, Cofrinho Turbinado 1 year; PicPay Bank CDBs have FGC cover within limits.",
+            },
+            {
+              url: "https://picpay.com/pt-br/pf/investimentos",
+              kind: "primary",
+              finding:
+                "Investments page: CDBs, funds, crypto, private pension and a selection of assets from managers; products without brokerage fee; FGC on selected products and Modo Seguro.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/categories/5633097296019-Investimentos",
+              kind: "primary",
+              finding:
+                "Help centre: invest in CDB, fixed income, funds, private pension, private credit and BDRs through PicPay Invest; public bonds can be followed in the app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/41204753424531-Como-fa%C3%A7o-para-investir-no-CDB-do-PicPay",
+              kind: "primary",
+              finding: "CDB investments from R$ 100 with several maturities.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
-          reason: "No store rating was gathered for the PicPay app.",
+          reason:
+            "No rating figure could be read from the PicPay listings on either store (descriptions and reviews only); an undated secondary guide puts Google Play at 4.4 and the App Store at 4.3, which is not citable as a current rating.",
           summaryPtBr:
-            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app do PicPay.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. Nenhuma nota pôde ser lida nas páginas do PicPay nas duas lojas (apenas descrições e avaliações); um guia secundário sem data indica 4,4 no Google Play e 4,3 na App Store, o que não serve como nota atual.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://apps.apple.com/br/app/picpay-conta-cart%C3%A3o-e-pix/id561524792",
+              kind: "secondary",
+              finding:
+                "App Store listing read: description and cards, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://play.google.com/store/apps/details?id=com.picpay&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing read: description, reviews mention instability, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mobills.com.br/blog/bancos/como-funciona-o-picpay/",
+              kind: "secondary",
+              finding: "Undated guide: Play Store 4.4 and App Store 4.3.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         security: {
-          status: "insufficient-evidence",
-          reason: "PicPay security features were not researched.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "PicPay's help centre and store listing describe Modo Seguro (protected and invisible balances), facial biometrics required when the device changes and for sensitive operations, optional biometrics on payments, a device-management area, a Central de Segurança and Pix limits split by day and night. Searches in this run found no confirmed PicPay data breach; the bank answers customers' fraud complaints by saying transactions were authorised on the registered device with biometrics, and absence of findings is not a clean record.",
           summaryPtBr:
-            "Não há evidência suficiente. Os recursos de segurança do PicPay não foram pesquisados.",
-          reviewedAt: "2026-09-09",
+            "A central de ajuda e a página do app do PicPay descrevem o Modo Seguro (saldos protegidos e invisíveis), a biometria facial exigida na troca de aparelho e em operações sensíveis, a biometria opcional nos pagamentos, uma área de gestão de dispositivos, uma Central de Segurança e limites de Pix separados por dia e noite. As buscas desta rodada não encontraram vazamento de dados confirmado no PicPay; o banco responde às reclamações de fraude dizendo que as transações foram autorizadas no aparelho cadastrado com biometria, e a ausência de achados não equivale a um histórico limpo.",
+          citations: [
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/categories/360006546032-Seguran%C3%A7a-e-Privacidade",
+              kind: "primary",
+              finding:
+                "Help centre security category: Modo Seguro, biometrics, access protection, device management, Central de Segurança, MED for Pix fraud.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/29232357541011-O-que-%C3%A9-e-como-ativar-a-biometria-nos-pagamentos-e-atividades",
+              kind: "primary",
+              finding:
+                "Biometrics on payments and activities can be enabled in the Central de segurança.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://apps.apple.com/br/app/picpay-conta-cart%C3%A3o-e-pix/id561524792",
+              kind: "primary",
+              finding:
+                "Store description: Modo Seguro and extra layers of protection for Pix, payments, transfers and purchases.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/picpay/erro-no-reconhecimento-facial-para-acesso-a-conta-picpay-apos-troca-de-aparelho-telefonico_jMWHJavHOwxzpzlV/",
+              kind: "secondary",
+              finding:
+                "PicPay reply: a device change requires mandatory facial recognition before access is released.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/picpay/picpay-hackeado_vVXsSNcqgeDjyUJ5/",
+              kind: "secondary",
+              finding:
+                "PicPay reply to a fraud complaint: transactions came from the device authorised by biometrics, the bank found no intrusion and opened an MED request.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -2617,9 +3970,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Night Pix limit R$ 1,000 with 24 to 48 hours to raise and a complaint about refused increases; since July 2025 each deposit must sit through a rolling 30-day cycle to earn the account yield.",
+            "Night Pix limit R$ 1,000 per transaction (night start 20h or 22h) with a 24 to 48 hour analysis for increases that can be approved fully, partly or refused, plus a complaint about refused increases; since July 2025 each deposit must sit through a rolling 30-day cycle to earn the account yield (balances below R$ 10 earn nothing), and the card Cofrinho follows a 30-day cycle too. Closing an account takes up to 30 days and a new PicPay account can be opened only after 90 days.",
           summaryPtBr:
-            "Limite do Pix noturno de R$ 1.000, com 24 a 48 horas para aumentar, e há uma reclamação sobre aumentos recusados. Desde julho de 2025, cada depósito precisa ficar parado por um ciclo móvel de 30 dias para render na conta.",
+            "Limite do Pix noturno de R$ 1.000 por transação (início da noite às 20h ou às 22h), com análise de 24 a 48 horas para aumentos, que podem ser aprovados total ou parcialmente ou recusados, e há uma reclamação sobre aumentos recusados; desde julho de 2025, cada depósito precisa ficar parado por um ciclo móvel de 30 dias para render na conta (saldos abaixo de R$ 10 não rendem), e o Cofrinho do cartão também segue um ciclo de 30 dias. O encerramento da conta leva até 30 dias, e uma nova conta do PicPay só pode ser aberta depois de 90 dias.",
           citations: [
             {
               url: "https://exame.com/invest/minhas-financas/picpay-muda-rendimento-automatico-da-conta-corrente-veja-como-funcionara/",
@@ -2633,8 +3986,49 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Complaint thread.",
             },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/360058187372-Existe-limite-di%C3%A1rio-de-Pix-no-PicPay",
+              kind: "primary",
+              finding:
+                "Night limit R$ 1,000 per transaction; increases analysed in 24 to 48 hours with full, partial or no approval.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/4408058807187-Como-aumentar-o-limite-di%C3%A1rio-do-Pix-no-PicPay",
+              kind: "primary",
+              finding:
+                "Night period can run from 20h or from 22h to 5h59; PJ has a single limit all day.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/42887860533011-Como-funciona-o-rendimento-do-saldo-da-minha-conta-PicPay",
+              kind: "primary",
+              finding:
+                "Each amount entering the account from 10 July 2025 starts a 30-day cycle and must stay to earn yield.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/42810303330067-Por-que-o-meu-saldo-n%C3%A3o-est%C3%A1-rendendo",
+              kind: "primary",
+              finding:
+                "Amounts moved before 30 days earn nothing; balances below R$ 10 are not credited.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/4407302956819-Como-eu-cancelo-minha-conta-do-PicPay",
+              kind: "primary",
+              finding:
+                "Closing can take up to 30 days; after closure a 90-day wait applies before creating a new account.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/38450692328211-O-que-%C3%A9-o-Cofrinho-do-Cart%C3%A3o",
+              kind: "primary",
+              finding: "Card Cofrinho: from 4 August 2025 new deposits earn after 30 days.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -2676,8 +4070,15 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "'No PicPay Empresas não existe a opção de conta conjunta'; one account per CNPJ, 'assim como em PF que é permitido apenas uma conta por CPF'.",
             },
+            {
+              url: "https://www.idinheiro.com.br/contas/digital/conta-conjunta-digital-qual-escolher/",
+              kind: "secondary",
+              finding:
+                "Guide: PicPay does not allow joint accounts at the moment; every account is individual and tied to one CPF.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -2694,22 +4095,53 @@ export const BANK_PROFILES_DATASET = {
                 "Saldo Compartilhado shares the total benefits balance with any number of people; used by QR code; no adicional card.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at PicPay.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no PicPay.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
-          status: "not-found",
+          status: "offered",
           evidence:
-            "PicPay Empresas' PJ account has no fetched source confirming MEI eligibility; third-party sources say MEI is accepted, but this was not verified against PicPay's own pages.",
+            "PicPay's own Google Play listing for PicPay Empresas says the app serves 'MEI (Individual Microentrepreneur) and CNPJ' with Pix, a card machine and payment links, its PJ page advertises a free, 100% digital account and its Pix page gives MEI examples; the account can be opened in the PicPay Empresas app or from the personal app.",
           summaryPtBr:
-            "Não há fonte verificada do próprio PicPay confirmando a elegibilidade de MEI na conta PJ do PicPay Empresas; fontes de terceiros dizem que MEI é aceito, mas isso não foi confirmado nas páginas oficiais.",
-          reviewedAt: "2026-10-13",
+            "A página do próprio PicPay Empresas no Google Play diz que o app atende 'MEI (Microempreendedor Individual) e CNPJ' com Pix, maquininha e link de pagamento, a página PJ anuncia uma conta gratuita e 100% digital e a página de Pix traz exemplos de MEI; a conta pode ser aberta no app PicPay Empresas ou pelo app de pessoa física.",
+          reviewedAt: "2026-11-01",
+          conditionPtBr: "conta PJ gratuita",
+          citations: [
+            {
+              url: "https://play.google.com/store/apps/details?id=com.picpay.business&hl=en_US",
+              kind: "primary",
+              finding:
+                "PicPay Empresas listing: for MEI (Individual Microentrepreneur) and CNPJ: Pix, card machine and payment link to the business account.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://picpay.com/pt-br/pj",
+              kind: "primary",
+              finding:
+                "PicPay Empresas page: free, 100% digital PJ account with card machine and credit card.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://picpay.com/pt-br/pj/pix",
+              kind: "primary",
+              finding:
+                "PicPay Empresas Pix page with MEI examples (manicure and driver MEIs), up to 20 Pix keys.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/42718651627923-O-que-%C3%A9-a-conta-PJ-do-PicPay-Empresas",
+              kind: "primary",
+              finding:
+                "Help article: open the PJ account in the PicPay Empresas app or from the personal app.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
       },
     },
@@ -2765,42 +4197,144 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Cofrinho CDB tiers (100%, 120% with Meli+, 140% campaigns); no access to stocks, funds or Tesouro found.",
+            "The app's Investimentos area sells CDBs (post- and pre-fixed, FGC-covered), LCI and LCA (maturities from 6 months to 3 years, post-fixed, pre-fixed or IPCA-linked, no fee to invest), investment funds and crypto (Bitcoin, Ethereum and Meli Dólar); the Cofrinhos are CDB-backed with no minimum deposit and pay at least 100% of CDI, 115% for those who bring R$ 1,000 a month into the account (up to R$ 5,000) and 120% for Meli+ subscribers (up to R$ 10,000). The blog also describes a seasonal CDB at 150% of CDI capped at R$ 3,000 for first-time CDB investors, not confirmed to be live. No home-broker access to shares and no Tesouro Direto sale in the app were found. Score stays 60: the range is broader than the earlier review recorded (funds, LCI and LCA do exist) but still has no shares or Tesouro Direto.",
           summaryPtBr:
-            "Faixas de CDB no Cofrinho (100%, 120% com Meli+ e 140% em campanhas). Não foi encontrado acesso a ações, fundos ou Tesouro.",
+            "A área de Investimentos do app vende CDBs (pós e prefixados, com cobertura do FGC), LCI e LCA (vencimentos de 6 meses a 3 anos, pós-fixados, prefixados ou atrelados ao IPCA, sem taxa para investir), fundos de investimento e cripto (Bitcoin, Ethereum e Meli Dólar); os Cofrinhos são lastreados em CDB, sem depósito mínimo, e rendem no mínimo 100% do CDI, 115% para quem traz R$ 1.000 por mês à conta (até R$ 5.000) e 120% para assinantes do Meli+ (até R$ 10.000). O blog também descreve um CDB sazonal de 150% do CDI, limitado a R$ 3.000, para quem investe em CDB pela primeira vez, sem confirmação de que esteja ativo. Não foram encontrados acesso a home broker de ações nem venda de Tesouro Direto no app.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/promocao-rendimento-CDB-mercado-pago",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Blog, read through a search snippet.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Seasonal CDB at 150% of CDI for a limited time: cap of R$ 3,000, about six months, daily liquidity, FGC cover, aimed at first-time CDB investors or new accounts; older customers are told to check the offers in their investments area.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/quando-investir-em-lci-lca",
+              kind: "primary",
+              finding:
+                "Mercado Pago: 'you find LCI, LCA, CDBs, investment funds and crypto' built directly in the app.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/ajuda/taxa-lci-lca_37131",
+              kind: "primary",
+              finding: "Help centre: no fee to invest in LCI and LCA.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/erros-comuns-ao-investir-lci-lca",
+              kind: "primary",
+              finding:
+                "LCI and LCA in the app with maturities of 6 months, 9 months, 1, 2 and 3 years; post-fixed (CDI), pre-fixed or hybrid (IPCA); FGC cover.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/lci-lca-ou-outros-investimentos",
+              kind: "primary",
+              finding:
+                "Investment options in the app: CDBs of several maturities, funds, Cofrinhos up to 120% of CDI and crypto (Bitcoin, Ethereum, Meli Dólar).",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/investimento-cdb-cofrinhos-mercado-pago",
+              kind: "primary",
+              finding:
+                "Cofrinhos are CDB-based with FGC cover up to R$ 250,000 per CPF; CDBs of all types are in the app; up to 120% of CDI for balances up to R$ 10,000.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/cofrinhos",
+              kind: "primary",
+              finding:
+                "Cofrinhos: all pay from 100% of CDI, 115% by bringing R$ 1,000 a month into the account, 120% with Meli+; businesses get 115%; campaigns up to 140%.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
-          reason: "No store rating was gathered for the Mercado Pago app.",
+          reason:
+            "No rating figure could be read from the Mercado Pago listings on Google Play or the App Store (descriptions and reviews only); figures quoted by third-party guides carry no date, so none is citable as a current rating.",
           summaryPtBr:
-            "Não há evidência suficiente. Não foi levantada nota nas lojas para o app do Mercado Pago.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. Nenhuma nota pôde ser lida nas páginas do Mercado Pago no Google Play e na App Store (apenas descrições e avaliações); os números citados por guias de terceiros não têm data e não servem como nota atual.",
+          reviewedAt: "2026-11-01",
+          citations: [
+            {
+              url: "https://play.google.com/store/apps/details?id=com.mercadopago.wallet&hl=en_US",
+              kind: "secondary",
+              finding:
+                "Google Play listing read: app description, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://apps.apple.com/br/app/mercado-pago-banco-digital/id925436649",
+              kind: "secondary",
+              finding:
+                "App Store listing read: app description and reviews, no rating figure to automated reads.",
+              checkedAt: "2026-11-01",
+            },
+          ],
         },
         security: {
           status: "scored",
           score: 60,
           evidence:
-            "Mandatory 2FA (facial recognition, cross-device QR code, SMS or WhatsApp codes); recurring complaints that 2FA is forced or inconvenient.",
+            "Mercado Pago's own blog describes two-step verification by facial recognition, cross-device QR code, SMS or WhatsApp codes, e-mail or an authenticator app (Google Authenticator), recommended right after opening the account, plus biometric or PIN unlock of the app, a list of devices that accessed the account, a 'modo blindado' that restricts the account outside trusted locations, security alerts, 'pessoas de confiança' who can flag odd activity or request a block, and an anti-fraud system that combines AI and manual review. Searches in this run found no confirmed Mercado Pago data breach. Customers keep complaining that the company declines refunds when a payment was approved on a device already logged in (one April 2026 complaint alleges a leak; the reply says no intrusion was found), and the company's own checklist says refunds are not automatic and depend on a contestation under its security fund. The earlier 'mandatory 2FA' wording could not be confirmed, since the blog presents 2FA as a recommended setting.",
           summaryPtBr:
-            "2FA obrigatório (reconhecimento facial, QR code entre dispositivos, códigos por SMS ou WhatsApp). Há reclamações recorrentes de que o 2FA é forçado ou incômodo.",
+            "O blog do próprio Mercado Pago descreve a verificação em duas etapas por reconhecimento facial, QR code entre dispositivos, códigos por SMS ou WhatsApp, e-mail ou app autenticador (Google Authenticator), recomendada logo após abrir a conta, além de desbloqueio do app por biometria ou PIN, lista de dispositivos que acessaram a conta, um 'modo blindado' que restringe a conta fora dos locais de confiança, alertas de segurança, 'pessoas de confiança' que podem sinalizar movimentações estranhas ou pedir o bloqueio e um sistema antifraude que combina inteligência artificial e revisão manual. As buscas desta rodada não encontraram vazamento de dados confirmado no Mercado Pago. Clientes seguem reclamando que a empresa nega reembolso quando o pagamento foi aprovado em um aparelho já conectado (uma reclamação de abril de 2026 alega vazamento, e a resposta diz que não houve invasão), e o próprio checklist da empresa diz que o reembolso não é automático e depende de uma contestação no fundo de segurança. A redação anterior de '2FA obrigatório' não pôde ser confirmada, já que o blog apresenta o 2FA como uma configuração recomendada.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/o-que-e-autenticacao-de-dois-fatores",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "2FA explainer, read through a search snippet.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Generic 2FA explainer on Mercado Pago's blog: password plus a code sent to the phone; recommends turning it on for bank, payment and investment accounts.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/seguranca-digital-conta-mercado-pago",
+              kind: "primary",
+              finding:
+                "2FA methods (facial recognition, QR code, SMS or WhatsApp codes, Google Authenticator), biometric unlock, security alerts, 'pessoas de confiança'.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/checklist-seguranca-conta-mercado-pago",
+              kind: "primary",
+              finding:
+                "Settings > Security lists every device that accessed the account; 'modo blindado' restricts the account outside trusted locations; biometrics or PIN before opening the app; refunds are not automatic and go through a contestation under the security fund.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/autenticacao-dois-fatores-como-ativar",
+              kind: "primary",
+              finding:
+                "Recommends enabling two-step verification as soon as the account is created (Settings > Security).",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://conteudo.mercadopago.com.br/como-deixar-sua-conta-mercado-pago-ainda-mais-segura",
+              kind: "primary",
+              finding:
+                "Anti-fraud system combining artificial intelligence and manual review; Google Authenticator as a second factor.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.reclameaqui.com.br/mercado-pago/banco-mercado-pago-vazamento-de-dados-e-retirada-total-de-dinheiro-da-conta-apos-denuncia_mcS6cG03MM5Qz6wT/",
+              kind: "secondary",
+              finding:
+                "April 2026 complaint alleging a leak; company reply: the payment was validated on an already known, logged-in device, so it cannot reverse it, and the account remains safe from outside intruders.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/noticias/mercado-pago-nao-reembolsa-vitimas-de-invasao-em-contas/",
+              kind: "secondary",
+              finding:
+                "Undated report: Mercado Pago declines to refund account-intrusion victims (one case of six transfers of R$ 712.29), arguing access used the victim's own data.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "insufficient-evidence",
@@ -2837,18 +4371,40 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Night Pix limit R$ 1,000, increases in 24 to 48 hours, decreases immediate. The default account balance is not FGC-covered.",
+            "Night Pix limit R$ 1,000 (the night start can be moved between 20h and 22h); increases are analysed in up to 24 hours (another Mercado Pago page says 24 to 48 hours) and decreases are immediate. Yield is conditional: Cofrinhos pay 100% of CDI by default, 115% only for those who bring R$ 1,000 a month into the account (up to R$ 5,000) and 120% only for Meli+ subscribers (up to R$ 10,000); the account balance earns 105% of CDI (up to R$ 20,000) under the same R$ 1,000 monthly rule; and a Cofrinho on the monthly-yield model can lose that cycle's yield if redeemed within 30 days. The earlier note that the account's free balance is not FGC-covered was not re-read.",
           summaryPtBr:
-            "Limite do Pix noturno de R$ 1.000, com aumento em 24 a 48 horas e redução imediata. O saldo padrão da conta não é coberto pelo FGC.",
+            "Limite do Pix noturno de R$ 1.000 (o início da noite pode ser movido entre 20h e 22h); aumentos são analisados em até 24 horas (outra página do Mercado Pago fala em 24 a 48 horas) e reduções são imediatas. O rendimento é condicionado: os Cofrinhos rendem 100% do CDI por padrão, 115% só para quem traz R$ 1.000 por mês à conta (até R$ 5.000) e 120% só para assinantes do Meli+ (até R$ 10.000); o saldo da conta rende 105% do CDI (até R$ 20.000) com a mesma regra de R$ 1.000 por mês; e um Cofrinho no modelo de rendimento mensal pode perder o rendimento do ciclo se for resgatado antes de 30 dias. A observação anterior de que o saldo comum da conta não tem cobertura do FGC não foi relida.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/como-funciona-limite-pix-mercado-pago",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Pix limits, read through a search snippet.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Pix limits: night limit R$ 1,000 (night start can be moved between 20h and 22h), limit increases analysed in up to 24 hours, reductions immediate.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/cofrinhos",
+              kind: "primary",
+              finding:
+                "Cofrinhos pay from 100% of CDI; 115% requires bringing R$ 1,000 a month into the account; 120% requires Meli+; the limit of each yield applies.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/dinheiro-no-cofrinho-mercado-pago-rende-mais",
+              kind: "primary",
+              finding:
+                "120% of CDI needs an active Meli+ and a balance of up to R$ 10,000; Cofrinhos on the monthly-yield model may not credit that cycle's yield if redeemed before 30 days.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/rendimento-conta-mercado-pago",
+              kind: "primary",
+              finding:
+                "Account balance yields 100% of CDI, or 105% up to R$ 20,000 when R$ 1,000 or more comes into the account in the month.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -2880,12 +4436,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.mercadopago.com.br/blog/como-funciona-conta-conjunta",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Section 'Alternativas digitais à conta conjunta no Mercado Pago': Dividir Gastos for personal life, Colaboradores for PJ seller accounts, 'sem o compromisso de um contrato bancário'.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "not-found",
@@ -2893,14 +4449,14 @@ export const BANK_PROFILES_DATASET = {
             "Dividir Gastos splits bills among a group and sends payment requests, but it does not give anyone shared access to another person's account; no shared-access product was found.",
           summaryPtBr:
             "O Dividir Gastos reparte contas entre um grupo e envia cobranças, mas não dá a ninguém acesso compartilhado à conta de outra pessoa; não foi encontrado produto de acesso compartilhado.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
           evidence: "No source was found describing a joint investment account at Mercado Pago.",
           summaryPtBr:
             "Não foi encontrada fonte que descreva uma conta de investimento conjunta no Mercado Pago.",
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         mei: {
           status: "offered",
@@ -2912,12 +4468,19 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.mercadopago.com.br/blog/como-abrir-conta-pj-gratuita-para-mei",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "12 Sep 2026: MEI account 100% digital, 'sem anuidade, sem taxa de manutenção'.",
             },
+            {
+              url: "https://www.mercadopago.com.br/conta-negocio",
+              kind: "primary",
+              finding:
+                "Conta Negócio FAQ for MEI: with a CNPJ, open the account in the app; the process is 100% digital.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
