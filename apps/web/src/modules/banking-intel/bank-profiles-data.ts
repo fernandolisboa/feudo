@@ -10,9 +10,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Nubank Rewards was discontinued. Nubank+ gives 0.8% cashback or 1.4 points per US$ for a R$ 39 monthly fee that can be waived; Ultravioleta gives 2.2 points per US$, IOF exemption abroad and 4 lounge visits a year. The entry card has no ongoing points programme.",
+            "Nubank Rewards was discontinued. The Nubank+ package became the Nubank Croma segment on 28 July 2026: Mastercard Platinum with 0.8% cashback or 1.4 points per US$ and a R$ 39 monthly fee, waived at R$ 4,000 of monthly card spend or R$ 30,000 invested or saved. Ultravioleta gives 2.2 points per US$ or 1.25% cashback, IOF exemption abroad and 4 Priority Pass visits a year, with a R$ 89 monthly fee waived at R$ 8,000 of monthly spend or R$ 50,000 invested or saved. A 28 October 2026 report, partly based on customer accounts, says Ultravioleta lost some perks (the cashback no longer earns 200% of CDI and the HBO Max benefit is no longer free). The entry card has no ongoing points programme.",
           summaryPtBr:
-            "O Nubank Rewards foi encerrado. O Nubank+ dá 0,8% de cashback ou 1,4 ponto por US$, com mensalidade de R$ 39 que pode ser isenta. O Ultravioleta dá 2,2 pontos por US$, isenção de IOF no exterior e 4 acessos a salas VIP por ano. O cartão de entrada não tem programa de pontos contínuo.",
+            "O Nubank Rewards foi encerrado. O pacote Nubank+ virou o segmento Nubank Croma em 28 de julho de 2026: cartão Mastercard Platinum com 0,8% de cashback ou 1,4 ponto por US$ e mensalidade de R$ 39, isenta com R$ 4.000 de gastos por mês no cartão ou R$ 30.000 investidos ou guardados. O Ultravioleta dá 2,2 pontos por US$ ou 1,25% de cashback, isenção de IOF no exterior e 4 acessos por ano ao Priority Pass, com mensalidade de R$ 89, isenta com R$ 8.000 de gastos por mês ou R$ 50.000 investidos ou guardados. Uma reportagem de 28 de outubro de 2026, em parte baseada em relatos de clientes, diz que o Ultravioleta perdeu vantagens (o cashback deixou de render 200% do CDI e o HBO Max deixou de ser gratuito). O cartão de entrada não tem programa de pontos contínuo.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/06/09",
@@ -23,11 +23,33 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://setorneinvestidor.net/novo-cartao-nubank-mais-cashback-aumento-limite",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Nubank+ terms.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Nubank+ terms: 0.8% cashback or 1.4 points per US$, R$ 39 monthly fee waived at R$ 4,000 of spend or R$ 30,000 invested (the segment is now called Croma).",
+            },
+            {
+              url: "https://nubank.com.br/ultravioleta/cartao-black",
+              kind: "primary",
+              finding:
+                "Ultravioleta: from 2.2 points per US$ or 1.25% cashback, IOF zero abroad, 4 Priority Pass visits a year; R$ 89 a month, waived at R$ 8,000 of monthly spend or R$ 50,000 invested or saved.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://nu.com/pt/sala-de-imprensa/companhia/nubank-anuncia-novo-segmento-croma",
+              kind: "primary",
+              finding:
+                "Press release of 28 July 2026: Croma with 0.8% cashback or 1.4 points per US$, R$ 39 a month waived at R$ 4,000 of card spend or R$ 30,000 invested or saved.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/28/nubank-poe-fim-a-beneficios-importantes-do-ultravioleta-e-eleva-a-mensalidade-para-r-89/",
+              kind: "secondary",
+              finding:
+                "Ultravioleta cuts reported on 28 October 2026, part of them compiled from customer accounts.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -40,42 +62,42 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nubank.com.br/nu/investimentos/tesouro-direto",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Tesouro Direto in the app.",
             },
             {
               url: "https://nubank.com.br/sobre-investimentos/taxas-e-precos",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Investment fees and prices.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
           score: 60,
           evidence:
-            "Secondary sources put the app at about 4.6 stars on Google Play and 4.8 on the App Store (undated); the earlier figure of about 4.7 stars from about 5.5 million ratings was not re-read and the store listing does not show a rating to automated reads. Confirmed 2026 instability: 7 February (login, transfers and internet banking, about 6,820 Downdetector reports at the peak, resolved the same day per Nubank), 6 March (login, transfers and Pix, about 389 reports) and a temporary Pix intermittency in late May that Nubank confirmed.",
+            "The App Store listing shows 4.8 stars from about 1.7 million ratings (read directly); the Google Play listing shows no rating to automated reads, and an undated secondary source puts it at 4.6. The earlier figure of about 4.7 stars from about 5.5 million ratings was not re-read. Confirmed 2026 instability: 7 February (login, transfers and internet banking, about 6,820 Downdetector reports at the peak, resolved the same day per Nubank), 6 March (login, transfers and Pix, about 389 reports), a temporary Pix intermittency in late May that Nubank confirmed, 23 August (Pix instability confirmed by the Central Bank across many banks, Nubank among the most cited) and 4 September (Pix transfers failing, per Downdetector, with no official statement read).",
           summaryPtBr:
-            "Fontes secundárias indicam cerca de 4,6 estrelas no Google Play e 4,8 na App Store (sem data). O número anterior, cerca de 4,7 estrelas com cerca de 5,5 milhões de avaliações, não foi relido, e a página da loja não mostra a nota para leitura automática. Houve instabilidade confirmada em 2026: em 7 de fevereiro (login, transferências e internet banking, com cerca de 6.820 relatos no pico do Downdetector, resolvida no mesmo dia segundo o Nubank), em 6 de março (login, transferências e Pix, cerca de 389 relatos) e uma intermitência temporária do Pix no fim de maio, confirmada pelo Nubank.",
+            "A página do app na App Store mostra 4,8 estrelas, com cerca de 1,7 milhão de avaliações (lida diretamente). A página do Google Play não mostra a nota para leitura automática, e uma fonte secundária sem data indica 4,6. O número anterior, cerca de 4,7 estrelas com cerca de 5,5 milhões de avaliações, não foi relido. Houve instabilidade confirmada em 2026: em 7 de fevereiro (login, transferências e internet banking, com cerca de 6.820 relatos no pico do Downdetector, resolvida no mesmo dia segundo o Nubank), em 6 de março (login, transferências e Pix, cerca de 389 relatos), uma intermitência temporária do Pix no fim de maio, confirmada pelo Nubank, em 23 de agosto (instabilidade do Pix confirmada pelo Banco Central em vários bancos, com o Nubank entre os mais citados) e em 4 de setembro (transferências por Pix falhando, segundo o Downdetector, sem comunicado oficial lido).",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.nu.production",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Listing found through search; the snippet shows no rating figure.",
             },
             {
               url: "https://www.mobills.com.br/blog/bancos/como-baixar-app-nubank/",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Undated: Play Store 4.6 and App Store 4.8.",
             },
             {
               url: "https://comunidade.nubank.com.br/vida-financeira/post/nubank-fora-do-ar-resolvido---07-02-2026-jawvM3kMEGDQQnk",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Nubank community post: app instability on 07/02/2026 resolved at 17:00.",
             },
             {
@@ -95,11 +117,31 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://altarendablog.com.br/2026/05/29/pix-fora-do-ar-nubank-itau-bradesco-santander-e-inter-registram-falhas-e-clientes-entram-em-alerta/",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Nubank confirmed a temporary Pix instability in the week of 27 May 2026.",
             },
+            {
+              url: "https://apps.apple.com/br/app/nubank-conta-cart%C3%A3o-e-mais/id814456780",
+              kind: "primary",
+              finding: "App Store listing: 4.8 stars, about 1.7 million ratings.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/noticias/nubank-fora-do-ar-aplicativo-tem-instabilidade-nesta-sexta-4/",
+              kind: "secondary",
+              finding:
+                "Pix transfers failing on Friday 4 September per Downdetector; no official statement in the text read.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, with a Downdetector peak of 2,444 reports.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         security: {
           status: "scored",
@@ -112,17 +154,17 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nubank.com.br/transparencia/politicas-de-privacidade-e-seguranca/politica-de-seguranca",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Security policy.",
             },
             {
               url: "https://blog.nubank.com.br/autenticacao-dois-fatores/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Two-factor authentication.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -141,13 +183,13 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nubank.com.br/contratos",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Contracts page lists TED, Pix and deposit by boleto at R$ 0.",
             },
             {
               url: "https://nubank.com.br/sobre-investimentos/taxas-e-precos",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "No service fee for Tesouro Direto, CDB, LCI, LCA, stocks or BDRs; only the B3 custody fee on Tesouro.",
             },
@@ -160,12 +202,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/18236120.asp?seg=bancossegmento09&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
-                "Automated read failed (url_not_accessible); the registry page was not re-read, only its listing was seen.",
+                "Registry page read: this institution did not report its tariffs; page last updated 25/08/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -178,32 +220,32 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.nubank.com.br/meus-limites-pix-nubank-permite-definir-limites-diurno-e-noturno-para-transacoes/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Pix day and night limits.",
             },
             {
               url: "https://blog.nubank.com.br/limite-pix/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Increases take 24 to 48 hours after the request; reductions apply immediately.",
             },
             {
               url: "https://comunidade.nubank.com.br/novidades/post/mais-seguranca-nas-transacoes-noturnas-em-sua-conta-4QKoa2N4jHuTsn3",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Night limit of up to R$ 1,000 on Pix and boleto payments between individuals, set by Banco Central.",
             },
             {
               url: "https://altarendablog.com.br/2026/10/13/nubank-agora-tem-5-cartoes-de-credito-veja-qual-e-o-seu-e-como-subir-de-nivel-em-2026/",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Croma and Ultravioleta fees are waived only above monthly spend or invested thresholds.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
@@ -216,7 +258,7 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/nubank/",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): maximum reputation, average 8.7/10 over the last 6 months, 99.6% response. Resolution and would-do-business-again figures were not visible in the snippet.",
             },
@@ -227,7 +269,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Page rendered no indicators to an automated read.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -240,11 +282,11 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://blog.nubank.com.br/conta-conjunta/",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding: "Blog states 'o Nubank não oferece conta conjunta', updated 28 Jul 2026.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         shared: {
           status: "offered",
@@ -257,12 +299,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://nu.com/pt/sala-de-imprensa/consumidores/espaco-familia-nubank-ultravioleta-lanca-recurso-de-saldo-compartilhado",
               kind: "primary",
-              checkedAt: "2026-10-13",
+              checkedAt: "2026-11-01",
               finding:
                 "Press release: Espaço Família (Ultravioleta) shares one balance among the client and up to four others from their own logins; both administrators are notified and spending is attributed pro rata to each person's deposits.",
             },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
         jointInvestment: {
           status: "not-found",
@@ -286,8 +328,15 @@ export const BANK_PROFILES_DATASET = {
               finding:
                 "Conta PJ: 'Zero taxas de manutenção', free unlimited Pix, available to MEI; withdrawals R$ 6,50.",
             },
+            {
+              url: "https://nubank.com.br/empresas/conta",
+              kind: "primary",
+              finding:
+                "Conta Nu Empresas is open to MEI, zero maintenance fee, free Pix and TED to other banks, R$ 6,50 per debit-card withdrawal.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-13",
+          reviewedAt: "2026-11-01",
         },
       },
     },
@@ -305,17 +354,17 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://inter.co/pra-voce/cartoes/programa-de-pontos/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Inter Loop programme.",
             },
             {
               url: "https://altarendablog.com.br/2026/04/05",
               kind: "secondary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "Card overview.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -328,19 +377,26 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://inter.co/pra-voce/investimentos/renda-fixa/cdb/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding: "CDB offer.",
             },
+            {
+              url: "https://www.inter.co/pra-voce/investimentos/",
+              kind: "primary",
+              finding:
+                "CDB from R$ 1.00, Tesouro Direto, funds, crypto and Brazilian and global stocks, with a free home broker.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
           score: 60,
           evidence:
-            "Only branded content claims top ratings, with no number or independent source. Confirmed instability on 7 February 2026 and in July 2026 (login, Pix, purchases).",
+            "Branded content (CNN Brasil, undated in the excerpt read) says the app has been among the best-rated financial apps for nine months across more than 1.3 million users, with no independent figure; a secondary guide dated November 2025 puts Google Play at 4.5 and the App Store at 4.9. Confirmed instability on 7 February 2026, in July 2026 (login, Pix, purchases) and on 23 August 2026 (Pix instability confirmed by the Central Bank across many banks, Inter among the most cited).",
           summaryPtBr:
-            "Só conteúdo da própria marca fala em notas máximas, sem número nem fonte independente. Houve instabilidade confirmada em 7 de fevereiro de 2026 e em julho de 2026 (login, Pix, compras).",
+            "Conteúdo da própria marca (CNN Brasil, sem data no trecho lido) diz que o app está entre os mais bem avaliados do setor financeiro há nove meses, com mais de 1,3 milhão de usuários, sem número independente. Um guia secundário de novembro de 2025 indica 4,5 no Google Play e 4,9 na App Store. Houve instabilidade confirmada em 7 de fevereiro de 2026, em julho de 2026 (login, Pix, compras) e em 23 de agosto de 2026 (instabilidade do Pix confirmada pelo Banco Central em vários bancos, com o Inter entre os mais citados).",
           citations: [
             {
               url: "https://dol.com.br/noticias/brasil/946160",
@@ -355,8 +411,29 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "App instability report.",
             },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/negocios/super-app-do-inter-se-mantem-entre-os-mais-bem-avaliados-do-pais/",
+              kind: "secondary",
+              finding:
+                "Branded content: Super App among the best-rated for nine consecutive months, over 1.3 million users.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://guiadoinvestidor.com.br/guias/corretoras/inter-corretora/",
+              kind: "secondary",
+              finding:
+                "Guide dated November 2025: Google Play 4.5, App Store 4.9; app instability complaints.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, with a Downdetector peak of 2,444 reports.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         security: {
           status: "scored",
@@ -378,8 +455,22 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Inter statement.",
             },
+            {
+              url: "https://tecnoblog.net/noticias/banco-inter-acordo-mpdft/",
+              kind: "secondary",
+              finding:
+                "MPDFT analysis: 19,961 account holders exposed, 13,207 with account number, password, address and CPF; R$ 1.5 million agreement.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://seucreditodigital.com.br/banco-inter-confirma-vazamento-de-dados/",
+              kind: "secondary",
+              finding:
+                "Inter's statement attributes the exposure to an authorised person who broke confidentiality, not an external attack.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         fees: {
           status: "scored",
@@ -392,7 +483,7 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00416968.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "TED R$ 15.00; standard packages I to III R$ 20.00, 30.00, 45.00; basic national card annuity R$ 80.00; page last updated 08/09/2026.",
             },
@@ -403,7 +494,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Free digital account.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -416,35 +507,35 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://ajuda.inter.co/conta-digital-pessoa-fisica-e-mei/o-que-e-limite-noturno",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Night limit.",
             },
             {
               url: "https://www.reclameaqui.com.br/inter/demora-para-liberacao-de-limite-pix",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Complaint, anecdotal.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
-          score: 85,
+          score: 86,
           evidence:
-            "Reclame Aqui: 8.5/10, 98.4% response, 90% resolution, 78% would do business again, average response 9 days 13 hours.",
+            "Reclame Aqui: 8.6/10 over the last six months, maximum reputation (earlier review: 8.5/10, 98.4% response, 90% resolution, 78% would do business again, average response 9 days 13 hours; those figures were not visible in this read).",
           summaryPtBr:
-            "Reclame Aqui: 8,5/10, 98,4% de respostas, 90% de solução, 78% voltariam a fazer negócio, tempo médio de resposta de 9 dias e 13 horas.",
+            "Reclame Aqui: 8,6/10 nos últimos seis meses, reputação máxima (revisão anterior: 8,5/10, 98,4% de respostas, 90% de solução, 78% voltariam a fazer negócio, tempo médio de resposta de 9 dias e 13 horas; esses números não apareceram nesta leitura).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/inter/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): maximum reputation, average 8.6/10 over the last six months.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -507,9 +598,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 80,
           evidence:
-            "Broad card ladder: Personnalité Black, LATAM Pass co-brand, Private Visa Infinite with DragonPass, Magalu up to 2% cashback. Annuity waiver from R$ 8,000 monthly spend or R$ 50,000 invested.",
+            "Broad card ladder: Personnalité Black, LATAM Pass co-brand, Private Visa Infinite with DragonPass, Magalu up to 2% cashback (ladder not re-read this run). On 29 July 2026 Itaú changed the Uniclass Mastercard Black and Visa Infinite, rolling out through the end of 2026: invoices from R$ 4,000 earn up to 2.5 points per US$ and 4 lounge visits a year, below that 2 points per US$. The Uniclass Black fee is R$ 80 a month (R$ 960 a year), waived at R$ 8,000 of invoice spend, R$ 50,000 invested at Itaú or Minhas Vantagens level 4 or above. Personnalité The One carries a R$ 4,000 annual fee, waived with R$ 5 million invested, R$ 60,000 of invoice spend or level 5, and from January 2027 full points and unlimited lounges need R$ 4,000 of invoice spend.",
           summaryPtBr:
-            "Vários níveis de cartão: Personnalité Black, parceria com LATAM Pass, Private Visa Infinite com DragonPass e Magalu com até 2% de cashback. A anuidade é isenta a partir de R$ 8.000 de gastos por mês ou R$ 50.000 investidos.",
+            "Vários níveis de cartão: Personnalité Black, parceria com LATAM Pass, Private Visa Infinite com DragonPass e Magalu com até 2% de cashback (a escada de cartões não foi relida nesta rodada). Em 29 de julho de 2026 o Itaú mudou os cartões Uniclass Mastercard Black e Visa Infinite, com implantação até o fim de 2026: faturas a partir de R$ 4.000 rendem até 2,5 pontos por US$ e 4 acessos por ano a salas VIP, e abaixo disso são 2 pontos por US$. A mensalidade do Uniclass Black é de R$ 80 (R$ 960 por ano), isenta com R$ 8.000 de fatura, R$ 50.000 investidos no Itaú ou nível 4 ou superior no Minhas Vantagens. O Personnalité The One tem anuidade de R$ 4.000, isenta com R$ 5 milhões investidos, R$ 60.000 de fatura ou nível 5, e a partir de janeiro de 2027 a pontuação máxima e as salas VIP ilimitadas exigem R$ 4.000 de fatura.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/01/28",
@@ -520,11 +611,26 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://diariodopara.com.br/seu-bolso/itau-muda-regras-de-pontos-e-anuidade-dos-cartoes-veja-o-que-muda",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "2026 waiver rules.",
+              checkedAt: "2026-11-01",
+              finding:
+                "29 July 2026 change: invoices from R$ 4,000 earn up to 2.5 points per US$ and 4 yearly lounge visits, below that 2 points; rollout through the end of 2026.",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/30/novo-uniclass-black-do-itau-4-acessos-a-salas-vip-ate-25-pontos-por-dolar-e-2-meses-gratis-para-testar/",
+              kind: "secondary",
+              finding:
+                "Uniclass Black: R$ 80 a month, waived at R$ 8,000 of invoice spend, R$ 50,000 invested or Minhas Vantagens level 4 or above; up to 2.5 points per US$ and 4 lounge visits.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/01/fim-da-pontuacao-cheia-no-the-one-itau-cria-exigencia-de-gasto-para-2027-analise-da-mudanca/",
+              kind: "secondary",
+              finding:
+                "The One: R$ 4,000 a year, waived with R$ 5 million invested, R$ 60,000 of spend or level 5; from January 2027 full points need R$ 4,000 of invoice spend.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -537,33 +643,54 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.ion.itau/investimentos/produtos/tesouro-direto/",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Tesouro Direto on íon.",
             },
             {
               url: "https://www.itaucorretora.com.br/nossosservicos/beneficios-no-itau.aspx",
               kind: "primary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Brokerage benefits.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "insufficient-evidence",
           reason:
-            "No current store rating could be read for the Itaú app and no 2026 outage was found either way.",
+            "The App Store listing shows 4.7 stars from about 3.3 million ratings, but the Google Play rating could not be read, so no score was assigned. Outages found: Central Bank-confirmed Pix instability on 23 August 2026 that hit Itaú among other banks, and an app, internet banking and Pix instability at Itaú on 30 October 2026 (about 100 Downdetector reports at the peak).",
           summaryPtBr:
-            "Não há evidência suficiente. Não foi possível ler a nota atual do app do Itaú, e não se encontrou nenhuma queda em 2026 que confirme ou descarte problemas.",
-          reviewedAt: "2026-09-09",
+            "Não há evidência suficiente. A página do app na App Store mostra 4,7 estrelas, com cerca de 3,3 milhões de avaliações, mas a nota do Google Play não pôde ser lida, então nenhuma nota foi atribuída. Houve instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central e que atingiu o Itaú entre outros bancos, e uma instabilidade do app, do internet banking e do Pix do Itaú em 30 de outubro de 2026, com cerca de 100 relatos no pico.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.itau",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Listing truncated for automated reads.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Listing found through search; the excerpt shows reviews but no rating figure.",
+            },
+            {
+              url: "https://apps.apple.com/br/app/banco-ita%C3%BA-conta-cart%C3%A3o-e/id474505665",
+              kind: "primary",
+              finding: "App Store listing: 4.7 stars, about 3.3 million ratings.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/112090/banco-itau-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-sexta-dia-30-de-outubro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "Downdetector: internet banking, app login and Pix instability on 30 October 2026, about 100 reports at the peak.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, Itaú among them.",
+              checkedAt: "2026-11-01",
             },
           ],
+          reviewedAt: "2026-11-01",
         },
         security: {
           status: "insufficient-evidence",
@@ -584,12 +711,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60701190.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Standard packages I to IV R$ 16.10, 28.00, 37.40, 55.70; TED R$ 11.10 internet, R$ 20.70 in person; page last updated 23/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -602,29 +729,36 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://diariodopara.com.br/seu-bolso/itau-muda-regras-de-pontos-e-anuidade-dos-cartoes-veja-o-que-muda",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "Waiver conditions.",
             },
+            {
+              url: "https://altarendablog.com.br/2026/10/30/novo-uniclass-black-do-itau-4-acessos-a-salas-vip-ate-25-pontos-por-dolar-e-2-meses-gratis-para-testar/",
+              kind: "secondary",
+              finding:
+                "Uniclass Black fee waived at R$ 8,000 of invoice spend, R$ 50,000 invested at Itaú or Minhas Vantagens level 4 or above.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         publicReviews: {
           status: "scored",
-          score: 81,
+          score: 82,
           evidence:
-            "Reclame Aqui: 8.1/10, consumer average 7.02, 97.5% response, 85.4% resolution, 74.2% would do business again.",
+            "Reclame Aqui: 8.2/10 over the last six months, 85.2% resolution, 73.5% would do business again, average response 6 days 8 hours (1 February to 31 July 2026). The earlier consumer average (7.02) and response rate (97.5%) were not visible in this read.",
           summaryPtBr:
-            "Reclame Aqui: 8,1/10, nota média dos consumidores 7,02, 97,5% de respostas, 85,4% de solução, 74,2% voltariam a fazer negócio.",
+            "Reclame Aqui: 8,2/10 nos últimos seis meses, 85,2% de solução, 73,5% voltariam a fazer negócio, tempo médio de resposta de 6 dias e 8 horas (1º de fevereiro a 31 de julho de 2026). A nota média anterior dos consumidores (7,02) e o índice de respostas (97,5%) não apareceram nesta leitura.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/itau/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page and list read through search-engine snippets (the site refuses automated reads): 8.2/10, 85.2% resolution, 73.5% would do business again.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -695,9 +829,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Livelo points; periodic annuity-waiver campaigns rather than a permanent waiver; the top card waiver needs R$ 5 million invested.",
+            "Livelo points, which do not expire on the Principal cards. Waiver paths now documented: Prime Visa Infinite at R$ 10,000 of average monthly spend or R$ 250,000 invested (50% off from R$ 5,000 of spend); Principal Visa Infinite (own page: 2.5 points per US$ in Brazil, 3 abroad, 4 Bradesco Lounge visits a year) waived by spend or R$ 300,000 invested; the Aeternum annuity is R$ 1,920 a year, waived only with R$ 5 million invested. Earlier research found periodic waiver campaigns rather than a permanent waiver; that was not re-checked.",
           summaryPtBr:
-            "Pontos Livelo. Há campanhas periódicas de isenção de anuidade, e não uma isenção permanente. A isenção do cartão topo de linha exige R$ 5 milhões investidos.",
+            "Pontos Livelo, que não expiram nos cartões do Principal. As formas de isenção agora documentadas são: Prime Visa Infinite com R$ 10.000 de gasto médio mensal ou R$ 250.000 investidos (50% de desconto a partir de R$ 5.000 de gasto); Principal Visa Infinite (página própria: 2,5 pontos por US$ no Brasil, 3 no exterior, 4 acessos por ano ao Bradesco Lounge) isento por gastos ou com R$ 300.000 investidos; a anuidade do Aeternum é de R$ 1.920 por ano, isenta só com R$ 5 milhões investidos. A pesquisa anterior encontrou campanhas periódicas de isenção, e não uma isenção permanente; isso não foi conferido de novo.",
           citations: [
             {
               url: "https://altarendablog.com.br/2026/08/02",
@@ -711,8 +845,35 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Card overview.",
             },
+            {
+              url: "https://banco.bradesco/html/principal/cartoes/visaprincipal/",
+              kind: "primary",
+              finding:
+                "Principal Visa Infinite: 2.5 points per US$ in Brazil, 3 abroad, 4 yearly Bradesco Lounge visits.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/03/bradesco-prime-2026-requisitos-isencao-de-tarifas-e-melhores-cartoes-com-pontos-livelo-que-nao-expiram/",
+              kind: "secondary",
+              finding:
+                "Prime Visa Infinite waived at R$ 10,000 of average monthly spend or R$ 250,000 invested; 50% off from R$ 5,000.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/11/bradesco-principal-oferece-salas-vip-conta-nos-eua-e-anuidade-zerada-e-quer-chegar-a-800-mil-clientes-ate-dezembro/",
+              kind: "secondary",
+              finding:
+                "Principal Visa Infinite waiver by investments (R$ 300,000) or spend; annual saving of R$ 1,500.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/01/17/os-onze-11-cartoes-de-credito-do-bradesco-com-as-maiores-anuidades/",
+              kind: "secondary",
+              finding: "Aeternum: R$ 1,920 a year (12 x R$ 160), waiver at R$ 5 million invested.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -741,9 +902,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 80,
           evidence:
-            "About 4.7 stars from about 5.9 million ratings on Google Play (search aggregate, not read from the listing).",
+            "The App Store listing shows 4.7 stars from about 3.1 million ratings (read directly). The earlier Google Play figure (about 4.7 stars from about 5.9 million ratings, a search aggregate) was not re-read. Outages: Central Bank-confirmed Pix instability on 23 August 2026 (Bradesco among the banks cited) and an app and Pix instability on 30 October 2026 (about 150 Downdetector reports at the peak).",
           summaryPtBr:
-            "Cerca de 4,7 estrelas, com cerca de 5,9 milhões de avaliações no Google Play (agregado de busca, não lido na página).",
+            "A página do app na App Store mostra 4,7 estrelas, com cerca de 3,1 milhões de avaliações (lida diretamente). O número anterior do Google Play (cerca de 4,7 estrelas, com cerca de 5,9 milhões de avaliações, agregado de busca) não foi relido. Quedas: instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central, com o Bradesco entre os bancos citados, e instabilidade do app e do Pix em 30 de outubro de 2026, com cerca de 150 relatos no pico do Downdetector.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.bradesco",
@@ -751,8 +912,28 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Rating from a search-engine aggregate.",
             },
+            {
+              url: "https://apps.apple.com/br/app/banco-bradesco/id336954985",
+              kind: "primary",
+              finding: "App Store listing: 4.7 stars, about 3.1 million ratings.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.portaldecamaqua.com.br/noticias/112120/bradesco-fora-do-ar-hoje-servicos-apresentam-instabilidade-nesta-sexta-dia-30-de-outubro-de-2026.html",
+              kind: "secondary",
+              finding:
+                "Downdetector: app and Pix instability on 30 October 2026, about 150 reports at the peak.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.cnnbrasil.com.br/economia/money/macroeconomia/pix-instabilidade-hoje-23-agosto-2026/",
+              kind: "secondary",
+              finding:
+                "23 August 2026: Central Bank confirmed Pix instability across banks, Bradesco among them.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         security: {
           status: "scored",
@@ -788,12 +969,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/60746948.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Standard packages I to IV R$ 18.65, 32.40, 43.40, 64.70; TED R$ 13.85 internet, R$ 29.45 in person; basic national card annuity R$ 108.00; page last updated 29/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -829,12 +1010,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/bradesco/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -897,15 +1078,16 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Ourocard Visa Infinite: points, cashback or investment; 1% cashback on Infinite, 0.30% on Gold. Benefits concentrate on premium tiers.",
+            "Ourocard Visa Infinite: 2 points per US$ in Brazil and 3 abroad on Livelo, or 1% cashback, or automatic investment, chosen in the app; 4 free Visa Airport Companion lounge visits a year; annuity R$ 996 a year (12 x R$ 83), waived at R$ 15,000 of monthly card spend per two guides (an undated comparison says R$ 10,000) or R$ 250,000 invested at BB; holding it gives 90% off the Elo Nanquim and 80% off the Mastercard Black annuity. Benefits concentrate on premium tiers. The earlier Gold cashback figure (0.30%) was not re-read.",
           summaryPtBr:
-            "Ourocard Visa Infinite: pontos, cashback ou investimento. Cashback de 1% no Infinite e de 0,30% no Gold. Os benefícios se concentram nos níveis premium.",
+            "Ourocard Visa Infinite: 2 pontos por US$ no Brasil e 3 no exterior na Livelo, ou 1% de cashback, ou investimento automático, escolhidos no app. São 4 acessos gratuitos por ano a salas VIP pelo Visa Airport Companion. A anuidade é de R$ 996 por ano (12 x R$ 83), isenta com R$ 15.000 de gastos por mês no cartão, segundo dois guias (um comparativo sem data diz R$ 10.000), ou com R$ 250.000 investidos no BB. Quem tem o cartão ganha 90% de desconto na anuidade do Elo Nanquim e 80% na do Mastercard Black. Os benefícios se concentram nos níveis premium. O número anterior de cashback do Gold (0,30%) não foi relido.",
           citations: [
             {
               url: "https://pontospravoar.com/guia-completo-beneficios-cartao-banco-brasil-ourocard-visa-infinite/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Ourocard benefits.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Visa Infinite: up to 3 points per US$, annuity waiver at R$ 15,000 of monthly spend or R$ 250,000 invested, additional cards at 50% of the annuity.",
             },
             {
               url: "https://www.melhorescartoes.com.br/banco-brasil-ourocard-cashback.html",
@@ -913,25 +1095,40 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Cashback rates.",
             },
+            {
+              url: "https://cartoeseviagens.com.br/cartao/bb-visa-infinite",
+              kind: "secondary",
+              finding:
+                "Visa Infinite: 2 points per US$ in Brazil, 3 abroad on Livelo, 1% cashback, 90% and 80% annuity discounts on a second card.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/06/21/ourocard-visa-infinite-o-guia-completo-do-cartao-de-alta-renda-do-banco-do-brasil/",
+              kind: "secondary",
+              finding:
+                "Annuity R$ 996 (12 x R$ 83); waiver by spend or R$ 250,000 invested; 4 lounge uses a year.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
           score: 60,
           evidence:
-            "Own brokerage (BB Investimentos) and an investments app; whether third-party products are distributed was not checked.",
+            "Own brokerage (BB Investimentos) and an investments app with zero brokerage on shares, ETFs and FIIs: Tesouro Direto, CDB, LCI and LCA, debentures, CRI and CRA, COE, private pensions and more than 100 funds, from R$ 0.01, in Brazil and abroad, with an Open Finance portfolio aggregator. The listing calls the portfolio open, but whether third-party issuers are distributed was still not confirmed.",
           summaryPtBr:
-            "Corretora própria (BB Investimentos) e um app de investimentos. Não foi verificado se há distribuição de produtos de terceiros.",
+            "Corretora própria (BB Investimentos) e um app de investimentos com corretagem zero para ações, ETFs e FIIs: Tesouro Direto, CDB, LCI e LCA, debêntures, CRI e CRA, COE, previdência e mais de 100 fundos, a partir de R$ 0,01, no Brasil e no exterior, com agregador de carteira por Open Finance. A página do app fala em carteira aberta, mas ainda não foi confirmado se há distribuição de emissores de terceiros.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=br.com.bb.investimentosbb",
               kind: "primary",
-              checkedAt: "2026-09-09",
-              finding: "Investments app listing.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Investimentos BB app listing: fixed income, Tesouro, funds, shares with zero brokerage, from R$ 0.01, Brazil and abroad.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         appQuality: {
           status: "scored",
@@ -968,12 +1165,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00000000.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Standard packages I to IV R$ 15.90, 27.90, 37.30, 55.60; TED R$ 14.00 internet, R$ 34.60 in person; basic national card annuity R$ 234.00; page last updated 25/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1009,12 +1206,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/banco-do-brasil/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -1074,11 +1271,36 @@ export const BANK_PROFILES_DATASET = {
       institutionId: "caixa",
       criteria: {
         cardBenefits: {
-          status: "insufficient-evidence",
-          reason: "No citable source was found; the research left this criterion unscored.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "CAIXA's own card pages: points per US$ run from 1.2 (Visa Gold) to 2.3 domestic and 3.2 international (Visa Infinite and Elo Nanquim, 36-month validity), 3 and 4 (Elo Diners Club, no expiry) and 5 and 6 (Ícone Visa and Infinite Investidor, no expiry). Visa Infinite and Elo Nanquim carry an R$ 828 annuity (12 x R$ 69) with a 50% cashback of the instalment from R$ 4,000 of monthly spend and 100% from R$ 8,000, and 2 free lounge visits a year; the card for CAIXA Tem customers has a permanent zero annuity. Scored at the level given to Banco do Brasil and Bradesco (a points programme with spend-based waivers and premium-tier benefits); this replaces the earlier insufficient-evidence entry.",
           summaryPtBr:
-            "Não há evidência suficiente. Nenhuma fonte citável foi encontrada, e a pesquisa deixou este critério sem nota.",
-          reviewedAt: "2026-09-09",
+            "Páginas próprias de cartões da CAIXA: os pontos por US$ vão de 1,2 (Visa Gold) a 2,3 no Brasil e 3,2 no exterior (Visa Infinite e Elo Nanquim, validade de 36 meses), 3 e 4 (Elo Diners Club, sem vencimento) e 5 e 6 (Ícone Visa e Infinite Investidor, sem vencimento). O Visa Infinite e o Elo Nanquim têm anuidade de R$ 828 (12 x R$ 69), com cashback de 50% da parcela a partir de R$ 4.000 de gastos por mês e de 100% a partir de R$ 8.000, e 2 acessos gratuitos por ano a salas VIP. O cartão para clientes CAIXA Tem tem anuidade zero permanente. A nota segue o nível dado ao Banco do Brasil e ao Bradesco (programa de pontos com isenção por gastos e benefícios nos níveis premium); ela substitui a entrada anterior de evidência insuficiente.",
+          citations: [
+            {
+              url: "https://www.caixa.gov.br/voce/cartoes/programa-pontos/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Points per US$ by card, annuity values and the cashback-of-annuity tiers; CAIXA Tem card with permanent zero annuity.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.caixa.gov.br/voce/cartoes/credito/nanquim/Paginas/default.aspx",
+              kind: "primary",
+              finding:
+                "Elo Nanquim: 2.3 points domestic, 3.2 international, R$ 69 a month, 2 yearly Priority Pass visits, 100% or 50% cashback of the instalment by spend.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/09/26/cartoes-caixa-veja-a-pontuacao-a-anuidade-e-os-beneficios-de-cada-modelo/",
+              kind: "secondary",
+              finding:
+                "Card-by-card points, annuity and lounge access summary of 26 September 2026.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -1141,12 +1363,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/00360305.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Standard packages I to IV R$ 16.00, 26.90, 35.50, 53.00; TED R$ 13.00 internet, R$ 25.00 in person; basic national card annuity R$ 156.00; page last updated 23/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1167,21 +1389,21 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 72,
+          score: 70,
           evidence:
-            "Reclame Aqui: 7.2/10 (March to August 2026), 69.9% resolution, 65.6% would do business again.",
+            "Reclame Aqui: 7.0/10 over the last six months (earlier review, March to August 2026: 7.2/10, 69.9% resolution, 65.6% would do business again; those figures were not visible in this read).",
           summaryPtBr:
-            "Reclame Aqui: 7,2/10 (março a agosto de 2026), 69,9% de solução, 65,6% voltariam a fazer negócio.",
+            "Reclame Aqui: 7,0/10 nos últimos seis meses (revisão anterior, de março a agosto de 2026: 7,2/10, 69,9% de solução, 65,6% voltariam a fazer negócio; esses números não apareceram nesta leitura).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/caixa-economica-federal/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): 7.0/10 over the last six months.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -1247,12 +1469,42 @@ export const BANK_PROFILES_DATASET = {
       institutionId: "santander",
       criteria: {
         cardBenefits: {
-          status: "insufficient-evidence",
-          reason:
-            "Only a search snippet said Elite and Unique moved to cashback; no citable page was found.",
+          status: "scored",
+          score: 60,
+          evidence:
+            "Santander's card comparison page lists a card with up to 3 points per US$ (up to 4.5 with the Santander Rewards programme) or 1.2% cashback, with Visa Airport Companion lounges, and entry cards with 1.5 points per US$ (up to 2.25 with Rewards) or 0.8% cashback, cashback capped at R$ 500 per invoice, plus a card with a free annuity for life. The Unlimited annuity is R$ 2,200 a year (12 x R$ 183.33), waived at R$ 30,000 of invoice spend or R$ 5 million invested at Santander or Toro, with up to 6 points per US$ depending on Rewards level; a September 2026 report says lounge access now needs a monthly spend. Scored at the level given to Banco do Brasil and Bradesco; this replaces the earlier insufficient-evidence entry.",
           summaryPtBr:
-            "Não há evidência suficiente. Só um trecho de busca dizia que Elite e Unique passaram para cashback, e nenhuma página citável foi encontrada.",
-          reviewedAt: "2026-09-09",
+            "A página de comparação de cartões do Santander lista um cartão com até 3 pontos por US$ (até 4,5 com o programa Santander Rewards) ou 1,2% de cashback, com salas VIP do Visa Airport Companion, e cartões de entrada com 1,5 ponto por US$ (até 2,25 com o Rewards) ou 0,8% de cashback, com cashback limitado a R$ 500 por fatura, além de um cartão com anuidade grátis para sempre. A anuidade do Unlimited é de R$ 2.200 por ano (12 x R$ 183,33), isenta com R$ 30.000 de fatura ou R$ 5 milhões investidos no Santander ou na Toro, com até 6 pontos por US$ conforme o nível no Rewards. Uma reportagem de setembro de 2026 diz que o acesso às salas VIP passou a exigir gasto mensal. A nota segue o nível dado ao Banco do Brasil e ao Bradesco; ela substitui a entrada anterior de evidência insuficiente.",
+          citations: [
+            {
+              url: "https://www.santander.com.br/cartao-de-credito",
+              kind: "primary",
+              finding:
+                "Card comparison: up to 3 points per US$ (4.5 with Rewards) or 1.2% cashback; entry cards 1.5 points (2.25 with Rewards) or 0.8% cashback, capped at R$ 500 per invoice; a free-for-life annuity card.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.santander.com.br/cartao-credito-santander/unlimited",
+              kind: "primary",
+              finding:
+                "Unlimited: 12 x R$ 183.33, waived at R$ 5 million invested or R$ 30,000 of invoice spend.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://pontospravoar.com/guia-completo-cartao-santander-unlimited/",
+              kind: "secondary",
+              finding:
+                "Unlimited: R$ 2,199.96 a year, up to 6 points per US$ by Rewards level, minimum spend for free lounge access.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/09/03/santander-zera-anuidade-do-unlimited-em-nova-proposta-especial-veja-os-detalhes/",
+              kind: "secondary",
+              finding: "September 2026: new spend criterion for Unlimited lounge access.",
+              checkedAt: "2026-11-01",
+            },
+          ],
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -1312,12 +1564,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/90400888.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Standard packages I to IV R$ 16.85, 28.95, 38.70, 57.50; TED R$ 14.10 internet, R$ 26.70 in person; page last updated 24/09/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1353,12 +1605,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/santander/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -1438,17 +1690,31 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://altarendablog.com.br/2026/06/10/anuidade-zero-e-ate-35-pontos-por-dolar-conheca-os-beneficios-do-c6-carbon-mastercard-black/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "C6 Carbon.",
             },
             {
               url: "https://www.mobills.com.br/blog/cartao-de-credito/cartao-c6-carbon/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding: "C6 Carbon.",
             },
+            {
+              url: "https://www.c6bank.com.br/cartao-c6-carbon-mastercard-black/",
+              kind: "primary",
+              finding:
+                "C6 Carbon: annuity R$ 98 a month, waived by spend or investment criteria; up to 1.7% cashback and up to 3.5 points per US$; points do not expire.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.melhorescartoes.com.br/c6-bank-oferece-anuidade-gratis-c6-carbon-jul26.html",
+              kind: "secondary",
+              finding:
+                "C6 Carbon: waiver at R$ 8,000 of spend or R$ 50,000 invested; 4 free DragonPass visits a year.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -1508,12 +1774,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/31872495.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "TED R$ 4.00; basic national and international card annuity R$ 98.00, listed with a periodicity of every 30 days; page last updated 15/10/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1543,12 +1809,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/c6-bank/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -1621,24 +1887,45 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "BTG Black: 2.2 points per US$ or 1% cashback, LoungeKey, reduced IOF abroad; annuity waived only above R$ 120,000 invested or R$ 10,000 invested plus R$ 1,000 monthly spend.",
+            "BTG Black is modular: a R$ 30 monthly base, plus R$ 20 for cashback (1% of the invoice) or R$ 50 for points (up to 2.2 per US$), plus R$ 40 per benefit module; the Travel module adds 4 free DragonPass lounge visits and IOF zero on international purchases (an indefinite campaign that can end without notice). The fee falls R$ 10 for every R$ 10,000 invested or R$ 1,000 spent in the month, whichever discount is larger, so the cashback variant (R$ 50) is waived at R$ 50,000 invested or R$ 5,000 of monthly spend. The Ultrablue costs R$ 400 a month, waived above R$ 400,000 invested. This replaces the earlier waiver description (R$ 120,000 invested).",
           summaryPtBr:
-            "BTG Black: 2,2 pontos por US$ ou 1% de cashback, LoungeKey e IOF reduzido no exterior. A anuidade só é isenta acima de R$ 120.000 investidos ou com R$ 10.000 investidos mais R$ 1.000 de gastos por mês.",
+            "O BTG Black é modular: base de R$ 30 por mês, mais R$ 20 para cashback (1% da fatura) ou R$ 50 para pontos (até 2,2 por US$), mais R$ 40 por módulo de benefícios. O módulo Viagem acrescenta 4 acessos gratuitos a salas VIP DragonPass e IOF zero em compras internacionais (campanha por tempo indeterminado, que pode acabar sem aviso). A mensalidade cai R$ 10 a cada R$ 10.000 investidos ou R$ 1.000 gastos no mês, valendo o maior desconto, então a versão com cashback (R$ 50) fica isenta com R$ 50.000 investidos ou R$ 5.000 de gastos por mês. O Ultrablue custa R$ 400 por mês, isento acima de R$ 400.000 investidos. Isso substitui a descrição anterior da isenção (R$ 120.000 investidos).",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-black-btg-pactual/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "BTG Black.",
+              checkedAt: "2026-11-01",
+              finding:
+                "BTG Black: 1% cashback or 2.2 points per US$, with fee discounts through investments or spend (page updated 18/06/2025).",
             },
             {
               url: "https://renovainvest.com.br/blog/cartao-black-btg-pactual/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "BTG Black.",
+              checkedAt: "2026-11-01",
+              finding:
+                "Reseller page still says 4 LoungeKey visits and 3.28% cashback on international purchases; BTG's own page now says DragonPass and IOF zero.",
+            },
+            {
+              url: "https://banking.btgpactual.com/cartao-de-credito/cartao-black",
+              kind: "primary",
+              finding:
+                "Black: 1% cashback or up to 2.2 points per US$; R$ 10 off the fee per R$ 10,000 invested or R$ 1,000 spent; Travel module with 4 DragonPass visits and IOF zero.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://banking.btgpactual.com/assets/files/tabela-de-tarifas.pdf?v=1",
+              kind: "primary",
+              finding: "August 2026 tariff table: progressive fee discount by spend or investment.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/09/20/%F0%9F%92%B3-btg-pactual-veja-as-tarifas-anuidades-e-beneficios-de-cada-cartao-em-setembro-de-2026/",
+              kind: "secondary",
+              finding: "Ultrablue R$ 400 a month, waived above R$ 400,000 invested.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -1683,12 +1970,12 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/30306294.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "14 items reported, all R$ 0.00 except administrative cheque R$ 40.00; no packages or annuity listed; page last updated 22/07/2026.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1709,28 +1996,28 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 74,
+          score: 85,
           evidence:
-            "Reclame Aqui is split by entity: BTG+ banking 7.39/10 (87.6% resolution), BTG Pactual Investimentos 8.6/10 (90.9% resolution).",
+            "Reclame Aqui is split by entity. BTG Pactual Banking, the banking entity, shows 8.5/10 over the last six months (a sibling listing page showed 8.4), a consumer average of 7.47 over 838 rated complaints, 75% would do business again and 88.3% resolved; BTG Pactual Investimentos shows 8.6/10 with maximum reputation. The earlier score of 74 followed the banking consumer average (7.39); it now follows the six-month reputation of the banking entity, as for the other banks.",
           summaryPtBr:
-            "O Reclame Aqui separa por empresa: BTG+ banking 7,39/10 (87,6% de solução) e BTG Pactual Investimentos 8,6/10 (90,9% de solução).",
+            "O Reclame Aqui separa por empresa. O BTG Pactual Banking, a entidade bancária, mostra 8,5/10 nos últimos seis meses (uma página de listagem vizinha mostrou 8,4), nota média dos consumidores de 7,47 em 838 reclamações avaliadas, 75% voltariam a fazer negócio e 88,3% de solução. O BTG Pactual Investimentos mostra 8,6/10, com reputação máxima. A nota anterior de 74 seguia a nota média dos consumidores do banking (7,39); agora ela segue a reputação dos últimos seis meses da entidade bancária, como nos demais bancos.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/btg-mais/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): BTG Pactual Banking 8.5/10 over the last six months; consumer average 7.47, 75% would do business again, 88.3% resolved.",
             },
             {
               url: "https://www.reclameaqui.com.br/empresa/btg-pactual-digital/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): BTG Pactual Investimentos 8.6/10, maximum reputation.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -1812,24 +2099,33 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 80,
           evidence:
-            "XP Visa Infinite: permanent zero annuity, DragonPass, Investback up to 1% of spend, points for miles; full benefits need R$ 50,000 invested or R$ 3,000 monthly spend.",
+            "XP Visa Infinite has a zero annuity and no spend requirement for the card itself. The reward is chosen in the app: Investback of up to 2% or points of up to 2.2 per US$ (up to 3 with salary portability), transferable to Livelo. The 4 yearly DragonPass lounge visits need R$ 3,000 of spend on the previous invoice or R$ 300,000 invested; the lighter XP One card needs R$ 5,000 invested and gives 2 visits.",
           summaryPtBr:
-            "XP Visa Infinite: anuidade zero permanente, DragonPass, Investback de até 1% dos gastos e pontos para milhas. Os benefícios completos exigem R$ 50.000 investidos ou R$ 3.000 de gastos por mês.",
+            "O XP Visa Infinite tem anuidade zero e não exige gasto mínimo para manter o cartão. A recompensa é escolhida no app: Investback de até 2% ou pontos de até 2,2 por US$ (até 3 com portabilidade de salário), transferíveis para a Livelo. Os 4 acessos anuais a salas VIP DragonPass exigem R$ 3.000 de gastos na fatura anterior ou R$ 300.000 investidos; o cartão XP One, mais simples, exige R$ 5.000 investidos e dá 2 acessos.",
           citations: [
             {
               url: "https://www.melhorescartoes.com.br/cartao-xp-visa-infinite.html",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "XP Visa Infinite.",
+              checkedAt: "2026-11-01",
+              finding:
+                "No annuity; reward choice of points (2.2 up to 3 per US$) or Investback; 4 DragonPass visits with a R$ 3,000 spend or R$ 300,000 invested requirement.",
             },
             {
               url: "https://altarendablog.com.br/2026/08/02/xp-visa-infinite-mantem-beneficios-em-2026-dragonpass-investback-pontos-turbinados-e-anuidade-zero/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "2026 benefits.",
+              checkedAt: "2026-11-01",
+              finding:
+                "2026 benefits: zero annuity, Investback up to 2% or up to 2.2 points per US$, lounge access.",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/10/26/mudou-tudo-nos-cartoes-xp-infinite-chega-a-3-pontos-por-dolar-e-one-comeca-com-r-5-mil-investidos/",
+              kind: "secondary",
+              finding:
+                "Infinite up to 3 points per US$ with salary portability; One from R$ 5,000 invested; both with zero annuity; points convert to Investback after 24 months unused.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -1873,14 +2169,14 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/33264668.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "TED R$ 0.00; standard packages I to IV R$ 18.00, 18.00, 29.50, 41.00; card annuity R$ 18,000.00; page last updated 14/08/2026.",
             },
             {
               url: "https://www.xpi.com.br/documentos/tarifas_20_01_22/",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Banco XP table published 05/08/2026, in force from 05/09/2026: packages I to IV R$ 18.00, 18.00, 29.50, 41.00; TED and transfers by electronic means zero; annuity practised zero on XP, Rico and One Visa Infinite, R$ 4,200 Legacy, R$ 18,000 Privilege.",
             },
@@ -1891,7 +2187,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Free digital account.",
             },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -1912,21 +2208,21 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 79,
+          score: 80,
           evidence:
-            "Reclame Aqui: 7.9/10, 83% resolution, 67.6% would do business again; recurring complaint about advisors pushing commissioned products.",
+            "Reclame Aqui: 8.0/10 over the last six months, 83% resolution, 67.6% would do business again, consumer average 6.6; complaints about advisors' recommendations remain among recent cases.",
           summaryPtBr:
-            "Reclame Aqui: 7,9/10, 83% de solução, 67,6% voltariam a fazer negócio. Há uma reclamação recorrente sobre assessores que empurram produtos com comissão.",
+            "Reclame Aqui: 8,0/10 nos últimos seis meses, 83% de solução, 67,6% voltariam a fazer negócio, nota média dos consumidores de 6,6. Reclamações sobre as recomendações dos assessores continuam entre os casos recentes.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/xp-investimentos/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -2000,9 +2296,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "Sicoobcard annuity R$ 90 (Clássico) or R$ 150 (Gold), waivable by spend; Coopera points for products, miles, bill credit or pension.",
+            "Sicoob replaced its card line in 2026: the new portfolio is Gold, Gold Plus, Platinum, Verth (the former Mastercard Black and Visa Infinite), Merith and Zenith, while Clássico, Vooz and Cabal cards are being discontinued and migrated by profile. Coopera points reach up to 4 points per US$ (Zenith); the annuity varies by cooperative and the 'Comprou, Zerou' programme waives it by monthly spend or investments.",
           summaryPtBr:
-            "Anuidade do Sicoobcard de R$ 90 (Clássico) ou R$ 150 (Gold), com isenção possível por gastos. Pontos Coopera para produtos, milhas, crédito na fatura ou previdência.",
+            "O Sicoob trocou a linha de cartões em 2026: o novo portfólio tem Gold, Gold Plus, Platinum, Verth (os antigos Mastercard Black e Visa Infinite), Merith e Zenith, enquanto os cartões Clássico, Vooz e Cabal estão sendo descontinuados e migrados conforme o perfil. Os pontos Coopera chegam a até 4 pontos por US$ (Zenith). A anuidade varia por cooperativa, e o programa 'Comprou, Zerou' a elimina conforme os gastos mensais ou os investimentos.",
           citations: [
             {
               url: "https://www.idinheiro.com.br/cartao-de-credito/cartao-sicoob/",
@@ -2016,8 +2312,29 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Card tariffs.",
             },
+            {
+              url: "https://www.sicoob.com.br/web/sicoob/cartoes-voce",
+              kind: "primary",
+              finding:
+                "New card portfolio (Gold, Gold Plus, Platinum, Verth, Merith, Zenith); Clássico, Vooz and Cabal being discontinued; annuity revised yearly by product.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.sicoob.com.br/web/sicoobcredicaru/noticias/-/asset_publisher/xAioIawpOI5S/content/id/307547791",
+              kind: "primary",
+              finding:
+                "Coopera points up to 4 per US$; annuity varies by cooperative; 'Comprou, Zerou' waiver by monthly spend.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://altarendablog.com.br/2026/07/24/sicoob-divulga-as-novas-regras-para-seus-novos-cartoes-e-atualizacao-para-publico-alta-renda/",
+              kind: "secondary",
+              finding:
+                "New Zenith variant with up to 4.0 points per US$ and spend- or investment-based annuity waivers.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -2066,12 +2383,12 @@ export const BANK_PROFILES_DATASET = {
             "Each cooperative publishes its own tariff table. The Central Bank registry entry for Banco Sicoob (packages R$ 4.00 to R$ 24.00, TED R$ 12.00) is not the table a member pays.",
           summaryPtBr:
             "Não há evidência suficiente. Cada cooperativa publica a própria tabela de tarifas. O registro do Banco Central para o Banco Sicoob (pacotes de R$ 4,00 a R$ 24,00, TED de R$ 12,00) não é a tabela que o associado paga.",
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/02038232.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "Banco Sicoob: packages I to IV R$ 4.00, 12.00, 16.00, 24.00; TED R$ 12.00 internet; page last updated 13/08/2026.",
             },
@@ -2102,21 +2419,21 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 66,
+          score: 68,
           evidence:
-            "Reclame Aqui: 6.6/10 over the last six months (6.8 overall), 96.3% response, consumer average 5.51/10.",
+            "Reclame Aqui: 6.8/10 over the last six months on the company page (a sibling listing page still showed the earlier 6.6 with 96.3% response, and the earlier reading gave a consumer average of 5.51/10).",
           summaryPtBr:
-            "Reclame Aqui: 6,6/10 nos últimos seis meses (6,8 no geral), 96,3% de respostas, nota média dos consumidores 5,51/10.",
+            "Reclame Aqui: 6,8/10 nos últimos seis meses na página da empresa (uma página de listagem vizinha ainda mostrava o 6,6 anterior, com 96,3% de respostas, e a leitura anterior trazia nota média dos consumidores de 5,51/10).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/sicoob/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -2178,11 +2495,11 @@ export const BANK_PROFILES_DATASET = {
       criteria: {
         cardBenefits: {
           status: "scored",
-          score: 80,
+          score: 60,
           evidence:
-            "Zero-annuity cards; cashback 0.5% (Platinum) to 1.2% (Black); free additional card for children from 10; Cofrinho balance raises the card limit.",
+            "Only the Gold card is annuity-free. The cashback cards carry annuities with spend or investment waivers: Platinum 0.5% cashback, Black 1.2% and Black Epic 1.3% in Brazil and 4% abroad ('em suas versões com anuidade'); PicPay's own table lists R$ 418.80 a year for Platinum, R$ 588.00 for Black and R$ 598.80 for Black Epic, and the card pages describe waivers at about R$ 5,000 of monthly spend or R$ 50,000 invested (R$ 2,000 or R$ 20,000 for Platinum). Cashback goes to a Cofrinho earning 102% of CDI, and the Cofrinho balance raises the card limit. This replaces the earlier 'zero-annuity cards' description.",
           summaryPtBr:
-            "Cartões sem anuidade. Cashback de 0,5% (Platinum) a 1,2% (Black). Cartão adicional gratuito para crianças a partir de 10 anos. O saldo do Cofrinho aumenta o limite do cartão.",
+            "Só o cartão Gold não tem anuidade. Os cartões com cashback têm anuidade com isenção por gastos ou investimentos: Platinum com 0,5% de cashback, Black com 1,2% e Black Epic com 1,3% no Brasil e 4% no exterior ('em suas versões com anuidade'). A tabela do próprio PicPay lista R$ 418,80 por ano para o Platinum, R$ 588,00 para o Black e R$ 598,80 para o Black Epic, e as páginas dos cartões descrevem isenção com cerca de R$ 5.000 de gastos por mês ou R$ 50.000 investidos (R$ 2.000 ou R$ 20.000 no Platinum). O cashback vai para um Cofrinho que rende 102% do CDI, e o saldo do Cofrinho aumenta o limite do cartão. Isso substitui a descrição anterior de 'cartões sem anuidade'.",
           citations: [
             {
               url: "https://www.serasa.com.br/credito/blog/cartao-picpay/",
@@ -2196,8 +2513,36 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-09-09",
               finding: "Card overview.",
             },
+            {
+              url: "https://meajuda.picpay.com/hc/pt-br/articles/43838801209619-O-que-%C3%A9-o-Cofrinho-de-Cashback-do-PicPay-Card",
+              kind: "primary",
+              finding:
+                "Cashback on the Platinum (0.5%), Black (1.2%) and Epic (1.3%) cards 'em suas versões com anuidade'; Cofrinho at 102% of CDI.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://picpay.com/docs/bu/taxas-e-tarifas/tabela-de-tarifas-pessoa-fisica-10-07-2026.pdf",
+              kind: "primary",
+              finding:
+                "Tariff table: card annuities of R$ 418.80 (Platinum), R$ 588.00 (Black) and R$ 598.80 (Black Epic); card versions without rewards are exempt.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://picpay.com/pt-br/pf/cartao-de-credito",
+              kind: "primary",
+              finding:
+                "PicPay Card: zero annuity on the Gold version, cashback and the Cofrinho that raises the card limit.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://cartoeseviagens.com.br/cartoes-banco-picpay",
+              kind: "secondary",
+              finding:
+                "Only the Gold is fully free; Black Epic free for 12 months then R$ 49.90 a month, waived at R$ 5,000 of spend or R$ 50,000 invested.",
+              checkedAt: "2026-11-01",
+            },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -2234,16 +2579,16 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 100,
           evidence:
-            "PicPay Bank declares R$ 0.00 for TED, every standard package and both card annuities; the only charges are registration (R$ 200.00) and two paper-statement items. PicPay's payment institution reports no table.",
+            "PicPay Bank declares R$ 0.00 for TED, every standard package and both card annuities; the registry now lists a registration fee of R$ 94,900.00 (R$ 200.00 in the earlier read, probably a reporting error since PicPay's own table lists R$ 150.00) and two paper-statement items. PicPay's payment institution reports no table (not re-read: the registry page could not be fetched).",
           summaryPtBr:
-            "O PicPay Bank declara R$ 0,00 para TED, todos os pacotes padrão e as duas anuidades de cartão. As únicas cobranças são o cadastro (R$ 200,00) e dois itens de extrato em papel. A instituição de pagamento do PicPay não informa tabela.",
+            "O PicPay Bank declara R$ 0,00 para TED, todos os pacotes padrão e as duas anuidades de cartão. O cadastro agora lista uma tarifa de cadastro de R$ 94.900,00 (eram R$ 200,00 na leitura anterior, provavelmente um erro de informação, já que a tabela do próprio PicPay lista R$ 150,00) e dois itens de extrato em papel. A instituição de pagamento do PicPay não informa tabela (não relido: a página do cadastro não pôde ser lida).",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/09516419.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
-                "TED, standard packages I to IV and card annuities R$ 0.00; registration R$ 200.00; page last updated 15/10/2026.",
+                "TED, standard packages I to IV and card annuities R$ 0.00; registration R$ 94,900.00; page last updated 30/10/2026.",
             },
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/22896431.asp?idpai=tarifa&frame=1",
@@ -2251,8 +2596,22 @@ export const BANK_PROFILES_DATASET = {
               checkedAt: "2026-10-02",
               finding: "The registry says this institution did not report its tariffs.",
             },
+            {
+              url: "https://picpay.com/docs/bu/taxas-e-tarifas/tabela-de-tarifas-pessoa-fisica-10-07-2026.pdf",
+              kind: "primary",
+              checkedAt: "2026-11-01",
+              finding:
+                "PicPay's own table: registration R$ 150.00, TED over the internet exempt; effective from 14/11/2026.",
+            },
+            {
+              url: "https://www.bcb.gov.br/fis/tarifas/htms/22896431.asp?seg=bancossegmento09&frame=1",
+              kind: "primary",
+              checkedAt: "2026-11-01",
+              finding:
+                "Automated read failed (url_not_accessible); the registry page for the payment institution was not re-read.",
+            },
           ],
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
         },
         lockIn: {
           status: "scored",
@@ -2288,7 +2647,7 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://www.reclameaqui.com.br/empresa/picpay/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
                 "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
             },
@@ -2299,7 +2658,7 @@ export const BANK_PROFILES_DATASET = {
               finding: "Award post.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
@@ -2359,11 +2718,11 @@ export const BANK_PROFILES_DATASET = {
       criteria: {
         cardBenefits: {
           status: "scored",
-          score: 80,
+          score: 60,
           evidence:
-            "Permanent zero annuity with no minimum spend; cashback up to 3% on Mercado Livre, 0.5% elsewhere, paid as Meli Dólar; up to 18 interest-free instalments on Mercado Livre.",
+            "The card has a permanent zero annuity with no minimum spend. Cashback is paid in Meli Dólar and now only to Meli+ subscribers who pay with the Mercado Pago card: up to 3% at Mercado Livre (R$ 5 per purchase and R$ 15 a month; a press report says it was cut from 5%), 0.5% elsewhere (up to R$ 100 a month per that report) and up to 10% at partners. Up to 18 interest-free instalments on Mercado Livre are still advertised, although a press report says the extended-term instalment is no longer part of Meli+.",
           summaryPtBr:
-            "Anuidade zero permanente, sem gasto mínimo. Cashback de até 3% no Mercado Livre e de 0,5% nas demais compras, pago em Meli Dólar. Até 18 parcelas sem juros no Mercado Livre.",
+            "O cartão tem anuidade zero permanente, sem gasto mínimo. O cashback é pago em Meli Dólar e agora só para assinantes do Meli+ que pagam com o cartão Mercado Pago: até 3% no Mercado Livre (R$ 5 por compra e R$ 15 por mês; uma reportagem diz que caiu de 5%), 0,5% nas demais compras (até R$ 100 por mês, segundo essa reportagem) e até 10% em parceiros. Ainda se divulgam até 18 parcelas sem juros no Mercado Livre, embora uma reportagem diga que o parcelamento com prazo extra deixou de fazer parte do Meli+.",
           citations: [
             {
               url: "https://www.mercadopago.com.br/blog/cartao-com-cashback",
@@ -2374,11 +2733,33 @@ export const BANK_PROFILES_DATASET = {
             {
               url: "https://cartoeseviagens.com.br/cartao-mercado-pago-analise-completa",
               kind: "secondary",
-              checkedAt: "2026-09-09",
-              finding: "Card review.",
+              checkedAt: "2026-11-01",
+              finding:
+                "No annuity or maintenance fee; Meli+ subscribers get up to 3% on selected Mercado Livre products and up to 5% at participating stores; instalments up to 18x on selected purchases.",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/como-receber-cashback-meli-dolar",
+              kind: "primary",
+              finding:
+                "Cashback in Meli Dólar only for active Meli+ subscribers: up to 3% at Mercado Livre (R$ 5 per purchase, R$ 15 a month), up to 0.5% elsewhere, up to 10% at partners.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://www.mercadopago.com.br/blog/vantagens-cartao-credito-mercado-pago",
+              kind: "primary",
+              finding:
+                "Zero annuity not tied to a minimum spend; instalments up to 18x on Mercado Livre.",
+              checkedAt: "2026-11-01",
+            },
+            {
+              url: "https://tecnoblog.net/noticias/mercado-livre-diminui-cashback-do-meli-veja-o-que-muda/",
+              kind: "secondary",
+              finding:
+                "Cashback cut from 5% to 3% at Mercado Livre, R$ 5 per purchase and R$ 15 a month, 0.5% elsewhere capped at R$ 100 a month, card required.",
+              checkedAt: "2026-11-01",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
         investmentAccess: {
           status: "scored",
@@ -2427,28 +2808,28 @@ export const BANK_PROFILES_DATASET = {
             "Mercado Pago's payment institution reports no tariff table to the Central Bank registry. Its help centre lists a fee table, but the page did not load to an automated read, and the blog describing a free account (no maintenance fee, free Pix and TED, paid cash withdrawal) is marketing, not a schedule.",
           summaryPtBr:
             "Não há evidência suficiente. A instituição de pagamento do Mercado Pago não informa tabela de tarifas ao cadastro do Banco Central. A central de ajuda indica uma tabela de tarifas, mas a página não carregou na leitura automática, e o blog que descreve conta gratuita (sem tarifa de manutenção, Pix e TED gratuitos, saque em espécie pago) é material de divulgação, não uma tabela.",
-          reviewedAt: "2026-10-15",
+          reviewedAt: "2026-11-01",
           citations: [
             {
               url: "https://www.bcb.gov.br/fis/tarifas/htms/10573521.asp?idpai=tarifa&frame=1",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
                 "The registry says this institution did not report its tariffs; page last updated 04/09/2026.",
             },
             {
               url: "https://www.mercadopago.com.br/ajuda/tabela-taxas-tarifas_45243",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
-                "Help centre page titled 'Tabela de taxas e tarifas'; the content did not load to an automated read.",
+                "Help centre page titled 'Tabela de taxas e tarifas'; the content did not load to an automated read, on this run too (url_not_accessible).",
             },
             {
               url: "https://www.mercadopago.com.br/blog/conta-mercado-pago-quanto-custa",
               kind: "primary",
-              checkedAt: "2026-10-15",
+              checkedAt: "2026-11-01",
               finding:
-                "Blog: no maintenance fee, free Pix and TED to any institution, cash withdrawal is paid; no fee schedule.",
+                "Blog (direct read failed with url_not_accessible; search excerpt read): no maintenance fee, free Pix and TED to any institution, cash withdrawal is paid; no fee schedule.",
             },
           ],
         },
@@ -2471,21 +2852,21 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 80,
+          score: 79,
           evidence:
-            "Reclame Aqui: 8.0/10, 96.8% response, 81.3% resolution, 75.9% would do business again.",
+            "Reclame Aqui: 7.9/10 over the last six months (earlier review: 8.0/10, 96.8% response, 81.3% resolution, 75.9% would do business again; those figures were not visible in this read).",
           summaryPtBr:
-            "Reclame Aqui: 8,0/10, 96,8% de respostas, 81,3% de solução, 75,9% voltariam a fazer negócio.",
+            "Reclame Aqui: 7,9/10 nos últimos seis meses (revisão anterior: 8,0/10, 96,8% de respostas, 81,3% de solução, 75,9% voltariam a fazer negócio; esses números não apareceram nesta leitura).",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/mercado-pago/",
               kind: "secondary",
-              checkedAt: "2026-09-09",
+              checkedAt: "2026-11-01",
               finding:
-                "Reclame Aqui page read through a search-engine snippet; the site refuses automated reads (HTTP 403).",
+                "Reclame Aqui page read through a search-engine snippet (the site refuses automated reads): 7.9/10 over the last six months.",
             },
           ],
-          reviewedAt: "2026-09-09",
+          reviewedAt: "2026-11-01",
         },
       },
       accountTypes: {
