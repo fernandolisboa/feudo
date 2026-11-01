@@ -719,11 +719,12 @@ export const BANK_PROFILES_DATASET = {
           reviewedAt: "2026-11-01",
         },
         appQuality: {
-          status: "insufficient-evidence",
-          reason:
-            "The App Store listing shows 4.7 stars from about 3.3 million ratings, but the Google Play rating could not be read, so no score was assigned. Outages found: Central Bank-confirmed Pix instability on 23 August 2026 that hit Itaú among other banks, and an app, internet banking and Pix instability at Itaú on 30 October 2026 (about 100 Downdetector reports at the peak).",
+          status: "scored",
+          score: 60,
+          evidence:
+            "The App Store listing shows 4.7 stars from about 3.3 million ratings; the Google Play rating could not be read. Scored 60 rather than 80 because of the confirmed 2026 outages, as for Nubank and Inter. Outages found: Central Bank-confirmed Pix instability on 23 August 2026 that hit Itaú among other banks, and an app, internet banking and Pix instability at Itaú on 30 October 2026 (about 100 Downdetector reports at the peak).",
           summaryPtBr:
-            "Não há evidência suficiente. A página do app na App Store mostra 4,7 estrelas, com cerca de 3,3 milhões de avaliações, mas a nota do Google Play não pôde ser lida, então nenhuma nota foi atribuída. Houve instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central e que atingiu o Itaú entre outros bancos, e uma instabilidade do app, do internet banking e do Pix do Itaú em 30 de outubro de 2026, com cerca de 100 relatos no pico.",
+            "A página do app na App Store mostra 4,7 estrelas, com cerca de 3,3 milhões de avaliações; a nota do Google Play não pôde ser lida. A nota é 60, e não 80, por causa das instabilidades confirmadas em 2026, como no Nubank e no Inter. Houve instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central e que atingiu o Itaú entre outros bancos, e uma instabilidade do app, do internet banking e do Pix do Itaú em 30 de outubro de 2026, com cerca de 100 relatos no pico.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.itau",
@@ -1132,11 +1133,11 @@ export const BANK_PROFILES_DATASET = {
         },
         appQuality: {
           status: "scored",
-          score: 80,
+          score: 60,
           evidence:
-            "The App Store listing shows 4.7 stars from about 3.1 million ratings (read directly). The earlier Google Play figure (about 4.7 stars from about 5.9 million ratings, a search aggregate) was not re-read. Outages: Central Bank-confirmed Pix instability on 23 August 2026 (Bradesco among the banks cited) and an app and Pix instability on 30 October 2026 (about 150 Downdetector reports at the peak).",
+            "The App Store listing shows 4.7 stars from about 3.1 million ratings (read directly). The earlier Google Play figure (about 4.7 stars from about 5.9 million ratings, a search aggregate) was not re-read. Scored 60 rather than 80 because of the confirmed 2026 outages, as for Nubank and Inter. Outages: Central Bank-confirmed Pix instability on 23 August 2026 (Bradesco among the banks cited) and an app and Pix instability on 30 October 2026 (about 150 Downdetector reports at the peak).",
           summaryPtBr:
-            "A página do app na App Store mostra 4,7 estrelas, com cerca de 3,1 milhões de avaliações (lida diretamente). O número anterior do Google Play (cerca de 4,7 estrelas, com cerca de 5,9 milhões de avaliações, agregado de busca) não foi relido. Quedas: instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central, com o Bradesco entre os bancos citados, e instabilidade do app e do Pix em 30 de outubro de 2026, com cerca de 150 relatos no pico do Downdetector.",
+            "A página do app na App Store mostra 4,7 estrelas, com cerca de 3,1 milhões de avaliações (lida diretamente). O número anterior do Google Play (cerca de 4,7 estrelas, com cerca de 5,9 milhões de avaliações, agregado de busca) não foi relido. A nota é 60, e não 80, por causa das instabilidades confirmadas em 2026, como no Nubank e no Inter. Quedas: instabilidade do Pix em 23 de agosto de 2026, confirmada pelo Banco Central, com o Bradesco entre os bancos citados, e instabilidade do app e do Pix em 30 de outubro de 2026, com cerca de 150 relatos no pico do Downdetector.",
           citations: [
             {
               url: "https://play.google.com/store/apps/details?id=com.bradesco",
@@ -2517,9 +2518,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 80,
           evidence:
-            "New devices need password plus facial recognition, and the app disables itself on a device if another face is detected; hardware-bound in-app token; Locais Seguros and Contatos Seguros limit investments and night transfers to registered places and contacts; facial biometrics with liveness at account opening. A secondary article (undated in the excerpt read) reports a fraud that diverted R$ 23 million through a flaw in the investments system, schemes by third-party contractor staff and a hacked Twitter profile; these incidents were not weighed in the earlier score and are left for review.",
+            "New devices need password plus facial recognition, and the app disables itself on a device if another face is detected; hardware-bound in-app token; Locais Seguros and Contatos Seguros limit investments and night transfers to registered places and contacts; facial biometrics with liveness at account opening. A secondary article (undated in the excerpt read) reports a fraud that diverted R$ 23 million through a flaw in the investments system, schemes by third-party contractor staff and a hacked Twitter profile; the score stays at 80 because no dated or primary source confirms them, unlike the confirmed incidents that put BTG at 60.",
           summaryPtBr:
-            "Dispositivos novos exigem senha e reconhecimento facial, e o app se desativa no aparelho se outro rosto for detectado; o token dentro do app é vinculado ao hardware; Locais Seguros e Contatos Seguros limitam investimentos e transferências noturnas a locais e contatos cadastrados; a biometria facial com prova de vida é usada na abertura da conta. Uma reportagem secundária (sem data no trecho lido) relata uma fraude que desviou R$ 23 milhões por uma falha no sistema de investimentos, esquemas de funcionários de terceirizadas e um perfil do Twitter invadido; esses incidentes não tinham sido considerados na nota anterior e ficam para revisão.",
+            "Dispositivos novos exigem senha e reconhecimento facial, e o app se desativa no aparelho se outro rosto for detectado; o token dentro do app é vinculado ao hardware; Locais Seguros e Contatos Seguros limitam investimentos e transferências noturnas a locais e contatos cadastrados; a biometria facial com prova de vida é usada na abertura da conta. Uma reportagem secundária (sem data no trecho lido) relata uma fraude que desviou R$ 23 milhões por uma falha no sistema de investimentos, esquemas de funcionários de terceirizadas e um perfil do Twitter invadido; a nota continua 80 porque nenhuma fonte primária ou datada confirma esses casos, ao contrário dos incidentes confirmados que levaram o BTG a 60.",
           citations: [
             {
               url: "https://www.c6bank.com.br/blog/6-recursos-de-seguranca-que-o-c6-bank-usa-para-proteger-o-cliente",
@@ -2842,9 +2843,9 @@ export const BANK_PROFILES_DATASET = {
           status: "scored",
           score: 60,
           evidence:
-            "BTG's help pages describe a one-time token bound to the device, a facial or fingerprint biometric check on top of login and password, a selfie registered at account opening that is independent of the device, notices when a new device accesses the account, and a safe-place mode for the investments menu. Confirmed incidents: the Central Bank reported a leak of registration data tied to 8,032 Pix keys between 23 July and 5 August 2024 (BTG says its systems were not breached and only agency and account data appeared in CPF-based queries), and on Sunday 22 March 2026 a cyber attack diverted about R$ 100 million from the bank, with Pix suspended for a day; BTG says no customer account was accessed and no customer data was exposed. The score reflects documented controls with confirmed incidents and is left for review.",
+            "BTG's help pages describe a one-time token bound to the device, a facial or fingerprint biometric check on top of login and password, a selfie registered at account opening that is independent of the device, notices when a new device accesses the account, and a safe-place mode for the investments menu. Confirmed incidents: the Central Bank reported a leak of registration data tied to 8,032 Pix keys between 23 July and 5 August 2024 (BTG says its systems were not breached and only agency and account data appeared in CPF-based queries), and on Sunday 22 March 2026 a cyber attack diverted about R$ 100 million from the bank, with Pix suspended for a day; BTG says no customer account was accessed and no customer data was exposed. The score reflects documented controls with confirmed incidents.",
           summaryPtBr:
-            "As páginas de ajuda do BTG descrevem um token de uso único vinculado ao aparelho, uma checagem de biometria facial ou digital além de login e senha, uma selfie cadastrada na abertura da conta e independente do aparelho, avisos quando um novo aparelho acessa a conta e um modo lugar seguro para o menu de investimentos. Incidentes confirmados: o Banco Central divulgou um vazamento de dados cadastrais ligados a 8.032 chaves Pix entre 23 de julho e 5 de agosto de 2024 (o BTG diz que seus sistemas não foram invadidos e que só apareceram dados de agência e conta em consultas feitas com CPFs), e em domingo, 22 de março de 2026, um ataque cibernético desviou cerca de R$ 100 milhões do banco, com o Pix suspenso por um dia; o BTG diz que nenhuma conta de cliente foi acessada e nenhum dado de cliente foi exposto. A nota reflete controles documentados com incidentes confirmados e fica para revisão.",
+            "As páginas de ajuda do BTG descrevem um token de uso único vinculado ao aparelho, uma checagem de biometria facial ou digital além de login e senha, uma selfie cadastrada na abertura da conta e independente do aparelho, avisos quando um novo aparelho acessa a conta e um modo lugar seguro para o menu de investimentos. Incidentes confirmados: o Banco Central divulgou um vazamento de dados cadastrais ligados a 8.032 chaves Pix entre 23 de julho e 5 de agosto de 2024 (o BTG diz que seus sistemas não foram invadidos e que só apareceram dados de agência e conta em consultas feitas com CPFs), e em domingo, 22 de março de 2026, um ataque cibernético desviou cerca de R$ 100 milhões do banco, com o Pix suspenso por um dia; o BTG diz que nenhuma conta de cliente foi acessada e nenhum dado de cliente foi exposto. A nota reflete controles documentados com incidentes confirmados.",
           citations: [
             {
               url: "https://banking.btgpactual.com/ajuda/acessoaconta/seguranca",
@@ -3662,11 +3663,11 @@ export const BANK_PROFILES_DATASET = {
         },
         publicReviews: {
           status: "scored",
-          score: 68,
+          score: 66,
           evidence:
-            "Reclame Aqui: 6.8/10 over the last six months on the company page (a sibling listing page still showed the earlier 6.6 with 96.3% response, and the earlier reading gave a consumer average of 5.51/10).",
+            "Reclame Aqui: a listing page shows 6.6/10 over the last six months with 96.3% response; the company-page snippet shows 6.8, which matches the earlier all-period figure, so the six-month 6.6 stands. The earlier reading gave a consumer average of 5.51/10.",
           summaryPtBr:
-            "Reclame Aqui: 6,8/10 nos últimos seis meses na página da empresa (uma página de listagem vizinha ainda mostrava o 6,6 anterior, com 96,3% de respostas, e a leitura anterior trazia nota média dos consumidores de 5,51/10).",
+            "Reclame Aqui: uma página de listagem mostra 6,6/10 nos últimos seis meses, com 96,3% de respostas; o trecho da página da empresa mostra 6,8, que é o mesmo número do período total da leitura anterior, então vale o 6,6 dos seis meses. A leitura anterior trazia nota média dos consumidores de 5,51/10.",
           citations: [
             {
               url: "https://www.reclameaqui.com.br/empresa/sicoob/",
