@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWebPushSender } from "./web-push-sender";
 
-const vapid = { subject: "mailto:feudo@miolos.app", publicKey: "pub", privateKey: "priv" };
+const vapid = { subject: "mailto:feudo@filx.app", publicKey: "pub", privateKey: "priv" };
 const subscription = {
   id: "s1",
   endpoint: "https://fcm.googleapis.com/fcm/send/secret-device-token",

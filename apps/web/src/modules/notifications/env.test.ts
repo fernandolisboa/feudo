@@ -16,7 +16,7 @@ describe("readVapidKeys", () => {
       {
         publicKey: PUBLIC_KEY,
         privateKey: PRIVATE_KEY,
-        subject: "mailto:feudo@miolos.app",
+        subject: "mailto:feudo@filx.app",
       },
     );
   });
