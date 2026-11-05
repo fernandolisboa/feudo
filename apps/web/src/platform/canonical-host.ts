@@ -4,12 +4,9 @@ export interface CanonicalHostEnv {
   [key: string]: string | undefined;
 }
 
-// Production answers on one origin, the one in BETTER_AUTH_URL: session
-// cookies, Better Auth's trusted origin, the service worker and installed PWAs
-// are all bound to it. Pages reached on any other production host (the former
-// feudo.vercel.app, a deployment URL) are sent there. This is done here rather
-// than with a Vercel domain redirect because Vercel Cron does not follow
-// redirects, so /api must keep answering on every host.
+// Session cookies, the trusted origin and installed PWAs are bound to
+// BETTER_AUTH_URL's host. This is not a Vercel domain redirect because Vercel
+// Cron does not follow redirects, so /api must keep answering on every host.
 export function canonicalRedirectUrl(
   requestUrl: URL,
   env: CanonicalHostEnv = process.env,
