@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest, type ProxyConfig } from "next/server";
 
+import { canonicalRedirectUrl } from "@/platform/canonical-host";
 import { contentSecurityPolicy, createNonce, CSP_HEADER } from "@/platform/security-headers";
 
 // Next reads the nonce from the request's CSP header while rendering and
@@ -7,6 +8,10 @@ import { contentSecurityPolicy, createNonce, CSP_HEADER } from "@/platform/secur
 // on the response. Every page is already rendered per request (the root
 // layout reads the session), which a nonce requires.
 export function proxy(request: NextRequest): NextResponse {
+  const canonical = canonicalRedirectUrl(request.nextUrl);
+  if (canonical) {
+    return NextResponse.redirect(canonical, 308);
+  }
   const policy = contentSecurityPolicy(createNonce(), process.env.NODE_ENV === "development");
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(CSP_HEADER, policy);

@@ -22,7 +22,7 @@
 6. **[2026-09-02] `setup-pre-commit` and `better-portuguese` skills are absent**
    Do instead: pre-commit is already set (Husky); pt-BR passes go to the `scribe` agent.
 7. **[2026-09-02] Preview deployments sit behind Vercel Authentication**
-   Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.vercel.app` is public.
+   Do instead: E2E against previews needs a protection-bypass token (`x-vercel-protection-bypass`); production `feudo.filx.app` is public.
 
 ## Shell & Command Reliability
 1. **[2026-09-18] Boundary lint: `no-restricted-imports` ignores `import()`, matches the spelling of relative specifiers (not the resolved path), and typed linting needs fixture files on disk (`lintText` on a non-existent path is a fatal parse error)**

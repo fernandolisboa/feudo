@@ -105,10 +105,10 @@ describe("readAuthBaseUrl", () => {
   it("prefers BETTER_AUTH_URL when it is set", () => {
     expect(
       readAuthBaseUrl({
-        BETTER_AUTH_URL: "https://feudo.vercel.app",
+        BETTER_AUTH_URL: "https://feudo.filx.app",
         VERCEL_URL: "feudo-git-pr-1.vercel.app",
       }),
-    ).toBe("https://feudo.vercel.app");
+    ).toBe("https://feudo.filx.app");
   });
 
   it("treats an empty BETTER_AUTH_URL as unset and falls back to VERCEL_URL", () => {

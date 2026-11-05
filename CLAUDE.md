@@ -65,7 +65,8 @@ Handlers.
   Sonnet on demand by default; the newest version of the family is resolved at runtime, pinned to
   the 5.5 ids as fallback (ADR-0013). Prompts versioned under `prompts/` with fixture tests. Every
   AI call is attributed to a household.
-- **Hosting**: Vercel free tier, default `*.vercel.app` domain.
+- **Hosting**: Vercel, production on `feudo.filx.app` (Vercel DNS); `feudo.vercel.app` redirects
+  pages there (`docs/runbooks/auth.md`, "Production domain").
 - **Money**: integer centavos + currency code, never floats. Dates in UTC, displayed in the
   household's time zone (default `America/Sao_Paulo`).
 

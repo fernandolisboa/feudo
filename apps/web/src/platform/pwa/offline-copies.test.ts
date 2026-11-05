@@ -10,7 +10,7 @@ import {
   STATIC_ASSETS_CACHE,
 } from "./offline-copies";
 
-const PRECACHE = "serwist-precache-v2-https://feudo.vercel.app/";
+const PRECACHE = "serwist-precache-v2-https://feudo.filx.app/";
 // What the Serwist default cache left in browsers before #28 (#116).
 const LEGACY = ["pages", "pages-rsc", "pages-rsc-prefetch", "others", "apis", "next-data"];
 
