@@ -1,6 +1,6 @@
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { config, proxy } from "./proxy";
 
@@ -9,6 +9,26 @@ function nonceOf(policy: string | null): string | undefined {
 }
 
 describe("proxy", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("redirects a production page on another host to BETTER_AUTH_URL's host", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("BETTER_AUTH_URL", "https://feudo.filx.app");
+    const response = proxy(new NextRequest("https://feudo.vercel.app/reserva?aba=contas"));
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://feudo.filx.app/reserva?aba=contas");
+  });
+
+  it("serves the page with its policy on the canonical host", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("BETTER_AUTH_URL", "https://feudo.filx.app");
+    const response = proxy(new NextRequest("https://feudo.filx.app/reserva"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(nonceOf(response.headers.get("content-security-policy"))).toBeDefined();
+  });
+
   it("puts the same nonced policy on the request Next renders and on the response", () => {
     const response = proxy(new NextRequest("https://feudo.test/entrar"));
     const policy = response.headers.get("content-security-policy");
@@ -33,6 +53,7 @@ describe("proxy", () => {
 
   it.each([
     "/api/health",
+    "/api/cron/sync",
     "/api/auth/sign-in/email",
     "/_next/static/chunks/main.js",
     "/_next/image",

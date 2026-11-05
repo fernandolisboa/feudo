@@ -16,7 +16,7 @@ describe("readVapidKeys", () => {
       {
         publicKey: PUBLIC_KEY,
         privateKey: PRIVATE_KEY,
-        subject: "mailto:feudo@miolos.app",
+        subject: "mailto:feudo@filx.app",
       },
     );
   });
@@ -26,9 +26,9 @@ describe("readVapidKeys", () => {
       readVapidKeys({
         VAPID_PUBLIC_KEY: PUBLIC_KEY,
         VAPID_PRIVATE_KEY: PRIVATE_KEY,
-        VAPID_SUBJECT: "https://feudo.vercel.app",
+        VAPID_SUBJECT: "https://feudo.filx.app",
       })?.subject,
-    ).toBe("https://feudo.vercel.app");
+    ).toBe("https://feudo.filx.app");
   });
 
   it.each([

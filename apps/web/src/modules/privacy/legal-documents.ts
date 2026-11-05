@@ -12,7 +12,7 @@ export type LegalDocument = {
 // Who answers for Feudo under LGPD (art. 9, III and art. 41): both documents
 // print these through {controller} and {contact}.
 export const LEGAL_CONTROLLER = "Fernando Lisboa";
-export const LEGAL_CONTACT_EMAIL = "feudo@miolos.app";
+export const LEGAL_CONTACT_EMAIL = "feudo@filx.app";
 
 const en = {
   versionLine: "In force since {date} (version {version})",

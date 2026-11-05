@@ -117,6 +117,23 @@ only reachable through that exact deployment URL — a stable branch alias would
 origin check — which is why the `e2e` CI job resolves and uses the deployment's own
 `environment_url` rather than a branch alias.
 
+### Production domain
+
+Production answers on `https://feudo.filx.app` (`BETTER_AUTH_URL` in Vercel Production; the
+domain is on Vercel DNS in the same team, so adding it to the project needs no DNS record). Every
+other host that reaches the production deployment (the former `feudo.vercel.app`, deployment
+URLs) gets a 308 to the same path on `BETTER_AUTH_URL`'s host from `src/proxy.ts`
+(`platform/canonical-host.ts`), pages only. `/api` keeps answering on every host on purpose:
+Vercel Cron does not follow redirects. Do **not** replace this with a Vercel domain-level
+redirect, which would also redirect `/api`. Auth emails sent before a domain change still work for
+verification, password reset and invitations (reset and invite are pages, and the 308 keeps the
+token in the query); a magic link opened on the old host signs the user in on the old host only,
+so they land on the new one signed out. A tab left open on the old host across the switch loses
+a form submit (a Server Action POST answered by a cross-origin 308); reloading fixes it. Changing the domain again is: add the
+domain to the project, set `BETTER_AUTH_URL`, redeploy. Sessions are host-bound cookies, so every
+user signs in once on the new host; installed PWAs and push subscriptions belong to the old origin
+and must be reinstalled and re-enabled there.
+
 ## Terms acceptance
 
 `TERMS_VERSION` (`apps/web/src/modules/auth/terms.ts`) is a code constant, not an env var, until

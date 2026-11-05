@@ -11,7 +11,7 @@ export interface PushEnv {
 
 // Who push services contact about this sender (RFC 8292): the same address
 // the privacy policy gives for data requests.
-const DEFAULT_VAPID_SUBJECT = "mailto:feudo@miolos.app";
+const DEFAULT_VAPID_SUBJECT = "mailto:feudo@filx.app";
 
 export class InvalidVapidConfigError extends Error {
   constructor(detail: string) {
