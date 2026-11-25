@@ -1,5 +1,6 @@
 import type { Categorization } from "./categorize";
 import { matchesPattern, normalizeDescription, rulePatternFromDescription } from "./description";
+import { sameAmountGroup } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
 
 export type QueueCandidate = {
@@ -65,10 +66,6 @@ function mostChosen(rows: readonly Categorized[]): Tally[] {
   return [...tallies.values()].sort((a, b) => (outranks(a, b) ? -1 : 1));
 }
 
-function sameAmount(a: QueueCandidate, b: QueueCandidate): boolean {
-  return Math.abs(a.amountCentavos) === Math.abs(b.amountCentavos) && a.currency === b.currency;
-}
-
 function historySuggestion(
   row: Normalized,
   pattern: string,
@@ -78,7 +75,7 @@ function historySuggestion(
     (other) => other.type === row.type && matchesPattern(other.normalized, pattern),
   );
 
-  const [bestOfSameAmount] = mostChosen(matching.filter((other) => sameAmount(other, row)));
+  const [bestOfSameAmount] = mostChosen(sameAmountGroup(row, matching));
   if (bestOfSameAmount) {
     return {
       suggestion: {
@@ -103,9 +100,10 @@ function historySuggestion(
 // Suggestions come only from what the household already decided: a
 // transaction the household's rules, Feudo's defaults and the bank's own
 // category all missed gets the subcategory most often given to transactions
-// of the same amount its proposed rule pattern would match, because a generic
-// description ("Pix enviado", a person's name) covers unrelated payments
-// while an equal amount usually is the same payment again. With no such
+// of the same amount (same-amount.ts) its proposed rule pattern would match,
+// because a generic description ("Pix enviado", a person's name) covers
+// unrelated payments while an equal amount usually is the same payment again,
+// give or take the centavos an installment rounds by. With no such
 // amount in the history, the description alone counts only when every match
 // agrees. Pairing-only categorizations are left out (they say "transfer
 // between your accounts" about a counterpart, not about the description),
@@ -138,7 +136,7 @@ export function buildCategorizationQueue(candidates: readonly QueueCandidate[]):
       pattern,
       suggestion,
       conflictingHistory: fromHistory.conflicting,
-      sameAmountCount: similar.filter((other) => sameAmount(other, row)).length,
+      sameAmountCount: sameAmountGroup(row, similar).length,
       similarCount: similar.length,
     };
   });

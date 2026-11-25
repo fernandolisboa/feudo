@@ -1,9 +1,10 @@
 import { PRODUCT_DEFAULT_RULES, type ProductDefaultRule } from "./default-rules";
 import { matchesPattern, normalizeDescription } from "./description";
 import { mapProviderCategory } from "./provider-mapping";
+import { sameAmountGapCentavos, type AmountInCurrency } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
 
-export type RuleAmount = { amountCentavos: number; currency: string };
+export type RuleAmount = AmountInCurrency;
 
 export type CategorizationRule = {
   id: string;
@@ -74,15 +75,29 @@ function directionMatches(
   return ruleDirection === null || ruleDirection === transactionType;
 }
 
-function amountMatches(
-  ruleAmount: RuleAmount | null,
+// Amount-bound rules win over any-amount ones, and among them the one
+// nearest to the transaction's amount (same-amount.ts): an exact amount beats
+// a rounded installment of another. Ties keep the order the rules came in.
+function householdRuleFor(
   transaction: CategorizableTransaction,
-): boolean {
-  return (
-    ruleAmount === null ||
-    (Math.abs(transaction.amountCentavos) === ruleAmount.amountCentavos &&
-      transaction.currency === ruleAmount.currency)
+  normalizedDescription: string,
+  orderedRules: readonly CategorizationRule[],
+): CategorizationRule | undefined {
+  const matching = orderedRules.filter(
+    (rule) =>
+      directionMatches(rule.direction, transaction.type) &&
+      matchesPattern(normalizedDescription, rule.pattern),
   );
+
+  let nearest: { rule: CategorizationRule; gap: number } | null = null;
+  for (const rule of matching) {
+    if (rule.amount === null) continue;
+    const gap = sameAmountGapCentavos(rule.amount, transaction);
+    if (gap !== null && (nearest === null || gap < nearest.gap)) {
+      nearest = { rule, gap };
+    }
+  }
+  return nearest?.rule ?? matching.find((rule) => rule.amount === null);
 }
 
 export function categorize(
@@ -95,12 +110,7 @@ export function categorize(
 
   const normalizedDescription = normalizeDescription(transaction.description);
 
-  const householdRule = orderedRules.find(
-    (rule) =>
-      directionMatches(rule.direction, transaction.type) &&
-      amountMatches(rule.amount, transaction) &&
-      matchesPattern(normalizedDescription, rule.pattern),
-  );
+  const householdRule = householdRuleFor(transaction, normalizedDescription, orderedRules);
   if (householdRule) {
     return { subcategory: householdRule.subcategory, source: "rule", ruleId: householdRule.id };
   }

@@ -131,6 +131,65 @@ describe("buildCategorizationQueue", () => {
     expect([item?.sameAmountCount, item?.similarCount]).toEqual([1, 2]);
   });
 
+  it("reads history a few centavos away as the same amount when none is exact", () => {
+    const history = [
+      candidate({ amountCentavos: -3816, categorization: categorized(RESTAURANTS) }),
+      candidate({ amountCentavos: -3816, categorization: categorized(RESTAURANTS) }),
+      candidate({ amountCentavos: -9000, categorization: categorized(GROCERIES) }),
+    ];
+    const odd = candidate({ amountCentavos: -3819 });
+
+    for (const candidates of [[...history, odd], [odd, ...history].reverse()]) {
+      expect(buildCategorizationQueue(candidates)[0]?.suggestion).toEqual({
+        subcategory: RESTAURANTS,
+        reason: "history_amount",
+        matches: 2,
+      });
+    }
+  });
+
+  it("ignores history a few centavos away once some has exactly the amount", () => {
+    const history = [
+      candidate({ amountCentavos: -3819, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -3816, categorization: categorized(RESTAURANTS) }),
+      candidate({ amountCentavos: -3816, categorization: categorized(RESTAURANTS) }),
+      candidate({ amountCentavos: -3817, categorization: categorized(RESTAURANTS) }),
+    ];
+    const pending = candidate({ amountCentavos: -3819 });
+
+    for (const candidates of [[...history, pending], [pending, ...history].reverse()]) {
+      expect(buildCategorizationQueue(candidates)[0]?.suggestion).toEqual({
+        subcategory: GROCERIES,
+        reason: "history_amount",
+        matches: 1,
+      });
+    }
+  });
+
+  it("does not read history 11 centavos away as the same amount", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ amountCentavos: -150011, categorization: categorized(RESTAURANTS) }),
+      candidate({ amountCentavos: -150000 }),
+    ]);
+
+    expect(queue[0]?.suggestion?.reason).toBe("history");
+  });
+
+  it("counts the pending ones a few centavos away only when none has exactly the amount", () => {
+    const odd = candidate({ amountCentavos: -3819 });
+    const first = candidate({ amountCentavos: -3816 });
+    const second = candidate({ amountCentavos: -3816 });
+    const unrelated = candidate({ amountCentavos: -9000 });
+
+    const queue = buildCategorizationQueue([second, unrelated, odd, first]);
+    const counts = new Map(queue.map((item) => [item.id, item.sameAmountCount]));
+
+    expect(counts.get(odd.id)).toBe(2);
+    expect(counts.get(first.id)).toBe(1);
+    expect(counts.get(second.id)).toBe(1);
+    expect(counts.get(unrelated.id)).toBe(0);
+  });
+
   it("follows unanimous history of other amounts when none shares the amount", () => {
     const queue = buildCategorizationQueue([
       candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),

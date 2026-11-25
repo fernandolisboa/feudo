@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Categorization } from "./categorize";
 import { matchesPattern, normalizeDescription } from "./description";
+import { isSameAmount, sameAmountGapCentavos } from "./same-amount";
 import { buildCategorizationQueue, type QueueCandidate } from "./suggest";
 
 const categorizations: (Categorization | null)[] = [
@@ -28,7 +29,7 @@ const candidateArb = fc.record({
   ),
   type: fc.constantFrom("credit" as const, "debit" as const),
   amountCentavos: fc.oneof(
-    fc.constantFrom(-150000, 150000, -4200, 4200),
+    fc.constantFrom(-150000, 150000, -150003, 150011, -4200, 4200, 4203),
     fc.integer({ min: -1_000_000_00, max: 1_000_000_00 }),
   ),
   currency: fc.constantFrom("BRL", "BRL", "BRL", "USD"),
@@ -41,6 +42,15 @@ const candidatesArb = fc
   .map((items): QueueCandidate[] =>
     items.map((item, index) => ({ ...item, id: `t${String(index).padStart(3, "0")}` })),
   );
+
+function sameAmountGroup(
+  own: QueueCandidate | undefined,
+  others: readonly QueueCandidate[],
+): QueueCandidate[] {
+  if (!own) return [];
+  const exact = others.filter((c) => sameAmountGapCentavos(c, own) === 0);
+  return exact.length > 0 ? exact : others.filter((c) => isSameAmount(c, own));
+}
 
 describe("buildCategorizationQueue property tests", () => {
   it("lists every uncategorized transaction exactly once, largest amount first", () => {
@@ -106,13 +116,12 @@ describe("buildCategorizationQueue property tests", () => {
     );
   });
 
-  it("counts as same-amount exactly the similar transactions of equal absolute amount and currency", () => {
+  it("counts as same-amount exactly the similar transactions of exact amount, or failing any the ones within tolerance", () => {
     fc.assert(
       fc.property(candidatesArb, (candidates) => {
         const byId = new Map(candidates.map((c) => [c.id, c]));
         for (const item of buildCategorizationQueue(candidates)) {
           const own = byId.get(item.id);
-          const amount = Math.abs(own?.amountCentavos ?? 0);
           const similar = candidates.filter(
             (c) =>
               c.categorization === null &&
@@ -121,11 +130,7 @@ describe("buildCategorizationQueue property tests", () => {
               matchesPattern(normalizeDescription(c.description), item.pattern),
           );
           expect(item.similarCount).toBe(similar.length);
-          expect(item.sameAmountCount).toBe(
-            similar.filter(
-              (c) => Math.abs(c.amountCentavos) === amount && c.currency === own?.currency,
-            ).length,
-          );
+          expect(item.sameAmountCount).toBe(sameAmountGroup(own, similar).length);
         }
       }),
     );
@@ -137,7 +142,6 @@ describe("buildCategorizationQueue property tests", () => {
         const byId = new Map(candidates.map((c) => [c.id, c]));
         for (const item of buildCategorizationQueue(candidates)) {
           const own = byId.get(item.id);
-          const amount = Math.abs(own?.amountCentavos ?? 0);
           const matching = candidates.filter(
             (c) =>
               c.type === item.type &&
@@ -145,9 +149,7 @@ describe("buildCategorizationQueue property tests", () => {
               c.categorization.source !== "internal_transfer" &&
               matchesPattern(normalizeDescription(c.description), item.pattern),
           );
-          const sameAmount = matching.filter(
-            (c) => Math.abs(c.amountCentavos) === amount && c.currency === own?.currency,
-          );
+          const sameAmount = sameAmountGroup(own, matching);
           const reason = item.suggestion?.reason ?? null;
           const chosen = new Set(
             matching.map((c) => JSON.stringify(c.categorization?.subcategory)),
@@ -171,6 +173,22 @@ describe("buildCategorizationQueue property tests", () => {
           }
         }
       }),
+    );
+  });
+
+  it("does not depend on the order the transactions are read in", () => {
+    fc.assert(
+      fc.property(
+        candidatesArb.chain((candidates) =>
+          fc.tuple(
+            fc.constant(candidates),
+            fc.shuffledSubarray(candidates, { minLength: candidates.length }),
+          ),
+        ),
+        ([candidates, shuffled]) => {
+          expect(buildCategorizationQueue(shuffled)).toEqual(buildCategorizationQueue(candidates));
+        },
+      ),
     );
   });
 });

@@ -108,7 +108,7 @@ const en = {
         },
         {
           title: "Categorizing",
-          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains certain words, check the rule option: the rule becomes the household's, matches whole words, covers only incoming or only outgoing transactions (like the one you are categorizing) and applies to past and future transactions. Tick the amount option as well and the rule only takes transactions of that same amount, which helps when the description is as generic as a Pix or a person's name. Back to automatic undoes a choice made by hand.",
+          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains certain words, check the rule option: the rule becomes the household's, matches whole words, covers only incoming or only outgoing transactions (like the one you are categorizing) and applies to past and future transactions. Tick the amount option as well and the rule only takes transactions of that same amount (a few centavos of difference, as between installments, still count), which helps when the description is as generic as a Pix or a person's name. Back to automatic undoes a choice made by hand.",
         },
         {
           title: "Transactions without a category",
@@ -367,7 +367,7 @@ const ptBR = {
         },
         {
           title: "Categorizar",
-          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha certas palavras, marque a opção de regra: ela passa a valer para a casa inteira, procura palavras inteiras, vale só para entradas ou só para saídas (como a transação que você está categorizando) e se aplica às transações passadas e futuras. Se marcar também a opção do valor, a regra só pega transações com aquele mesmo valor, o que ajuda quando a descrição é genérica, como um Pix ou o nome de uma pessoa. Voltar ao automático desfaz uma escolha feita à mão.",
+          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha certas palavras, marque a opção de regra: ela passa a valer para a casa inteira, procura palavras inteiras, vale só para entradas ou só para saídas (como a transação que você está categorizando) e se aplica às transações passadas e futuras. Se marcar também a opção do valor, a regra só pega transações com aquele mesmo valor (uns poucos centavos de diferença, como entre parcelas, ainda contam), o que ajuda quando a descrição é genérica, como um Pix ou o nome de uma pessoa. Voltar ao automático desfaz uma escolha feita à mão.",
         },
         {
           title: "Transações sem categoria",

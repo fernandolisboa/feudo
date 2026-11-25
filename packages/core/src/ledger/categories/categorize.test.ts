@@ -306,6 +306,88 @@ describe("categorize with amount-bound rules", () => {
     ).toBe("longer");
   });
 
+  it("applies an amount-bound rule to an amount a few centavos away, as an installment rounds", () => {
+    const [near, tooFar] = [-150010, -150011].map((amountCentavos) =>
+      categorize(transaction({ description: "PIX JOAO SILVA", amountCentavos }), [rent]),
+    );
+    expect(near?.ruleId).toBe("rent");
+    expect(tooFar).toBeNull();
+  });
+
+  it("picks the amount-bound rule nearest to the transaction's amount", () => {
+    const far = rule({
+      id: "far",
+      pattern: "PIX JOAO SILVA SANTOS",
+      amount: { amountCentavos: 150008, currency: "BRL" },
+    });
+    const near = rule({
+      id: "near",
+      pattern: "PIX",
+      amount: { amountCentavos: 150002, currency: "BRL" },
+    });
+    const anyAmount = rule({ id: "any", pattern: "PIX JOAO SILVA SANTOS DE SOUZA" });
+
+    for (const rules of [
+      [far, near, anyAmount],
+      [anyAmount, near, far],
+    ]) {
+      expect(
+        categorize(
+          transaction({
+            description: "PIX JOAO SILVA SANTOS DE SOUZA",
+            amountCentavos: -150003,
+          }),
+          orderRules(rules),
+        )?.ruleId,
+      ).toBe("near");
+    }
+  });
+
+  it("lets an exact-amount rule beat a nearer-ordered one within tolerance", () => {
+    const nearButFirst = rule({
+      id: "near",
+      pattern: "PIX JOAO SILVA SANTOS",
+      amount: { amountCentavos: 150003, currency: "BRL" },
+    });
+    const exact = rule({
+      id: "exact",
+      pattern: "PIX",
+      amount: { amountCentavos: 150000, currency: "BRL" },
+    });
+
+    expect(
+      categorize(
+        transaction({ description: "PIX JOAO SILVA SANTOS", amountCentavos: -150000 }),
+        orderRules([nearButFirst, exact]),
+      )?.ruleId,
+    ).toBe("exact");
+  });
+
+  it("breaks a tie between two equally near rules by the existing order", () => {
+    const below = rule({
+      id: "below",
+      pattern: "PIX JOAO",
+      amount: { amountCentavos: 149998, currency: "BRL" },
+    });
+    const above = rule({
+      id: "above",
+      pattern: "PIX JOAO SILVA",
+      amount: { amountCentavos: 150002, currency: "BRL" },
+    });
+
+    for (const rules of [
+      [below, above],
+      [above, below],
+    ]) {
+      expect(
+        categorize(
+          transaction({ description: "PIX JOAO SILVA", amountCentavos: -150000 }),
+          orderRules(rules),
+        )?.ruleId,
+      ).toBe("above");
+    }
+  });
+
   it("keeps the existing ordering among amount-bound rules", () => {
     const short = rule({
       id: "short",

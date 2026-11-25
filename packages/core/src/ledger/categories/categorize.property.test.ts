@@ -6,6 +6,7 @@ import {
   type CategorizableTransaction,
   type CategorizationRule,
 } from "./categorize";
+import { isSameAmount, sameAmountGapCentavos } from "./same-amount";
 
 const directionArb = fc.constantFrom<"credit" | "debit" | null>("credit", "debit", null);
 const patternWordArb = fc.constantFrom("MERCADO", "UBER", "EATS", "PIX", "CONDOMINIO", "FATURA");
@@ -19,6 +20,8 @@ const ruleArb: fc.Arbitrary<CategorizationRule> = fc.record({
     null,
     { amountCentavos: 1000, currency: "BRL" },
     { amountCentavos: 150000, currency: "BRL" },
+    { amountCentavos: 150004, currency: "BRL" },
+    { amountCentavos: 150011, currency: "BRL" },
     { amountCentavos: 150000, currency: "USD" },
   ),
   subcategory: fc.constantFrom(
@@ -47,7 +50,7 @@ const transactionArb: fc.Arbitrary<CategorizableTransaction> = fc.record({
     "SOMETHING ELSE ENTIRELY",
   ),
   type: fc.constantFrom<"credit" | "debit">("credit", "debit"),
-  amountCentavos: fc.constantFrom(-150000, -1000, 1000, 150000, 4200),
+  amountCentavos: fc.constantFrom(-150000, -1000, 1000, 150000, 150003, 4200),
   currency: fc.constantFrom("BRL", "BRL", "USD"),
   providerCategory: fc.constantFrom<string | null>(null, "Groceries", "Other", "Unknown"),
   manual: fc.constant(null),
@@ -64,7 +67,7 @@ describe("categorize property tests", () => {
     );
   });
 
-  it("never applies an amount-bound rule to a transaction of another absolute amount or currency", () => {
+  it("only applies an amount-bound rule within the same-amount tolerance, and never a farther one than another that matches", () => {
     fc.assert(
       fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
         const result = categorize(transaction, orderRules(rules));
@@ -72,8 +75,17 @@ describe("categorize property tests", () => {
         const applied = rules.find((rule) => rule.id === result.ruleId);
         expect(applied).toBeDefined();
         if (applied?.amount) {
-          expect(Math.abs(transaction.amountCentavos)).toBe(applied.amount.amountCentavos);
-          expect(transaction.currency).toBe(applied.amount.currency);
+          expect(isSameAmount(applied.amount, transaction)).toBe(true);
+          const gap = sameAmountGapCentavos(applied.amount, transaction);
+          for (const other of rules) {
+            const otherGap = other.amount ? sameAmountGapCentavos(other.amount, transaction) : null;
+            if (
+              otherGap !== null &&
+              categorize(transaction, [{ ...other, amount: null }])?.source === "rule"
+            ) {
+              expect(gap).toBeLessThanOrEqual(otherGap);
+            }
+          }
         }
       }),
     );
