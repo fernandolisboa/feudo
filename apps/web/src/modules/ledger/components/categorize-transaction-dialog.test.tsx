@@ -194,6 +194,7 @@ describe("CategorizeTransactionDialog", () => {
         transaction={{
           ...transaction,
           link: {
+            kind: "funding",
             description: "RESGATE RDB",
             amountLabel: "R$ 100,00",
             dateLabel: "15/09/2026",
@@ -216,5 +217,58 @@ describe("CategorizeTransactionDialog", () => {
 
     await screen.findByRole("dialog");
     expect(screen.queryByText(t.categorize.link.sectionLabel)).toBeNull();
+  });
+
+  it("hides the internal-transfer section for an offset-linked row", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{
+          ...transaction,
+          link: {
+            kind: "offset",
+            description: "PIX RECEBIDO CICLANO",
+            amountLabel: "R$ 100,00",
+            dateLabel: "15/09/2026",
+            ariaLabel: "Vinculada a PIX RECEBIDO CICLANO, R$ 100,00, 15/09/2026",
+          },
+        }}
+        groups={groups}
+      />,
+    );
+    openDialog();
+
+    await screen.findByRole("dialog");
+    expect(screen.queryByText(t.categorize.transfer.sectionLabel)).toBeNull();
+    expect(screen.queryByRole("button", { name: t.categorize.transfer.mark })).toBeNull();
+  });
+
+  it("keeps the internal-transfer section for a funding-linked row", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{
+          ...transaction,
+          link: {
+            kind: "funding",
+            description: "RESGATE RDB",
+            amountLabel: "R$ 100,00",
+            dateLabel: "15/09/2026",
+            ariaLabel: "Vinculada a RESGATE RDB, R$ 100,00, 15/09/2026",
+          },
+        }}
+        groups={groups}
+      />,
+    );
+    openDialog();
+
+    expect(await screen.findByText(t.categorize.transfer.sectionLabel)).not.toBeNull();
+    expect(screen.getByRole("button", { name: t.categorize.transfer.mark })).not.toBeNull();
+  });
+
+  it("keeps the internal-transfer section for an unlinked row", async () => {
+    render(<CategorizeTransactionDialog transaction={transaction} groups={groups} />);
+    openDialog();
+
+    expect(await screen.findByText(t.categorize.transfer.sectionLabel)).not.toBeNull();
+    expect(screen.getByRole("button", { name: t.categorize.transfer.mark })).not.toBeNull();
   });
 });

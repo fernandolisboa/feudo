@@ -105,6 +105,7 @@ describe("TransactionsTable", () => {
     const ariaLabel = "Vinculada a RESGATE RDB, R$ 50,00, 15/09/2026";
     const row = buildRow({
       link: {
+        kind: "funding",
         description: "RESGATE RDB",
         amountLabel: "R$ 50,00",
         dateLabel: "15/09/2026",

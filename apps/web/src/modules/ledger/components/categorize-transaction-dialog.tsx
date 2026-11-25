@@ -85,7 +85,7 @@ export function CategorizeTransactionDialog({
     clearTransferMarkAction,
     initialActionState,
   );
-  const [undoLinkState, undoLinkActionState, isUndoingLink] = useActionState(
+  const [undoLinkState, undoAction, isUndoingLink] = useActionState(
     undoLinkAction,
     initialActionState,
   );
@@ -238,46 +238,48 @@ export function CategorizeTransactionDialog({
               </Button>
             </form>
           ) : null}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
-              {t.categorize.transfer.sectionLabel}
-            </span>
-            <div className="flex flex-wrap items-center gap-4">
-              <form action={transferMarkAction}>
-                <input type="hidden" name="transactionId" value={transaction.id} />
-                <input
-                  type="hidden"
-                  name="value"
-                  value={transaction.isInternalTransfer ? "false" : "true"}
-                />
-                <Button
-                  type="submit"
-                  variant="link"
-                  size="sm"
-                  disabled={isMarkingTransfer}
-                  className="px-0"
-                >
-                  {transaction.isInternalTransfer
-                    ? t.categorize.transfer.unmark
-                    : t.categorize.transfer.mark}
-                </Button>
-              </form>
-              {transaction.hasTransferMark ? (
-                <form action={clearMarkAction}>
+          {transaction.link?.kind === "offset" ? null : (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                {t.categorize.transfer.sectionLabel}
+              </span>
+              <div className="flex flex-wrap items-center gap-4">
+                <form action={transferMarkAction}>
                   <input type="hidden" name="transactionId" value={transaction.id} />
+                  <input
+                    type="hidden"
+                    name="value"
+                    value={transaction.isInternalTransfer ? "false" : "true"}
+                  />
                   <Button
                     type="submit"
                     variant="link"
                     size="sm"
-                    disabled={isClearingMark}
+                    disabled={isMarkingTransfer}
                     className="px-0"
                   >
-                    {t.categorize.transfer.backToAutomatic}
+                    {transaction.isInternalTransfer
+                      ? t.categorize.transfer.unmark
+                      : t.categorize.transfer.mark}
                   </Button>
                 </form>
-              ) : null}
+                {transaction.hasTransferMark ? (
+                  <form action={clearMarkAction}>
+                    <input type="hidden" name="transactionId" value={transaction.id} />
+                    <Button
+                      type="submit"
+                      variant="link"
+                      size="sm"
+                      disabled={isClearingMark}
+                      className="px-0"
+                    >
+                      {t.categorize.transfer.backToAutomatic}
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
             </div>
-          </div>
+          )}
           {transaction.link ? (
             <div className="flex flex-col gap-1.5">
               <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
@@ -290,7 +292,7 @@ export function CategorizeTransactionDialog({
                   date: transaction.link.dateLabel,
                 })}
               </p>
-              <form action={undoLinkActionState}>
+              <form action={undoAction}>
                 <input type="hidden" name="transactionId" value={transaction.id} />
                 <Button
                   type="submit"

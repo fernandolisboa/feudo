@@ -11,6 +11,7 @@ import {
   type IsoDateRange,
   type Kind,
   type ProductCategoryId,
+  type TransactionLinkKind,
   type YearMonth,
 } from "@feudo/core";
 
@@ -109,6 +110,7 @@ function transferTooltip(
 // kind: a funding link changes no categorization, so this is the only trace
 // of it a member sees next to the row.
 export type LinkedCounterpartView = {
+  kind: TransactionLinkKind;
   description: string;
   amountLabel: string;
   dateLabel: string;
@@ -132,6 +134,7 @@ function linkedCounterpartView(
   });
   const dateLabel = formatIsoDate(counterpart.date);
   return {
+    kind: row.link.kind,
     description: counterpart.description,
     amountLabel,
     dateLabel,
