@@ -14,6 +14,7 @@ const ruleArb: fc.Arbitrary<CategorizationRule> = fc.record({
   id: fc.uuid(),
   pattern: fc.array(patternWordArb, { minLength: 1, maxLength: 3 }).map((words) => words.join(" ")),
   direction: directionArb,
+  amountCentavos: fc.constantFrom<number | null>(null, null, 1000, 150000),
   subcategory: fc.constantFrom(
     { type: "product" as const, id: "food.groceries" as const },
     { type: "product" as const, id: "transport.ride-hailing" as const },
@@ -40,6 +41,7 @@ const transactionArb: fc.Arbitrary<CategorizableTransaction> = fc.record({
     "SOMETHING ELSE ENTIRELY",
   ),
   type: fc.constantFrom<"credit" | "debit">("credit", "debit"),
+  amountCentavos: fc.constantFrom(-150000, -1000, 1000, 150000, 4200),
   providerCategory: fc.constantFrom<string | null>(null, "Groceries", "Other", "Unknown"),
   manual: fc.constant(null),
 });
@@ -51,6 +53,40 @@ describe("categorize property tests", () => {
         expect(categorize(transaction, orderRules(shuffled))).toEqual(
           categorize(transaction, orderRules(rules)),
         );
+      }),
+    );
+  });
+
+  it("never applies an amount-bound rule to a transaction of another absolute amount", () => {
+    fc.assert(
+      fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
+        const result = categorize(transaction, orderRules(rules));
+        if (result?.source !== "rule") return;
+        const applied = rules.find((rule) => rule.id === result.ruleId);
+        expect(applied).toBeDefined();
+        if (applied && applied.amountCentavos !== null) {
+          expect(Math.abs(transaction.amountCentavos)).toBe(applied.amountCentavos);
+        }
+      }),
+    );
+  });
+
+  it("lets a matching amount-bound rule win over every unbound rule", () => {
+    fc.assert(
+      fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
+        const unbound = rules.map((rule) => ({ ...rule, amountCentavos: null }));
+        const boundCouldApply = rules.some((rule, index) => {
+          const alone = unbound[index];
+          return (
+            rule.amountCentavos === Math.abs(transaction.amountCentavos) &&
+            alone !== undefined &&
+            categorize(transaction, [alone])?.source === "rule"
+          );
+        });
+        if (!boundCouldApply) return;
+        const result = categorize(transaction, orderRules(rules));
+        const applied = rules.find((rule) => rule.id === result?.ruleId);
+        expect(applied?.amountCentavos).toBe(Math.abs(transaction.amountCentavos));
       }),
     );
   });

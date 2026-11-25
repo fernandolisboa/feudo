@@ -37,6 +37,7 @@ function buildRow(overrides: Partial<TransactionRowView> = {}): TransactionRowVi
       isInternalTransfer: false,
       hasTransferMark: false,
       suggestedPattern: "COMPRA NO MERCADO",
+      ruleAmountLabel: "R$ 100,00",
     },
     ...overrides,
   };

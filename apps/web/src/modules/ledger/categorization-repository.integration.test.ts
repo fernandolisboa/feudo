@@ -172,6 +172,7 @@ describe("categorization repository (integration)", () => {
           {
             pattern: "CONDOMINIO",
             direction: "debit",
+            amountCentavos: null,
             subcategory: { type: "product", id: "housing.condo" },
           },
           userA.id,
@@ -182,6 +183,7 @@ describe("categorization repository (integration)", () => {
       expect(rulesA[0]).toMatchObject({
         pattern: "CONDOMINIO",
         direction: "debit",
+        amountCentavos: null,
         subcategory: { type: "product", id: "housing.condo" },
       });
       expect(await repoB.listRules(db)).toEqual([]);
@@ -192,6 +194,7 @@ describe("categorization repository (integration)", () => {
           {
             pattern: "CONDOMINIO",
             direction: "debit",
+            amountCentavos: null,
             subcategory: { type: "product", id: "housing.rent" },
           },
           userA.id,
@@ -206,6 +209,90 @@ describe("categorization repository (integration)", () => {
       expect(await repoA.listRules(db)).toHaveLength(1);
       expect(await repoA.deleteRule(db, ruleId)).toBe("ok");
       expect(await repoA.listRules(db)).toEqual([]);
+    });
+  });
+
+  it("keeps an amount-bound rule apart from the any-amount one, scoped to the household", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+      const save = (amountCentavos: number | null, id: "housing.rent" | "food.groceries") =>
+        repoA.saveRule(
+          db,
+          {
+            pattern: "PIX JOAO SILVA",
+            direction: "debit",
+            amountCentavos,
+            subcategory: { type: "product", id },
+          },
+          userA.id,
+        );
+      const amountsAndTargets = async () =>
+        (await repoA.listRules(db))
+          .sort((a, b) => (a.amountCentavos ?? 0) - (b.amountCentavos ?? 0))
+          .map((rule) => [rule.amountCentavos, rule.subcategory.id]);
+
+      expect(await save(null, "food.groceries")).toBe("ok");
+      expect(await save(150000, "housing.rent")).toBe("ok");
+      expect(await save(4200, "housing.rent")).toBe("ok");
+      expect(await amountsAndTargets()).toEqual([
+        [null, "food.groceries"],
+        [4200, "housing.rent"],
+        [150000, "housing.rent"],
+      ]);
+
+      expect(await save(150000, "food.groceries")).toBe("ok");
+      expect(await save(null, "housing.rent")).toBe("ok");
+      expect(await amountsAndTargets()).toEqual([
+        [null, "housing.rent"],
+        [4200, "housing.rent"],
+        [150000, "food.groceries"],
+      ]);
+
+      expect(await repoB.listRules(db)).toEqual([]);
+      const amountBound = (await repoA.listRules(db)).find((rule) => rule.amountCentavos === 4200);
+      expect(await repoB.deleteRule(db, amountBound?.id ?? "")).toBe("not_found");
+      expect(await repoA.listRules(db)).toHaveLength(3);
+    });
+  });
+
+  it("refuses an amount-bound rule whose amount is not positive", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+
+      for (const amountCentavos of [0, -150000]) {
+        await expect(
+          repoA.saveRule(
+            db,
+            {
+              pattern: "PIX JOAO SILVA",
+              direction: "debit",
+              amountCentavos,
+              subcategory: { type: "product", id: "housing.rent" },
+            },
+            userA.id,
+          ),
+        ).rejects.toThrow();
+      }
+      expect(await repoA.listRules(db)).toEqual([]);
+    });
+  });
+
+  it("reads a transaction's absolute amount only through its own household", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({ providerTransactionId: "a-amount", amountCentavos: -150000 }),
+        ],
+      });
+      const transactionId = await transactionIdFor(db, "a-amount");
+      const repoA = createCategorizationRepository(householdScope(userA.session));
+      const repoB = createCategorizationRepository(householdScope(userB.session));
+
+      expect(await repoA.absoluteAmountOf(db, transactionId)).toBe(150000);
+      expect(await repoB.absoluteAmountOf(db, transactionId)).toBeNull();
+      expect(await repoA.absoluteAmountOf(db, UNKNOWN_ID)).toBeNull();
     });
   });
 
@@ -228,6 +315,7 @@ describe("categorization repository (integration)", () => {
           {
             pattern: "PRESENTE",
             direction: null,
+            amountCentavos: null,
             subcategory: { type: "household", id: created.id },
           },
           userA.id,

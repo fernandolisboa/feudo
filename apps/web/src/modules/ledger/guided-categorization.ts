@@ -36,6 +36,8 @@ export type GuidedItemView = {
   amountLabel: string;
   type: TransactionDirection;
   pattern: string;
+  ruleAmountLabel: string;
+  sameAmountCount: number;
   similarCount: number;
   suggestion: GuidedSuggestionView | null;
   deferred: boolean;
@@ -80,6 +82,13 @@ async function readUncategorizedWindow(
 
 function suggestionReason(suggestion: CategorySuggestion, target: string): string {
   switch (suggestion.reason) {
+    case "history_amount":
+      return interpolateAll(
+        suggestion.matches === 1
+          ? t.guided.suggestion.historyAmountOne
+          : t.guided.suggestion.historyAmountMany,
+        { count: String(suggestion.matches), target },
+      );
     case "history":
       return interpolateAll(
         suggestion.matches === 1 ? t.guided.suggestion.historyOne : t.guided.suggestion.historyMany,
@@ -154,6 +163,11 @@ export async function getGuidedCategorizationProps(
           amountLabel: formatMoney({ amountCentavos: row.amountCentavos, currency: row.currency }),
           type: row.type,
           pattern: item.pattern,
+          ruleAmountLabel: formatMoney({
+            amountCentavos: Math.abs(row.amountCentavos),
+            currency: row.currency,
+          }),
+          sameAmountCount: item.sameAmountCount,
           similarCount: item.similarCount,
           suggestion: suggestionView(item.suggestion, taxonomy),
           deferred: deferredIds.has(row.id),

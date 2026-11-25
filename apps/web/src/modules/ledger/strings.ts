@@ -393,6 +393,7 @@ const en = {
   },
   rules: {
     removed: "Rule removed.",
+    onlyThisAmount: "Only when the amount is {amount}",
   },
   overview: {
     overline: "Overview",
@@ -480,11 +481,14 @@ const en = {
     debit: "Money out",
     suggestion: {
       label: "Feudo's suggestion",
+      historyAmountOne: "1 transaction with this description and amount is already in {target}.",
+      historyAmountMany:
+        "{count} transactions with this description and amount are already in {target}.",
       historyOne: "1 transaction with this description is already in {target}.",
       historyMany: "{count} transactions with this description are already in {target}.",
       credit:
         "Money coming in with nothing like it categorized yet is usually income. Change it if it is a refund or a transfer.",
-      none: "No suggestion yet: nothing with this description has a category.",
+      none: "No suggestion yet: nothing with this description and amount has a category.",
     },
     categoryLabel: "Category",
     placeholder: "Choose a category",
@@ -493,6 +497,10 @@ const en = {
     similarOne: "1 more uncategorized transaction has this text and gets the same category.",
     similarMany:
       "{count} more uncategorized transactions have this text and get the same category.",
+    sameAmountOne:
+      "1 more uncategorized transaction has this text and this amount and gets the same category.",
+    sameAmountMany:
+      "{count} more uncategorized transactions have this text and this amount and get the same category.",
     save: "Save and continue",
     defer: "Leave for later",
     deferred: "Left for later.",
@@ -754,6 +762,7 @@ const ptBR = {
   },
   rules: {
     removed: "Regra removida.",
+    onlyThisAmount: "Só quando o valor for {amount}",
   },
   overview: {
     overline: "Visão geral",
@@ -840,11 +849,13 @@ const ptBR = {
     debit: "Saída",
     suggestion: {
       label: "Sugestão do Feudo",
+      historyAmountOne: "1 transação com esta descrição e este valor já está em {target}.",
+      historyAmountMany: "{count} transações com esta descrição e este valor já estão em {target}.",
       historyOne: "1 transação com esta descrição já está em {target}.",
       historyMany: "{count} transações com esta descrição já estão em {target}.",
       credit:
         "Dinheiro que entrou e não tem nada parecido categorizado costuma ser renda. Troque se for um reembolso ou uma transferência.",
-      none: "Ainda sem sugestão: nada com esta descrição tem categoria.",
+      none: "Ainda sem sugestão: nada com esta descrição e este valor tem categoria.",
     },
     categoryLabel: "Categoria",
     placeholder: "Escolha uma categoria",
@@ -853,6 +864,10 @@ const ptBR = {
     similarOne: "Mais 1 transação sem categoria tem este texto e vai receber a mesma categoria.",
     similarMany:
       "Mais {count} transações sem categoria têm este texto e vão receber a mesma categoria.",
+    sameAmountOne:
+      "Mais 1 transação sem categoria tem este texto e este valor e vai receber a mesma categoria.",
+    sameAmountMany:
+      "Mais {count} transações sem categoria têm este texto e este valor e vão receber a mesma categoria.",
     save: "Salvar e seguir",
     defer: "Deixar para depois",
     deferred: "Deixada para depois.",

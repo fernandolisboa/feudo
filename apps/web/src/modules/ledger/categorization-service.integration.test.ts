@@ -14,10 +14,12 @@ import {
   resetTransactionCategory,
 } from "./categorization-service";
 import { createCategorizationRepository } from "./categorization-repository";
+import { readHouseholdLedger } from "./ledger-read";
 
 import type { Database } from "@/platform/db/client";
 
 const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
+const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
 
 async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
   const [row] = await db
@@ -60,8 +62,122 @@ describe("categorizeTransaction (integration)", () => {
       expect(rules[0]).toMatchObject({
         pattern: "CONDOMINIO",
         direction: "debit",
+        amountCentavos: null,
         subcategory: { type: "product", id: "housing.condo" },
       });
+    });
+  });
+
+  it("binds the rule to the transaction's own absolute amount when only this amount is asked for", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "a-rent-1",
+            date: "2026-09-05",
+            description: "PIX ENVIADO JOAO SILVA",
+            amountCentavos: -150000,
+          }),
+          seedTransaction({
+            providerTransactionId: "a-rent-2",
+            date: "2026-09-06",
+            description: "PIX ENVIADO JOAO SILVA",
+            amountCentavos: -150000,
+          }),
+          seedTransaction({
+            providerTransactionId: "a-other",
+            date: "2026-09-07",
+            description: "PIX ENVIADO JOAO SILVA",
+            amountCentavos: -4200,
+          }),
+        ],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "b-same",
+            date: "2026-09-05",
+            description: "PIX ENVIADO JOAO SILVA",
+            amountCentavos: -150000,
+          }),
+        ],
+      });
+
+      const outcome = await categorizeTransaction(
+        {
+          transactionId: await transactionIdFor(db, "a-rent-1"),
+          subcategory: { type: "product", id: "housing.rent" },
+          createRule: "on",
+          pattern: "JOAO SILVA",
+          direction: "debit",
+          onlyThisAmount: "on",
+        },
+        userA.session,
+        db,
+      );
+      expect(outcome).toEqual({ status: "ok" });
+
+      const rules = await createCategorizationRepository(householdScope(userA.session)).listRules(
+        db,
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0]).toMatchObject({
+        pattern: "JOAO SILVA",
+        direction: "debit",
+        amountCentavos: 150000,
+        subcategory: { type: "product", id: "housing.rent" },
+      });
+
+      const sourceOf = async (session: typeof userA.session, providerTransactionId: string) => {
+        const transactionId = await transactionIdFor(db, providerTransactionId);
+        const { rows } = await readHouseholdLedger(
+          db,
+          householdScope(session),
+          SEPTEMBER,
+          null,
+          "America/Sao_Paulo",
+        );
+        const row = rows.find((candidate) => candidate.id === transactionId);
+        return row ? (row.categorization?.source ?? "uncategorized") : "not visible";
+      };
+      expect(await sourceOf(userA.session, "a-rent-1")).toBe("manual");
+      expect(await sourceOf(userA.session, "a-rent-2")).toBe("rule");
+      expect(await sourceOf(userA.session, "a-other")).toBe("uncategorized");
+      expect(await sourceOf(userB.session, "b-same")).toBe("uncategorized");
+      expect(await sourceOf(userB.session, "a-rent-2")).toBe("not visible");
+      expect(
+        await createCategorizationRepository(householdScope(userB.session)).listRules(db),
+      ).toEqual([]);
+    });
+  });
+
+  it("saves an any-amount rule when only this amount is off or absent", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "a-any", amountCentavos: -777 })],
+      });
+
+      const outcome = await categorizeTransaction(
+        {
+          transactionId: await transactionIdFor(db, "a-any"),
+          subcategory: { type: "product", id: "housing.condo" },
+          createRule: "on",
+          pattern: "COMPRA",
+          direction: "debit",
+          onlyThisAmount: "off",
+        },
+        userA.session,
+        db,
+      );
+      expect(outcome).toEqual({ status: "ok" });
+
+      const rules = await createCategorizationRepository(householdScope(userA.session)).listRules(
+        db,
+      );
+      expect(rules.map((rule) => rule.amountCentavos)).toEqual([null]);
     });
   });
 
@@ -200,6 +316,7 @@ describe("removeRule (integration)", () => {
           {
             pattern: "CONDOMINIO",
             direction: "debit",
+            amountCentavos: null,
             subcategory: { type: "product", id: "housing.condo" },
           },
           userA.id,

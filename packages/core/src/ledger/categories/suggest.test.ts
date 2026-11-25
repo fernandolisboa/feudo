@@ -67,7 +67,11 @@ describe("buildCategorizationQueue", () => {
 
   it("suggests the subcategory already used for the same description and direction", () => {
     const queue = buildCategorizationQueue([
-      candidate({ description: "PADARIA DO ZE 01/09", categorization: categorized(GROCERIES) }),
+      candidate({
+        description: "PADARIA DO ZE 01/09",
+        amountCentavos: -2500,
+        categorization: categorized(GROCERIES),
+      }),
       candidate({ description: "PADARIA DO ZE 15/09" }),
     ]);
 
@@ -79,18 +83,72 @@ describe("buildCategorizationQueue", () => {
     });
   });
 
-  it("picks the subcategory used most often among matching transactions", () => {
+  it("prefers history of the same amount, picking the subcategory used most often among it", () => {
     const queue = buildCategorizationQueue([
       candidate({ categorization: categorized(GROCERIES) }),
       candidate({ categorization: categorized(RESTAURANTS) }),
       candidate({ categorization: categorized(RESTAURANTS, "rule") }),
+      candidate({ amountCentavos: -7700, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -7700, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -7700, categorization: categorized(GROCERIES) }),
       candidate({}),
     ]);
 
     expect(queue[0]?.suggestion).toEqual({
       subcategory: RESTAURANTS,
+      reason: "history_amount",
+      matches: 2,
+    });
+  });
+
+  it("compares amounts by absolute value, whatever sign the provider used", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ amountCentavos: 1000, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -1000 }),
+    ]);
+
+    expect(queue[0]?.suggestion).toEqual({
+      subcategory: GROCERIES,
+      reason: "history_amount",
+      matches: 1,
+    });
+  });
+
+  it("follows unanimous history of other amounts when none shares the amount", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -450, categorization: categorized(GROCERIES, "rule") }),
+      candidate({}),
+    ]);
+
+    expect(queue[0]?.suggestion).toEqual({
+      subcategory: GROCERIES,
       reason: "history",
       matches: 2,
+    });
+  });
+
+  it("suggests nothing when history disagrees and none shares the amount", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -450, categorization: categorized(RESTAURANTS) }),
+      candidate({}),
+    ]);
+
+    expect(queue[0]?.suggestion).toBeNull();
+  });
+
+  it("falls back to income for a credit whose history disagrees and shares no amount", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ type: "credit", amountCentavos: 300, categorization: categorized(SALARY) }),
+      candidate({ type: "credit", amountCentavos: 450, categorization: categorized(OWN_ACCOUNTS) }),
+      candidate({ type: "credit", amountCentavos: 1000 }),
+    ]);
+
+    expect(queue[0]?.suggestion).toEqual({
+      subcategory: { type: "product", id: "income.other" },
+      reason: "credit",
     });
   });
 
@@ -176,5 +234,31 @@ describe("buildCategorizationQueue", () => {
     expect(uberDebits.map((item) => item.similarCount)).toEqual([2, 2, 2]);
     expect(queue.find((item) => item.type === "credit")?.similarCount).toBe(0);
     expect(queue.find((item) => item.pattern === "IFOOD")?.similarCount).toBe(0);
+  });
+
+  it("counts apart the similar transactions that also share the amount", () => {
+    const first = candidate({ description: "PIX ENVIADO JOAO SILVA", amountCentavos: -150000 });
+    const second = candidate({ description: "PIX ENVIADO JOAO SILVA", amountCentavos: 150000 });
+    const other = candidate({ description: "PIX ENVIADO JOAO SILVA", amountCentavos: -4200 });
+    const credit = candidate({
+      description: "PIX ENVIADO JOAO SILVA",
+      type: "credit",
+      amountCentavos: 150000,
+    });
+    const done = candidate({
+      description: "PIX ENVIADO JOAO SILVA",
+      amountCentavos: -150000,
+      categorization: categorized(GROCERIES),
+    });
+
+    const queue = buildCategorizationQueue([first, second, other, credit, done]);
+    const counts = new Map(
+      queue.map((item) => [item.id, [item.sameAmountCount, item.similarCount]]),
+    );
+
+    expect(counts.get(first.id)).toEqual([1, 2]);
+    expect(counts.get(second.id)).toEqual([1, 2]);
+    expect(counts.get(other.id)).toEqual([0, 2]);
+    expect(counts.get(credit.id)).toEqual([0, 0]);
   });
 });

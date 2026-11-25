@@ -146,6 +146,10 @@ function toRowView(
       isInternalTransfer: row.internalTransfer !== null,
       hasTransferMark: row.transferMark !== null,
       suggestedPattern: rulePatternFromDescription(row.description),
+      ruleAmountLabel: formatMoney({
+        amountCentavos: Math.abs(row.amountCentavos),
+        currency: row.currency,
+      }),
     },
   };
 }

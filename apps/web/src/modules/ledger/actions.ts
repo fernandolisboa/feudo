@@ -58,6 +58,7 @@ export async function categorizeTransactionAction(
     createRule: formData.get("createRule") === "on" ? "on" : "off",
     pattern: formData.get("pattern"),
     direction: formData.get("direction"),
+    onlyThisAmount: formData.get("onlyThisAmount") === "on" ? "on" : "off",
   });
   if (!parsed.success) {
     return {

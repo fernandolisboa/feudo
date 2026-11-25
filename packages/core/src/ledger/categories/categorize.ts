@@ -7,6 +7,7 @@ export type CategorizationRule = {
   id: string;
   pattern: string;
   direction: TransactionDirection | null;
+  amountCentavos: number | null;
   subcategory: SubcategoryRef;
   createdAt: Date;
 };
@@ -14,6 +15,7 @@ export type CategorizationRule = {
 export type CategorizableTransaction = {
   description: string;
   type: TransactionDirection;
+  amountCentavos: number;
   providerCategory: string | null;
   manual: SubcategoryRef | null;
 };
@@ -38,6 +40,9 @@ function compareById(a: string, b: string): number {
 
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
   return [...rules].sort((a, b) => {
+    const amountBoundDelta = Number(b.amountCentavos !== null) - Number(a.amountCentavos !== null);
+    if (amountBoundDelta !== 0) return amountBoundDelta;
+
     const tokensDelta = tokenCount(b.pattern) - tokenCount(a.pattern);
     if (tokensDelta !== 0) return tokensDelta;
 
@@ -66,6 +71,10 @@ function directionMatches(
   return ruleDirection === null || ruleDirection === transactionType;
 }
 
+function amountMatches(ruleAmountCentavos: number | null, transactionAmountCentavos: number) {
+  return ruleAmountCentavos === null || Math.abs(transactionAmountCentavos) === ruleAmountCentavos;
+}
+
 export function categorize(
   transaction: CategorizableTransaction,
   orderedRules: readonly CategorizationRule[],
@@ -79,6 +88,7 @@ export function categorize(
   const householdRule = orderedRules.find(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
+      amountMatches(rule.amountCentavos, transaction.amountCentavos) &&
       matchesPattern(normalizedDescription, rule.pattern),
   );
   if (householdRule) {

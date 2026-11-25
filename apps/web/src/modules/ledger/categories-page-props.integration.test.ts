@@ -1,3 +1,4 @@
+import { formatMoney } from "@feudo/core";
 import { describe, expect, it } from "vitest";
 
 import { householdScope } from "@/modules/households";
@@ -25,6 +26,7 @@ describe("getCategoriesPageProps (integration)", () => {
         {
           pattern: "CONDOMINIO",
           direction: "debit",
+          amountCentavos: null,
           subcategory: { type: "product", id: "housing.condo" },
         },
         userA.id,
@@ -34,6 +36,18 @@ describe("getCategoriesPageProps (integration)", () => {
         {
           pattern: "PIX ENVIADO CONDOMINIO",
           direction: "debit",
+          amountCentavos: null,
+          subcategory: { type: "product", id: "housing.rent" },
+        },
+        userA.id,
+      );
+
+      await repository.saveRule(
+        db,
+        {
+          pattern: "JOAO SILVA",
+          direction: "debit",
+          amountCentavos: 150000,
           subcategory: { type: "product", id: "housing.rent" },
         },
         userA.id,
@@ -41,8 +55,13 @@ describe("getCategoriesPageProps (integration)", () => {
 
       const props = await getCategoriesPageProps(userA.session, NOW);
 
+      expect(props.rules.map((rule) => [rule.pattern, rule.amountLabel])).toEqual([
+        ["JOAO SILVA", formatMoney({ amountCentavos: 150000, currency: "BRL" })],
+        ["PIX ENVIADO CONDOMINIO", null],
+        ["CONDOMINIO", null],
+      ]);
       expect(
-        props.rules.map((rule) => ({
+        props.rules.slice(1).map((rule) => ({
           pattern: rule.pattern,
           appliesTo: rule.appliesTo,
           target: rule.target,

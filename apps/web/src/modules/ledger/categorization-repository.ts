@@ -113,6 +113,7 @@ export type AddHouseholdSubcategoryResult = { status: "ok"; id: string } | { sta
 export type SaveRuleInput = {
   pattern: string;
   direction: TransactionDirection | null;
+  amountCentavos: number | null;
   subcategory: SubcategoryRef;
 };
 
@@ -265,12 +266,23 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       return updated.length > 0 ? "ok" : "not_found";
     },
 
+    async absoluteAmountOf(db: Database, transactionId: string): Promise<number | null> {
+      const [row] = await db
+        .select({ amountCentavos: bankTransaction.amountCentavos })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(scopedToHousehold(transactionId))
+        .limit(1);
+      return row ? Math.abs(row.amountCentavos) : null;
+    },
+
     async listRules(db: Database): Promise<CategorizationRule[]> {
       const rows = await db
         .select({
           id: categorizationRule.id,
           pattern: categorizationRule.pattern,
           direction: categorizationRule.direction,
+          amountCentavos: categorizationRule.amountCentavos,
           productSubcategoryId: categorizationRule.productSubcategoryId,
           householdSubcategoryId: categorizationRule.householdSubcategoryId,
           createdAt: categorizationRule.createdAt,
@@ -291,6 +303,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
           id: row.id,
           pattern: row.pattern,
           direction: row.direction,
+          amountCentavos: row.amountCentavos,
           subcategory,
           createdAt: row.createdAt,
         });
@@ -314,6 +327,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
             householdId: scope.householdId,
             pattern: input.pattern,
             direction: input.direction,
+            amountCentavos: input.amountCentavos,
             createdByUserId: userId,
             ...target,
           })
@@ -322,6 +336,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
               categorizationRule.householdId,
               categorizationRule.pattern,
               categorizationRule.direction,
+              categorizationRule.amountCentavos,
             ],
             set: { createdByUserId: userId, createdAt: new Date(), ...target },
           });

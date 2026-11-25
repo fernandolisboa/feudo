@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   foreignKey,
@@ -76,7 +77,8 @@ export const subcategoryKindOverride = pgTable(
 // Household-scoped (ADR-0001): a member's standing rule, applied at read
 // time by packages/core/src/ledger/categories/categorize.ts and never
 // written onto a transaction (design contract's key decision: only manual
-// choices are persisted). direction null matches either. Targets exactly one
+// choices are persisted). direction null matches either; amount_centavos null
+// matches any amount, else only that absolute amount. Targets exactly one
 // subcategory, product or the household's own; the composite foreign key
 // only lets it point at this household's own household_subcategory, and the
 // check makes "exactly one target" a database invariant, not just app code.
@@ -91,6 +93,7 @@ export const categorizationRule = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     pattern: text("pattern").notNull(),
     direction: bankTransactionTypeEnum("direction"),
+    amountCentavos: bigint("amount_centavos", { mode: "number" }),
     productSubcategoryId: text("product_subcategory_id"),
     householdSubcategoryId: text("household_subcategory_id"),
     createdByUserId: text("created_by_user_id").references(() => user.id, {
@@ -108,8 +111,9 @@ export const categorizationRule = pgTable(
       "categorization_rule_target_check",
       sql`num_nonnulls(${table.productSubcategoryId}, ${table.householdSubcategoryId}) = 1`,
     ),
-    unique("categorization_rule_household_pattern_direction_unique")
-      .on(table.householdId, table.pattern, table.direction)
+    check("categorization_rule_amount_check", sql`${table.amountCentavos} > 0`),
+    unique("categorization_rule_household_pattern_direction_amount_unique")
+      .on(table.householdId, table.pattern, table.direction, table.amountCentavos)
       .nullsNotDistinct(),
   ],
 );

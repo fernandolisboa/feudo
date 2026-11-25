@@ -12,6 +12,7 @@ export type QueueCandidate = {
 };
 
 export type CategorySuggestion =
+  | { subcategory: SubcategoryRef; reason: "history_amount"; matches: number }
   | { subcategory: SubcategoryRef; reason: "history"; matches: number }
   | { subcategory: SubcategoryRef; reason: "credit" };
 
@@ -20,12 +21,14 @@ export type QueueItem = {
   type: TransactionDirection;
   pattern: string;
   suggestion: CategorySuggestion | null;
+  sameAmountCount: number;
   similarCount: number;
 };
 
 const CREDIT_FALLBACK: SubcategoryRef = { type: "product", id: "income.other" };
 
 type Normalized = QueueCandidate & { normalized: string };
+type Categorized = Normalized & { categorization: Categorization };
 
 type Tally = { subcategory: SubcategoryRef; count: number; latestDate: string; key: string };
 
@@ -47,15 +50,9 @@ function outranks(a: Tally, b: Tally): boolean {
   return a.key < b.key;
 }
 
-function historySuggestion(
-  type: TransactionDirection,
-  pattern: string,
-  history: readonly Normalized[],
-): CategorySuggestion | null {
+function mostChosen(rows: readonly Categorized[]): Tally[] {
   const tallies = new Map<string, Tally>();
-  for (const row of history) {
-    if (row.type !== type || row.categorization === null) continue;
-    if (!matchesPattern(row.normalized, pattern)) continue;
+  for (const row of rows) {
     const subcategory = row.categorization.subcategory;
     const key = refKey(subcategory);
     const tally = tallies.get(key) ?? { subcategory, count: 0, latestDate: row.date, key };
@@ -63,42 +60,75 @@ function historySuggestion(
     if (row.date > tally.latestDate) tally.latestDate = row.date;
     tallies.set(key, tally);
   }
+  return [...tallies.values()].sort((a, b) => (outranks(a, b) ? -1 : 1));
+}
 
-  let best: Tally | null = null;
-  for (const tally of tallies.values()) {
-    if (best === null || outranks(tally, best)) best = tally;
+function sameAmount(a: QueueCandidate, b: QueueCandidate): boolean {
+  return Math.abs(a.amountCentavos) === Math.abs(b.amountCentavos);
+}
+
+function historySuggestion(
+  row: Normalized,
+  pattern: string,
+  history: readonly Categorized[],
+): CategorySuggestion | null {
+  const matching = history.filter(
+    (other) => other.type === row.type && matchesPattern(other.normalized, pattern),
+  );
+
+  const [bestOfSameAmount] = mostChosen(matching.filter((other) => sameAmount(other, row)));
+  if (bestOfSameAmount) {
+    return {
+      subcategory: bestOfSameAmount.subcategory,
+      reason: "history_amount",
+      matches: bestOfSameAmount.count,
+    };
   }
-  return best === null
-    ? null
-    : { subcategory: best.subcategory, reason: "history", matches: best.count };
+
+  const [only, ...others] = mostChosen(matching);
+  return only && others.length === 0
+    ? { subcategory: only.subcategory, reason: "history", matches: only.count }
+    : null;
 }
 
 // Suggestions come only from what the household already decided: a
 // transaction the household's rules, Feudo's defaults and the bank's own
 // category all missed gets the subcategory most often given to transactions
-// its proposed rule pattern would match. Pairing-only categorizations are
-// left out (they say "transfer between your accounts" about a counterpart,
-// not about the description), and money coming in with no history leans to
-// income, because unclassified credits are where a household's income hides.
+// of the same amount its proposed rule pattern would match, because a generic
+// description ("Pix enviado", a person's name) covers unrelated payments
+// while an equal amount usually is the same payment again. With no such
+// amount in the history, the description alone counts only when every match
+// agrees. Pairing-only categorizations are left out (they say "transfer
+// between your accounts" about a counterpart, not about the description),
+// and money coming in with no suggestion from history leans to income,
+// because unclassified credits are where a household's income hides.
 export function buildCategorizationQueue(candidates: readonly QueueCandidate[]): QueueItem[] {
   const normalized: Normalized[] = candidates.map((candidate) => ({
     ...candidate,
     normalized: normalizeDescription(candidate.description),
   }));
   const history = normalized.filter(
-    (row) => row.categorization !== null && row.categorization.source !== "internal_transfer",
+    (row): row is Categorized =>
+      row.categorization !== null && row.categorization.source !== "internal_transfer",
   );
   const uncategorized = normalized.filter((row) => row.categorization === null);
 
   return [...uncategorized].sort(byLargestAmount).map((row) => {
     const pattern = rulePatternFromDescription(row.description);
-    const similarCount = uncategorized.filter(
+    const similar = uncategorized.filter(
       (other) =>
         other.id !== row.id && other.type === row.type && matchesPattern(other.normalized, pattern),
-    ).length;
+    );
     const suggestion =
-      historySuggestion(row.type, pattern, history) ??
+      historySuggestion(row, pattern, history) ??
       (row.type === "credit" ? { subcategory: CREDIT_FALLBACK, reason: "credit" as const } : null);
-    return { id: row.id, type: row.type, pattern, suggestion, similarCount };
+    return {
+      id: row.id,
+      type: row.type,
+      pattern,
+      suggestion,
+      sameAmountCount: similar.filter((other) => sameAmount(other, row)).length,
+      similarCount: similar.length,
+    };
   });
 }

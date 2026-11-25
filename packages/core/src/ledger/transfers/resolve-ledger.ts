@@ -41,6 +41,7 @@ function toCategorizable(transaction: LedgerTransaction): CategorizableTransacti
   return {
     description: transaction.description,
     type: transaction.type,
+    amountCentavos: transaction.amountCentavos,
     providerCategory: transaction.providerCategory,
     manual: transaction.manual,
   };

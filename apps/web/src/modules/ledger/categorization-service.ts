@@ -39,9 +39,24 @@ export async function categorizeTransaction(
       // contract's precedence: mark would otherwise outrank this choice).
       await repository.clearTransferMark(tx, input.transactionId);
       if (input.createRule === "on") {
+        // The amount an "only this amount" rule is bound to is the
+        // transaction's own, read here under the household's scope: a form
+        // field would let a member bind the rule to any amount they typed.
+        const amountCentavos =
+          input.onlyThisAmount === "on"
+            ? await repository.absoluteAmountOf(tx, input.transactionId)
+            : null;
+        if (input.onlyThisAmount === "on" && amountCentavos === null) {
+          throw new RuleTargetNotFoundError();
+        }
         const rule = await repository.saveRule(
           tx,
-          { pattern: input.pattern, direction: input.direction, subcategory: input.subcategory },
+          {
+            pattern: input.pattern,
+            direction: input.direction,
+            amountCentavos,
+            subcategory: input.subcategory,
+          },
           session.userId,
         );
         if (rule === "not_found") {
