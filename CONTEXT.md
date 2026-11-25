@@ -242,13 +242,13 @@ The household's own Anthropic API key, registered on Casa by an owner or admin, 
 _Avoid_: API key, deploy-wide key, ANTHROPIC_API_KEY
 
 **Model family** (ADR-0013):
-Haiku, Sonnet or Opus — the household's choice of which Anthropic model line answers a reading kind (monthly and on-demand are chosen separately; Opus and Sonnet by default). The household never pins a version: the newest qualifying version of the chosen family is resolved at reading time and recorded on that reading, so a new Anthropic release changes nothing the household has to do.
+Haiku, Sonnet or Opus — the household's choice of which Anthropic model line answers a reading kind (monthly and on-demand are chosen separately; Opus and Sonnet by default) or, since ADR-0014, answers category suggestions (chosen the same way, Haiku by default; not a reading). The household never pins a version: the newest qualifying version of the chosen family is resolved at reading time and recorded on that reading, so a new Anthropic release changes nothing the household has to do.
 _Avoid_: model version, model name (for the family choice itself)
 
 ### Audit log
 
 **Financial-data access**:
-One row per server-side read of financial data — who, which household, what kind (overview, transactions, categories, reserve, export, analyses), when (ADR-0008). Written at the server boundary of each read, only after that read has already succeeded; a failed read records nothing, and a failed write still fails the call that read the data. Holds no amounts, descriptions, documents or filters; kept 12 calendar months, then purged by the daily job. `user_id` is cleared, not cascaded, when the user who read is deleted, so the household's record of the read outlives them. Each member sees only their own recent access, on the Casa page ("Seus acessos recentes"), never another member's. A read of the same kind by the same person in the same household within a minute of a recorded one is the same access and adds no row, so the offline copy fetched right after a navigation does not show twice; an export is always its own row.
+One row per server-side read of financial data — who, which household, what kind (overview, transactions, categories, reserve, export, analyses, category_suggestions), when (ADR-0008). Written at the server boundary of each read, only after that read has already succeeded; a failed read records nothing, and a failed write still fails the call that read the data. Holds no amounts, descriptions, documents or filters; kept 12 calendar months, then purged by the daily job. `user_id` is cleared, not cascaded, when the user who read is deleted, so the household's record of the read outlives them. Each member sees only their own recent access, on the Casa page ("Seus acessos recentes"), never another member's. A read of the same kind by the same person in the same household within a minute of a recorded one is the same access and adds no row, so the offline copy fetched right after a navigation does not show twice; an export is always its own row.
 _Avoid_: access log content describing what was read, beyond its kind
 
 ### Offline

@@ -225,7 +225,7 @@ const en = {
         },
         {
           title: "What the analyst receives",
-          body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials. To suggest categories, and only when you press Suggest categories with AI, it sends the description, amount and direction of the transactions without a suggestion, never their date, account or bank.",
+          body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials. To suggest categories, and only when you press Suggest categories with AI, what goes is the description of the transactions without a suggestion, as the bank wrote it, their amount and direction. The description may carry a name, a date or part of a document number; Feudo removes sequences that look like a CPF or CNPJ from it before sending. The transactions' date, account and bank are never sent.",
         },
         {
           title: "Deleting your account",
@@ -488,7 +488,7 @@ const ptBR = {
         },
         {
           title: "O que o analista recebe",
-          body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais. Para sugerir categorias, e só quando você toca em Sugerir categorias com IA, envia a descrição, o valor e se é entrada ou saída das transações sem sugestão, nunca a data, a conta ou o banco.",
+          body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais. Para sugerir categorias, e só quando você toca em Sugerir categorias com IA, vai a descrição das transações sem sugestão como o banco a escreveu, o valor delas e se é entrada ou saída. A descrição pode trazer um nome, uma data ou parte de um documento; o Feudo remove dela sequências que parecem CPF ou CNPJ antes de enviar. Não vão a data, a conta nem o banco das transações.",
         },
         {
           title: "Excluir seu cadastro",
