@@ -183,7 +183,7 @@ function GuidedItem({
                 required
               />
               {item.ruleAmountLabel === null ? null : (
-                <Label className="items-start gap-2 font-normal">
+                <Label className="items-start gap-2 font-normal tabular-nums">
                   <Checkbox
                     name="onlyThisAmount"
                     checked={onlyThisAmount}

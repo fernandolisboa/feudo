@@ -188,7 +188,7 @@ export function CategorizeTransactionDialog({
                   {t.categorize.patternHint} {t.categorize.direction[transaction.type]}
                 </p>
                 {transaction.ruleAmountLabel === null ? null : (
-                  <Label className="items-start gap-2 font-normal">
+                  <Label className="items-start gap-2 font-normal tabular-nums">
                     <Checkbox name="onlyThisAmount" className="mt-0.5" />
                     {interpolate(t.rules.onlyThisAmount, "{amount}", transaction.ruleAmountLabel)}
                   </Label>
