@@ -239,6 +239,97 @@ describe("category suggester prompt v1", () => {
     expect(user).not.toMatch(/\| *\n/);
   });
 
+  describe("sanitizeDescriptionForPrompt removes document-like sequences by character count, not exact punctuation", () => {
+    const DOCUMENT_LIKE_FRAGMENTS = [
+      "123 456 789 00",
+      "123.456.789 00",
+      "123.456.78900",
+      "12345678/0001-90",
+      "12 345 678 0001 90",
+      "*23.456.789-00",
+      "***456789**",
+      "•••.456.789-••",
+      "XXX.456.789-XX",
+      "123456789-00",
+    ];
+
+    it.each(DOCUMENT_LIKE_FRAGMENTS)(
+      "removes %s entirely, at the start of a description",
+      (fragment) => {
+        expect(sanitizeDescriptionForPrompt(`${fragment} compra na loja`)).toBe("compra na loja");
+      },
+    );
+
+    it.each(DOCUMENT_LIKE_FRAGMENTS)(
+      "removes %s entirely, in the middle of a description",
+      (fragment) => {
+        expect(sanitizeDescriptionForPrompt(`compra ${fragment} na loja`)).toBe("compra na loja");
+      },
+    );
+
+    it.each(DOCUMENT_LIKE_FRAGMENTS)(
+      "removes %s entirely, at the end of a description",
+      (fragment) => {
+        expect(sanitizeDescriptionForPrompt(`compra na loja ${fragment}`)).toBe("compra na loja");
+      },
+    );
+
+    it("replaces a description made only of a space-separated document-like sequence with a placeholder", () => {
+      expect(sanitizeDescriptionForPrompt("123 456 789 00")).toBe("(descrição removida)");
+    });
+
+    const SURVIVORS = [
+      "PARC 3/12",
+      "PARCELA 03/10",
+      "01/02/2026",
+      "02/09",
+      "LOJA 0042",
+      "R$ 1.234,56",
+      "VALOR 1.234.567,89",
+      "12345678",
+      "11 99999",
+      "UBER TRIP 99",
+      "EXTRA 12 345",
+      "XBOX 360 1234 5678",
+    ];
+
+    it.each(SURVIVORS)("keeps %s untouched, at the start of a description", (survivor) => {
+      const input = `${survivor} compra na loja`;
+      expect(sanitizeDescriptionForPrompt(input)).toBe(input);
+    });
+
+    it.each(SURVIVORS)("keeps %s untouched, in the middle of a description", (survivor) => {
+      const input = `compra ${survivor} na loja`;
+      expect(sanitizeDescriptionForPrompt(input)).toBe(input);
+    });
+
+    it.each(SURVIVORS)("keeps %s untouched, at the end of a description", (survivor) => {
+      const input = `compra na loja ${survivor}`;
+      expect(sanitizeDescriptionForPrompt(input)).toBe(input);
+    });
+
+    it("never treats a letter x or X inside an ordinary word as a mask character", () => {
+      expect(sanitizeDescriptionForPrompt("EXTRA 12 345")).toBe("EXTRA 12 345");
+      expect(sanitizeDescriptionForPrompt("XBOX 360 1234 5678")).toBe("XBOX 360 1234 5678");
+    });
+
+    it("keeps a masked document untouched when a letter sits right at its boundary", () => {
+      expect(sanitizeDescriptionForPrompt("PAGOXXX.456.789-XX")).toBe("PAGOXXX.456.789-XX");
+      expect(sanitizeDescriptionForPrompt("XXX.456.789-XXMAIS")).toBe("XXX.456.789-XXMAIS");
+    });
+
+    it("runs in linear time on an adversarial 140-character input", () => {
+      const adversarial = `${"1.".repeat(69)}1`;
+      expect(adversarial).toHaveLength(139);
+
+      const start = performance.now();
+      sanitizeDescriptionForPrompt(adversarial);
+      const elapsedMs = performance.now() - start;
+
+      expect(elapsedMs).toBeLessThan(100);
+    });
+  });
+
   it("constrains the output JSON schema's subcategory enum to exactly the ids sent, and nothing else", () => {
     const schema = categorySuggestionOutputSchema(["shopping.other", "income.salary"]) as {
       properties: {
