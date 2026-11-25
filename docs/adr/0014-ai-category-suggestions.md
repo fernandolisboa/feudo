@@ -36,10 +36,13 @@ choice, exactly as with a manual categorization today.
 - **What the model receives, and nothing else.** Feudo's product subcategories as stable ids with
   their pt-BR "Categoria · Subcategoria" labels and kinds (product data, not personal data), and per
   group: an index, the direction, the absolute amount formatted in BRL, and the description
-  (whitespace collapsed, control characters and `<`/`>`/`|` removed, cut at 140 characters). No
-  dates, account names or types, institution, connection label, document hash, household subcategory
-  names or examples from the household's categorized history. Descriptions are untrusted data: they
-  sit inside a delimited block the system prompt declares as data, never instructions.
+  (whitespace collapsed, control characters and `<`/`>`/`|` removed, CPF- and CNPJ-shaped digit
+  sequences and any other run of 9 or more digits removed, cut at 140 characters). No dates, account
+  names or types, institution, connection label, document hash, household subcategory names or
+  examples from the household's categorized history. The description is the bank's own free text,
+  so it can still carry a name, a date or part of a document number the sanitizer's pattern does not
+  catch; the terms, privacy policy and connection consent say so. Descriptions are untrusted data:
+  they sit inside a delimited block the system prompt declares as data, never instructions.
 - **Output contract.** Structured outputs (JSON schema) restrict every answer to
   `{ index, subcategory }` where `subcategory` is one of the sent ids or `null`; the reply is then
   parsed with Zod, and an out-of-range index, an unknown id, or a second answer for the same index is
@@ -89,10 +92,11 @@ choice, exactly as with a manual categorization today.
 - **Slice placement (ADR-0011).** `analysis` already imports `@/modules/ledger` (`service.ts` →
   `getLedgerAnalysisFacts`) and `ledger` imports nothing from `analysis`, so the direction stays
   `analysis → ledger`: `analysis` owns both tables, the prompt, the client method, the action, the
-  quota and the button; `ledger` exports `getAiSuggestionCandidates` (the groups to send and the
-  product subcategory labels) and accepts the stored suggestions as a plain input of
-  `getGuidedCategorizationProps`. `app/(app)/categorizar/page.tsx` composes the two and passes the
-  button into the guided view as a slot.
+  quota and the button; `ledger` exports `getAiSuggestionCandidates` (the groups to send) and
+  `productSubcategoriesForPrompt` (the taxonomy to offer, called directly by `analysis` when it
+  renders the prompt, rather than carried through the candidates result) and accepts the stored
+  suggestions as a plain input of `getGuidedCategorizationProps`. `app/(app)/categorizar/page.tsx`
+  composes the two and passes the button into the guided view as a slot.
 - **Audit (ADR-0008).** Each press that sends something writes a `financial_data_access` row of a
   new kind, `category_suggestions`, after the candidates are read and before Anthropic is called, so
   a failed audit write sends nothing. Shown to the member as "Sugestões de categoria (IA)" under

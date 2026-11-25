@@ -29,15 +29,10 @@ export { CategorizationNudge } from "./components/categorization-nudge";
 export { GuidedCategorizationView } from "./components/guided-categorization-view";
 export { GuidedCategorizationErrorBoundary } from "./components/guided-categorization-error-boundary";
 export { getGuidedCategorizationProps } from "./guided-categorization";
-export type {
-  GuidedCategorizationOptions,
-  GuidedCategorizationProps,
-} from "./guided-categorization";
 export {
   getAiSuggestionCandidates,
   productSubcategoriesForPrompt,
 } from "./ai-suggestion-candidates";
-export type { AiSuggestibleSubcategory, AiSuggestionCandidates } from "./ai-suggestion-candidates";
 export { CategorizarTabs } from "./components/categorizar-tabs";
 export { TransactionLinksView } from "./components/transaction-links-view";
 export { TransactionLinksErrorBoundary } from "./components/transaction-links-error-boundary";
