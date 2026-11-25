@@ -1,10 +1,12 @@
 import { formatMoney } from "@feudo/core";
+import { Link2 } from "lucide-react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { formatIsoDate } from "@/lib/format-date";
 
 import type { LedgerTransactionRow } from "../repository";
+import type { LinkedCounterpartView } from "../page-props";
 import { t } from "../strings";
 import {
   CategorizeTransactionDialog,
@@ -30,6 +32,7 @@ export type TransactionRowView = Pick<
   "id" | "date" | "description" | "amountCentavos" | "currency" | "accountName" | "institutionName"
 > & {
   category: { label: string; categoryLabel: string; sourceLabel: string } | null;
+  link: LinkedCounterpartView | null;
   categorize: CategorizableRow;
 };
 
@@ -64,7 +67,19 @@ export function TransactionsTable({
               {formatIsoDate(transaction.date)}
             </TableCell>
             <TableCell card="title" className="font-medium">
-              <div>{transaction.description}</div>
+              <div className="flex items-center gap-1.5">
+                <span>{transaction.description}</span>
+                {transaction.link ? (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span tabIndex={0} aria-label={transaction.link.ariaLabel} />}
+                    >
+                      <Link2 aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>{transaction.link.ariaLabel}</TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
               <div data-card-only className="text-muted-foreground mt-0.5 text-[12px] font-normal">
                 {cardMetaLine(transaction)}
               </div>

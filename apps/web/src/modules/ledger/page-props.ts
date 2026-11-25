@@ -104,6 +104,45 @@ function transferTooltip(
   return counterpart ? pairTooltip(counterpart) : t.category.sources.internal_transfer;
 }
 
+// Shown on both /transacoes (the row's small indicator) and inside its
+// dialog (the counterpart section and "Desfazer vínculo"), for either link
+// kind: a funding link changes no categorization, so this is the only trace
+// of it a member sees next to the row.
+export type LinkedCounterpartView = {
+  description: string;
+  amountLabel: string;
+  dateLabel: string;
+  ariaLabel: string;
+};
+
+function linkedCounterpartView(
+  row: ResolvedLedgerRow,
+  rowById: ReadonlyMap<string, LedgerTransactionRow>,
+): LinkedCounterpartView | null {
+  if (row.link === null) {
+    return null;
+  }
+  const counterpart = rowById.get(row.link.counterpartId);
+  if (!counterpart) {
+    return null;
+  }
+  const amountLabel = formatMoney({
+    amountCentavos: counterpart.amountCentavos,
+    currency: counterpart.currency,
+  });
+  const dateLabel = formatIsoDate(counterpart.date);
+  return {
+    description: counterpart.description,
+    amountLabel,
+    dateLabel,
+    ariaLabel: interpolateAll(t.category.linkIndicator, {
+      description: counterpart.description,
+      amount: amountLabel,
+      date: dateLabel,
+    }),
+  };
+}
+
 function toRowView(
   row: ResolvedLedgerRow,
   taxonomy: TaxonomyView,
@@ -117,6 +156,7 @@ function toRowView(
       ? t.category.sources[row.categorization.source]
       : null;
   const manualLabel = row.manual ? taxonomy.labelOf(row.manual) : null;
+  const link = linkedCounterpartView(row, rowById);
   return {
     id: row.id,
     date: row.date,
@@ -129,6 +169,7 @@ function toRowView(
       row.categorization && label && sourceLabel
         ? { label: label.label, categoryLabel: label.categoryLabel, sourceLabel }
         : null,
+    link,
     categorize: {
       id: row.id,
       description: row.description,
@@ -148,6 +189,7 @@ function toRowView(
       hasTransferMark: row.transferMark !== null,
       suggestedPattern: rulePatternFromDescription(row.description),
       ruleAmountLabel: ruleAmountLabel(row),
+      link,
     },
   };
 }

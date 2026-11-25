@@ -11,6 +11,7 @@ vi.mock("../actions", () => ({
   removeRuleAction: vi.fn(),
   resetTransactionCategoryAction: vi.fn(),
   setTransferMarkAction: vi.fn(),
+  undoLinkAction: vi.fn(),
 }));
 
 import { TOURS } from "@/modules/shell/test/tours";
@@ -59,6 +60,7 @@ const transactionsProps: TransactionsPageProps = {
       accountName: "Conta corrente",
       institutionName: "Banco Fixture",
       category: null,
+      link: null,
       categorize: {
         id: "tx-1",
         description: "COMPRA NO MERCADO",
@@ -70,6 +72,7 @@ const transactionsProps: TransactionsPageProps = {
         hasTransferMark: false,
         suggestedPattern: "COMPRA NO MERCADO",
         ruleAmountLabel: "R$ 100,00",
+        link: null,
       },
     },
   ],

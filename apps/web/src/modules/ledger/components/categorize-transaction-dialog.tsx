@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/ui/select";
 import { initialActionState } from "@/lib/action-state";
-import { interpolate } from "@/lib/interpolate";
+import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { useCloseOnSuccess } from "@/lib/use-close-on-success";
 
 import type { TransactionDirection } from "@feudo/core";
@@ -35,7 +35,9 @@ import {
   clearTransferMarkAction,
   resetTransactionCategoryAction,
   setTransferMarkAction,
+  undoLinkAction,
 } from "../actions";
+import type { LinkedCounterpartView } from "../page-props";
 import { t } from "../strings";
 import { RULE_PATTERN_MAX_LENGTH } from "../validation";
 
@@ -55,6 +57,7 @@ export type CategorizableRow = {
   hasTransferMark: boolean;
   suggestedPattern: string;
   ruleAmountLabel: string | null;
+  link: LinkedCounterpartView | null;
 };
 
 export function CategorizeTransactionDialog({
@@ -82,6 +85,10 @@ export function CategorizeTransactionDialog({
     clearTransferMarkAction,
     initialActionState,
   );
+  const [undoLinkState, undoLinkActionState, isUndoingLink] = useActionState(
+    undoLinkAction,
+    initialActionState,
+  );
   const items = groups.flatMap((group) => group.options);
   const error =
     state.status === "error"
@@ -92,7 +99,9 @@ export function CategorizeTransactionDialog({
           ? transferMarkState.message
           : clearMarkState.status === "error"
             ? clearMarkState.message
-            : null;
+            : undoLinkState.status === "error"
+              ? undoLinkState.message
+              : null;
   const selectId = `categorize-${transaction.id}`;
   const patternId = `categorize-pattern-${transaction.id}`;
 
@@ -100,6 +109,7 @@ export function CategorizeTransactionDialog({
   useCloseOnSuccess(resetState, setOpen);
   useCloseOnSuccess(transferMarkState, setOpen);
   useCloseOnSuccess(clearMarkState, setOpen);
+  useCloseOnSuccess(undoLinkState, setOpen);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -268,6 +278,32 @@ export function CategorizeTransactionDialog({
               ) : null}
             </div>
           </div>
+          {transaction.link ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                {t.categorize.link.sectionLabel}
+              </span>
+              <p className="text-[13px] tabular-nums">
+                {interpolateAll(t.categorize.link.counterpart, {
+                  description: transaction.link.description,
+                  amount: transaction.link.amountLabel,
+                  date: transaction.link.dateLabel,
+                })}
+              </p>
+              <form action={undoLinkActionState}>
+                <input type="hidden" name="transactionId" value={transaction.id} />
+                <Button
+                  type="submit"
+                  variant="link"
+                  size="sm"
+                  disabled={isUndoingLink}
+                  className="px-0"
+                >
+                  {t.categorize.link.undo}
+                </Button>
+              </form>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
