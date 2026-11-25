@@ -108,7 +108,7 @@ const en = {
         },
         {
           title: "Categorizing",
-          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains certain words, check the rule option: the rule becomes the household's, matches whole words, covers only incoming or only outgoing transactions (like the one you are categorizing) and applies to past and future transactions. Tick the amount option as well and the rule only takes transactions of that same amount (a few centavos of difference, as between installments, still count), which helps when the description is as generic as a Pix or a person's name. Back to automatic undoes a choice made by hand.",
+          body: "Feudo recognizes many transactions on its own. For the rest, use Categorize and pick a subcategory. To do the same with every transaction whose description contains certain words, check the rule option: the rule becomes the household's, matches whole words, covers only incoming or only outgoing transactions (like the one you are categorizing) and applies to past and future transactions. Tick the amount option as well and the rule only takes transactions of that same amount (a few centavos of difference, as between installments, still count), which helps when the description is as generic as a Pix or a person's name. Back to automatic undoes a choice made by hand. When the household has an Anthropic key, Categorize offers Suggest categories with AI for the transactions without a suggestion; a suggestion only fills in the choice, and you check it and save.",
         },
         {
           title: "Transactions without a category",
@@ -225,7 +225,7 @@ const en = {
         },
         {
           title: "What the analyst receives",
-          body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials.",
+          body: "To write a reading, Feudo sends Anthropic, the company behind the AI model, only the figures it already computed for your household, with their labels: totals, rates, the reserve, the bank comparison. Never transactions, descriptions, account names, documents or your credentials. To suggest categories, and only when you press Suggest categories with AI, it sends the description, amount and direction of the transactions without a suggestion, never their date, account or bank.",
         },
         {
           title: "Deleting your account",
@@ -371,7 +371,7 @@ const ptBR = {
         },
         {
           title: "Categorizar",
-          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha certas palavras, marque a opção de regra: ela passa a valer para a casa inteira, procura palavras inteiras, vale só para entradas ou só para saídas (como a transação que você está categorizando) e se aplica às transações passadas e futuras. Se marcar também a opção do valor, a regra só pega transações com aquele mesmo valor (uns poucos centavos de diferença, como entre parcelas, ainda contam), o que ajuda quando a descrição é genérica, como um Pix ou o nome de uma pessoa. Voltar ao automático desfaz uma escolha feita à mão.",
+          body: "O Feudo reconhece muitas transações sozinho. Para as outras, use Categorizar e escolha uma subcategoria. Para fazer o mesmo com toda transação cuja descrição tenha certas palavras, marque a opção de regra: ela passa a valer para a casa inteira, procura palavras inteiras, vale só para entradas ou só para saídas (como a transação que você está categorizando) e se aplica às transações passadas e futuras. Se marcar também a opção do valor, a regra só pega transações com aquele mesmo valor (uns poucos centavos de diferença, como entre parcelas, ainda contam), o que ajuda quando a descrição é genérica, como um Pix ou o nome de uma pessoa. Voltar ao automático desfaz uma escolha feita à mão. Quando a casa tem uma chave da Anthropic, Categorizar oferece Sugerir categorias com IA para as transações sem sugestão; a sugestão só preenche a escolha, e você confere e salva.",
         },
         {
           title: "Transações sem categoria",
@@ -488,7 +488,7 @@ const ptBR = {
         },
         {
           title: "O que o analista recebe",
-          body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais.",
+          body: "Para escrever uma leitura, o Feudo envia à Anthropic, a empresa por trás do modelo de IA, só os números que ele já calculou para a sua casa, com os nomes deles: totais, taxas, a reserva, a comparação de bancos. Nunca transações, descrições, nomes de contas, documentos ou suas credenciais. Para sugerir categorias, e só quando você toca em Sugerir categorias com IA, envia a descrição, o valor e se é entrada ou saída das transações sem sugestão, nunca a data, a conta ou o banco.",
         },
         {
           title: "Excluir seu cadastro",
