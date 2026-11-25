@@ -116,7 +116,7 @@ describe("buildCategorizationQueue property tests", () => {
     );
   });
 
-  it("counts as same-amount exactly the similar transactions of exact amount, or failing any the ones within tolerance", () => {
+  it("counts as same-amount exactly the similar transactions of same amount, exact or within tolerance", () => {
     fc.assert(
       fc.property(candidatesArb, (candidates) => {
         const byId = new Map(candidates.map((c) => [c.id, c]));
@@ -130,7 +130,9 @@ describe("buildCategorizationQueue property tests", () => {
               matchesPattern(normalizeDescription(c.description), item.pattern),
           );
           expect(item.similarCount).toBe(similar.length);
-          expect(item.sameAmountCount).toBe(sameAmountGroup(own, similar).length);
+          expect(item.sameAmountCount).toBe(
+            similar.filter((c) => own !== undefined && isSameAmount(c, own)).length,
+          );
         }
       }),
     );

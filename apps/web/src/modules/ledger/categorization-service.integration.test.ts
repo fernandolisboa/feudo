@@ -326,6 +326,50 @@ describe("categorizeTransaction (integration)", () => {
     });
   });
 
+  it("does not write a rule, amount-bound or not, for another household's transaction", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "a-foreign",
+            date: "2026-09-05",
+            description: "PIX ENVIADO JOAO SILVA",
+            amountCentavos: -150000,
+          }),
+        ],
+      });
+      const transactionId = await transactionIdFor(db, "a-foreign");
+
+      const outcome = await categorizeTransaction(
+        {
+          transactionId,
+          subcategory: { type: "product", id: "housing.rent" },
+          createRule: "on",
+          pattern: "JOAO SILVA",
+          direction: "debit",
+          onlyThisAmount: "on",
+        },
+        userB.session,
+        db,
+      );
+      expect(outcome).toEqual({ status: "not_found" });
+
+      const repositoryA = createCategorizationRepository(householdScope(userA.session));
+      const repositoryB = createCategorizationRepository(householdScope(userB.session));
+      expect(await repositoryA.listRules(db)).toEqual([]);
+      expect(await repositoryB.listRules(db)).toEqual([]);
+      const { rows } = await readHouseholdLedger(
+        db,
+        householdScope(userA.session),
+        SEPTEMBER,
+        null,
+        "America/Sao_Paulo",
+      );
+      expect(rows.find((row) => row.id === transactionId)?.categorization).toBeNull();
+    });
+  });
+
   it("does not write anything for another household's transaction", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       await seedSyncedConnection(db, userA, {

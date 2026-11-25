@@ -1,6 +1,6 @@
 import type { Categorization } from "./categorize";
 import { matchesPattern, normalizeDescription, rulePatternFromDescription } from "./description";
-import { sameAmountGroup } from "./same-amount";
+import { isSameAmount, sameAmountGroup } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
 
 export type QueueCandidate = {
@@ -136,7 +136,7 @@ export function buildCategorizationQueue(candidates: readonly QueueCandidate[]):
       pattern,
       suggestion,
       conflictingHistory: fromHistory.conflicting,
-      sameAmountCount: sameAmountGroup(row, similar).length,
+      sameAmountCount: similar.filter((other) => isSameAmount(other, row)).length,
       similarCount: similar.length,
     };
   });

@@ -175,18 +175,18 @@ describe("buildCategorizationQueue", () => {
     expect(queue[0]?.suggestion?.reason).toBe("history");
   });
 
-  it("counts the pending ones a few centavos away only when none has exactly the amount", () => {
-    const odd = candidate({ amountCentavos: -3819 });
-    const first = candidate({ amountCentavos: -3816 });
-    const second = candidate({ amountCentavos: -3816 });
+  it("counts every pending one the amount-bound rule would take, exact or a few centavos away", () => {
+    const a = candidate({ amountCentavos: -1000 });
+    const b = candidate({ amountCentavos: -1000 });
+    const c = candidate({ amountCentavos: -1005 });
     const unrelated = candidate({ amountCentavos: -9000 });
 
-    const queue = buildCategorizationQueue([second, unrelated, odd, first]);
+    const queue = buildCategorizationQueue([b, unrelated, c, a]);
     const counts = new Map(queue.map((item) => [item.id, item.sameAmountCount]));
 
-    expect(counts.get(odd.id)).toBe(2);
-    expect(counts.get(first.id)).toBe(1);
-    expect(counts.get(second.id)).toBe(1);
+    expect(counts.get(a.id)).toBe(2);
+    expect(counts.get(b.id)).toBe(2);
+    expect(counts.get(c.id)).toBe(2);
     expect(counts.get(unrelated.id)).toBe(0);
   });
 
