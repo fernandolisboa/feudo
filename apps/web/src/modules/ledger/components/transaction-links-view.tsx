@@ -1,3 +1,4 @@
+import { PageHeader } from "@/ui/page-header";
 import { PaginatedTable } from "@/ui/paginated-table";
 import { TableCell, TableHead, TableRow } from "@/ui/table";
 import { interpolate, interpolateAll } from "@/lib/interpolate";
@@ -23,9 +24,21 @@ function confirmAllLabel(kind: "offset" | "funding", count: number): string {
   return interpolate(template, "{count}", String(count));
 }
 
-export function TransactionLinksView({ items }: LinkSuggestionsProps) {
+function title(pendingCount: number): string {
+  if (pendingCount === 0) {
+    return t.links.title.none;
+  }
+  if (pendingCount === 1) {
+    return t.links.title.one;
+  }
+  return interpolate(t.links.title.many, "{count}", String(pendingCount));
+}
+
+export function TransactionLinksView({ items, pendingCount }: LinkSuggestionsProps) {
+  const header = <PageHeader overline={t.links.overline} title={title(pendingCount)} />;
+
   if (items.length === 0) {
-    return <p className="font-heading text-[18px]">{t.links.empty}</p>;
+    return header;
   }
 
   const byKind = {
@@ -35,12 +48,19 @@ export function TransactionLinksView({ items }: LinkSuggestionsProps) {
 
   return (
     <>
+      {header}
       {(["offset", "funding"] as const).map((kind) =>
         byKind[kind].length > 1 ? (
           <div key={kind} className="mb-3">
             <FormActionButton
               action={confirmAllLinksAction}
-              fields={{ kind }}
+              fields={{
+                kind,
+                debitTransactionIds: byKind[kind].map((item) => item.debitTransactionId).join(","),
+                creditTransactionIds: byKind[kind]
+                  .map((item) => item.creditTransactionId)
+                  .join(","),
+              }}
               label={confirmAllLabel(kind, byKind[kind].length)}
               ariaLabel={confirmAllLabel(kind, byKind[kind].length)}
             />
@@ -95,6 +115,7 @@ export function TransactionLinksView({ items }: LinkSuggestionsProps) {
                   fields={{
                     debitTransactionId: item.debitTransactionId,
                     creditTransactionId: item.creditTransactionId,
+                    kind: item.kind,
                   }}
                   label={t.links.confirm}
                   ariaLabel={ariaLabelFor(t.links.confirmFor, item)}

@@ -31,6 +31,7 @@ export { GuidedCategorizationErrorBoundary } from "./components/guided-categoriz
 export { getGuidedCategorizationProps } from "./guided-categorization";
 export { CategorizarTabs } from "./components/categorizar-tabs";
 export { TransactionLinksView } from "./components/transaction-links-view";
+export { TransactionLinksErrorBoundary } from "./components/transaction-links-error-boundary";
 export {
   getLinkSuggestionsPendingCount,
   getLinkSuggestionsProps,

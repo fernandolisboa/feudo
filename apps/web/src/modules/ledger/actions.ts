@@ -59,13 +59,40 @@ function stateFor(outcome: CategorizeOutcome, success: string): ActionState {
   }
 }
 
-function stateForLink(outcome: LinkOutcome | ConfirmAllLinksOutcome, success: string): ActionState {
+function stateForLink(outcome: LinkOutcome, success: string): ActionState {
   switch (outcome.status) {
     case "ok":
       revalidateLedger();
       return { status: "success", message: success };
     case "not_found":
       return { status: "error", message: t.errors.linkNotFound };
+    case "failed":
+      return { status: "error", message: t.errors.failed };
+  }
+}
+
+function confirmAllLinksMessage(confirmedCount: number, requestedCount: number): string {
+  if (confirmedCount < requestedCount) {
+    return interpolateAll(t.links.confirmedPartial, {
+      confirmed: String(confirmedCount),
+      requested: String(requestedCount),
+    });
+  }
+  return confirmedCount === 1
+    ? t.links.confirmedOne
+    : interpolateAll(t.links.confirmedMany, { count: String(confirmedCount) });
+}
+
+function stateForConfirmAllLinks(outcome: ConfirmAllLinksOutcome): ActionState {
+  switch (outcome.status) {
+    case "ok":
+      revalidateLedger();
+      return {
+        status: "success",
+        message: confirmAllLinksMessage(outcome.confirmedCount, outcome.requestedCount),
+      };
+    case "not_found":
+      return { status: "error", message: t.errors.linksNotFound };
     case "failed":
       return { status: "error", message: t.errors.failed };
   }
@@ -252,7 +279,7 @@ export async function confirmAllLinksAction(
     return { status: "error", message: t.errors.invalidInput };
   }
   const session = await requireHouseholdSession();
-  return stateForLink(await confirmAllLinks(parsed.data, session, getDb()), t.links.confirmed);
+  return stateForConfirmAllLinks(await confirmAllLinks(parsed.data, session, getDb()));
 }
 
 export async function dismissLinkAction(

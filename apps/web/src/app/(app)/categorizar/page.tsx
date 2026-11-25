@@ -10,6 +10,7 @@ import {
   getLinkSuggestionsProps,
   GuidedCategorizationErrorBoundary,
   GuidedCategorizationView,
+  TransactionLinksErrorBoundary,
   TransactionLinksView,
   type CategorizeSearchParams,
 } from "@/modules/ledger";
@@ -52,9 +53,11 @@ export default async function GuidedCategorizationPage({
         </GuidedCategorizationErrorBoundary>
       }
       vinculos={
-        <Suspense fallback={<PageSkeleton />}>
-          <TransactionLinksContent session={session} now={now} />
-        </Suspense>
+        <TransactionLinksErrorBoundary>
+          <Suspense fallback={<PageSkeleton />}>
+            <TransactionLinksContent session={session} now={now} />
+          </Suspense>
+        </TransactionLinksErrorBoundary>
       }
     />
   );

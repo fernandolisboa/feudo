@@ -356,6 +356,7 @@ const en = {
     linksWithCount: "Links ({count})",
   },
   links: {
+    overline: "Links",
     title: {
       none: "No links suggested right now",
       one: "1 link suggested",
@@ -369,12 +370,19 @@ const en = {
     confirmFor: "Link {description} and {counterpartDescription}",
     dismiss: "Not a link",
     dismissFor: "Mark {description} and {counterpartDescription} as not a link",
-    confirmAll: "Link all",
     confirmAllOffset: "Link all {count} “one cancels the other” pairs",
     confirmAllFunding: "Link all {count} “inflow covered a payment” pairs",
+    confirmedOne: "1 pair linked.",
+    confirmedMany: "{count} pairs linked.",
+    confirmedPartial:
+      "{confirmed} of {requested} pairs linked. The others are no longer available.",
     confirmed: "Link confirmed.",
     dismissed: "Marked as not a link.",
-    empty: "No links suggested right now.",
+    error: {
+      message:
+        "Could not load the link suggestions right now. Check your connection and try again.",
+      retry: "Try again",
+    },
     table: {
       transactions: "Transactions",
       kind: "What it would be",
@@ -582,6 +590,7 @@ const en = {
     failed: "Couldn't save right now. Try again.",
     duplicateSubcategory: "This category already has a subcategory with that name.",
     linkNotFound: "That pair is no longer available to link.",
+    linksNotFound: "Those pairs are no longer available to link.",
   },
 };
 
@@ -775,6 +784,7 @@ const ptBR = {
     linksWithCount: "Vínculos ({count})",
   },
   links: {
+    overline: "Vínculos",
     title: {
       none: "Nenhum vínculo sugerido no momento",
       one: "1 vínculo sugerido",
@@ -787,13 +797,20 @@ const ptBR = {
     confirm: "Vincular",
     confirmFor: "Vincular {description} e {counterpartDescription}",
     dismiss: "Não é vínculo",
-    dismissFor: "Marcar {description} e {counterpartDescription} como não sendo vínculo",
-    confirmAll: "Vincular todos",
+    dismissFor: "Dizer que {description} e {counterpartDescription} não são um vínculo",
     confirmAllOffset: "Vincular os {count} pares em que “uma anula a outra”",
     confirmAllFunding: "Vincular os {count} pares em que “a entrada cobriu o pagamento”",
+    confirmedOne: "1 par vinculado.",
+    confirmedMany: "{count} pares vinculados.",
+    confirmedPartial:
+      "{confirmed} de {requested} pares vinculados. Os outros não estão mais disponíveis.",
     confirmed: "Vínculo confirmado.",
-    dismissed: "Marcado como não sendo vínculo.",
-    empty: "Nenhum vínculo sugerido no momento.",
+    dismissed: "Sugestão de vínculo descartada.",
+    error: {
+      message:
+        "Não deu para carregar as sugestões de vínculo agora. Confira sua conexão e tente de novo.",
+      retry: "Tentar de novo",
+    },
     table: {
       transactions: "Transações",
       kind: "O que seria",
@@ -999,6 +1016,7 @@ const ptBR = {
     failed: "Não deu para salvar agora. Tente de novo.",
     duplicateSubcategory: "Essa categoria já tem uma subcategoria com esse nome.",
     linkNotFound: "Esse par não está mais disponível para vincular.",
+    linksNotFound: "Esses pares não estão mais disponíveis para vincular.",
   },
 } satisfies typeof en;
 
