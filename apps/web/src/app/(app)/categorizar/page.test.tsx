@@ -4,11 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getGuidedCategorizationPropsMock = vi.hoisted(() => vi.fn());
 const computeLinkSuggestionsMock = vi.hoisted(() => vi.fn());
+const readAiCategorySuggestionsMock = vi.hoisted(() => vi.fn());
+const getSuggestCategoriesButtonPropsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/households", () => ({
   requireHouseholdSession: vi.fn().mockResolvedValue({ userId: "user-1", householdId: "h-1" }),
 }));
 vi.mock("@/modules/audit", () => ({ recordFinancialDataAccess: vi.fn() }));
+vi.mock("@/modules/analysis", () => ({
+  readAiCategorySuggestions: readAiCategorySuggestionsMock,
+  getSuggestCategoriesButtonProps: getSuggestCategoriesButtonPropsMock,
+  SuggestCategoriesButton: () => <p>Sugerir categorias com IA</p>,
+}));
 vi.mock("@/modules/ledger/link-suggestions", () => ({
   computeLinkSuggestions: computeLinkSuggestionsMock,
 }));
