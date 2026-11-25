@@ -50,6 +50,7 @@ const EMPTY_DOCUMENT: ExportDocument = {
     internalTransferMarks: [],
     categorizationRules: [],
     reserveMarks: [],
+    transactionLinks: [],
   },
   financialDataAccess: [],
   pushSubscriptions: [],

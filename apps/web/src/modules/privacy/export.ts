@@ -128,6 +128,12 @@ export type ExportDocument = {
       institutionId: string | null;
       updatedAt: string;
     }>;
+    transactionLinks: Array<{
+      debitTransactionId: string;
+      creditTransactionId: string;
+      kind: string;
+      linkedAt: string;
+    }>;
   };
   financialDataAccess: Array<{ householdId: string; kind: string; accessedAt: string }>;
   pushSubscriptions: Array<{ pushService: string; createdAt: string }>;
@@ -307,6 +313,12 @@ export async function buildExportDocument(
         liquidity: mark.liquidity,
         institutionId: mark.institutionId,
         updatedAt: mark.updatedAt.toISOString(),
+      })),
+      transactionLinks: ledger.transactionLinks.map((link) => ({
+        debitTransactionId: link.debitTransactionId,
+        creditTransactionId: link.creditTransactionId,
+        kind: link.kind,
+        linkedAt: link.linkedAt.toISOString(),
       })),
     },
     financialDataAccess: financialDataAccess.map((access) => ({

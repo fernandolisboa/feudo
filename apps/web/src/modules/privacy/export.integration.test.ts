@@ -10,6 +10,7 @@ import {
   householdSubcategory,
   internalTransferMark,
   transactionCategorization,
+  transactionLink,
 } from "@/modules/ledger/schema";
 import { reserveMark } from "@/modules/reserve/schema";
 import { userTour } from "@/modules/shell/schema";
@@ -265,6 +266,35 @@ describe("buildExportDocument (integration)", () => {
           updatedAt: NOW.toISOString(),
         },
       ]);
+    });
+  });
+
+  it("isolation: confirmed transaction links are scoped to the user who confirmed them", async () => {
+    await withTestDb(async (db) => {
+      const { householdA, ana, bia, anaTransactionId, biaTransactionId } = await seedCasa(db);
+
+      await db.insert(transactionLink).values([
+        {
+          debitTransactionId: anaTransactionId,
+          creditTransactionId: biaTransactionId,
+          kind: "offset",
+          linkedByUserId: ana.id,
+          linkedAt: NOW,
+        },
+      ]);
+
+      const document = await buildExportDocument(sessionInHousehold(ana, householdA), NOW);
+      const biaDocument = await buildExportDocument(sessionInHousehold(bia, householdA), NOW);
+
+      expect(document.annotations.transactionLinks).toEqual([
+        {
+          debitTransactionId: anaTransactionId,
+          creditTransactionId: biaTransactionId,
+          kind: "offset",
+          linkedAt: NOW.toISOString(),
+        },
+      ]);
+      expect(biaDocument.annotations.transactionLinks).toEqual([]);
     });
   });
 
