@@ -268,6 +268,56 @@ describe("category_suggestion_run isolation (integration)", () => {
   });
 });
 
+describe("category-suggestions run completion races (integration)", () => {
+  it("leaves an already-succeeded run untouched when fail() is called on it afterwards", async () => {
+    await withTwoUsers(async ({ db, userA, householdA }) => {
+      const repository = createCategorySuggestionsRepository({ householdId: householdA });
+      const reserved = await repository.reserveRun(db, {
+        row: {
+          localDay: "2026-11-10",
+          promptVersion: PROMPT_VERSION,
+          requestedModel: "claude-haiku-5-5",
+          itemCount: 1,
+          transactionCount: 1,
+          requestedByUserId: userA.id,
+        },
+        limit: CATEGORY_SUGGESTION_RUNS_PER_DAY,
+        staleBefore: new Date(0),
+      });
+      if (reserved.status !== "reserved") {
+        throw new Error("reserveRun did not reserve a fresh run");
+      }
+
+      await repository.succeed(db, reserved.id, {
+        model: "claude-haiku-5-5",
+        inputTokens: 10,
+        outputTokens: 5,
+        suggestedCount: 1,
+      });
+
+      await repository.fail(db, reserved.id, {
+        model: "claude-haiku-5-5",
+        inputTokens: 10,
+        outputTokens: 5,
+        failureReason: "unavailable",
+      });
+
+      const [row] = await db
+        .select({
+          status: categorySuggestionRun.status,
+          failureReason: categorySuggestionRun.failureReason,
+          suggestedCount: categorySuggestionRun.suggestedCount,
+        })
+        .from(categorySuggestionRun)
+        .where(eq(categorySuggestionRun.id, reserved.id));
+
+      expect(row?.status).toBe("succeeded");
+      expect(row?.failureReason).toBeNull();
+      expect(row?.suggestedCount).toBe(1);
+    });
+  });
+});
+
 describe("category-suggestions concurrency and quota (integration)", () => {
   it("refuses a second press while one is already running, and frees a stale one", async () => {
     await withTwoUsers(async ({ db, userA, householdA }) => {

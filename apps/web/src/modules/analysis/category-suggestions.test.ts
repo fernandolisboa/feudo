@@ -12,6 +12,7 @@ const repoMock = vi.hoisted(() => ({
   succeed: vi.fn(),
   fail: vi.fn(),
   saveSuggestions: vi.fn(),
+  statusOf: vi.fn(),
 }));
 const createCategorySuggestionsRepositoryMock = vi.hoisted(() => vi.fn(() => repoMock));
 
@@ -107,6 +108,7 @@ function resetMocks(): void {
   repoMock.succeed.mockResolvedValue(undefined);
   repoMock.fail.mockResolvedValue(undefined);
   repoMock.saveSuggestions.mockResolvedValue(undefined);
+  repoMock.statusOf.mockResolvedValue(null);
   createCategorySuggestionsRepositoryMock.mockImplementation(() => repoMock);
   recordFinancialDataAccessMock.mockResolvedValue(undefined);
   getAiSuggestionCandidatesMock.mockResolvedValue(okCandidates([]));
@@ -353,6 +355,33 @@ describe("requestCategorySuggestions", () => {
       "run-1",
       expect.objectContaining({ failureReason: "unavailable" }),
     );
+  });
+
+  it("reports ok instead of failed when the save actually committed and only the driver threw on the way back", async () => {
+    resetMocks();
+    getAiSuggestionCandidatesMock.mockResolvedValue(okCandidates([group("t1")]));
+    const suggestCategories = vi.fn().mockResolvedValue({
+      status: "ok",
+      output: { suggestions: [{ index: 0, subcategory: "shopping.other" }] },
+      model: "claude-haiku-5-5",
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+    clientForHouseholdMock.mockResolvedValue(fakeClient(suggestCategories));
+    const committedThenDroppedDb = {
+      transaction: async (fn: (tx: unknown) => Promise<void>) => {
+        await fn({});
+        throw new Error("connection reset acknowledging commit");
+      },
+    } as unknown as Database;
+    repoMock.statusOf.mockResolvedValue("succeeded");
+
+    const outcome = await requestCategorySuggestions(SESSION, committedThenDroppedDb, DEPS, {
+      now: NOW,
+      deadline: FAR_DEADLINE,
+    });
+
+    expect(outcome).toEqual({ status: "ok", suggestedCount: 1 });
+    expect(repoMock.fail).not.toHaveBeenCalled();
   });
 
   it("still reports failed when marking the run failed also throws", async () => {

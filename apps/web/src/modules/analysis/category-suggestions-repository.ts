@@ -163,6 +163,10 @@ export function createCategorySuggestionsRepository(scope: HouseholdScope) {
         .where(and(inHousehold, eq(categorySuggestionRun.id, id)));
     },
 
+    // Predicated on the row still being "running", the same guard
+    // abandonStale uses: if the run's own transaction (saveSuggestions +
+    // succeed) actually committed and only the driver throwing afterwards
+    // sent the caller here, this must not overwrite a succeeded run.
     async fail(
       db: DatabaseOrTransaction,
       id: string,
@@ -171,7 +175,24 @@ export function createCategorySuggestionsRepository(scope: HouseholdScope) {
       await db
         .update(categorySuggestionRun)
         .set({ status: "failed", completedAt: new Date(), ...result })
+        .where(
+          and(
+            inHousehold,
+            eq(categorySuggestionRun.id, id),
+            eq(categorySuggestionRun.status, "running"),
+          ),
+        );
+    },
+
+    async statusOf(
+      db: DatabaseOrTransaction,
+      id: string,
+    ): Promise<"running" | "succeeded" | "failed" | null> {
+      const [row] = await db
+        .select({ status: categorySuggestionRun.status })
+        .from(categorySuggestionRun)
         .where(and(inHousehold, eq(categorySuggestionRun.id, id)));
+      return row?.status ?? null;
     },
 
     // Writes only rows for transaction ids this household currently owns

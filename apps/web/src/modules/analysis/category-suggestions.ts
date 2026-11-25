@@ -251,6 +251,13 @@ export async function requestCategorySuggestions(
     });
   } catch (error) {
     console.warn(`analysis: could not save category suggestions (${errorName(error)})`);
+    // The transaction above may have actually committed and only the driver
+    // threw on its way back (a dropped connection acking the commit): ask
+    // the row itself rather than assume the worse of the two outcomes.
+    const statusAfterError = await repository.statusOf(db, reservation.id).catch(() => null);
+    if (statusAfterError === "succeeded") {
+      return { status: "ok", suggestedCount };
+    }
     await failRun(repository, db, reservation.id, result.model, result.usage, "unavailable");
     return { status: "failed" };
   }
