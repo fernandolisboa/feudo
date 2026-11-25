@@ -525,6 +525,16 @@ describe("category suggestions feed guided categorization (integration)", () => 
       const aiSuggestions = await readAiCategorySuggestions(userA.session);
       const after = await getGuidedCategorizationProps(userA.session, NOW, { aiSuggestions });
       expect(after.aiPendingCount).toBe(0);
+
+      const transactionId = await transactionIdFor(db, "a13");
+      const item = after.items.find((candidate) => candidate.id === transactionId);
+      expect(item?.suggestion).toEqual(
+        expect.objectContaining({
+          value: "product:shopping.other",
+          label: "Compras · Outras compras",
+          source: "ai",
+        }),
+      );
     });
   });
 });
