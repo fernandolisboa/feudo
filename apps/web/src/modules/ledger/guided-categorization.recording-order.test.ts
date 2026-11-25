@@ -186,4 +186,39 @@ describe("guided categorization recording order (ADR-0008)", () => {
 
     await expect(getCategorizationNudgeProps(SESSION, NOW)).resolves.toBeNull();
   });
+
+  it("pre-fills a stored AI suggestion, labelled as the AI's own", async () => {
+    resetAll();
+    readHouseholdDashboardLinesMock.mockResolvedValue({
+      kinds: KINDS,
+      rows: [{ ...uncategorizedRow("tx-1", -1000, "BRL"), type: "debit" }],
+      lines: [],
+    });
+
+    const props = await getGuidedCategorizationProps(SESSION, NOW, {
+      aiSuggestions: new Map([["tx-1", { type: "product", id: "food.groceries" }]]),
+    });
+
+    expect(props.items[0]?.suggestion?.source).toBe("ai");
+  });
+
+  it("counts, under aiPendingCount, what a press could still send", async () => {
+    resetAll();
+    readHouseholdDashboardLinesMock.mockResolvedValue({
+      kinds: KINDS,
+      rows: [
+        { ...uncategorizedRow("tx-1", -1000, "BRL"), type: "debit" },
+        { ...uncategorizedRow("tx-2", -1000, "BRL"), type: "debit", description: "OUTRA LOJA" },
+      ],
+      lines: [],
+    });
+
+    const withoutAsk = await getGuidedCategorizationProps(SESSION, NOW);
+    expect(withoutAsk.aiPendingCount).toBe(2);
+
+    const withOneAsked = await getGuidedCategorizationProps(SESSION, NOW, {
+      aiSuggestions: new Map([["tx-1", null]]),
+    });
+    expect(withOneAsked.aiPendingCount).toBe(1);
+  });
 });

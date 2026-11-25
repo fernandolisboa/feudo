@@ -9,7 +9,7 @@ import type { HouseholdSession } from "@/modules/households";
 import { householdScope } from "@/modules/households";
 import { getDb } from "@/platform/db/client";
 
-import { readCategorizationWindow } from "./guided-categorization";
+import { readCategorizationWindow } from "./categorization-window";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { createTransactionLinkRepository } from "./transaction-link-repository";
 
