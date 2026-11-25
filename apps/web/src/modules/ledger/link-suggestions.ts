@@ -13,12 +13,9 @@ import { readCategorizationWindow } from "./guided-categorization";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { createTransactionLinkRepository } from "./transaction-link-repository";
 
-// row.internalTransfer is null for a transferMark of false (resolve-ledger.ts
-// B2: false only means "do not pair this as a transfer," it still leaves the
-// transaction eligible for a link), but a transaction the household already
-// told Feudo something about should never be offered as a *new* link
-// suggestion either way: isInternalTransfer here means "has an explicit
-// mark," true or false, not "resolved as a transfer."
+// row.internalTransfer is null for a transferMark of false, so the raw mark
+// is read here: a transaction the household already marked either way is
+// never offered as a new link suggestion.
 function toLinkable(row: ResolvedLedgerRow): LinkableTransaction {
   return {
     id: row.id,
