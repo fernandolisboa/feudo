@@ -58,7 +58,7 @@ describe("CategorizarPage", () => {
     expect(container.textContent).not.toContain("household-b");
   });
 
-  it("shows the Vínculos tab's own count once its read succeeds", async () => {
+  it("renders both tabs with the plain Vínculos label when nothing is suggested", async () => {
     getGuidedCategorizationPropsMock.mockResolvedValue({});
     computeLinkSuggestionsMock.mockResolvedValue({ rowById: new Map(), suggestions: [] });
 
