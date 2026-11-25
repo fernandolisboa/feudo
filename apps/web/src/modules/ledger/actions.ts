@@ -20,9 +20,18 @@ import {
 } from "./categorization-service";
 import { t } from "./strings";
 import {
+  confirmAllLinks,
+  confirmLink,
+  dismissLink,
+  undoLink,
+  type LinkOutcome,
+} from "./transaction-link-service";
+import {
   addSubcategoryFormSchema,
   categorizeTransactionFormSchema,
   changeKindFormSchema,
+  linkKindFormSchema,
+  linkPairFormSchema,
   RULE_PATTERN_MAX_LENGTH,
   RULE_PATTERN_MIN_LENGTH,
   ruleIdFormSchema,
@@ -43,6 +52,18 @@ function stateFor(outcome: CategorizeOutcome, success: string): ActionState {
       return { status: "success", message: success };
     case "not_found":
       return { status: "error", message: t.errors.notFound };
+    case "failed":
+      return { status: "error", message: t.errors.failed };
+  }
+}
+
+function stateForLink(outcome: LinkOutcome, success: string): ActionState {
+  switch (outcome.status) {
+    case "ok":
+      revalidateLedger();
+      return { status: "success", message: success };
+    case "not_found":
+      return { status: "error", message: t.errors.linkNotFound };
     case "failed":
       return { status: "error", message: t.errors.failed };
   }
@@ -197,5 +218,64 @@ export async function deferCategorizationAction(
   return stateFor(
     await deferCategorization(parsed.data.transactionId, session, getDb()),
     t.guided.deferred,
+  );
+}
+
+export async function confirmLinkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = linkPairFormSchema.safeParse({
+    debitTransactionId: formData.get("debitTransactionId"),
+    creditTransactionId: formData.get("creditTransactionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateForLink(await confirmLink(parsed.data, session, getDb()), t.links.confirmed);
+}
+
+export async function confirmAllLinksAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = linkKindFormSchema.safeParse({ kind: formData.get("kind") });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateForLink(await confirmAllLinks(parsed.data.kind, session, getDb()), t.links.confirmed);
+}
+
+export async function dismissLinkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = linkPairFormSchema.safeParse({
+    debitTransactionId: formData.get("debitTransactionId"),
+    creditTransactionId: formData.get("creditTransactionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateForLink(await dismissLink(parsed.data, session, getDb()), t.links.dismissed);
+}
+
+export async function undoLinkAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = transactionIdFormSchema.safeParse({
+    transactionId: formData.get("transactionId"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: t.errors.invalidInput };
+  }
+  const session = await requireHouseholdSession();
+  return stateForLink(
+    await undoLink(parsed.data.transactionId, session, getDb()),
+    t.categorize.link.undone,
   );
 }

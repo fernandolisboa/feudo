@@ -65,7 +65,10 @@ type UncategorizedWindow = {
 // ADR-0002): what is uncategorized here is exactly what keeps Visão geral and
 // the reserve target incomplete. A foreign-currency row is in no number, so
 // counting it would claim an incompleteness that categorizing cannot fix.
-async function readUncategorizedWindow(
+// Exported for link-suggestions.ts too: the ticket requires link
+// suggestions over this same window and currency, every resolved row, not
+// only the uncategorized ones.
+export async function readUncategorizedWindow(
   session: HouseholdSession,
   now: Date,
 ): Promise<UncategorizedWindow> {

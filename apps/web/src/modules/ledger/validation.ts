@@ -97,6 +97,20 @@ export function overviewTabOf(searchParams: OverviewSearchParams): OverviewTab {
   return overviewSearchParamsSchema.parse(searchParams).aba ?? DEFAULT_OVERVIEW_TAB;
 }
 
+// Same tab-in-the-address pattern as the overview's own tabs (PR #160).
+export const CATEGORIZE_TABS = ["categorias", "vinculos"] as const;
+export type CategorizeTab = (typeof CATEGORIZE_TABS)[number];
+export const DEFAULT_CATEGORIZE_TAB: CategorizeTab = "categorias";
+
+export const categorizeSearchParamsSchema = z.object({
+  aba: z.enum(CATEGORIZE_TABS).optional().catch(undefined),
+});
+export type CategorizeSearchParams = z.input<typeof categorizeSearchParamsSchema>;
+
+export function categorizeTabOf(searchParams: CategorizeSearchParams): CategorizeTab {
+  return categorizeSearchParamsSchema.parse(searchParams).aba ?? DEFAULT_CATEGORIZE_TAB;
+}
+
 const idSchema = z.string().trim().min(1).max(64);
 
 const subcategoryRefSchema = z.string().transform((value, context) => {
@@ -165,3 +179,14 @@ export const transferMarkFormSchema = z.object({
   transactionId: idSchema,
   value: z.enum(["true", "false"]).transform((value) => value === "true"),
 });
+
+export const linkPairFormSchema = z.object({
+  debitTransactionId: idSchema,
+  creditTransactionId: idSchema,
+});
+export type LinkPairFormInput = z.infer<typeof linkPairFormSchema>;
+
+export const linkKindFormSchema = z.object({
+  kind: z.enum(["offset", "funding"]),
+});
+export type LinkKindFormInput = z.infer<typeof linkKindFormSchema>;

@@ -307,11 +307,13 @@ const en = {
       default: "Recognized by Feudo",
       provider: "Category from the bank",
       internal_transfer: "Internal transfer",
+      link: "Linked transactions",
     },
     transferTooltip: {
       pair: "Paired with {institution} · {account}, {date}",
       mark: "Marked by hand as an internal transfer",
     },
+    linkIndicator: "Linked to {description}, {amount}, {date}",
   },
   categorize: {
     action: "Categorize",
@@ -339,6 +341,51 @@ const en = {
       marked: "Marked as an internal transfer.",
       unmarked: "Marked as not an internal transfer.",
       cleared: "Back to automatic detection.",
+    },
+    link: {
+      sectionLabel: "Linked transaction",
+      counterpart: "{description} · {amount} · {date}",
+      undo: "Undo link",
+      undone: "Link undone.",
+    },
+  },
+  categorizeTabs: {
+    label: "Categorize sections",
+    categories: "Categories",
+    links: "Links",
+    linksWithCount: "Links ({count})",
+  },
+  links: {
+    title: {
+      none: "No links suggested right now",
+      one: "1 link suggested",
+      many: "{count} links suggested",
+    },
+    kind: {
+      offset: "One cancels the other",
+      funding: "The inflow covered this payment",
+    },
+    confirm: "Link",
+    confirmFor: "Link {description} and {counterpartDescription}",
+    dismiss: "Not a link",
+    dismissFor: "Mark {description} and {counterpartDescription} as not a link",
+    confirmAll: "Link all",
+    confirmAllOffset: "Link all {count} “one cancels the other” pairs",
+    confirmAllFunding: "Link all {count} “inflow covered a payment” pairs",
+    confirmed: "Link confirmed.",
+    dismissed: "Marked as not a link.",
+    empty: "No links suggested right now.",
+    table: {
+      transactions: "Transactions",
+      kind: "What it would be",
+      pagination: {
+        nav: "Link pages",
+        status: "Page {page} of {pages} · {total} links",
+        rowsPerPage: "Rows per page",
+        previous: "Previous page",
+        next: "Next page",
+        page: "Page {page}",
+      },
     },
   },
   categoriesPage: {
@@ -534,6 +581,7 @@ const en = {
     notFound: "That transaction or subcategory is no longer available in this household.",
     failed: "Couldn't save right now. Try again.",
     duplicateSubcategory: "This category already has a subcategory with that name.",
+    linkNotFound: "That pair is no longer available to link.",
   },
 };
 
@@ -678,11 +726,13 @@ const ptBR = {
       default: "Reconhecida pelo Feudo",
       provider: "Categoria do banco",
       internal_transfer: "Transferência interna",
+      link: "Transações vinculadas",
     },
     transferTooltip: {
       pair: "Pareada com {institution} · {account}, {date}",
       mark: "Marcada à mão como transferência interna",
     },
+    linkIndicator: "Vinculada a {description}, {amount}, {date}",
   },
   categorize: {
     action: "Categorizar",
@@ -710,6 +760,51 @@ const ptBR = {
       marked: "Marcada como transferência interna.",
       unmarked: "Marcada como não sendo transferência interna.",
       cleared: "Voltou à detecção automática.",
+    },
+    link: {
+      sectionLabel: "Transação vinculada",
+      counterpart: "{description} · {amount} · {date}",
+      undo: "Desfazer vínculo",
+      undone: "Vínculo desfeito.",
+    },
+  },
+  categorizeTabs: {
+    label: "Seções de categorizar",
+    categories: "Categorias",
+    links: "Vínculos",
+    linksWithCount: "Vínculos ({count})",
+  },
+  links: {
+    title: {
+      none: "Nenhum vínculo sugerido no momento",
+      one: "1 vínculo sugerido",
+      many: "{count} vínculos sugeridos",
+    },
+    kind: {
+      offset: "Uma anula a outra",
+      funding: "A entrada cobriu este pagamento",
+    },
+    confirm: "Vincular",
+    confirmFor: "Vincular {description} e {counterpartDescription}",
+    dismiss: "Não é vínculo",
+    dismissFor: "Marcar {description} e {counterpartDescription} como não sendo vínculo",
+    confirmAll: "Vincular todos",
+    confirmAllOffset: "Vincular os {count} pares em que “uma anula a outra”",
+    confirmAllFunding: "Vincular os {count} pares em que “a entrada cobriu o pagamento”",
+    confirmed: "Vínculo confirmado.",
+    dismissed: "Marcado como não sendo vínculo.",
+    empty: "Nenhum vínculo sugerido no momento.",
+    table: {
+      transactions: "Transações",
+      kind: "O que seria",
+      pagination: {
+        nav: "Páginas de vínculos",
+        status: "Página {page} de {pages} · {total} vínculos",
+        rowsPerPage: "Linhas por página",
+        previous: "Página anterior",
+        next: "Próxima página",
+        page: "Página {page}",
+      },
     },
   },
   categoriesPage: {
@@ -903,6 +998,7 @@ const ptBR = {
     notFound: "Essa transação ou subcategoria não está mais disponível nesta casa.",
     failed: "Não deu para salvar agora. Tente de novo.",
     duplicateSubcategory: "Essa categoria já tem uma subcategoria com esse nome.",
+    linkNotFound: "Esse par não está mais disponível para vincular.",
   },
 } satisfies typeof en;
 
