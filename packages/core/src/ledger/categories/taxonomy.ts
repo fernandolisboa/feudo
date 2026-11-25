@@ -84,6 +84,7 @@ export const PRODUCT_SUBCATEGORIES = [
 
   { id: "transfers.own-accounts", categoryId: "transfers", kind: "transfer" },
   { id: "transfers.card-bill", categoryId: "transfers", kind: "transfer" },
+  { id: "transfers.pass-through", categoryId: "transfers", kind: "transfer" },
 ] as const satisfies readonly { id: string; categoryId: ProductCategoryId; kind: Kind }[];
 
 export type ProductSubcategory = (typeof PRODUCT_SUBCATEGORIES)[number];

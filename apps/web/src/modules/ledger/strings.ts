@@ -82,6 +82,7 @@ const enTaxonomy = {
     "investments.movements": "Contributions and withdrawals",
     "transfers.own-accounts": "Between household accounts",
     "transfers.card-bill": "Card bill payment",
+    "transfers.pass-through": "Pass-through and reimbursements",
   },
 } satisfies TaxonomyLabels;
 
@@ -161,6 +162,7 @@ const ptBRTaxonomy = {
     "investments.movements": "Aplicações e resgates",
     "transfers.own-accounts": "Entre contas da casa",
     "transfers.card-bill": "Pagamento de fatura",
+    "transfers.pass-through": "Repasses e reembolsos",
   },
 } satisfies TaxonomyLabels;
 
