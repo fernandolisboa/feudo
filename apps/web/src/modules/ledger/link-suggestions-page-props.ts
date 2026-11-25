@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { formatMoney, type TransactionLinkKind } from "@feudo/core";
 
 import { recordFinancialDataAccess } from "@/modules/audit";
@@ -28,8 +30,12 @@ export type LinkSuggestionsProps = {
 // and currency as guided categorization, turned into display rows. The
 // audit write (ADR-0008) happens only after the read succeeds, the same
 // order as every other reader of financial data (getGuidedCategorizationProps
-// right next to it).
-export async function getLinkSuggestionsProps(
+// right next to it). Wrapped in React's cache() (same pattern as
+// auth/session.ts's getCurrentSession) so the tab label's pending count and
+// the Vínculos tab's own content, called with the same `now`, share one
+// read per request; outside a request (and this module's own tests)
+// cache() is a no-op and every call runs fresh.
+async function getLinkSuggestionsPropsUncached(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<LinkSuggestionsProps> {
@@ -61,4 +67,16 @@ export async function getLinkSuggestionsProps(
 
   await recordFinancialDataAccess(session, "transactions");
   return { items, pendingCount: items.length };
+}
+
+export const getLinkSuggestionsProps = cache(getLinkSuggestionsPropsUncached);
+
+// The thin accessor /categorizar's page uses for the Vínculos tab label, so
+// the page never reaches into the larger props bag just to read one count.
+export async function getLinkSuggestionsPendingCount(
+  session: HouseholdSession,
+  now: Date = new Date(),
+): Promise<number> {
+  const { pendingCount } = await getLinkSuggestionsProps(session, now);
+  return pendingCount;
 }
