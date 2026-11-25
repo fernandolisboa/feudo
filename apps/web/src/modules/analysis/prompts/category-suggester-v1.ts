@@ -29,7 +29,21 @@ Rules:
 // or enclosing mark NFKC did not compose into a letter (an accent after a
 // digit, the keycap U+20E3) rather than part of a composed letter such as
 // "ã", which NFKC has already turned into one code point by this point.
-const INVISIBLE_OR_MARK_CHARS = /[\p{Default_Ignorable_Code_Point}\p{Cf}\p{M}]/gu;
+// Built from a shared source so the letter-bounded exception below cannot
+// drift from the deletion it narrows.
+const INVISIBLE_OR_MARK_CHAR_CLASS = "[\\p{Default_Ignorable_Code_Point}\\p{Cf}\\p{M}]";
+const INVISIBLE_OR_MARK_CHARS = new RegExp(INVISIBLE_OR_MARK_CHAR_CLASS, "gu");
+
+// A letter on both sides is the one case deletion must not win: removing the
+// run would glue the letter to whatever follows, and when that is a mask run
+// ("B\u{0301}XXX.456.789-XX"), the glued "X"s stop reading as a mask and the
+// document survives. A space keeps the letter and the run apart, exactly as
+// if the bank had written one there; every other occurrence (next to a
+// digit, a separator or the string's edge) stays a deletion.
+const INVISIBLE_OR_MARK_RUN_BETWEEN_LETTERS = new RegExp(
+  `(?<=\\p{L})${INVISIBLE_OR_MARK_CHAR_CLASS}+(?=\\p{L})`,
+  "gu",
+);
 
 // Collapsed to a space rather than dropped, so two words a description ran
 // together by one of these never fuse into one the model might read as a
@@ -171,14 +185,18 @@ const EMPTY_DESCRIPTION_PLACEHOLDER = "(descrição removida)";
 
 // Folds full-width digits to ASCII, deletes every default-ignorable, format
 // and mark character outright (never collapsing them to a visible space,
-// so a document they split still reads as one unbroken run) and turns
-// every other control, private-use, unassigned or separator character into
-// one plain space, before the document scan ever runs: a document padded
-// or broken up by any of these must look, to the scan, exactly like one
-// written with plain spaces.
+// so a document they split still reads as one unbroken run), except a run
+// of them sitting directly between two letters, which becomes a space
+// instead (deleting it would glue the letters together, and when the
+// second one starts a mask run, the glued result no longer reads as a
+// mask), and turns every other control, private-use, unassigned or
+// separator character into one plain space, before the document scan ever
+// runs: a document padded or broken up by any of these must look, to the
+// scan, exactly like one written with plain spaces.
 function normalizeForSanitizing(text: string): string {
   return text
     .normalize("NFKC")
+    .replace(INVISIBLE_OR_MARK_RUN_BETWEEN_LETTERS, " ")
     .replace(INVISIBLE_OR_MARK_CHARS, "")
     .replace(SPACE_FOLDED_CHARS, " ")
     .replace(/\s+/g, " ");

@@ -370,6 +370,25 @@ describe("category suggester prompt v1", () => {
       expect(sanitizeDescriptionForPrompt("XXX.456.789-XXMAIS")).toBe("XXX.456.789-XXMAIS");
     });
 
+    it.each([
+      ["B\u{0301}XXX.456.789-XX", "B"],
+      ["PIX B\u{0301}XXX.456.789-XX FIM", "PIX B FIM"],
+      ["B\u{0308}XXX.456.789-XX", "B"],
+      ["Q\u{20E3}XXX.456.789-XX", "Q"],
+      ["XXX.456.789-XX\u{0301}B", "B"],
+      ["B\u{200B}XXX.456.789-XX", "B"],
+      ["XXX.456.789-XX\u{200B}B", "B"],
+    ])(
+      "turns a deleted invisible character or mark between a letter and a mask run into a space, so the run is still recognised as a mask: %s",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(input)).toBe(expected);
+      },
+    );
+
+    it("leaves a space where a soft hyphen inside a word is deleted", () => {
+      expect(sanitizeDescriptionForPrompt("EX\u{00AD}TRA 12 345")).toBe("EX TRA 12 345");
+    });
+
     it("runs in linear time on an adversarial 140-character input", () => {
       const adversarial = `${"1.".repeat(69)}1`;
       expect(adversarial).toHaveLength(139);
