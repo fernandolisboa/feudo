@@ -283,6 +283,127 @@ describe("Anthropic AI client", () => {
   });
 });
 
+const CATEGORY_SCHEMA = {
+  type: "object",
+  properties: {
+    suggestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          index: { type: "integer" },
+          subcategory: { type: ["string", "null"] },
+        },
+        required: ["index", "subcategory"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["suggestions"],
+  additionalProperties: false,
+};
+
+const CATEGORY_REQUEST = {
+  family: "haiku" as const,
+  model: "claude-haiku-5-5",
+  system: "category system prompt",
+  user: "category user prompt",
+  outputSchema: CATEGORY_SCHEMA,
+  timeoutMs: 25_000,
+  input: {
+    subcategories: [
+      { id: "shopping.other", label: "Compras · Outras compras", kind: "variable" as const },
+    ],
+    items: [
+      {
+        index: 0,
+        type: "debit" as const,
+        absoluteAmountCentavos: 5_000,
+        currency: "BRL",
+        description: "Padaria Estrela",
+      },
+    ],
+  },
+};
+
+function categoryMessage(overrides: Record<string, unknown> = {}) {
+  return {
+    model: "claude-haiku-5-5",
+    stop_reason: "end_turn",
+    usage: { input_tokens: 400, output_tokens: 80 },
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({ suggestions: [{ index: 0, subcategory: "shopping.other" }] }),
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("suggestCategories", () => {
+  it("asks at low effort with the given schema and no server-side fallback for Haiku", async () => {
+    create.mockResolvedValue(categoryMessage());
+
+    const result = await createAnthropicAiClient("sk-ant-test").suggestCategories(CATEGORY_REQUEST);
+
+    expect(result).toEqual({
+      status: "ok",
+      output: { suggestions: [{ index: 0, subcategory: "shopping.other" }] },
+      model: "claude-haiku-5-5",
+      usage: { inputTokens: 400, outputTokens: 80 },
+    });
+    const params = create.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(params).toMatchObject({
+      model: "claude-haiku-5-5",
+      max_tokens: 8_000,
+      system: "category system prompt",
+      messages: [{ role: "user", content: "category user prompt" }],
+      output_config: { effort: "low", format: { type: "json_schema", schema: CATEGORY_SCHEMA } },
+    });
+    expect(params.betas).toBeUndefined();
+    expect(params.fallbacks).toBeUndefined();
+  });
+
+  it("sends the server-side fallback beta for Sonnet and Opus", async () => {
+    create.mockResolvedValue(categoryMessage({ model: "claude-sonnet-5-5" }));
+
+    await createAnthropicAiClient("sk-ant-test").suggestCategories({
+      ...CATEGORY_REQUEST,
+      family: "sonnet",
+      model: "claude-sonnet-5-5",
+    });
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    });
+  });
+
+  it("retries once on the pinned id when a freshly resolved id is rejected (404)", async () => {
+    const { NotFoundError } = await import("@anthropic-ai/sdk");
+    create.mockRejectedValueOnce(new NotFoundError(404, undefined, "unknown model", new Headers()));
+    create.mockResolvedValueOnce(categoryMessage());
+
+    const result = await createAnthropicAiClient("sk-ant-test").suggestCategories({
+      ...CATEGORY_REQUEST,
+      model: "claude-haiku-5-9",
+    });
+
+    expect(result).toMatchObject({ status: "ok" });
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ model: "claude-haiku-5-9" });
+    expect(create.mock.calls[1]?.[0]).toMatchObject({ model: "claude-haiku-5-5" });
+  });
+
+  it("leaves complete's own shape and behaviour untouched", async () => {
+    create.mockResolvedValue(message());
+
+    const result = await createAnthropicAiClient("sk-ant-test").complete(REQUEST);
+
+    expect(result).toMatchObject({ status: "ok", output: FIXTURE_OUTPUT });
+  });
+});
+
 describe("resolveModel", () => {
   it("lists every page of models and resolves the newest qualifying id", async () => {
     list.mockReturnValue(
