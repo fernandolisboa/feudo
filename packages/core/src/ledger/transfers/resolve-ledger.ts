@@ -47,7 +47,7 @@ const PASS_THROUGH_SUBCATEGORY: ProductSubcategoryId = "transfers.pass-through";
 function offsetLinkCategorization(): Categorization {
   return {
     subcategory: { type: "product", id: PASS_THROUGH_SUBCATEGORY },
-    source: "internal_transfer",
+    source: "link",
     ruleId: null,
   };
 }

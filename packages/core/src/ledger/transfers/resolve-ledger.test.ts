@@ -319,7 +319,7 @@ describe("resolveLedger precedence", () => {
       id: "d1",
       categorization: {
         subcategory: { type: "product", id: "transfers.pass-through" },
-        source: "internal_transfer",
+        source: "link",
         ruleId: null,
       },
       kind: "transfer",
@@ -330,7 +330,7 @@ describe("resolveLedger precedence", () => {
       id: "c1",
       categorization: {
         subcategory: { type: "product", id: "transfers.pass-through" },
-        source: "internal_transfer",
+        source: "link",
         ruleId: null,
       },
       kind: "transfer",

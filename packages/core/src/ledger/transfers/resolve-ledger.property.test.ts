@@ -128,7 +128,7 @@ describe("resolveLedger property tests", () => {
           expect(resolvedById.get(id)?.kind).toBe("transfer");
           expect(resolvedById.get(id)?.categorization).toEqual({
             subcategory: { type: "product", id: "transfers.pass-through" },
-            source: "internal_transfer",
+            source: "link",
             ruleId: null,
           });
         }
