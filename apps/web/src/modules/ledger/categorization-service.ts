@@ -1,9 +1,13 @@
 import type { SimpleOutcome } from "@/lib/outcome";
 import type { HouseholdSession } from "@/modules/households";
 import { householdScope } from "@/modules/households";
-import type { Database } from "@/platform/db/client";
+import type { Database, DatabaseOrTransaction } from "@/platform/db/client";
 
-import { createCategorizationRepository } from "./categorization-repository";
+import {
+  createCategorizationRepository,
+  type CategorizationRepository,
+  type SaveRuleResult,
+} from "./categorization-repository";
 import type {
   AddSubcategoryFormInput,
   CategorizeTransactionFormInput,
@@ -12,7 +16,42 @@ import type {
 
 export type CategorizeOutcome = SimpleOutcome<"ok" | "not_found" | "failed">;
 
-class RuleTargetNotFoundError extends Error {}
+class CategorizeRollback extends Error {
+  constructor(readonly status: "not_found" | "failed") {
+    super(status);
+  }
+}
+
+type RuleInput = Extract<CategorizeTransactionFormInput, { createRule: "on" }>;
+
+// The amount an "only this amount" rule is bound to is the transaction's
+// own, with its currency, read here under the household's scope: a form
+// field would let a member bind the rule to any amount they typed. A
+// transaction of zero has no amount to bind to, so it gets its category and
+// no rule.
+async function saveRuleFor(
+  repository: CategorizationRepository,
+  tx: DatabaseOrTransaction,
+  input: RuleInput,
+  userId: string,
+): Promise<SaveRuleResult> {
+  const rule = {
+    pattern: input.pattern,
+    direction: input.direction,
+    subcategory: input.subcategory,
+  };
+  if (input.onlyThisAmount !== "on") {
+    return repository.saveRule(tx, { ...rule, amount: null }, userId);
+  }
+  const amount = await repository.absoluteAmountOf(tx, input.transactionId);
+  if (amount === null) {
+    return "not_found";
+  }
+  if (amount.amountCentavos === 0) {
+    return "ok";
+  }
+  return repository.saveRule(tx, { ...rule, amount }, userId);
+}
 
 // The manual choice and the rule land together or not at all: a member who
 // asked for both should never find the transaction moved while the rule they
@@ -39,34 +78,15 @@ export async function categorizeTransaction(
       // contract's precedence: mark would otherwise outrank this choice).
       await repository.clearTransferMark(tx, input.transactionId);
       if (input.createRule === "on") {
-        // The amount an "only this amount" rule is bound to is the
-        // transaction's own, read here under the household's scope: a form
-        // field would let a member bind the rule to any amount they typed.
-        const amountCentavos =
-          input.onlyThisAmount === "on"
-            ? await repository.absoluteAmountOf(tx, input.transactionId)
-            : null;
-        if (input.onlyThisAmount === "on" && amountCentavos === null) {
-          throw new RuleTargetNotFoundError();
-        }
-        const rule = await repository.saveRule(
-          tx,
-          {
-            pattern: input.pattern,
-            direction: input.direction,
-            amountCentavos,
-            subcategory: input.subcategory,
-          },
-          session.userId,
-        );
-        if (rule === "not_found") {
-          throw new RuleTargetNotFoundError();
+        const saved = await saveRuleFor(repository, tx, input, session.userId);
+        if (saved !== "ok") {
+          throw new CategorizeRollback(saved === "not_found" ? "not_found" : "failed");
         }
       }
       return { status: "ok" as const };
     });
   } catch (error) {
-    return { status: error instanceof RuleTargetNotFoundError ? "not_found" : "failed" };
+    return { status: error instanceof CategorizeRollback ? error.status : "failed" };
   }
 }
 

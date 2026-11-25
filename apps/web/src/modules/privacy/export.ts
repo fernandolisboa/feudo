@@ -115,6 +115,7 @@ export type ExportDocument = {
       pattern: string;
       direction: string | null;
       amountCentavos: number | null;
+      amountCurrency: string | null;
       productSubcategoryId: string | null;
       householdSubcategoryId: string | null;
       createdAt: string;
@@ -294,6 +295,7 @@ export async function buildExportDocument(
         pattern: rule.pattern,
         direction: rule.direction,
         amountCentavos: rule.amountCentavos,
+        amountCurrency: rule.amountCurrency,
         productSubcategoryId: rule.productSubcategoryId,
         householdSubcategoryId: rule.householdSubcategoryId,
         createdAt: rule.createdAt.toISOString(),

@@ -488,7 +488,9 @@ const en = {
       historyMany: "{count} transactions with this description are already in {target}.",
       credit:
         "Money coming in with nothing like it categorized yet is usually income. Change it if it is a refund or a transfer.",
-      none: "No suggestion yet: nothing with this description and amount has a category.",
+      none: "No suggestion yet: nothing with this description has a category.",
+      conflicting:
+        "No suggestion: transactions with this description are in different categories, and none has this amount.",
     },
     categoryLabel: "Category",
     placeholder: "Choose a category",
@@ -855,7 +857,9 @@ const ptBR = {
       historyMany: "{count} transações com esta descrição já estão em {target}.",
       credit:
         "Dinheiro que entrou e não tem nada parecido categorizado costuma ser renda. Troque se for um reembolso ou uma transferência.",
-      none: "Ainda sem sugestão: nada com esta descrição e este valor tem categoria.",
+      none: "Ainda sem sugestão: nada com esta descrição tem categoria.",
+      conflicting:
+        "Sem sugestão: as transações com esta descrição estão em categorias diferentes, e nenhuma tem este valor.",
     },
     categoryLabel: "Categoria",
     placeholder: "Escolha uma categoria",

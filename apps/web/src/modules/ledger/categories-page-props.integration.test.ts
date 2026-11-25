@@ -26,7 +26,7 @@ describe("getCategoriesPageProps (integration)", () => {
         {
           pattern: "CONDOMINIO",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "housing.condo" },
         },
         userA.id,
@@ -36,7 +36,7 @@ describe("getCategoriesPageProps (integration)", () => {
         {
           pattern: "PIX ENVIADO CONDOMINIO",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "housing.rent" },
         },
         userA.id,
@@ -47,8 +47,18 @@ describe("getCategoriesPageProps (integration)", () => {
         {
           pattern: "JOAO SILVA",
           direction: "debit",
-          amountCentavos: 150000,
+          amount: { amountCentavos: 150000, currency: "BRL" },
           subcategory: { type: "product", id: "housing.rent" },
+        },
+        userA.id,
+      );
+      await repository.saveRule(
+        db,
+        {
+          pattern: "AMAZON US",
+          direction: "debit",
+          amount: { amountCentavos: 9900, currency: "USD" },
+          subcategory: { type: "product", id: "shopping.other" },
         },
         userA.id,
       );
@@ -57,11 +67,12 @@ describe("getCategoriesPageProps (integration)", () => {
 
       expect(props.rules.map((rule) => [rule.pattern, rule.amountLabel])).toEqual([
         ["JOAO SILVA", formatMoney({ amountCentavos: 150000, currency: "BRL" })],
+        ["AMAZON US", formatMoney({ amountCentavos: 9900, currency: "USD" })],
         ["PIX ENVIADO CONDOMINIO", null],
         ["CONDOMINIO", null],
       ]);
       expect(
-        props.rules.slice(1).map((rule) => ({
+        props.rules.slice(2).map((rule) => ({
           pattern: rule.pattern,
           appliesTo: rule.appliesTo,
           target: rule.target,

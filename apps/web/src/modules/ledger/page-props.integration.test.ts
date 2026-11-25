@@ -176,7 +176,7 @@ describe("getTransactionsPageProps (integration)", () => {
         {
           pattern: "PIX ENVIADO CONDOMINIO",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "housing.rent" },
         },
         userA.id,
@@ -349,7 +349,7 @@ describe("getTransactionsPageProps (integration)", () => {
         {
           pattern: "CONDOMINIO",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "leisure.gaming" },
         },
         userB.id,
@@ -697,7 +697,7 @@ describe("getTransactionsPageProps (integration)", () => {
         {
           pattern: "LOJA XYZ",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "shopping.electronics" },
         },
         userA.id,
@@ -719,7 +719,7 @@ describe("getTransactionsPageProps (integration)", () => {
         {
           pattern: "PIX ENVIADO",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "leisure.gaming" },
         },
         userB.id,
@@ -1300,7 +1300,7 @@ describe("getTransactionsPageProps (integration)", () => {
         {
           pattern: "ALUGUEL",
           direction: "debit",
-          amountCentavos: null,
+          amount: null,
           subcategory: { type: "product", id: "housing.rent" },
         },
         userA.id,

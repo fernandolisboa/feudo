@@ -24,6 +24,7 @@ import type { SubcategoryOptionGroup } from "./components/categorize-transaction
 import type { TransactionRowView } from "./components/transactions-table";
 import type { LedgerAccount, LedgerTransactionRow } from "./repository";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
+import { ruleAmountLabel } from "./rule-amount-label";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
@@ -146,10 +147,7 @@ function toRowView(
       isInternalTransfer: row.internalTransfer !== null,
       hasTransferMark: row.transferMark !== null,
       suggestedPattern: rulePatternFromDescription(row.description),
-      ruleAmountLabel: formatMoney({
-        amountCentavos: Math.abs(row.amountCentavos),
-        currency: row.currency,
-      }),
+      ruleAmountLabel: ruleAmountLabel(row),
     },
   };
 }

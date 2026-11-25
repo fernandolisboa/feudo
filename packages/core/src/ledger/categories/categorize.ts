@@ -3,11 +3,13 @@ import { matchesPattern, normalizeDescription } from "./description";
 import { mapProviderCategory } from "./provider-mapping";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
 
+export type RuleAmount = { amountCentavos: number; currency: string };
+
 export type CategorizationRule = {
   id: string;
   pattern: string;
   direction: TransactionDirection | null;
-  amountCentavos: number | null;
+  amount: RuleAmount | null;
   subcategory: SubcategoryRef;
   createdAt: Date;
 };
@@ -16,6 +18,7 @@ export type CategorizableTransaction = {
   description: string;
   type: TransactionDirection;
   amountCentavos: number;
+  currency: string;
   providerCategory: string | null;
   manual: SubcategoryRef | null;
 };
@@ -40,7 +43,7 @@ function compareById(a: string, b: string): number {
 
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
   return [...rules].sort((a, b) => {
-    const amountBoundDelta = Number(b.amountCentavos !== null) - Number(a.amountCentavos !== null);
+    const amountBoundDelta = Number(b.amount !== null) - Number(a.amount !== null);
     if (amountBoundDelta !== 0) return amountBoundDelta;
 
     const tokensDelta = tokenCount(b.pattern) - tokenCount(a.pattern);
@@ -71,8 +74,15 @@ function directionMatches(
   return ruleDirection === null || ruleDirection === transactionType;
 }
 
-function amountMatches(ruleAmountCentavos: number | null, transactionAmountCentavos: number) {
-  return ruleAmountCentavos === null || Math.abs(transactionAmountCentavos) === ruleAmountCentavos;
+function amountMatches(
+  ruleAmount: RuleAmount | null,
+  transaction: CategorizableTransaction,
+): boolean {
+  return (
+    ruleAmount === null ||
+    (Math.abs(transaction.amountCentavos) === ruleAmount.amountCentavos &&
+      transaction.currency === ruleAmount.currency)
+  );
 }
 
 export function categorize(
@@ -88,7 +98,7 @@ export function categorize(
   const householdRule = orderedRules.find(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
-      amountMatches(rule.amountCentavos, transaction.amountCentavos) &&
+      amountMatches(rule.amount, transaction) &&
       matchesPattern(normalizedDescription, rule.pattern),
   );
   if (householdRule) {

@@ -165,6 +165,7 @@ describe("buildExportDocument (integration)", () => {
           householdId: householdA,
           pattern: "UBER",
           amountCentavos: 4200,
+          amountCurrency: "USD",
           productSubcategoryId: "transport.ride_hailing",
           createdByUserId: ana.id,
           createdAt: NOW,
@@ -213,9 +214,13 @@ describe("buildExportDocument (integration)", () => {
       expect(document.annotations.internalTransferMarks).toEqual([
         { transactionId: biaTransactionId, isInternalTransfer: true, markedAt: NOW.toISOString() },
       ]);
-      expect(document.annotations.categorizationRules.map((r) => [r.id, r.amountCentavos])).toEqual(
-        [["rule-ana", 4200]],
-      );
+      expect(
+        document.annotations.categorizationRules.map((r) => [
+          r.id,
+          r.amountCentavos,
+          r.amountCurrency,
+        ]),
+      ).toEqual([["rule-ana", 4200, "USD"]]);
 
       expect(document.providerCredentials).toHaveLength(1);
       expect(document.providerCredentials[0]?.provider).toBe("pluggy");

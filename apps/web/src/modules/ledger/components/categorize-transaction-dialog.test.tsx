@@ -100,6 +100,22 @@ describe("CategorizeTransactionDialog", () => {
     expect(new FormData(form).get("onlyThisAmount")).toBe("on");
   });
 
+  it("does not offer the amount for a transaction of zero", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{ ...transaction, ruleAmountLabel: null }}
+        groups={groups}
+      />,
+    );
+
+    openDialog();
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("checkbox", { name: t.categorize.createRule }));
+
+    await screen.findByLabelText(t.categorize.patternLabel);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  });
+
   it("offers to mark a transaction that is not an internal transfer as one, with no automatic-detection link", async () => {
     render(<CategorizeTransactionDialog transaction={transaction} groups={groups} />);
     openDialog();

@@ -24,6 +24,7 @@ function candidate(overrides: Partial<QueueCandidate>): QueueCandidate {
     description: "COMPRA CARTAO 1234 PADARIA DO ZE",
     type: "debit",
     amountCentavos: -1000,
+    currency: "BRL",
     date: "2026-09-10",
     categorization: null,
     ...overrides,
@@ -114,6 +115,22 @@ describe("buildCategorizationQueue", () => {
     });
   });
 
+  it("does not read the same number in another currency as the same amount", () => {
+    const dollars = candidate({ currency: "USD" });
+    const queue = buildCategorizationQueue([
+      candidate({ categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -300, categorization: categorized(RESTAURANTS) }),
+      dollars,
+      candidate({ currency: "USD" }),
+      candidate({}),
+    ]);
+    const item = queue.find((queued) => queued.id === dollars.id);
+
+    expect(item?.suggestion).toBeNull();
+    expect(item?.conflictingHistory).toBe(true);
+    expect([item?.sameAmountCount, item?.similarCount]).toEqual([1, 2]);
+  });
+
   it("follows unanimous history of other amounts when none shares the amount", () => {
     const queue = buildCategorizationQueue([
       candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),
@@ -137,6 +154,20 @@ describe("buildCategorizationQueue", () => {
     ]);
 
     expect(queue[0]?.suggestion).toBeNull();
+    expect(queue[0]?.conflictingHistory).toBe(true);
+  });
+
+  it("tells no history at all apart from history that disagrees", () => {
+    const queue = buildCategorizationQueue([
+      candidate({ description: "LOJA A" }),
+      candidate({ description: "LOJA B", categorization: categorized(GROCERIES) }),
+      candidate({ description: "LOJA B", amountCentavos: -300 }),
+    ]);
+
+    expect(queue.map((item) => [item.pattern, item.conflictingHistory])).toEqual([
+      ["LOJA A", false],
+      ["LOJA B", false],
+    ]);
   });
 
   it("falls back to income for a credit whose history disagrees and shares no amount", () => {
@@ -150,6 +181,7 @@ describe("buildCategorizationQueue", () => {
       subcategory: { type: "product", id: "income.other" },
       reason: "credit",
     });
+    expect(queue[0]?.conflictingHistory).toBe(true);
   });
 
   it("on a tie, follows the most recent categorized transaction", () => {

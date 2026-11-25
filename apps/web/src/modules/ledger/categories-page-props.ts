@@ -1,6 +1,5 @@
 import {
   formatMoney,
-  HOUSEHOLD_CURRENCY,
   orderRules,
   parseYearMonth,
   shiftYearMonth,
@@ -111,10 +110,7 @@ async function buildCategoriesPageProps(
         {
           id: rule.id,
           pattern: rule.pattern,
-          amountLabel:
-            rule.amountCentavos === null
-              ? null
-              : formatMoney({ amountCentavos: rule.amountCentavos, currency: HOUSEHOLD_CURRENCY }),
+          amountLabel: rule.amount === null ? null : formatMoney(rule.amount),
           appliesTo: t.categoriesPage.ruleTable[rule.direction ?? "any"],
           target: `${target.categoryLabel} · ${target.label}`,
         },

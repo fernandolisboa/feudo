@@ -51,6 +51,7 @@ export async function getLedgerExportAnnotations(session: CurrentSession) {
         pattern: categorizationRule.pattern,
         direction: categorizationRule.direction,
         amountCentavos: categorizationRule.amountCentavos,
+        amountCurrency: categorizationRule.amountCurrency,
         productSubcategoryId: categorizationRule.productSubcategoryId,
         householdSubcategoryId: categorizationRule.householdSubcategoryId,
         createdAt: categorizationRule.createdAt,

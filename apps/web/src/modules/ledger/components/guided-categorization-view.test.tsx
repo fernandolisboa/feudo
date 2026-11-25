@@ -43,6 +43,7 @@ function item(overrides: Partial<GuidedItemView>): GuidedItemView {
       label: "Renda · Outras rendas",
       reason: t.guided.suggestion.credit,
     },
+    noSuggestionReason: t.guided.suggestion.none,
     deferred: false,
     ...overrides,
   };
@@ -225,6 +226,48 @@ describe("GuidedCategorizationView", () => {
       "subcategory",
       "transactionId",
     ]);
+  });
+
+  it("gives the reason it was handed when there is no suggestion", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [item({ suggestion: null, noSuggestionReason: t.guided.suggestion.conflicting })],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(t.guided.suggestion.conflicting)).toBeTruthy();
+    expect(screen.queryByText(t.guided.suggestion.none)).toBeNull();
+  });
+
+  it("neither pre-ticks the rule nor offers the amount for a transaction of zero", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [
+            item({
+              pattern: "AJUSTE SEM VALOR",
+              ruleAmountLabel: null,
+              sameAmountCount: 1,
+              similarCount: 1,
+            }),
+          ],
+        })}
+      />,
+    );
+
+    const createRule = screen.getByRole("checkbox", { name: t.guided.createRule });
+    expect(createRule.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(createRule);
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Mais 1 transação sem categoria tem este texto e vai receber a mesma categoria.",
+      ),
+    ).toBeTruthy();
   });
 
   it("leaves the rule unticked for a one-off description", () => {

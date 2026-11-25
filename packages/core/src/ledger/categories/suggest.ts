@@ -7,6 +7,7 @@ export type QueueCandidate = {
   description: string;
   type: TransactionDirection;
   amountCentavos: number;
+  currency: string;
   date: string;
   categorization: Categorization | null;
 };
@@ -21,6 +22,7 @@ export type QueueItem = {
   type: TransactionDirection;
   pattern: string;
   suggestion: CategorySuggestion | null;
+  conflictingHistory: boolean;
   sameAmountCount: number;
   similarCount: number;
 };
@@ -64,14 +66,14 @@ function mostChosen(rows: readonly Categorized[]): Tally[] {
 }
 
 function sameAmount(a: QueueCandidate, b: QueueCandidate): boolean {
-  return Math.abs(a.amountCentavos) === Math.abs(b.amountCentavos);
+  return Math.abs(a.amountCentavos) === Math.abs(b.amountCentavos) && a.currency === b.currency;
 }
 
 function historySuggestion(
   row: Normalized,
   pattern: string,
   history: readonly Categorized[],
-): CategorySuggestion | null {
+): { suggestion: CategorySuggestion | null; conflicting: boolean } {
   const matching = history.filter(
     (other) => other.type === row.type && matchesPattern(other.normalized, pattern),
   );
@@ -79,16 +81,23 @@ function historySuggestion(
   const [bestOfSameAmount] = mostChosen(matching.filter((other) => sameAmount(other, row)));
   if (bestOfSameAmount) {
     return {
-      subcategory: bestOfSameAmount.subcategory,
-      reason: "history_amount",
-      matches: bestOfSameAmount.count,
+      suggestion: {
+        subcategory: bestOfSameAmount.subcategory,
+        reason: "history_amount",
+        matches: bestOfSameAmount.count,
+      },
+      conflicting: false,
     };
   }
 
   const [only, ...others] = mostChosen(matching);
-  return only && others.length === 0
-    ? { subcategory: only.subcategory, reason: "history", matches: only.count }
-    : null;
+  if (only && others.length === 0) {
+    return {
+      suggestion: { subcategory: only.subcategory, reason: "history", matches: only.count },
+      conflicting: false,
+    };
+  }
+  return { suggestion: null, conflicting: only !== undefined };
 }
 
 // Suggestions come only from what the household already decided: a
@@ -119,14 +128,16 @@ export function buildCategorizationQueue(candidates: readonly QueueCandidate[]):
       (other) =>
         other.id !== row.id && other.type === row.type && matchesPattern(other.normalized, pattern),
     );
+    const fromHistory = historySuggestion(row, pattern, history);
     const suggestion =
-      historySuggestion(row, pattern, history) ??
+      fromHistory.suggestion ??
       (row.type === "credit" ? { subcategory: CREDIT_FALLBACK, reason: "credit" as const } : null);
     return {
       id: row.id,
       type: row.type,
       pattern,
       suggestion,
+      conflictingHistory: fromHistory.conflicting,
       sameAmountCount: similar.filter((other) => sameAmount(other, row)).length,
       similarCount: similar.length,
     };

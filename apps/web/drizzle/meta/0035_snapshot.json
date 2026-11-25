@@ -1,5 +1,5 @@
 {
-  "id": "6977cc97-db4f-4e98-83ba-64ee668a8e31",
+  "id": "4c47bc91-5e3c-4fb1-852f-461b05118a5f",
   "prevId": "eedc7f17-46ce-4a20-a63b-523540f828eb",
   "version": "7",
   "dialect": "postgresql",
@@ -1938,6 +1938,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "amount_currency": {
+          "name": "amount_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "product_subcategory_id": {
           "name": "product_subcategory_id",
           "type": "text",
@@ -2010,6 +2016,15 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "categorization_rule_household_pattern_direction_unique": {
+          "name": "categorization_rule_household_pattern_direction_unique",
+          "nullsNotDistinct": true,
+          "columns": [
+            "household_id",
+            "pattern",
+            "direction"
+          ]
+        },
         "categorization_rule_household_pattern_direction_amount_unique": {
           "name": "categorization_rule_household_pattern_direction_amount_unique",
           "nullsNotDistinct": true,
@@ -2017,7 +2032,8 @@
             "household_id",
             "pattern",
             "direction",
-            "amount_centavos"
+            "amount_centavos",
+            "amount_currency"
           ]
         }
       },
@@ -2030,6 +2046,10 @@
         "categorization_rule_amount_check": {
           "name": "categorization_rule_amount_check",
           "value": "\"categorization_rule\".\"amount_centavos\" > 0"
+        },
+        "categorization_rule_amount_currency_check": {
+          "name": "categorization_rule_amount_currency_check",
+          "value": "num_nonnulls(\"categorization_rule\".\"amount_centavos\", \"categorization_rule\".\"amount_currency\") in (0, 2)"
         }
       },
       "isRLSEnabled": false

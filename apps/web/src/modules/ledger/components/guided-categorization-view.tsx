@@ -64,12 +64,13 @@ function GuidedItem({
   groups: SubcategoryOptionGroup[];
   onDeferHere: () => void;
 }) {
+  const sharesBindableAmount = item.ruleAmountLabel !== null && item.sameAmountCount > 0;
   const [createRule, setCreateRule] = useState(
-    item.sameAmountCount > 0 &&
+    sharesBindableAmount &&
       item.pattern.length >= RULE_PATTERN_MIN_LENGTH &&
       item.pattern.length <= RULE_PATTERN_MAX_LENGTH,
   );
-  const [onlyThisAmount, setOnlyThisAmount] = useState(item.sameAmountCount > 0);
+  const [onlyThisAmount, setOnlyThisAmount] = useState(sharesBindableAmount);
   const coveredCount = onlyThisAmount ? item.sameAmountCount : item.similarCount;
   const [state, formAction, isSaving] = useActionState(
     categorizeTransactionAction,
@@ -133,7 +134,7 @@ function GuidedItem({
                 <span className="text-muted-foreground">{item.suggestion.reason}</span>
               </>
             ) : (
-              <span className="text-muted-foreground">{t.guided.suggestion.none}</span>
+              <span className="text-muted-foreground">{item.noSuggestionReason}</span>
             )}
           </div>
         </div>
@@ -181,15 +182,17 @@ function GuidedItem({
                 maxLength={RULE_PATTERN_MAX_LENGTH}
                 required
               />
-              <Label className="items-start gap-2 font-normal">
-                <Checkbox
-                  name="onlyThisAmount"
-                  checked={onlyThisAmount}
-                  onCheckedChange={setOnlyThisAmount}
-                  className="mt-0.5"
-                />
-                {interpolate(t.rules.onlyThisAmount, "{amount}", item.ruleAmountLabel)}
-              </Label>
+              {item.ruleAmountLabel === null ? null : (
+                <Label className="items-start gap-2 font-normal">
+                  <Checkbox
+                    name="onlyThisAmount"
+                    checked={onlyThisAmount}
+                    onCheckedChange={setOnlyThisAmount}
+                    className="mt-0.5"
+                  />
+                  {interpolate(t.rules.onlyThisAmount, "{amount}", item.ruleAmountLabel)}
+                </Label>
+              )}
             </div>
           ) : null}
           {createRule && coveredCount > 0 ? (

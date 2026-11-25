@@ -31,6 +31,7 @@ const candidateArb = fc.record({
     fc.constantFrom(-150000, 150000, -4200, 4200),
     fc.integer({ min: -1_000_000_00, max: 1_000_000_00 }),
   ),
+  currency: fc.constantFrom("BRL", "BRL", "BRL", "USD"),
   date: fc.constantFrom("2026-07-01", "2026-08-15", "2026-09-30"),
   categorization: fc.constantFrom(...categorizations),
 });
@@ -105,12 +106,13 @@ describe("buildCategorizationQueue property tests", () => {
     );
   });
 
-  it("counts as same-amount exactly the similar transactions of equal absolute amount", () => {
+  it("counts as same-amount exactly the similar transactions of equal absolute amount and currency", () => {
     fc.assert(
       fc.property(candidatesArb, (candidates) => {
         const byId = new Map(candidates.map((c) => [c.id, c]));
         for (const item of buildCategorizationQueue(candidates)) {
-          const amount = Math.abs(byId.get(item.id)?.amountCentavos ?? 0);
+          const own = byId.get(item.id);
+          const amount = Math.abs(own?.amountCentavos ?? 0);
           const similar = candidates.filter(
             (c) =>
               c.categorization === null &&
@@ -120,7 +122,9 @@ describe("buildCategorizationQueue property tests", () => {
           );
           expect(item.similarCount).toBe(similar.length);
           expect(item.sameAmountCount).toBe(
-            similar.filter((c) => Math.abs(c.amountCentavos) === amount).length,
+            similar.filter(
+              (c) => Math.abs(c.amountCentavos) === amount && c.currency === own?.currency,
+            ).length,
           );
         }
       }),
@@ -132,7 +136,8 @@ describe("buildCategorizationQueue property tests", () => {
       fc.property(candidatesArb, (candidates) => {
         const byId = new Map(candidates.map((c) => [c.id, c]));
         for (const item of buildCategorizationQueue(candidates)) {
-          const amount = Math.abs(byId.get(item.id)?.amountCentavos ?? 0);
+          const own = byId.get(item.id);
+          const amount = Math.abs(own?.amountCentavos ?? 0);
           const matching = candidates.filter(
             (c) =>
               c.type === item.type &&
@@ -140,7 +145,9 @@ describe("buildCategorizationQueue property tests", () => {
               c.categorization.source !== "internal_transfer" &&
               matchesPattern(normalizeDescription(c.description), item.pattern),
           );
-          const sameAmount = matching.filter((c) => Math.abs(c.amountCentavos) === amount);
+          const sameAmount = matching.filter(
+            (c) => Math.abs(c.amountCentavos) === amount && c.currency === own?.currency,
+          );
           const reason = item.suggestion?.reason ?? null;
           const chosen = new Set(
             matching.map((c) => JSON.stringify(c.categorization?.subcategory)),
@@ -148,6 +155,7 @@ describe("buildCategorizationQueue property tests", () => {
 
           expect(reason === "history_amount").toBe(sameAmount.length > 0);
           expect(reason === "history").toBe(sameAmount.length === 0 && chosen.size === 1);
+          expect(item.conflictingHistory).toBe(sameAmount.length === 0 && chosen.size > 1);
           if (item.suggestion?.reason === "history_amount") {
             const target = item.suggestion.subcategory;
             expect(item.suggestion.matches).toBe(

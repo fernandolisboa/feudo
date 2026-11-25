@@ -12,6 +12,7 @@ function transaction(overrides: Partial<CategorizableTransaction> = {}): Categor
     description: "COMPRA CARTAO MERCADO",
     type: "debit",
     amountCentavos: -1000,
+    currency: "BRL",
     providerCategory: null,
     manual: null,
     ...overrides,
@@ -23,7 +24,7 @@ function rule(overrides: Partial<CategorizationRule> = {}): CategorizationRule {
     id: "rule-1",
     pattern: "MERCADO",
     direction: null,
-    amountCentavos: null,
+    amount: null,
     subcategory: { type: "product", id: "food.groceries" },
     createdAt: new Date("2026-01-01T00:00:00Z"),
     ...overrides,
@@ -242,7 +243,7 @@ describe("categorize with amount-bound rules", () => {
   const rent: CategorizationRule = rule({
     id: "rent",
     pattern: "PIX JOAO SILVA",
-    amountCentavos: 150000,
+    amount: { amountCentavos: 150000, currency: "BRL" },
     subcategory: { type: "product", id: "housing.rent" },
   });
 
@@ -264,6 +265,14 @@ describe("categorize with amount-bound rules", () => {
       [rent],
     );
     expect(result?.ruleId).toBe("rent");
+  });
+
+  it("skips an amount-bound rule for the same amount in another currency", () => {
+    const result = categorize(
+      transaction({ description: "PIX JOAO SILVA", amountCentavos: -150000, currency: "USD" }),
+      [rent],
+    );
+    expect(result).toBeNull();
   });
 
   it("skips an amount-bound rule for the same description with another amount", () => {
@@ -298,8 +307,16 @@ describe("categorize with amount-bound rules", () => {
   });
 
   it("keeps the existing ordering among amount-bound rules", () => {
-    const short = rule({ id: "short", pattern: "PIX", amountCentavos: 150000 });
-    const other = rule({ id: "other", pattern: "PIX JOAO SILVA", amountCentavos: 4200 });
+    const short = rule({
+      id: "short",
+      pattern: "PIX",
+      amount: { amountCentavos: 150000, currency: "BRL" },
+    });
+    const other = rule({
+      id: "other",
+      pattern: "PIX JOAO SILVA",
+      amount: { amountCentavos: 4200, currency: "BRL" },
+    });
 
     expect(orderRules([short, other, rent]).map((r) => r.id)).toEqual(["other", "rent", "short"]);
   });

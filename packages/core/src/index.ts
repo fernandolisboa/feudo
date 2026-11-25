@@ -75,6 +75,7 @@ export { PRODUCT_DEFAULT_RULES } from "./ledger/categories/default-rules";
 
 export type {
   CategorizationRule,
+  RuleAmount,
   CategorizableTransaction,
   CategorizationSource,
   Categorization,

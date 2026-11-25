@@ -14,7 +14,13 @@ const ruleArb: fc.Arbitrary<CategorizationRule> = fc.record({
   id: fc.uuid(),
   pattern: fc.array(patternWordArb, { minLength: 1, maxLength: 3 }).map((words) => words.join(" ")),
   direction: directionArb,
-  amountCentavos: fc.constantFrom<number | null>(null, null, 1000, 150000),
+  amount: fc.constantFrom<CategorizationRule["amount"]>(
+    null,
+    null,
+    { amountCentavos: 1000, currency: "BRL" },
+    { amountCentavos: 150000, currency: "BRL" },
+    { amountCentavos: 150000, currency: "USD" },
+  ),
   subcategory: fc.constantFrom(
     { type: "product" as const, id: "food.groceries" as const },
     { type: "product" as const, id: "transport.ride-hailing" as const },
@@ -42,6 +48,7 @@ const transactionArb: fc.Arbitrary<CategorizableTransaction> = fc.record({
   ),
   type: fc.constantFrom<"credit" | "debit">("credit", "debit"),
   amountCentavos: fc.constantFrom(-150000, -1000, 1000, 150000, 4200),
+  currency: fc.constantFrom("BRL", "BRL", "USD"),
   providerCategory: fc.constantFrom<string | null>(null, "Groceries", "Other", "Unknown"),
   manual: fc.constant(null),
 });
@@ -57,15 +64,16 @@ describe("categorize property tests", () => {
     );
   });
 
-  it("never applies an amount-bound rule to a transaction of another absolute amount", () => {
+  it("never applies an amount-bound rule to a transaction of another absolute amount or currency", () => {
     fc.assert(
       fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
         const result = categorize(transaction, orderRules(rules));
         if (result?.source !== "rule") return;
         const applied = rules.find((rule) => rule.id === result.ruleId);
         expect(applied).toBeDefined();
-        if (applied && applied.amountCentavos !== null) {
-          expect(Math.abs(transaction.amountCentavos)).toBe(applied.amountCentavos);
+        if (applied?.amount) {
+          expect(Math.abs(transaction.amountCentavos)).toBe(applied.amount.amountCentavos);
+          expect(transaction.currency).toBe(applied.amount.currency);
         }
       }),
     );
@@ -74,11 +82,12 @@ describe("categorize property tests", () => {
   it("lets a matching amount-bound rule win over every unbound rule", () => {
     fc.assert(
       fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
-        const unbound = rules.map((rule) => ({ ...rule, amountCentavos: null }));
+        const unbound = rules.map((rule) => ({ ...rule, amount: null }));
         const boundCouldApply = rules.some((rule, index) => {
           const alone = unbound[index];
           return (
-            rule.amountCentavos === Math.abs(transaction.amountCentavos) &&
+            rule.amount?.amountCentavos === Math.abs(transaction.amountCentavos) &&
+            rule.amount.currency === transaction.currency &&
             alone !== undefined &&
             categorize(transaction, [alone])?.source === "rule"
           );
@@ -86,7 +95,10 @@ describe("categorize property tests", () => {
         if (!boundCouldApply) return;
         const result = categorize(transaction, orderRules(rules));
         const applied = rules.find((rule) => rule.id === result?.ruleId);
-        expect(applied?.amountCentavos).toBe(Math.abs(transaction.amountCentavos));
+        expect(applied?.amount).toEqual({
+          amountCentavos: Math.abs(transaction.amountCentavos),
+          currency: transaction.currency,
+        });
       }),
     );
   });

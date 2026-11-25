@@ -38,7 +38,7 @@ function rule(overrides: Partial<CategorizationRule> = {}): CategorizationRule {
     id: "rule-1",
     pattern: "MERCADO",
     direction: null,
-    amountCentavos: null,
+    amount: null,
     subcategory: { type: "product", id: "food.groceries" },
     createdAt: new Date("2026-01-01T00:00:00Z"),
     ...overrides,
@@ -46,18 +46,24 @@ function rule(overrides: Partial<CategorizationRule> = {}): CategorizationRule {
 }
 
 describe("resolveLedger precedence", () => {
-  it("applies an amount-bound rule only to transactions of that amount", () => {
+  it("applies an amount-bound rule only to transactions of that amount and currency", () => {
     const resolved = resolveLedger(
       [
         transaction({ id: "same", description: "PIX JOAO SILVA", amountCentavos: -150000 }),
         transaction({ id: "other", description: "PIX JOAO SILVA", amountCentavos: -4200 }),
+        transaction({
+          id: "dollars",
+          description: "PIX JOAO SILVA",
+          amountCentavos: -150000,
+          currency: "USD",
+        }),
       ],
       context({
         rules: [
           rule({
             id: "rent",
             pattern: "PIX JOAO SILVA",
-            amountCentavos: 150000,
+            amount: { amountCentavos: 150000, currency: "BRL" },
             subcategory: { type: "product", id: "housing.rent" },
           }),
         ],
@@ -67,6 +73,7 @@ describe("resolveLedger precedence", () => {
     expect(resolved.map((row) => [row.id, row.categorization?.ruleId ?? null])).toEqual([
       ["same", "rent"],
       ["other", null],
+      ["dollars", null],
     ]);
   });
 
