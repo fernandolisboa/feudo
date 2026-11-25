@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { saveAiSettingsFormSchema } from "./validation";
 
-const BASE = { monthlyFamily: "opus", onDemandFamily: "sonnet" };
+const BASE = {
+  monthlyFamily: "opus",
+  onDemandFamily: "sonnet",
+  categorySuggestionFamily: "haiku",
+};
 
 describe("saveAiSettingsFormSchema", () => {
   it("accepts no key: a blank field means keep the current one", () => {
@@ -34,8 +38,11 @@ describe("saveAiSettingsFormSchema", () => {
   it("accepts every known family for either field", () => {
     for (const family of ["haiku", "sonnet", "opus"]) {
       expect(
-        saveAiSettingsFormSchema.safeParse({ monthlyFamily: family, onDemandFamily: family })
-          .success,
+        saveAiSettingsFormSchema.safeParse({
+          monthlyFamily: family,
+          onDemandFamily: family,
+          categorySuggestionFamily: family,
+        }).success,
       ).toBe(true);
     }
   });

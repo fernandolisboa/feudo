@@ -70,6 +70,7 @@ export async function saveAiSettingsAction(
     apiKey: formData.get("apiKey"),
     monthlyFamily: formData.get("monthlyFamily"),
     onDemandFamily: formData.get("onDemandFamily"),
+    categorySuggestionFamily: formData.get("categorySuggestionFamily"),
   });
   if (!parsed.success) {
     return { status: "error", message: t.aiSettings.outcomes.invalidInput };
@@ -97,6 +98,7 @@ export async function saveAiSettingsAction(
     apiKey: parsed.data.apiKey ?? null,
     monthlyFamily: parsed.data.monthlyFamily,
     onDemandFamily: parsed.data.onDemandFamily,
+    categorySuggestionFamily: parsed.data.categorySuggestionFamily,
     updatedByUserId: session.userId,
   });
 

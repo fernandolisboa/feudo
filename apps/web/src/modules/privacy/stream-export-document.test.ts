@@ -111,6 +111,7 @@ const BASE_DOCUMENT: ExportDocument = {
       householdId: "household-1",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
       hasKey: true,
       updatedAt: "2026-01-02T00:00:00.000Z",
     },

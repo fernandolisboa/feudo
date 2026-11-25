@@ -61,7 +61,14 @@ const MONTHLY_MAX_FAILURES = 3;
 
 const ATTEMPTS = 2;
 
-const TIMEOUT_MS: Record<AiTier, number> = { standard: 45_000, deep: 150_000 };
+// Exported for category-suggestions.ts, the only other caller that needs a
+// per-tier call timeout; the on-demand and monthly readings never import it
+// directly, this module's own functions already close over it.
+export const TIMEOUT_MS: Record<AiTier, number> = {
+  light: 25_000,
+  standard: 45_000,
+  deep: 150_000,
+};
 
 // The household's own key (ADR-0013), never a deploy-wide one: `provider` is
 // null only when the analyst is off for everyone (AI_PROVIDER=off or no
@@ -110,11 +117,20 @@ export async function isAnalysisEnabled(
   }
 }
 
-async function clientForHousehold(
+export type HouseholdAiClient = {
+  client: AiClient;
+  family: (tier: "monthly" | "onDemand" | "categorySuggestion") => AiFamily;
+};
+
+// Module-internal: used by requestOnDemandAnalysis and
+// runMonthlyAnalysisForHousehold below, and by
+// category-suggestions.ts (not re-exported from index.ts — only this
+// module's own services build a client from a household's own key).
+export async function clientForHousehold(
   scope: HouseholdScope,
   db: Database,
   deps: Pick<AnalysisDeps, "provider" | "encryptionKey">,
-): Promise<{ client: AiClient; family: (tier: "monthly" | "onDemand") => AiFamily } | null> {
+): Promise<HouseholdAiClient | null> {
   if (deps.provider === null) {
     return null;
   }
@@ -129,7 +145,16 @@ async function clientForHousehold(
   }
   return {
     client,
-    family: (tier) => (tier === "monthly" ? settings.monthlyFamily : settings.onDemandFamily),
+    family: (tier) => {
+      switch (tier) {
+        case "monthly":
+          return settings.monthlyFamily;
+        case "onDemand":
+          return settings.onDemandFamily;
+        case "categorySuggestion":
+          return settings.categorySuggestionFamily;
+      }
+    },
   };
 }
 

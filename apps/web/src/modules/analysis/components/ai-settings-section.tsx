@@ -141,12 +141,23 @@ export function AiSettingsSection(props: AiSettingsSectionProps) {
             <dt>{t.aiSettings.onDemandFamilyLabel}</dt>
             <dd>{t.aiSettings.familyNames[props.onDemandFamily]}</dd>
           </div>
+          <div className="flex justify-between gap-4">
+            <dt>{t.aiSettings.categorySuggestionFamilyLabel}</dt>
+            <dd>{t.aiSettings.familyNames[props.categorySuggestionFamily]}</dd>
+          </div>
         </dl>
       </div>
     );
   }
 
-  const { canManage, hasKey, apiKeyLast4, monthlyFamily, onDemandFamily } = props;
+  const {
+    canManage,
+    hasKey,
+    apiKeyLast4,
+    monthlyFamily,
+    onDemandFamily,
+    categorySuggestionFamily,
+  } = props;
 
   if (!canManage) {
     return (
@@ -161,6 +172,10 @@ export function AiSettingsSection(props: AiSettingsSectionProps) {
           <div className="flex justify-between gap-4">
             <dt>{t.aiSettings.onDemandFamilyLabel}</dt>
             <dd>{t.aiSettings.familyNames[onDemandFamily]}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt>{t.aiSettings.categorySuggestionFamilyLabel}</dt>
+            <dd>{t.aiSettings.familyNames[categorySuggestionFamily]}</dd>
           </div>
         </dl>
         <p className="text-muted-foreground text-xs">{t.aiSettings.viewerNote}</p>
@@ -211,6 +226,17 @@ export function AiSettingsSection(props: AiSettingsSectionProps) {
           id="ai-settings-on-demand-family"
           name="onDemandFamily"
           defaultValue={onDemandFamily}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="ai-settings-category-suggestion-family">
+          {t.aiSettings.categorySuggestionFamilyLabel}
+        </Label>
+        <FamilySelect
+          id="ai-settings-category-suggestion-family"
+          name="categorySuggestionFamily"
+          defaultValue={categorySuggestionFamily}
         />
       </div>
 

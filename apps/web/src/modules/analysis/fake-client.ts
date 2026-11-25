@@ -1,4 +1,10 @@
-import { PINNED_MODEL_IDS, type AiClient, type AiRequest, type AiResult } from "./ai-client";
+import {
+  PINNED_MODEL_IDS,
+  type AiClient,
+  type AiRequest,
+  type AiResult,
+  type CategorySuggestionAiRequest,
+} from "./ai-client";
 
 // Preview and tests only (env.ts refuses it in production): a canned reading
 // that quotes the input's own first facts, so it always passes the number
@@ -24,6 +30,25 @@ export function createFakeAiClient(): AiClient {
           tradeOffs: ["Liquidez e rendimento puxam para lados opostos; esta leitura não escolhe."],
           counterArgument: "Uma leitura de demonstração não deve orientar nenhuma decisão.",
           citedKeys: cited.map((fact) => fact.key),
+        },
+        model: `fake-${request.model}`,
+        usage: { inputTokens: 0, outputTokens: 0 },
+      });
+    },
+
+    suggestCategories(request: CategorySuggestionAiRequest): Promise<AiResult> {
+      return Promise.resolve({
+        status: "ok",
+        output: {
+          suggestions: request.input.items.map((item) => ({
+            index: item.index,
+            subcategory:
+              item.index % 3 === 2
+                ? null
+                : item.type === "credit"
+                  ? "income.salary"
+                  : "shopping.other",
+          })),
         },
         model: `fake-${request.model}`,
         usage: { inputTokens: 0, outputTokens: 0 },

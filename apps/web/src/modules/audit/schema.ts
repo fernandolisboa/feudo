@@ -9,6 +9,7 @@ export const FINANCIAL_DATA_KINDS = [
   "reserve",
   "export",
   "analyses",
+  "category_suggestions",
 ] as const;
 
 export type FinancialDataKind = (typeof FINANCIAL_DATA_KINDS)[number];

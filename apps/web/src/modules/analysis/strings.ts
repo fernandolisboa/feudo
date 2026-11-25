@@ -91,6 +91,7 @@ const en = {
     },
     monthlyFamilyLabel: "Monthly reading",
     onDemandFamilyLabel: 'On-demand reading ("Gerar nova leitura")',
+    categorySuggestionFamilyLabel: 'Category suggestions ("Sugerir categorias com IA")',
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Save",
     viewerNote: "Only an owner or admin can change these.",
@@ -105,6 +106,27 @@ const en = {
       invalidInput: "Check the fields and try again.",
       failed: "Could not save. Check your connection and try again.",
       rateLimited: "Too many key attempts recently. Wait a bit and try again.",
+    },
+  },
+  categorySuggestions: {
+    button: "Suggest categories with AI",
+    pending: "Asking the AI…",
+    disclosure:
+      "Sends Anthropic, through the household's key, the description, amount and direction (in or out) of up to {limit} transactions without a suggestion. Nothing is saved until you save it.",
+    pendingOne: "1 transaction without a suggestion.",
+    pendingMany: "{count} transactions without a suggestion.",
+    remaining: "{remaining} of {limit} requests left today",
+    outcomes: {
+      okOne: "1 suggestion ready. Check it before saving.",
+      okMany: "{count} suggestions ready. Check each one before saving.",
+      okNone: "The AI had no suggestion for these transactions.",
+      nothingToSuggest: "Every transaction here already has a suggestion or was already sent.",
+      exhausted: "The household used today's {limit} requests. Try again tomorrow.",
+      inProgress: "Suggestions are being prepared. Reload the page in a minute.",
+      failed: "The AI could not answer now. Nothing was saved, and this request counts for today.",
+      disabled:
+        "AI suggestions are off for this household. An owner or admin registers a key on Casa.",
+      noTime: "There was not enough time to ask the AI. Try again.",
     },
   },
 };
@@ -202,6 +224,7 @@ const ptBR = {
     },
     monthlyFamilyLabel: "Leitura mensal",
     onDemandFamilyLabel: 'Leitura sob demanda ("Gerar nova leitura")',
+    categorySuggestionFamilyLabel: 'Sugestões de categoria ("Sugerir categorias com IA")',
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Salvar",
     viewerNote: "Só um responsável ou administrador pode alterar isto.",
@@ -216,6 +239,27 @@ const ptBR = {
       invalidInput: "Confira os campos e tente de novo.",
       failed: "Não deu para salvar. Confira sua conexão e tente de novo.",
       rateLimited: "Muitas tentativas de chave recentes. Espere um pouco e tente de novo.",
+    },
+  },
+  categorySuggestions: {
+    button: "Sugerir categorias com IA",
+    pending: "Pedindo sugestões à IA…",
+    disclosure:
+      "Envia à Anthropic, pela chave da casa, a descrição, o valor e se é entrada ou saída de até {limit} transações sem sugestão. Nada é salvo sem você confirmar.",
+    pendingOne: "1 transação sem sugestão.",
+    pendingMany: "{count} transações sem sugestão.",
+    remaining: "Restam {remaining} de {limit} pedidos hoje",
+    outcomes: {
+      okOne: "1 sugestão pronta. Confira antes de salvar.",
+      okMany: "{count} sugestões prontas. Confira cada uma antes de salvar.",
+      okNone: "A IA não teve sugestão para estas transações.",
+      nothingToSuggest: "Todas as transações daqui já têm sugestão ou já foram enviadas.",
+      exhausted: "A casa já usou os {limit} pedidos de hoje. Tente amanhã.",
+      inProgress: "As sugestões estão sendo preparadas. Recarregue a página em um minuto.",
+      failed: "A IA não conseguiu responder agora. Nada foi salvo, e o pedido conta para hoje.",
+      disabled:
+        "As sugestões por IA estão desligadas nesta casa. Um responsável ou administrador registra a chave em Casa.",
+      noTime: "Não deu tempo de pedir à IA. Tente de novo.",
     },
   },
 } satisfies typeof en;

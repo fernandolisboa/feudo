@@ -58,6 +58,7 @@ export type SaveAiSettingsCommand = {
   apiKey: string | null;
   monthlyFamily: AiFamily;
   onDemandFamily: AiFamily;
+  categorySuggestionFamily: AiFamily;
   // Never null: the member submitting the change is also who the
   // verification attempt is rate-limited by (key-verification-attempts.ts).
   // A caller with no session-derived user has no business saving a key.
@@ -120,6 +121,7 @@ export async function saveAiSettings(
       apiKey,
       monthlyFamily: input.monthlyFamily,
       onDemandFamily: input.onDemandFamily,
+      categorySuggestionFamily: input.categorySuggestionFamily,
       updatedByUserId: input.updatedByUserId,
     });
     return { status: "ok" };

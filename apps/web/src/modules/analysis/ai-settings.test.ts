@@ -143,6 +143,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-test-key",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -152,6 +153,7 @@ describe("saveAiSettings", () => {
       apiKey: { ciphertext: expect.any(String) as unknown, last4: "-key" },
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
   });
@@ -163,6 +165,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-bad",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -177,6 +180,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-test",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -192,6 +196,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-test-key",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -209,6 +214,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-test-key",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -225,6 +231,7 @@ describe("saveAiSettings", () => {
       apiKey: "sk-ant-test-key",
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "sonnet",
       updatedByUserId: "user-1",
     });
 
@@ -241,6 +248,7 @@ describe("saveAiSettings", () => {
       apiKey: null,
       monthlyFamily: "haiku",
       onDemandFamily: "haiku",
+      categorySuggestionFamily: "haiku",
       updatedByUserId: "user-1",
     });
 
@@ -251,6 +259,7 @@ describe("saveAiSettings", () => {
       apiKey: undefined,
       monthlyFamily: "haiku",
       onDemandFamily: "haiku",
+      categorySuggestionFamily: "haiku",
       updatedByUserId: "user-1",
     });
   });

@@ -62,7 +62,12 @@ function formDataWith(entries: Record<string, string>): FormData {
   return formData;
 }
 
-const VALID = { apiKey: "", monthlyFamily: "opus", onDemandFamily: "sonnet" };
+const VALID = {
+  apiKey: "",
+  monthlyFamily: "opus",
+  onDemandFamily: "sonnet",
+  categorySuggestionFamily: "haiku",
+};
 
 describe("saveAiSettingsAction", () => {
   it("rejects a key with no sk-ant- prefix before reaching the session or the service", async () => {
@@ -128,6 +133,7 @@ describe("saveAiSettingsAction", () => {
         apiKey: null,
         monthlyFamily: "opus",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "haiku",
         updatedByUserId: "user-1",
       },
     );
