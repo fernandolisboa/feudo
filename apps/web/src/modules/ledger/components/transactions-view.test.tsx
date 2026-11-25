@@ -20,6 +20,7 @@ const ROW: TransactionsPageProps["transactions"][number] = {
   accountName: "Conta corrente",
   institutionName: "Banco Fixture",
   category: null,
+  link: null,
   categorize: {
     id: "tx-1",
     description: "COMPRA NO MERCADO",
@@ -31,6 +32,7 @@ const ROW: TransactionsPageProps["transactions"][number] = {
     hasTransferMark: false,
     suggestedPattern: "COMPRA NO MERCADO",
     ruleAmountLabel: "R$ 100,00",
+    link: null,
   },
 };
 

@@ -9,6 +9,7 @@ vi.mock("../actions", () => ({
   resetTransactionCategoryAction: vi.fn(),
   setTransferMarkAction: vi.fn(),
   clearTransferMarkAction: vi.fn(),
+  undoLinkAction: vi.fn(),
 }));
 
 import { TransactionsTable, type TransactionRowView } from "./transactions-table";
@@ -27,6 +28,7 @@ function buildRow(overrides: Partial<TransactionRowView> = {}): TransactionRowVi
     accountName: "Conta corrente",
     institutionName: "Banco Fixture",
     category: null,
+    link: null,
     categorize: {
       id: "tx-1",
       description: "COMPRA NO MERCADO",
@@ -38,6 +40,7 @@ function buildRow(overrides: Partial<TransactionRowView> = {}): TransactionRowVi
       hasTransferMark: false,
       suggestedPattern: "COMPRA NO MERCADO",
       ruleAmountLabel: "R$ 100,00",
+      link: null,
     },
     ...overrides,
   };
@@ -96,5 +99,28 @@ describe("TransactionsTable", () => {
     expect(
       screen.getByText(`15/09/2026 · ${t.category.uncategorized} · Banco Fixture · Conta corrente`),
     ).not.toBeNull();
+  });
+
+  it("shows a link indicator with an accessible label naming the counterpart", () => {
+    const ariaLabel = "Vinculada a RESGATE RDB, R$ 50,00, 15/09/2026";
+    const row = buildRow({
+      link: {
+        kind: "funding",
+        description: "RESGATE RDB",
+        amountLabel: "R$ 50,00",
+        dateLabel: "15/09/2026",
+        ariaLabel,
+      },
+    });
+
+    render(<TransactionsTable transactions={[row]} groups={[]} />);
+
+    expect(screen.getByLabelText(ariaLabel)).not.toBeNull();
+  });
+
+  it("shows no link indicator for a row with no link", () => {
+    render(<TransactionsTable transactions={[buildRow({ link: null })]} groups={[]} />);
+
+    expect(screen.queryByLabelText(/vinculad/i)).toBeNull();
   });
 });

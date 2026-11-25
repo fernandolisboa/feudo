@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import {
   buildCategorizationQueue,
   dashboardMonthRange,
@@ -65,7 +67,14 @@ type UncategorizedWindow = {
 // ADR-0002): what is uncategorized here is exactly what keeps Visão geral and
 // the reserve target incomplete. A foreign-currency row is in no number, so
 // counting it would claim an incompleteness that categorizing cannot fix.
-async function readUncategorizedWindow(
+// Exported for link-suggestions.ts too: link suggestions need this same
+// window and currency, every resolved row, not only the uncategorized ones.
+// Wrapped in React's cache() (same pattern as
+// auth/session.ts's getCurrentSession) so the Categorias and Vínculos tabs
+// of one /categorizar request, called with the same `now`, share one DB
+// round trip instead of reading the window twice; outside a request (and
+// this module's own tests) cache() is a no-op and every call runs fresh.
+async function readCategorizationWindowUncached(
   session: HouseholdSession,
   now: Date,
 ): Promise<UncategorizedWindow> {
@@ -81,6 +90,8 @@ async function readUncategorizedWindow(
     rows: rows.filter((row) => row.currency === HOUSEHOLD_CURRENCY),
   };
 }
+
+export const readCategorizationWindow = cache(readCategorizationWindowUncached);
 
 function suggestionReason(suggestion: CategorySuggestion, target: string): string {
   switch (suggestion.reason) {
@@ -130,7 +141,7 @@ export async function getGuidedCategorizationProps(
   now: Date = new Date(),
 ): Promise<GuidedCategorizationProps> {
   const [{ sinceLabel, kinds, rows }, hasAccounts, deferredIds] = await Promise.all([
-    readUncategorizedWindow(session, now),
+    readCategorizationWindow(session, now),
     householdHasAccounts(getDb(), householdScope(session)),
     createCategorizationRepository(householdScope(session)).listDeferredTransactionIds(getDb()),
   ]);
@@ -194,7 +205,7 @@ export async function getCategorizationNudgeProps(
   session: HouseholdSession,
   now: Date = new Date(),
 ): Promise<CategorizationNudgeProps | null> {
-  const { sinceLabel, rows } = await readUncategorizedWindow(session, now);
+  const { sinceLabel, rows } = await readCategorizationWindow(session, now);
   const summary = summarizeUncategorized(
     rows.map((row) => ({
       categorization: row.categorization,

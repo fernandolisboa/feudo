@@ -8,6 +8,7 @@ import {
   householdSubcategory,
   internalTransferMark,
   transactionCategorization,
+  transactionLink,
 } from "./schema";
 
 // The LGPD export's own reader (#25): only the annotations the session's
@@ -19,48 +20,59 @@ import {
 export async function getLedgerExportAnnotations(session: CurrentSession) {
   const db = getDb();
 
-  const [categorizations, internalTransferMarks, categorizationRules] = await Promise.all([
-    db
-      .select({
-        transactionId: transactionCategorization.transactionId,
-        productSubcategoryId: transactionCategorization.productSubcategoryId,
-        householdSubcategoryId: transactionCategorization.householdSubcategoryId,
-        householdSubcategoryName: householdSubcategory.name,
-        categorizedAt: transactionCategorization.categorizedAt,
-      })
-      .from(transactionCategorization)
-      .leftJoin(
-        householdSubcategory,
-        eq(householdSubcategory.id, transactionCategorization.householdSubcategoryId),
-      )
-      .where(eq(transactionCategorization.categorizedByUserId, session.userId)),
+  const [categorizations, internalTransferMarks, categorizationRules, transactionLinks] =
+    await Promise.all([
+      db
+        .select({
+          transactionId: transactionCategorization.transactionId,
+          productSubcategoryId: transactionCategorization.productSubcategoryId,
+          householdSubcategoryId: transactionCategorization.householdSubcategoryId,
+          householdSubcategoryName: householdSubcategory.name,
+          categorizedAt: transactionCategorization.categorizedAt,
+        })
+        .from(transactionCategorization)
+        .leftJoin(
+          householdSubcategory,
+          eq(householdSubcategory.id, transactionCategorization.householdSubcategoryId),
+        )
+        .where(eq(transactionCategorization.categorizedByUserId, session.userId)),
 
-    db
-      .select({
-        transactionId: internalTransferMark.transactionId,
-        isInternalTransfer: internalTransferMark.isInternalTransfer,
-        markedAt: internalTransferMark.markedAt,
-      })
-      .from(internalTransferMark)
-      .where(eq(internalTransferMark.markedByUserId, session.userId)),
+      db
+        .select({
+          transactionId: internalTransferMark.transactionId,
+          isInternalTransfer: internalTransferMark.isInternalTransfer,
+          markedAt: internalTransferMark.markedAt,
+        })
+        .from(internalTransferMark)
+        .where(eq(internalTransferMark.markedByUserId, session.userId)),
 
-    db
-      .select({
-        id: categorizationRule.id,
-        householdId: categorizationRule.householdId,
-        pattern: categorizationRule.pattern,
-        direction: categorizationRule.direction,
-        amountCentavos: categorizationRule.amountCentavos,
-        amountCurrency: categorizationRule.amountCurrency,
-        productSubcategoryId: categorizationRule.productSubcategoryId,
-        householdSubcategoryId: categorizationRule.householdSubcategoryId,
-        createdAt: categorizationRule.createdAt,
-      })
-      .from(categorizationRule)
-      .where(eq(categorizationRule.createdByUserId, session.userId)),
-  ]);
+      db
+        .select({
+          id: categorizationRule.id,
+          householdId: categorizationRule.householdId,
+          pattern: categorizationRule.pattern,
+          direction: categorizationRule.direction,
+          amountCentavos: categorizationRule.amountCentavos,
+          amountCurrency: categorizationRule.amountCurrency,
+          productSubcategoryId: categorizationRule.productSubcategoryId,
+          householdSubcategoryId: categorizationRule.householdSubcategoryId,
+          createdAt: categorizationRule.createdAt,
+        })
+        .from(categorizationRule)
+        .where(eq(categorizationRule.createdByUserId, session.userId)),
 
-  return { categorizations, internalTransferMarks, categorizationRules };
+      db
+        .select({
+          debitTransactionId: transactionLink.debitTransactionId,
+          creditTransactionId: transactionLink.creditTransactionId,
+          kind: transactionLink.kind,
+          linkedAt: transactionLink.linkedAt,
+        })
+        .from(transactionLink)
+        .where(eq(transactionLink.linkedByUserId, session.userId)),
+    ]);
+
+  return { categorizations, internalTransferMarks, categorizationRules, transactionLinks };
 }
 
 export type LedgerExportAnnotations = Awaited<ReturnType<typeof getLedgerExportAnnotations>>;

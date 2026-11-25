@@ -16,6 +16,11 @@ const categorizations: (Categorization | null)[] = [
     source: "internal_transfer",
     ruleId: null,
   },
+  {
+    subcategory: { type: "product", id: "transfers.pass-through" },
+    source: "link",
+    ruleId: null,
+  },
 ];
 
 const candidateArb = fc.record({
@@ -91,6 +96,7 @@ describe("buildCategorizationQueue property tests", () => {
               c.type === item.type &&
               c.categorization !== null &&
               c.categorization.source !== "internal_transfer" &&
+              c.categorization.source !== "link" &&
               c.categorization.subcategory.type === suggestion.subcategory.type &&
               c.categorization.subcategory.id === suggestion.subcategory.id,
           );
@@ -149,6 +155,7 @@ describe("buildCategorizationQueue property tests", () => {
               c.type === item.type &&
               c.categorization !== null &&
               c.categorization.source !== "internal_transfer" &&
+              c.categorization.source !== "link" &&
               matchesPattern(normalizeDescription(c.description), item.pattern),
           );
           const sameAmount = sameAmountGroup(own, matching);

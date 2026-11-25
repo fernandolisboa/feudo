@@ -15,22 +15,10 @@ import {
 } from "./categorization-service";
 import { createCategorizationRepository } from "./categorization-repository";
 import { readHouseholdLedger } from "./ledger-read";
-
-import type { Database } from "@/platform/db/client";
+import { transactionIdFor } from "./test/transaction-id-for";
 
 const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
 const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
 
 describe("categorizeTransaction (integration)", () => {
   it("sets the manual choice and saves the rule together when createRule is on", async () => {
@@ -270,7 +258,7 @@ describe("categorizeTransaction (integration)", () => {
     });
   });
 
-  it("interim, until the pattern+direction constraint is dropped: fails and writes nothing when the pattern and direction already have a rule with another amount", async () => {
+  it("lets an amount-bound rule coexist with an any-amount rule already on the same pattern and direction", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, {
         household: householdScope(userA.session),
@@ -310,11 +298,20 @@ describe("categorizeTransaction (integration)", () => {
         userA.session,
         db,
       );
-      expect(outcome).toEqual({ status: "failed" });
+      expect(outcome).toEqual({ status: "ok" });
 
-      expect(await repository.listRules(db)).toMatchObject([
-        { amount: null, subcategory: { type: "product", id: "food.groceries" } },
-      ]);
+      expect(await repository.listRules(db)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            amount: null,
+            subcategory: { type: "product", id: "food.groceries" },
+          }),
+          expect.objectContaining({
+            amount: { amountCentavos: 150000, currency: "BRL" },
+            subcategory: { type: "product", id: "housing.rent" },
+          }),
+        ]),
+      );
       const { rows } = await readHouseholdLedger(
         db,
         householdScope(userA.session),
@@ -322,7 +319,10 @@ describe("categorizeTransaction (integration)", () => {
         null,
         "America/Sao_Paulo",
       );
-      expect(rows.find((row) => row.id === transactionId)?.categorization).toBeNull();
+      expect(rows.find((row) => row.id === transactionId)?.categorization).toMatchObject({
+        source: "manual",
+        subcategory: { type: "product", id: "housing.rent" },
+      });
     });
   });
 

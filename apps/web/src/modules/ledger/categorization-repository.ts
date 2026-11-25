@@ -117,7 +117,7 @@ export type SaveRuleInput = {
   amount: RuleAmount | null;
   subcategory: SubcategoryRef;
 };
-export type SaveRuleResult = "ok" | "not_found" | "conflict";
+export type SaveRuleResult = "ok" | "not_found";
 
 // Household-scoped (ADR-0001): every query below is filtered by
 // scope.householdId, and no method accepts a household id. The composite
@@ -351,12 +351,6 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       } catch (error) {
         if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
           return "not_found";
-        }
-        // Interim (schema.ts): the upsert targets the amount-aware key, so a
-        // rule on the same pattern and direction with another amount trips
-        // the older, narrower constraint instead of being updated.
-        if (hasSqlState(error, POSTGRES_UNIQUE_VIOLATION)) {
-          return "conflict";
         }
         throw error;
       }

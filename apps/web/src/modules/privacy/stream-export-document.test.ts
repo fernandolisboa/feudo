@@ -100,6 +100,7 @@ const BASE_DOCUMENT: ExportDocument = {
     internalTransferMarks: [],
     categorizationRules: [],
     reserveMarks: [],
+    transactionLinks: [],
   },
   financialDataAccess: [
     { householdId: "household-1", kind: "overview", accessedAt: "2026-01-02T00:00:00.000Z" },

@@ -10,10 +10,11 @@ import {
   householdSubcategory,
   internalTransferMark,
   transactionCategorization,
+  transactionLink,
 } from "@/modules/ledger/schema";
 import { reserveMark } from "@/modules/reserve/schema";
 import { userTour } from "@/modules/shell/schema";
-import { bankAccount, bankTransaction, providerCredential } from "@/modules/sync/schema";
+import { bankAccount, providerCredential } from "@/modules/sync/schema";
 import {
   seedAccount,
   seedSyncedConnection,
@@ -26,6 +27,7 @@ import {
   type SeededUser,
 } from "@/modules/sync/test/with-two-users";
 import { withTestDb } from "@/platform/db/test/harness";
+import { transactionIdFor } from "@/modules/ledger/test/transaction-id-for";
 
 import type { Database } from "@/platform/db/client";
 import { buildExportDocument } from "./export";
@@ -35,17 +37,6 @@ const NOW = new Date("2026-10-03T12:00:00.000Z");
 
 function sessionInHousehold(seeded: SeededUser, householdId: string): HouseholdSession {
   return { ...seeded.session, householdId };
-}
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
 }
 
 async function seedCasa(db: Database) {
@@ -265,6 +256,35 @@ describe("buildExportDocument (integration)", () => {
           updatedAt: NOW.toISOString(),
         },
       ]);
+    });
+  });
+
+  it("isolation: confirmed transaction links are scoped to the user who confirmed them", async () => {
+    await withTestDb(async (db) => {
+      const { householdA, ana, bia, anaTransactionId, biaTransactionId } = await seedCasa(db);
+
+      await db.insert(transactionLink).values([
+        {
+          debitTransactionId: anaTransactionId,
+          creditTransactionId: biaTransactionId,
+          kind: "offset",
+          linkedByUserId: ana.id,
+          linkedAt: NOW,
+        },
+      ]);
+
+      const document = await buildExportDocument(sessionInHousehold(ana, householdA), NOW);
+      const biaDocument = await buildExportDocument(sessionInHousehold(bia, householdA), NOW);
+
+      expect(document.annotations.transactionLinks).toEqual([
+        {
+          debitTransactionId: anaTransactionId,
+          creditTransactionId: biaTransactionId,
+          kind: "offset",
+          linkedAt: NOW.toISOString(),
+        },
+      ]);
+      expect(biaDocument.annotations.transactionLinks).toEqual([]);
     });
   });
 

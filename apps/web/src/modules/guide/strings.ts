@@ -119,6 +119,10 @@ const en = {
           body: "Money moving from one household account to another is not income or spending: it only changed place. Feudo pairs these transfers on its own (same amount, opposite directions, up to two business days apart) and leaves them out of the totals. When it misses one, mark it in Categorize, under Internal transfer.",
         },
         {
+          title: "Linking two transactions on the same account",
+          body: "When a withdrawal only exists to pay a bill moments later, or an inflow and an outflow of the same amount on the same day cancel each other, Feudo recommends linking them on the Links tab of Categorize: it never links on its own. One cancels the other turns both into a pass-through transfer, counted as neither income nor spending. The inflow covered this payment only annotates both rows; neither one's category changes. A linked row shows a small icon next to its description; open it to see the counterpart or undo the link.",
+        },
+        {
           title: "Credit card",
           body: "Each card purchase is spending on its own date, and each installment on the day it falls. Paying the bill is a transfer, not spending, so the same purchase never counts twice.",
         },
@@ -376,6 +380,10 @@ const ptBR = {
         {
           title: "Transferência entre contas da casa não é gasto",
           body: "Dinheiro que passa de uma conta da casa para outra não é renda nem gasto: só mudou de lugar. O Feudo agrupa essas transferências automaticamente (mesmo valor, sentidos opostos, até dois dias úteis de diferença) e as deixa fora dos totais. Quando ele deixar passar alguma, marque em Categorizar, na parte Transferência interna.",
+        },
+        {
+          title: "Vincular duas transações da mesma conta",
+          body: "Quando um resgate só existe para pagar uma conta momentos depois, ou uma entrada e uma saída do mesmo valor no mesmo dia se anulam, o Feudo sugere vincular as duas na aba Vínculos de Categorizar: ele nunca vincula por conta própria. Com “Uma anula a outra”, as duas viram repasse e deixam de contar como renda ou como gasto. Com “A entrada cobriu este pagamento”, o Feudo só anota a ligação entre elas e nenhuma categoria muda. Uma transação vinculada mostra um pequeno ícone ao lado da descrição; abra-a para ver a outra ponta ou desfazer o vínculo.",
         },
         {
           title: "Cartão de crédito",

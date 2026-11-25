@@ -12,6 +12,7 @@ import type { Database } from "@/platform/db/client";
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository, type LedgerTransactionRow } from "./repository";
 import { resolveLedgerRows, type ResolvedLedgerRow } from "./resolve-ledger-rows";
+import { createTransactionLinkRepository } from "./transaction-link-repository";
 
 export type LedgerReadResult = {
   kinds: KindContext;
@@ -63,13 +64,16 @@ export async function readHouseholdLedger(
 ): Promise<LedgerReadResult> {
   const categorization = createCategorizationRepository(scope);
   const ledger = createHouseholdLedgerRepository(scope);
+  const links = createTransactionLinkRepository(scope);
 
-  const [householdSubcategories, overrides, rules, holderDocumentHashes] = await Promise.all([
-    categorization.listHouseholdSubcategories(db),
-    categorization.listKindOverrides(db),
-    categorization.listRules(db),
-    ledger.listHolderDocumentHashes(db),
-  ]);
+  const [householdSubcategories, overrides, rules, holderDocumentHashes, confirmedLinks] =
+    await Promise.all([
+      categorization.listHouseholdSubcategories(db),
+      categorization.listKindOverrides(db),
+      categorization.listRules(db),
+      ledger.listHolderDocumentHashes(db),
+      links.listConfirmedLinks(db),
+    ]);
   const kinds: KindContext = {
     overrides,
     householdSubcategories: new Map(
@@ -82,7 +86,12 @@ export async function readHouseholdLedger(
     accountId: null,
   });
   const localizedTransactions = localizeRowDates(paddedTransactions, timeZone);
-  const padded = resolveLedgerRows(localizedTransactions, { rules, kinds, holderDocumentHashes });
+  const padded = resolveLedgerRows(localizedTransactions, {
+    rules,
+    kinds,
+    holderDocumentHashes,
+    links: confirmedLinks,
+  });
   const rows = padded.filter(
     (row) =>
       row.date >= range.from &&

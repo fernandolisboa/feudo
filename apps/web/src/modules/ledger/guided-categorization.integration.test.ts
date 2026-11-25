@@ -1,32 +1,20 @@
 import { formatMoney } from "@feudo/core";
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
-import { bankTransaction } from "@/modules/sync/schema";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
-import type { Database } from "@/platform/db/client";
 
 import { categorizeTransaction, deferCategorization } from "./categorization-service";
 import { getCategorizationNudgeProps, getGuidedCategorizationProps } from "./guided-categorization";
+import { confirmLink, undoLink } from "./transaction-link-service";
+import { transactionIdFor } from "./test/transaction-id-for";
 import { t } from "./strings";
 
 const NOW = new Date("2026-10-13T12:00:00.000Z");
 
 function money(amountCentavos: number): string {
   return formatMoney({ amountCentavos, currency: "BRL" });
-}
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
 }
 
 describe("guided categorization (integration)", () => {
@@ -281,6 +269,59 @@ describe("guided categorization (integration)", () => {
 
       const nudgeA = await getCategorizationNudgeProps(userA.session, NOW);
       expect(nudgeA?.count).toBe(1);
+    });
+  });
+
+  it("drops a confirmed offset link's two legs from the queue and the nudge, and brings them back on undo", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "link-debit",
+            date: "2026-09-10",
+            description: "PIX ENVIADO FULANO",
+            type: "debit",
+            amountCentavos: -70000,
+          }),
+          seedTransaction({
+            providerTransactionId: "link-credit",
+            date: "2026-09-10",
+            description: "PIX RECEBIDO CICLANO",
+            type: "credit",
+            amountCentavos: 70000,
+          }),
+        ],
+      });
+      const debitTransactionId = await transactionIdFor(db, "link-debit");
+      const creditTransactionId = await transactionIdFor(db, "link-credit");
+
+      const before = await getGuidedCategorizationProps(userA.session, NOW);
+      expect(before.items.map((item) => item.description).sort()).toEqual(
+        ["PIX ENVIADO FULANO", "PIX RECEBIDO CICLANO"].sort(),
+      );
+      expect(await getCategorizationNudgeProps(userA.session, NOW)).toMatchObject({ count: 2 });
+
+      expect(
+        await confirmLink(
+          { debitTransactionId, creditTransactionId, kind: "offset" },
+          userA.session,
+          db,
+          NOW,
+        ),
+      ).toEqual({ status: "ok" });
+
+      const afterConfirm = await getGuidedCategorizationProps(userA.session, NOW);
+      expect(afterConfirm.items).toEqual([]);
+      await expect(getCategorizationNudgeProps(userA.session, NOW)).resolves.toBeNull();
+
+      expect(await undoLink(debitTransactionId, userA.session, db)).toEqual({ status: "ok" });
+
+      const afterUndo = await getGuidedCategorizationProps(userA.session, NOW);
+      expect(afterUndo.items.map((item) => item.description).sort()).toEqual(
+        ["PIX ENVIADO FULANO", "PIX RECEBIDO CICLANO"].sort(),
+      );
+      expect(await getCategorizationNudgeProps(userA.session, NOW)).toMatchObject({ count: 2 });
     });
   });
 });

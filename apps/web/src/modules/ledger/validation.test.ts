@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import {
   categorizeTransactionFormSchema,
+  confirmAllLinksFormSchema,
   overviewSearchParamsSchema,
   SEARCH_QUERY_MAX_LENGTH,
   transactionsSearchParamsSchema,
@@ -82,6 +83,50 @@ describe("categorizeTransactionFormSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("confirmAllLinksFormSchema", () => {
+  it("zips the two id lists back into debit/credit pairs", () => {
+    const parsed = confirmAllLinksFormSchema.parse({
+      kind: "offset",
+      debitTransactionIds: "d1,d2",
+      creditTransactionIds: "c1,c2",
+    });
+
+    expect(parsed).toEqual({
+      kind: "offset",
+      pairs: [
+        { debitTransactionId: "d1", creditTransactionId: "c1" },
+        { debitTransactionId: "d2", creditTransactionId: "c2" },
+      ],
+    });
+  });
+
+  it("rejects two lists of different lengths", () => {
+    const result = confirmAllLinksFormSchema.safeParse({
+      kind: "offset",
+      debitTransactionIds: "d1,d2,d3",
+      creditTransactionIds: "c1,c2",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("de-duplicates a pair repeated in the posted lists, so requestedCount counts it once", () => {
+    const parsed = confirmAllLinksFormSchema.parse({
+      kind: "offset",
+      debitTransactionIds: "d1,d2,d1",
+      creditTransactionIds: "c1,c2,c1",
+    });
+
+    expect(parsed).toEqual({
+      kind: "offset",
+      pairs: [
+        { debitTransactionId: "d1", creditTransactionId: "c1" },
+        { debitTransactionId: "d2", creditTransactionId: "c2" },
+      ],
+    });
   });
 });
 

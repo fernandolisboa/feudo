@@ -5,6 +5,7 @@ import {
   type Kind,
   type LedgerContext,
   type LedgerTransaction,
+  type TransactionLinkRef,
 } from "@feudo/core";
 
 import type { LedgerTransactionRow } from "./repository";
@@ -13,6 +14,7 @@ export type ResolvedLedgerRow = LedgerTransactionRow & {
   categorization: Categorization | null;
   kind: Kind | null;
   internalTransfer: InternalTransfer | null;
+  link: TransactionLinkRef | null;
 };
 
 function toLedgerTransaction(row: LedgerTransactionRow): LedgerTransaction {
@@ -52,6 +54,7 @@ export function resolveLedgerRows(
       categorization: item.categorization,
       kind: item.kind,
       internalTransfer: item.internalTransfer,
+      link: item.link,
     };
   });
 }

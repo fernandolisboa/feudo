@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 
 import { member } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
-import { bankTransaction } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
   seedSyncedConnection,
@@ -14,22 +13,12 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
 import { categorizationDeferral, categorizationRule, transactionCategorization } from "./schema";
+import { transactionIdFor } from "./test/transaction-id-for";
 
 import type { Database } from "@/platform/db/client";
 
 const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
 const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
 
 // Runs sideEffect right after the first read through db resolves, before the
 // caller's next statement: a deterministic stand-in for another request
@@ -260,7 +249,7 @@ describe("categorization repository (integration)", () => {
     });
   });
 
-  it("interim, until the pattern+direction constraint is dropped: reports a conflict for a second rule on the same pattern and direction with another amount", async () => {
+  it("lets an amount-bound rule and an any-amount rule coexist on the same pattern and direction, and two different amounts coexist", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       const repoA = createCategorizationRepository(householdScope(userA.session));
       const save = (amount: { amountCentavos: number; currency: string } | null) =>
@@ -276,18 +265,20 @@ describe("categorization repository (integration)", () => {
         );
 
       expect(await save(null)).toBe("ok");
-      expect(await save({ amountCentavos: 150000, currency: "BRL" })).toBe("conflict");
-      expect((await repoA.listRules(db)).map((rule) => rule.amount)).toEqual([null]);
-
-      const [anyAmount] = await repoA.listRules(db);
-      expect(await repoA.deleteRule(db, anyAmount?.id ?? "")).toBe("ok");
       expect(await save({ amountCentavos: 150000, currency: "BRL" })).toBe("ok");
-      expect(await save({ amountCentavos: 4200, currency: "BRL" })).toBe("conflict");
-      expect(await save({ amountCentavos: 150000, currency: "USD" })).toBe("conflict");
-      expect(await save(null)).toBe("conflict");
-      expect((await repoA.listRules(db)).map((rule) => rule.amount)).toEqual([
-        { amountCentavos: 150000, currency: "BRL" },
-      ]);
+      expect(await save({ amountCentavos: 4200, currency: "BRL" })).toBe("ok");
+      expect(await save({ amountCentavos: 150000, currency: "USD" })).toBe("ok");
+
+      const amounts = (await repoA.listRules(db)).map((rule) => rule.amount);
+      expect(amounts).toHaveLength(4);
+      expect(amounts).toEqual(
+        expect.arrayContaining([
+          null,
+          { amountCentavos: 150000, currency: "BRL" },
+          { amountCentavos: 4200, currency: "BRL" },
+          { amountCentavos: 150000, currency: "USD" },
+        ]),
+      );
     });
   });
 

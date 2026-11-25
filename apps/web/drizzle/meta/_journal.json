@@ -253,6 +253,13 @@
       "when": 1795578646309,
       "tag": "0035_categorization_rule_amount",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795582593568,
+      "tag": "0036_transaction_link_and_rule_constraint_contract",
+      "breakpoints": true
     }
   ]
 }

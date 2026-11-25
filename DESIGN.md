@@ -32,7 +32,7 @@ shadows, one accent used sparingly, dense enough for a desktop that is open ever
   each row into a bordered card (title, amount on the right, labelled lines, actions). Lists that
   grow with use are paginated with numbered pages (`‹ 1 … 4 5 6 … 9 ›`: first, last and the
   current page's neighbours; fewer numbers under 640px, 44px targets) and a rows-per-page choice
-  (transactions 20, accounts and reserve positions 10, rules 20).
+  (transactions 20, accounts and reserve positions 10, rules 20, link suggestions 20).
 - **Themes change tokens only** (color, type, radius, elevation, density, light or dark); the
   layout is a separate choice. Component anatomy is the same in every theme and layout: the
   accounts list is a table, the page headline is a sentence (ADR-0010).

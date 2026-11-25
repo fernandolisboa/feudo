@@ -105,8 +105,9 @@ function historySuggestion(
 // unrelated payments while an equal amount usually is the same payment again,
 // give or take the centavos an installment rounds by. With no such
 // amount in the history, the description alone counts only when every match
-// agrees. Pairing-only categorizations are left out (they say "transfer
-// between your accounts" about a counterpart, not about the description),
+// agrees. Pairing-only and offset-link categorizations are left out (they say
+// "transfer between your accounts" or "pass-through" about a counterpart, not
+// about the description),
 // and money coming in with no suggestion from history leans to income,
 // because unclassified credits are where a household's income hides.
 export function buildCategorizationQueue(candidates: readonly QueueCandidate[]): QueueItem[] {
@@ -116,7 +117,9 @@ export function buildCategorizationQueue(candidates: readonly QueueCandidate[]):
   }));
   const history = normalized.filter(
     (row): row is Categorized =>
-      row.categorization !== null && row.categorization.source !== "internal_transfer",
+      row.categorization !== null &&
+      row.categorization.source !== "internal_transfer" &&
+      row.categorization.source !== "link",
   );
   const uncategorized = normalized.filter((row) => row.categorization === null);
 

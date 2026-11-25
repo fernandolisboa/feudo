@@ -35,6 +35,7 @@ function ledgerRow(overrides: Partial<ResolvedLedgerRow> = {}): ResolvedLedgerRo
     categorization: null,
     kind: null,
     internalTransfer: null,
+    link: null,
     ...overrides,
   };
 }
