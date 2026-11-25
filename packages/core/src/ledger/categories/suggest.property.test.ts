@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { Categorization } from "./categorize";
 import { matchesPattern, normalizeDescription } from "./description";
+import { suggestionFingerprint } from "./fingerprint";
 import { isSameAmount, sameAmountGapCentavos } from "./same-amount";
 import { buildCategorizationQueue, type QueueCandidate } from "./suggest";
+import type { SubcategoryRef } from "./taxonomy";
 
 const categorizations: (Categorization | null)[] = [
   null,
@@ -90,6 +92,9 @@ describe("buildCategorizationQueue property tests", () => {
             expect(item.type).toBe("credit");
             expect(suggestion.subcategory).toEqual({ type: "product", id: "income.other" });
             continue;
+          }
+          if (suggestion.reason === "ai") {
+            throw new Error("candidatesArb never carries an aiSuggestion field");
           }
           const sources = candidates.filter(
             (c) =>
@@ -179,6 +184,75 @@ describe("buildCategorizationQueue property tests", () => {
           }
           if (item.suggestion?.reason === "history") {
             expect(item.suggestion.matches).toBe(matching.length);
+          }
+        }
+      }),
+    );
+  });
+
+  const aiAnswers: (SubcategoryRef | null | undefined)[] = [
+    undefined,
+    null,
+    { type: "product", id: "food.groceries" },
+    { type: "product", id: "food.restaurants" },
+  ];
+
+  const candidatesWithAiArb = candidatesArb.chain((candidates) =>
+    fc
+      .array(fc.constantFrom(...aiAnswers), {
+        minLength: candidates.length,
+        maxLength: candidates.length,
+      })
+      .map((answers) =>
+        candidates.map((candidate, index) => ({ ...candidate, aiSuggestion: answers[index] })),
+      ),
+  );
+
+  it("leaves every output byte-identical when no candidate carries an aiSuggestion field", () => {
+    fc.assert(
+      fc.property(candidatesArb, (candidates) => {
+        const withoutField = buildCategorizationQueue(candidates);
+        const withUndefined = buildCategorizationQueue(
+          candidates.map((candidate): QueueCandidate => ({
+            ...candidate,
+            aiSuggestion: undefined,
+          })),
+        );
+        expect(withUndefined).toEqual(withoutField);
+      }),
+    );
+  });
+
+  it("never lets an AI suggestion outrank history, and always lets it outrank the credit fallback", () => {
+    fc.assert(
+      fc.property(candidatesWithAiArb, (candidates) => {
+        const queue = buildCategorizationQueue(candidates);
+        const byId = new Map(queue.map((item) => [item.id, item]));
+        for (const candidate of candidates) {
+          if (candidate.categorization !== null) continue;
+          const own = candidate.aiSuggestion;
+          if (own === undefined || own === null) continue;
+          const reason = byId.get(candidate.id)?.suggestion?.reason;
+          if (reason === "history" || reason === "history_amount") continue;
+          expect(reason).not.toBe("credit");
+        }
+      }),
+    );
+  });
+
+  it("inheritance never crosses direction or amount", () => {
+    fc.assert(
+      fc.property(candidatesWithAiArb, (candidates) => {
+        const uncategorized = candidates.filter((c) => c.categorization === null);
+        for (const item of buildCategorizationQueue(candidates)) {
+          if (item.suggestion?.reason !== "ai") continue;
+          const own = uncategorized.find((c) => c.id === item.id);
+          if (!own) continue;
+          const sameFingerprintRows = uncategorized.filter(
+            (c) => suggestionFingerprint(c) === suggestionFingerprint(own) && c.aiSuggestion,
+          );
+          for (const source of sameFingerprintRows) {
+            expect(source.type).toBe(own.type);
           }
         }
       }),

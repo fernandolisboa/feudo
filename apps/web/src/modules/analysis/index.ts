@@ -5,6 +5,13 @@ export { AnalysesOff, AnalysesView } from "./components/analyses-view";
 export { AnalystBanksNote } from "./components/analyst-banks-note";
 export { AnalystReading } from "./components/analyst-reading";
 export { AnalystReadingErrorBoundary } from "./components/analyst-reading-error-boundary";
+export { SuggestCategoriesButton } from "./components/suggest-categories-button";
+export {
+  CATEGORY_SUGGESTION_BUDGET_MS,
+  getSuggestCategoriesButtonProps,
+  readAiCategorySuggestions,
+} from "./category-suggestions";
+export type { SuggestCategoriesButtonProps } from "./category-suggestions";
 export { getAiSettingsForExport } from "./export";
 export {
   getAiSettingsSectionProps,

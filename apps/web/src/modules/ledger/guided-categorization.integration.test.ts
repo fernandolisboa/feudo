@@ -1,4 +1,4 @@
-import { formatMoney } from "@feudo/core";
+import { formatMoney, type SubcategoryRef } from "@feudo/core";
 import { describe, expect, it } from "vitest";
 
 import { householdScope } from "@/modules/households";
@@ -78,6 +78,7 @@ describe("guided categorization (integration)", () => {
         value: "product:food.groceries",
         label: "Alimentação · Mercado",
         reason: "1 transação com esta descrição já está em Alimentação · Mercado.",
+        source: "history",
       });
       expect(props.items[1]?.pattern).toBe("PADARIA DO ZE");
     });
@@ -322,6 +323,120 @@ describe("guided categorization (integration)", () => {
         ["PIX ENVIADO FULANO", "PIX RECEBIDO CICLANO"].sort(),
       );
       expect(await getCategorizationNudgeProps(userA.session, NOW)).toMatchObject({ count: 2 });
+    });
+  });
+
+  it("pre-fills an item with no history from a stored AI suggestion (ADR-0014)", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "ai-no-history",
+            date: "2026-09-05",
+            description: "PIX ENVIADO MARIA",
+            type: "debit",
+            amountCentavos: -5000,
+          }),
+        ],
+      });
+      const transactionId = await transactionIdFor(db, "ai-no-history");
+      const aiSuggestions = new Map<string, SubcategoryRef | null>([
+        [transactionId, { type: "product", id: "shopping.other" }],
+      ]);
+
+      const props = await getGuidedCategorizationProps(userA.session, NOW, { aiSuggestions });
+
+      expect(props.items).toHaveLength(1);
+      expect(props.items[0]?.suggestion).toEqual({
+        value: "product:shopping.other",
+        label: "Compras · Outras compras",
+        reason: t.guided.suggestion.ai,
+        source: "ai",
+      });
+    });
+  });
+
+  it("ignores a stored AI suggestion once the household's own history can place the transaction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "bakery-history",
+            date: "2026-08-02",
+            description: "PADARIA DO ZE 0208",
+            type: "debit",
+            amountCentavos: -1500,
+          }),
+          seedTransaction({
+            providerTransactionId: "bakery-pending",
+            date: "2026-09-02",
+            description: "PADARIA DO ZE 0209",
+            type: "debit",
+            amountCentavos: -1800,
+          }),
+        ],
+      });
+      await categorizeTransaction(
+        {
+          transactionId: await transactionIdFor(db, "bakery-history"),
+          subcategory: { type: "product", id: "food.groceries" },
+          createRule: "off",
+        },
+        userA.session,
+        db,
+      );
+      const pendingId = await transactionIdFor(db, "bakery-pending");
+      const aiSuggestions = new Map<string, SubcategoryRef | null>([
+        [pendingId, { type: "product", id: "shopping.other" }],
+      ]);
+
+      const props = await getGuidedCategorizationProps(userA.session, NOW, { aiSuggestions });
+
+      const pendingItem = props.items.find((item) => item.id === pendingId);
+      expect(pendingItem?.suggestion?.source).toBe("history");
+      expect(pendingItem?.suggestion?.value).toBe("product:food.groceries");
+    });
+  });
+
+  it("lets a same-fingerprint sibling inherit a stored AI suggestion it was not asked for itself", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "ai-asked",
+            date: "2026-09-10",
+            description: "PIX ENVIADO CARLOS",
+            type: "debit",
+            amountCentavos: -3300,
+          }),
+          seedTransaction({
+            providerTransactionId: "ai-sibling",
+            date: "2026-09-12",
+            description: "PIX ENVIADO CARLOS",
+            type: "debit",
+            amountCentavos: -3300,
+          }),
+        ],
+      });
+      const askedId = await transactionIdFor(db, "ai-asked");
+      const aiSuggestions = new Map<string, SubcategoryRef | null>([
+        [askedId, { type: "product", id: "shopping.other" }],
+      ]);
+
+      const props = await getGuidedCategorizationProps(userA.session, NOW, { aiSuggestions });
+
+      expect(props.items).toHaveLength(2);
+      for (const item of props.items) {
+        expect(item.suggestion).toEqual({
+          value: "product:shopping.other",
+          label: "Compras · Outras compras",
+          reason: t.guided.suggestion.ai,
+          source: "ai",
+        });
+      }
     });
   });
 });

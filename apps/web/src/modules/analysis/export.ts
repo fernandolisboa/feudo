@@ -15,6 +15,7 @@ export async function getAiSettingsForExport(session: CurrentSession) {
       householdId: householdAiSettings.householdId,
       monthlyFamily: householdAiSettings.monthlyFamily,
       onDemandFamily: householdAiSettings.onDemandFamily,
+      categorySuggestionFamily: householdAiSettings.categorySuggestionFamily,
       apiKeyCiphertext: householdAiSettings.apiKeyCiphertext,
       updatedAt: householdAiSettings.updatedAt,
     })
@@ -24,6 +25,7 @@ export async function getAiSettingsForExport(session: CurrentSession) {
     householdId: row.householdId,
     monthlyFamily: row.monthlyFamily,
     onDemandFamily: row.onDemandFamily,
+    categorySuggestionFamily: row.categorySuggestionFamily,
     hasKey: row.apiKeyCiphertext !== null,
     updatedAt: row.updatedAt,
   }));

@@ -327,6 +327,113 @@ describe("buildCategorizationQueue", () => {
     expect(queue.find((item) => item.pattern === "IFOOD")?.similarCount).toBe(0);
   });
 
+  it("prefers an AI suggestion over the credit fallback", () => {
+    const queue = buildCategorizationQueue([candidate({ type: "credit", aiSuggestion: SALARY })]);
+
+    expect(queue[0]?.suggestion).toEqual({ subcategory: SALARY, reason: "ai" });
+  });
+
+  it("never lets an AI suggestion outrank history, exact-amount or not", () => {
+    const sameAmount = buildCategorizationQueue([
+      candidate({ categorization: categorized(GROCERIES) }),
+      candidate({ aiSuggestion: SALARY }),
+    ]);
+    expect(sameAmount[0]?.suggestion).toEqual({
+      subcategory: GROCERIES,
+      reason: "history_amount",
+      matches: 1,
+    });
+
+    const otherAmount = buildCategorizationQueue([
+      candidate({ amountCentavos: -300, categorization: categorized(GROCERIES) }),
+      candidate({ amountCentavos: -450, categorization: categorized(GROCERIES, "rule") }),
+      candidate({ aiSuggestion: SALARY }),
+    ]);
+    expect(otherAmount[0]?.suggestion).toEqual({
+      subcategory: GROCERIES,
+      reason: "history",
+      matches: 2,
+    });
+  });
+
+  it("does not change any existing output when every candidate has no aiSuggestion field", () => {
+    const withoutField = buildCategorizationQueue([
+      candidate({
+        id: "history",
+        description: "PADARIA DO ZE 01/09",
+        categorization: categorized(GROCERIES),
+      }),
+      candidate({ id: "pending", description: "PADARIA DO ZE 15/09" }),
+    ]);
+    const withUndefined = buildCategorizationQueue([
+      candidate({
+        id: "history",
+        description: "PADARIA DO ZE 01/09",
+        categorization: categorized(GROCERIES),
+        aiSuggestion: undefined,
+      }),
+      candidate({
+        id: "pending",
+        description: "PADARIA DO ZE 15/09",
+        aiSuggestion: undefined,
+      }),
+    ]);
+    expect(withUndefined).toEqual(withoutField);
+  });
+
+  it("inherits the newest same-fingerprint AI suggestion when a row has none of its own", () => {
+    const older = candidate({
+      description: "LOJA X",
+      amountCentavos: -1000,
+      date: "2026-08-01",
+      aiSuggestion: GROCERIES,
+    });
+    const newer = candidate({
+      description: "LOJA X",
+      amountCentavos: -1000,
+      date: "2026-09-01",
+      aiSuggestion: RESTAURANTS,
+    });
+    const noOwnAnswer = candidate({ description: "LOJA X", amountCentavos: -1000 });
+
+    const queue = buildCategorizationQueue([older, newer, noOwnAnswer]);
+    const item = queue.find((queued) => queued.id === noOwnAnswer.id);
+
+    expect(item?.suggestion).toEqual({ subcategory: RESTAURANTS, reason: "ai" });
+  });
+
+  it("never inherits an AI suggestion across direction or amount", () => {
+    const debit = candidate({
+      description: "LOJA Y",
+      amountCentavos: -1000,
+      aiSuggestion: GROCERIES,
+    });
+    const otherDirection = candidate({
+      description: "LOJA Y",
+      amountCentavos: 1000,
+      type: "credit",
+    });
+    const otherAmount = candidate({ description: "LOJA Y", amountCentavos: -2000 });
+
+    const queue = buildCategorizationQueue([debit, otherDirection, otherAmount]);
+
+    expect(queue.find((item) => item.id === otherDirection.id)?.suggestion).toEqual({
+      subcategory: { type: "product", id: "income.other" },
+      reason: "credit",
+    });
+    expect(queue.find((item) => item.id === otherAmount.id)?.suggestion).toBeNull();
+  });
+
+  it("treats an asked AI row with no answer (null) as no suggestion, not inheritable", () => {
+    const asked = candidate({ description: "LOJA Z", amountCentavos: -1000, aiSuggestion: null });
+    const sibling = candidate({ description: "LOJA Z", amountCentavos: -1000 });
+
+    const queue = buildCategorizationQueue([asked, sibling]);
+
+    expect(queue.find((item) => item.id === asked.id)?.suggestion).toBeNull();
+    expect(queue.find((item) => item.id === sibling.id)?.suggestion).toBeNull();
+  });
+
   it("counts apart the similar transactions that also share the amount", () => {
     const first = candidate({ description: "PIX ENVIADO JOAO SILVA", amountCentavos: -150000 });
     const second = candidate({ description: "PIX ENVIADO JOAO SILVA", amountCentavos: 150000 });

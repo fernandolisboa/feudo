@@ -42,6 +42,7 @@ function item(overrides: Partial<GuidedItemView>): GuidedItemView {
       value: "product:income.other",
       label: "Renda · Outras rendas",
       reason: t.guided.suggestion.credit,
+      source: "credit",
     },
     noSuggestionReason: t.guided.suggestion.none,
     deferred: false,
@@ -55,6 +56,7 @@ function props(overrides: Partial<GuidedCategorizationProps>): GuidedCategorizat
   return {
     sinceLabel: "abril de 2026",
     hasAccounts: true,
+    aiPendingCount: 0,
     items: [item({})],
     categoryGroups: [
       { label: "Renda", options: [{ value: "product:income.other", label: "Outras rendas" }] },

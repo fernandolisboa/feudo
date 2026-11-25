@@ -51,6 +51,7 @@ function failingDeps(status: AiFailure): AnalysisDeps {
   const client: AiClient = {
     resolveModel: () => Promise.resolve(PINNED_MODEL_IDS.sonnet),
     complete: () => Promise.resolve({ status, model: null, usage: null }),
+    suggestCategories: () => Promise.resolve({ status, model: null, usage: null }),
   };
   return {
     provider: providerFor(client),
@@ -446,7 +447,13 @@ async function registerKey(db: Database, user: SeededUser, apiKey: string): Prom
     db,
     recordingAnthropicProvider(),
     ENCRYPTION_KEY,
-    { apiKey, monthlyFamily: "opus", onDemandFamily: "sonnet", updatedByUserId: user.id },
+    {
+      apiKey,
+      monthlyFamily: "opus",
+      onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
+      updatedByUserId: user.id,
+    },
   );
   expect(outcome).toEqual({ status: "ok" });
 }
@@ -544,6 +551,7 @@ describe("saveAiSettings key-verification rate limit (integration)", () => {
           apiKey: `sk-ant-attempt-${String(attempt)}`,
           monthlyFamily: "opus",
           onDemandFamily: "sonnet",
+          categorySuggestionFamily: "haiku",
           updatedByUserId: userA.id,
         });
         expect(outcome).toEqual({ status: "ok" });
@@ -555,6 +563,7 @@ describe("saveAiSettings key-verification rate limit (integration)", () => {
         apiKey: "sk-ant-one-too-many",
         monthlyFamily: "opus",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "haiku",
         updatedByUserId: userA.id,
       });
 

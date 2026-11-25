@@ -3,12 +3,18 @@ import { eq, sql } from "drizzle-orm";
 import type { HouseholdScope } from "@/modules/households";
 
 import type { Database } from "@/platform/db/client";
-import { DEFAULT_MONTHLY_FAMILY, DEFAULT_ON_DEMAND_FAMILY, type AiFamily } from "./ai-client";
+import {
+  DEFAULT_CATEGORY_SUGGESTION_FAMILY,
+  DEFAULT_MONTHLY_FAMILY,
+  DEFAULT_ON_DEMAND_FAMILY,
+  type AiFamily,
+} from "./ai-client";
 import { householdAiSettings } from "./schema";
 
 export type AiSettings = {
   monthlyFamily: AiFamily;
   onDemandFamily: AiFamily;
+  categorySuggestionFamily: AiFamily;
   apiKeyCiphertext: string | null;
   apiKeyLast4: string | null;
 };
@@ -16,6 +22,7 @@ export type AiSettings = {
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   monthlyFamily: DEFAULT_MONTHLY_FAMILY,
   onDemandFamily: DEFAULT_ON_DEMAND_FAMILY,
+  categorySuggestionFamily: DEFAULT_CATEGORY_SUGGESTION_FAMILY,
   apiKeyCiphertext: null,
   apiKeyLast4: null,
 };
@@ -26,6 +33,7 @@ export type SaveAiSettingsInput = {
   apiKey: { ciphertext: string; last4: string } | undefined;
   monthlyFamily: AiFamily;
   onDemandFamily: AiFamily;
+  categorySuggestionFamily: AiFamily;
   updatedByUserId: string | null;
 };
 
@@ -40,6 +48,7 @@ export function createAiSettingsRepository(scope: HouseholdScope) {
         .select({
           monthlyFamily: householdAiSettings.monthlyFamily,
           onDemandFamily: householdAiSettings.onDemandFamily,
+          categorySuggestionFamily: householdAiSettings.categorySuggestionFamily,
           apiKeyCiphertext: householdAiSettings.apiKeyCiphertext,
           apiKeyLast4: householdAiSettings.apiKeyLast4,
         })
@@ -58,6 +67,7 @@ export function createAiSettingsRepository(scope: HouseholdScope) {
           apiKeyLast4: input.apiKey?.last4 ?? null,
           monthlyFamily: input.monthlyFamily,
           onDemandFamily: input.onDemandFamily,
+          categorySuggestionFamily: input.categorySuggestionFamily,
           updatedByUserId: input.updatedByUserId,
         })
         .onConflictDoUpdate({
@@ -65,6 +75,7 @@ export function createAiSettingsRepository(scope: HouseholdScope) {
           set: {
             monthlyFamily: input.monthlyFamily,
             onDemandFamily: input.onDemandFamily,
+            categorySuggestionFamily: input.categorySuggestionFamily,
             updatedByUserId: input.updatedByUserId,
             updatedAt: sql`now()`,
             ...(input.apiKey === undefined

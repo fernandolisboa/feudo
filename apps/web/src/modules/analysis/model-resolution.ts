@@ -11,6 +11,11 @@ const capabilitySupportSchema = z.object({ supported: z.boolean() });
 
 const effortCapabilitySchema = z.object({
   supported: z.boolean(),
+  // Optional because the Models API only started reporting it once "light"
+  // (ADR-0014) needed it: a listing without it simply has no model that
+  // qualifies for that tier, never an error, and the two existing tiers
+  // (medium, high) are unaffected either way.
+  low: capabilitySupportSchema.optional(),
   medium: capabilitySupportSchema,
   high: capabilitySupportSchema,
 });
@@ -45,7 +50,7 @@ function qualifies(model: ResolvableModel, family: AiFamily, tier: AiTier): bool
   if (!capabilities.effort.supported) {
     return false;
   }
-  return capabilities.effort[EFFORT[tier]].supported;
+  return capabilities.effort[EFFORT[tier]]?.supported ?? false;
 }
 
 // Pure: given the household's own Models API listing, the family it picked

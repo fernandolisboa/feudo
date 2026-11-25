@@ -141,6 +141,7 @@ export type ExportDocument = {
     householdId: string;
     monthlyFamily: string;
     onDemandFamily: string;
+    categorySuggestionFamily: string;
     hasKey: boolean;
     updatedAt: string;
   }>;
@@ -334,6 +335,7 @@ export async function buildExportDocument(
       householdId: row.householdId,
       monthlyFamily: row.monthlyFamily,
       onDemandFamily: row.onDemandFamily,
+      categorySuggestionFamily: row.categorySuggestionFamily,
       hasKey: row.hasKey,
       updatedAt: row.updatedAt.toISOString(),
     })),

@@ -10,10 +10,17 @@ import {
   type AiRequest,
   type AiResult,
   type AiTier,
+  type CategorySuggestionAiRequest,
 } from "./ai-client";
 import { resolveModelId } from "./model-resolution";
 
 const MAX_TOKENS = 16_000;
+
+// Category suggestions run Haiku 5.5 with adaptive thinking on by default,
+// and thinking tokens count toward max_tokens; this is well above what 40
+// index/subcategory answers need so thinking cannot truncate the answer
+// (verified against the current Claude API reference, 2026-11-25).
+const MAX_TOKENS_LIGHT = 8_000;
 
 // Haiku 5.5 has no server-side refusal fallback; sending the beta or
 // `fallbacks` for it is rejected by the API, so only Sonnet and Opus get them.
@@ -37,21 +44,27 @@ const OUTPUT_JSON_SCHEMA = {
 };
 
 type CreateParams = Anthropic.Beta.Messages.MessageCreateParamsNonStreaming;
+type Effort = "low" | "medium" | "high";
 
+// Haiku never gets the server-side fallback beta or `fallbacks` (the API
+// rejects both for it); Sonnet and Opus get both, for every call shape.
 function buildParams(
   modelId: string,
   family: AiFamily,
-  tier: AiTier,
-  request: AiRequest,
+  effort: Effort,
+  system: string,
+  user: string,
+  schema: Record<string, unknown>,
+  maxTokens: number,
 ): CreateParams {
   const params: CreateParams = {
     model: modelId,
-    max_tokens: MAX_TOKENS,
-    system: request.system,
-    messages: [{ role: "user", content: request.user }],
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: "user", content: user }],
     output_config: {
-      effort: EFFORT[tier],
-      format: { type: "json_schema", schema: OUTPUT_JSON_SCHEMA },
+      effort,
+      format: { type: "json_schema", schema },
     },
   };
   if (family === "haiku") {
@@ -145,6 +158,49 @@ async function listAllModels(client: Anthropic): Promise<unknown[]> {
   return models;
 }
 
+// Shared by complete and suggestCategories: one attempt on the resolved
+// model id and, only when the API rejects it outright (never on a refusal,
+// an outage or any other failure) and the rejected id was not already the
+// pinned one, one more attempt on the pinned id within whatever is left of
+// the original timeout — never a second full one, and skipped outright when
+// too little of it remains for a fair shot.
+async function createWithPinnedRetry(
+  client: Anthropic,
+  requestedModelId: string,
+  pinnedModelId: string,
+  timeoutMs: number,
+  minAttemptMs: number,
+  paramsFor: (modelId: string) => CreateParams,
+): Promise<AiResult> {
+  const startedAt = Date.now();
+  try {
+    const response = await client.beta.messages.create(paramsFor(requestedModelId), {
+      timeout: timeoutMs,
+    });
+    return mapMessage(response);
+  } catch (error) {
+    if (requestedModelId === pinnedModelId || !isResolutionRejection(error)) {
+      return mapError(error);
+    }
+    const remainingMs = timeoutMs - (Date.now() - startedAt);
+    if (remainingMs < minAttemptMs) {
+      console.warn(
+        `analysis: model ${requestedModelId} was rejected, no time left to retry on ${pinnedModelId}`,
+      );
+      return mapError(error);
+    }
+    console.warn(`analysis: model ${requestedModelId} was rejected, retrying on ${pinnedModelId}`);
+    try {
+      const response = await client.beta.messages.create(paramsFor(pinnedModelId), {
+        timeout: remainingMs,
+      });
+      return mapMessage(response);
+    } catch (retryError) {
+      return mapError(retryError);
+    }
+  }
+}
+
 export function createAnthropicAiClient(apiKey: string): AiClient {
   const client = new Anthropic({ apiKey, maxRetries: 0 });
 
@@ -158,42 +214,47 @@ export function createAnthropicAiClient(apiKey: string): AiClient {
       }
     },
 
-    async complete(request: AiRequest): Promise<AiResult> {
+    complete(request: AiRequest): Promise<AiResult> {
       const pinned = PINNED_MODEL_IDS[request.family];
-      const startedAt = Date.now();
-      try {
-        const response = await client.beta.messages.create(
-          buildParams(request.model, request.family, request.tier, request),
-          { timeout: request.timeoutMs },
-        );
-        return mapMessage(response);
-      } catch (error) {
-        if (request.model === pinned || !isResolutionRejection(error)) {
-          return mapError(error);
-        }
-        // The resolved id is newer than what this deploy knows to be good;
-        // the API rejected it outright (not an outage), so one more try on
-        // the pinned id before giving up, within whatever is left of the
-        // first attempt's own timeout — never a second full one. Below the
-        // tier's minimum, there is no fair shot left: skip the retry outright.
-        const remainingMs = request.timeoutMs - (Date.now() - startedAt);
-        if (remainingMs < MIN_ATTEMPT_MS[request.tier]) {
-          console.warn(
-            `analysis: model ${request.model} was rejected, no time left to retry on ${pinned}`,
-          );
-          return mapError(error);
-        }
-        console.warn(`analysis: model ${request.model} was rejected, retrying on ${pinned}`);
-        try {
-          const response = await client.beta.messages.create(
-            buildParams(pinned, request.family, request.tier, request),
-            { timeout: remainingMs },
-          );
-          return mapMessage(response);
-        } catch (retryError) {
-          return mapError(retryError);
-        }
-      }
+      return createWithPinnedRetry(
+        client,
+        request.model,
+        pinned,
+        request.timeoutMs,
+        MIN_ATTEMPT_MS[request.tier],
+        (modelId) =>
+          buildParams(
+            modelId,
+            request.family,
+            EFFORT[request.tier],
+            request.system,
+            request.user,
+            OUTPUT_JSON_SCHEMA,
+            MAX_TOKENS,
+          ),
+      );
+    },
+
+    suggestCategories(request: CategorySuggestionAiRequest): Promise<AiResult> {
+      const pinned = PINNED_MODEL_IDS[request.family];
+      const tier: AiTier = "light";
+      return createWithPinnedRetry(
+        client,
+        request.model,
+        pinned,
+        request.timeoutMs,
+        MIN_ATTEMPT_MS[tier],
+        (modelId) =>
+          buildParams(
+            modelId,
+            request.family,
+            EFFORT[tier],
+            request.system,
+            request.user,
+            request.outputSchema,
+            MAX_TOKENS_LIGHT,
+          ),
+      );
     },
   };
 }

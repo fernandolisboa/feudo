@@ -539,11 +539,13 @@ const en = {
     debit: "Money out",
     suggestion: {
       label: "Feudo's suggestion",
+      aiLabel: "AI suggestion",
       historyAmountOne: "1 transaction with this description and amount is already in {target}.",
       historyAmountMany:
         "{count} transactions with this description and amount are already in {target}.",
       historyOne: "1 transaction with this description is already in {target}.",
       historyMany: "{count} transactions with this description are already in {target}.",
+      ai: "Suggested by AI from the description and amount. Check it before saving.",
       credit:
         "Money coming in with nothing like it categorized yet is usually income. Change it if it is a refund or a transfer.",
       none: "No suggestion yet: nothing with this description has a category.",
@@ -968,10 +970,12 @@ const ptBR = {
     debit: "Saída",
     suggestion: {
       label: "Sugestão do Feudo",
+      aiLabel: "Sugestão da IA",
       historyAmountOne: "1 transação com esta descrição e este valor já está em {target}.",
       historyAmountMany: "{count} transações com esta descrição e este valor já estão em {target}.",
       historyOne: "1 transação com esta descrição já está em {target}.",
       historyMany: "{count} transações com esta descrição já estão em {target}.",
+      ai: "Sugerida pela IA a partir da descrição e do valor. Confira antes de salvar.",
       credit:
         "Dinheiro que entrou e não tem nada parecido categorizado costuma ser renda. Troque se for um reembolso ou uma transferência.",
       none: "Ainda sem sugestão: nada com esta descrição tem categoria.",

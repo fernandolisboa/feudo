@@ -10,9 +10,10 @@ import {
 } from "@/modules/households";
 
 import type { ActionState } from "@/lib/action-state";
-import { interpolate } from "@/lib/interpolate";
+import { interpolate, interpolateAll } from "@/lib/interpolate";
 import { getDb } from "@/platform/db/client";
 import { removeAiKey, saveAiSettings } from "./ai-settings";
+import { CATEGORY_SUGGESTION_RUNS_PER_DAY, runCategorySuggestions } from "./category-suggestions";
 import { readAiProviderName, readEncryptionKey } from "./env";
 import { ANALYSES_PATH } from "./paths";
 import { createAiProvider } from "./provider";
@@ -44,17 +45,57 @@ export async function requestAnalysisAction(): Promise<ActionState> {
       return { status: "error", message: t.outcomes.failed };
     case "quota_exhausted":
       return {
-        status: "error",
+        status: "info",
         message: interpolate(t.outcomes.exhausted, "{limit}", String(ON_DEMAND_ANALYSES_PER_DAY)),
       };
     case "in_progress":
-      return { status: "error", message: t.outcomes.inProgress };
+      return { status: "info", message: t.outcomes.inProgress };
     case "no_accounts":
-      return { status: "error", message: t.outcomes.noAccounts };
+      return { status: "info", message: t.outcomes.noAccounts };
     case "disabled":
-      return { status: "error", message: t.outcomes.disabled };
+      return { status: "info", message: t.outcomes.disabled };
     case "no_time":
-      return { status: "error", message: t.outcomes.noTime };
+      return { status: "info", message: t.outcomes.noTime };
+  }
+}
+
+function categorySuggestionOkMessage(suggestedCount: number): string {
+  if (suggestedCount === 0) {
+    return t.categorySuggestions.outcomes.okNone;
+  }
+  if (suggestedCount === 1) {
+    return t.categorySuggestions.outcomes.okOne;
+  }
+  return interpolateAll(t.categorySuggestions.outcomes.okMany, { count: String(suggestedCount) });
+}
+
+// Any member may press "Sugerir categorias com IA" (Behaviour 1): unlike the
+// key and family form below, nothing here is owner/admin-gated.
+export async function requestCategorySuggestionsAction(): Promise<ActionState> {
+  const session = await requireHouseholdSession();
+  const outcome = await runCategorySuggestions(session, getDb());
+  switch (outcome.status) {
+    case "ok":
+      revalidatePath("/categorizar");
+      return { status: "success", message: categorySuggestionOkMessage(outcome.suggestedCount) };
+    case "failed":
+      revalidatePath("/categorizar");
+      return { status: "error", message: t.categorySuggestions.outcomes.failed };
+    case "nothing_to_suggest":
+      return { status: "info", message: t.categorySuggestions.outcomes.nothingToSuggest };
+    case "quota_exhausted":
+      return {
+        status: "info",
+        message: interpolateAll(t.categorySuggestions.outcomes.exhausted, {
+          limit: String(CATEGORY_SUGGESTION_RUNS_PER_DAY),
+        }),
+      };
+    case "in_progress":
+      return { status: "info", message: t.categorySuggestions.outcomes.inProgress };
+    case "disabled":
+      return { status: "info", message: t.categorySuggestions.outcomes.disabled };
+    case "no_time":
+      return { status: "info", message: t.categorySuggestions.outcomes.noTime };
   }
 }
 
@@ -70,6 +111,7 @@ export async function saveAiSettingsAction(
     apiKey: formData.get("apiKey"),
     monthlyFamily: formData.get("monthlyFamily"),
     onDemandFamily: formData.get("onDemandFamily"),
+    categorySuggestionFamily: formData.get("categorySuggestionFamily"),
   });
   if (!parsed.success) {
     return { status: "error", message: t.aiSettings.outcomes.invalidInput };
@@ -97,6 +139,7 @@ export async function saveAiSettingsAction(
     apiKey: parsed.data.apiKey ?? null,
     monthlyFamily: parsed.data.monthlyFamily,
     onDemandFamily: parsed.data.onDemandFamily,
+    categorySuggestionFamily: parsed.data.categorySuggestionFamily,
     updatedByUserId: session.userId,
   });
 

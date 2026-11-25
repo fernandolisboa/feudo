@@ -42,13 +42,14 @@ function resetAll() {
   getAiSettingsMock.mockReset().mockResolvedValue({
     monthlyFamily: "opus",
     onDemandFamily: "sonnet",
+    categorySuggestionFamily: "haiku",
     apiKeyCiphertext: null,
     apiKeyLast4: null,
   });
 }
 
 describe("getAiSettingsSectionProps", () => {
-  it("shows the current state to a member who cannot change it", async () => {
+  it("shows the current state to a member who cannot change it, with the default haiku family", async () => {
     resetAll();
 
     const props = await getAiSettingsSectionProps(SESSION, ANTHROPIC_ENV);
@@ -60,6 +61,7 @@ describe("getAiSettingsSectionProps", () => {
       apiKeyLast4: null,
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
     });
   });
 
@@ -69,6 +71,7 @@ describe("getAiSettingsSectionProps", () => {
     getAiSettingsMock.mockResolvedValue({
       monthlyFamily: "haiku",
       onDemandFamily: "opus",
+      categorySuggestionFamily: "sonnet",
       apiKeyCiphertext: encryptSecret(
         "sk-ant-secret",
         ENCRYPTION_KEY,
@@ -87,6 +90,7 @@ describe("getAiSettingsSectionProps", () => {
       apiKeyLast4: "cret",
       monthlyFamily: "haiku",
       onDemandFamily: "opus",
+      categorySuggestionFamily: "sonnet",
     });
   });
 
@@ -104,6 +108,7 @@ describe("getAiSettingsSectionProps", () => {
     getAiSettingsMock.mockResolvedValue({
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
       apiKeyCiphertext: encryptSecret(
         "sk-ant-secret",
         "a-different-key-of-32-characters",
@@ -130,6 +135,7 @@ describe("getAiSettingsSectionProps", () => {
       canManage: false,
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
     });
   });
 
@@ -143,6 +149,7 @@ describe("getAiSettingsSectionProps", () => {
       canManage: false,
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
     });
   });
 
@@ -159,6 +166,7 @@ describe("getAiSettingsSectionProps", () => {
       canManage: false,
       monthlyFamily: "opus",
       onDemandFamily: "sonnet",
+      categorySuggestionFamily: "haiku",
     });
   });
 });

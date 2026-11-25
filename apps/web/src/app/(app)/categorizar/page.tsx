@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 
 import { PageSkeleton } from "@/ui/page-skeleton";
+import {
+  getSuggestCategoriesButtonProps,
+  readAiCategorySuggestions,
+  SuggestCategoriesButton,
+} from "@/modules/analysis";
 import { requireHouseholdSession, type HouseholdSession } from "@/modules/households";
 import {
   categorizeTabOf,
@@ -15,6 +20,11 @@ import {
   type CategorizeSearchParams,
 } from "@/modules/ledger";
 
+// The category-suggestions Server Action's own budget (ADR-0014): kept equal
+// to CATEGORY_SUGGESTION_BUDGET_MS so a press always has the full window this
+// page promises it (pinned by page-route-config.test.ts).
+export const maxDuration = 60;
+
 async function GuidedCategorizationContent({
   session,
   now,
@@ -22,8 +32,15 @@ async function GuidedCategorizationContent({
   session: HouseholdSession;
   now: Date;
 }) {
-  const props = await getGuidedCategorizationProps(session, now);
-  return <GuidedCategorizationView {...props} />;
+  const aiSuggestions = await readAiCategorySuggestions(session);
+  const props = await getGuidedCategorizationProps(session, now, { aiSuggestions });
+  const button = await getSuggestCategoriesButtonProps(session, props.aiPendingCount);
+  return (
+    <GuidedCategorizationView
+      {...props}
+      suggestSlot={button ? <SuggestCategoriesButton {...button} /> : null}
+    />
+  );
 }
 
 async function TransactionLinksContent({ session, now }: { session: HouseholdSession; now: Date }) {

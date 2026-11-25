@@ -86,4 +86,30 @@ describe("resolveModelId", () => {
 
     expect(resolveModelId(models, "sonnet", "standard")).toBe("claude-sonnet-5-9");
   });
+
+  it("requires the light tier's own low-effort support, not just medium or high", () => {
+    const models = [
+      model("claude-haiku-5-9", "2026-11-01T00:00:00Z", {
+        capabilities: {
+          ...FULL_CAPABILITIES,
+          effort: { ...FULL_CAPABILITIES.effort, low: { supported: true } },
+        },
+      }),
+    ];
+
+    expect(resolveModelId(models, "haiku", "light")).toBe("claude-haiku-5-9");
+  });
+
+  it("falls back to the pinned id for the light tier when a listing reports no low field at all", () => {
+    const models = [model("claude-haiku-5-9", "2026-11-01T00:00:00Z")];
+
+    expect(resolveModelId(models, "haiku", "light")).toBe(PINNED_MODEL_IDS.haiku);
+  });
+
+  it("still resolves standard and deep from a listing that reports no low field", () => {
+    const models = [model("claude-sonnet-5-9", "2026-11-01T00:00:00Z")];
+
+    expect(resolveModelId(models, "sonnet", "standard")).toBe("claude-sonnet-5-9");
+    expect(resolveModelId(models, "sonnet", "deep")).toBe("claude-sonnet-5-9");
+  });
 });

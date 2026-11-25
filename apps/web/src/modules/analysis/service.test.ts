@@ -21,6 +21,9 @@ function scriptedClient(results: AiResult[]): AiClient & { requests: AiRequest[]
       }
       return Promise.resolve(next);
     },
+    suggestCategories() {
+      throw new Error("not scripted for this test");
+    },
   };
 }
 

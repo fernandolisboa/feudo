@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { Landmark, Lightbulb } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -129,7 +129,10 @@ function GuidedItem({
             {item.suggestion ? (
               <>
                 <span className="font-medium">
-                  {t.guided.suggestion.label}: {item.suggestion.label}
+                  {item.suggestion.source === "ai"
+                    ? t.guided.suggestion.aiLabel
+                    : t.guided.suggestion.label}
+                  : {item.suggestion.label}
                 </span>
                 <span className="text-muted-foreground">{item.suggestion.reason}</span>
               </>
@@ -240,7 +243,8 @@ export function GuidedCategorizationView({
   hasAccounts,
   items,
   categoryGroups,
-}: GuidedCategorizationProps) {
+  suggestSlot = null,
+}: GuidedCategorizationProps & { suggestSlot?: ReactNode }) {
   const [initialTotal] = useState(items.length);
   const [reviewing, setReviewing] = useState(false);
   const [deferredHere, setDeferredHere] = useState<ReadonlySet<string>>(() => new Set());
@@ -287,9 +291,10 @@ export function GuidedCategorizationView({
                 : null}
             </span>
           </Progress>
+          {suggestSlot}
           {current ? (
             <GuidedItem
-              key={current.id}
+              key={`${current.id}:${current.suggestion?.value ?? ""}`}
               item={current}
               groups={categoryGroups}
               onDeferHere={() => {

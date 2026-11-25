@@ -19,6 +19,7 @@ export const saveAiSettingsFormSchema = z.object({
   apiKey: optionalApiKeySchema,
   monthlyFamily: aiFamilySchema,
   onDemandFamily: aiFamilySchema,
+  categorySuggestionFamily: aiFamilySchema,
 });
 
 export type SaveAiSettingsFormInput = z.infer<typeof saveAiSettingsFormSchema>;

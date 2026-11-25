@@ -260,6 +260,13 @@
       "when": 1795582593568,
       "tag": "0036_transaction_link_and_rule_constraint_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1795607586271,
+      "tag": "0037_category_suggestions",
+      "breakpoints": true
     }
   ]
 }

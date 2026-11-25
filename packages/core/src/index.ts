@@ -91,6 +91,12 @@ export { summarizeUncategorized } from "./ledger/categories/uncategorized";
 export type { CategorySuggestion, QueueCandidate, QueueItem } from "./ledger/categories/suggest";
 export { buildCategorizationQueue } from "./ledger/categories/suggest";
 
+export type { FingerprintedTransaction } from "./ledger/categories/fingerprint";
+export { suggestionFingerprint } from "./ledger/categories/fingerprint";
+
+export type { AiBatchRow, AiSuggestionGroup } from "./ledger/categories/ai-batch";
+export { batchForAiSuggestion } from "./ledger/categories/ai-batch";
+
 export type { RecurringInput, FixedSuggestion } from "./ledger/categories/recurring";
 export { suggestFixedSubcategories } from "./ledger/categories/recurring";
 

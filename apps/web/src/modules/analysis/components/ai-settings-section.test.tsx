@@ -22,6 +22,7 @@ function props(
     apiKeyLast4: null,
     monthlyFamily: "opus",
     onDemandFamily: "sonnet",
+    categorySuggestionFamily: "haiku",
     ...overrides,
   };
 }
@@ -34,13 +35,20 @@ describe("AiSettingsSection", () => {
   it("shows a member the current state with no way to change it", () => {
     render(
       <AiSettingsSection
-        {...props({ canManage: false, hasKey: true, apiKeyLast4: "abcd", monthlyFamily: "haiku" })}
+        {...props({
+          canManage: false,
+          hasKey: true,
+          apiKeyLast4: "abcd",
+          monthlyFamily: "haiku",
+          categorySuggestionFamily: "opus",
+        })}
       />,
     );
 
     expect(screen.getByText("Chave atual: •••• abcd")).toBeDefined();
     expect(screen.getByText("Haiku")).toBeDefined();
     expect(screen.getByText("Sonnet")).toBeDefined();
+    expect(screen.getByText("Opus")).toBeDefined();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
   });
@@ -55,7 +63,7 @@ describe("AiSettingsSection", () => {
     render(<AiSettingsSection {...props()} />);
 
     expect(screen.getByLabelText("Chave da Anthropic")).toBeDefined();
-    expect(screen.getAllByRole("combobox")).toHaveLength(2);
+    expect(screen.getAllByRole("combobox")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDefined();
   });
 
@@ -87,6 +95,7 @@ describe("AiSettingsSection", () => {
         canManage={true}
         monthlyFamily="opus"
         onDemandFamily="sonnet"
+        categorySuggestionFamily="haiku"
       />,
     );
 

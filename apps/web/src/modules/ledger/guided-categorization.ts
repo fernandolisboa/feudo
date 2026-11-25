@@ -1,15 +1,10 @@
-import { cache } from "react";
-
 import {
+  batchForAiSuggestion,
   buildCategorizationQueue,
-  dashboardMonthRange,
   formatMoney,
-  formatYearMonth,
-  HOUSEHOLD_CURRENCY,
   summarizeUncategorized,
-  yearMonthOf,
   type CategorySuggestion,
-  type KindContext,
+  type SubcategoryRef,
   type TransactionDirection,
 } from "@feudo/core";
 
@@ -17,19 +12,27 @@ import { recordFinancialDataAccess } from "@/modules/audit";
 import { formatIsoDate } from "@/lib/format-date";
 import { interpolateAll } from "@/lib/interpolate";
 import type { HouseholdSession } from "@/modules/households";
-import { DEFAULT_TIME_ZONE, getHouseholdSettings, householdScope } from "@/modules/households";
+import { householdScope } from "@/modules/households";
 import { getDb } from "@/platform/db/client";
 
+import { aiBatchRowsFor } from "./ai-suggestion-candidates";
 import { createCategorizationRepository } from "./categorization-repository";
+import { readCategorizationWindow } from "./categorization-window";
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
-import { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
-import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
+import { householdHasAccounts } from "./dashboard-lines";
 import { ruleAmountLabel } from "./rule-amount-label";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
 
-export type GuidedSuggestionView = { value: string; label: string; reason: string };
+export type GuidedSuggestionSource = "history" | "ai" | "credit";
+
+export type GuidedSuggestionView = {
+  value: string;
+  label: string;
+  reason: string;
+  source: GuidedSuggestionSource;
+};
 
 export type GuidedItemView = {
   id: string;
@@ -52,46 +55,10 @@ export type GuidedCategorizationProps = {
   hasAccounts: boolean;
   items: GuidedItemView[];
   categoryGroups: SubcategoryOptionGroup[];
+  aiPendingCount: number;
 };
 
 export type CategorizationNudgeProps = { count: number; amountLabel: string; sinceLabel: string };
-
-type UncategorizedWindow = {
-  sinceLabel: string;
-  kinds: KindContext;
-  rows: ResolvedLedgerRow[];
-};
-
-// The same window and currency as the overview's numbers (dashboardMonthRange
-// through readHouseholdDashboardLines, household currency only per
-// ADR-0002): what is uncategorized here is exactly what keeps Visão geral and
-// the reserve target incomplete. A foreign-currency row is in no number, so
-// counting it would claim an incompleteness that categorizing cannot fix.
-// Exported for link-suggestions.ts too: link suggestions need this same
-// window and currency, every resolved row, not only the uncategorized ones.
-// Wrapped in React's cache() (same pattern as
-// auth/session.ts's getCurrentSession) so the Categorias and Vínculos tabs
-// of one /categorizar request, called with the same `now`, share one DB
-// round trip instead of reading the window twice; outside a request (and
-// this module's own tests) cache() is a no-op and every call runs fresh.
-async function readCategorizationWindowUncached(
-  session: HouseholdSession,
-  now: Date,
-): Promise<UncategorizedWindow> {
-  const db = getDb();
-  const scope = householdScope(session);
-  const settings = await getHouseholdSettings(scope, db);
-  const timeZone = settings?.timeZone ?? DEFAULT_TIME_ZONE;
-  const month = yearMonthOf(now, timeZone);
-  const { kinds, rows } = await readHouseholdDashboardLines(db, scope, month, timeZone);
-  return {
-    sinceLabel: formatYearMonth(dashboardMonthRange(month).from),
-    kinds,
-    rows: rows.filter((row) => row.currency === HOUSEHOLD_CURRENCY),
-  };
-}
-
-export const readCategorizationWindow = cache(readCategorizationWindowUncached);
 
 function suggestionReason(suggestion: CategorySuggestion, target: string): string {
   switch (suggestion.reason) {
@@ -107,8 +74,22 @@ function suggestionReason(suggestion: CategorySuggestion, target: string): strin
         suggestion.matches === 1 ? t.guided.suggestion.historyOne : t.guided.suggestion.historyMany,
         { count: String(suggestion.matches), target },
       );
+    case "ai":
+      return t.guided.suggestion.ai;
     case "credit":
       return t.guided.suggestion.credit;
+  }
+}
+
+function suggestionSource(reason: CategorySuggestion["reason"]): GuidedSuggestionSource {
+  switch (reason) {
+    case "history_amount":
+    case "history":
+      return "history";
+    case "ai":
+      return "ai";
+    case "credit":
+      return "credit";
   }
 }
 
@@ -128,17 +109,25 @@ function suggestionView(
     value: encodeSubcategoryRef(suggestion.subcategory),
     label: target,
     reason: suggestionReason(suggestion, target),
+    source: suggestionSource(suggestion.reason),
   };
 }
 
+export type GuidedCategorizationOptions = {
+  aiSuggestions: ReadonlyMap<string, SubcategoryRef | null>;
+};
+
+const NO_AI_SUGGESTIONS: GuidedCategorizationOptions = { aiSuggestions: new Map() };
+
 // Everything /categorizar renders: the uncategorized transactions of the
-// overview's window, largest first, each with a suggestion drawn only from
-// the household's own categorized history (packages/core, no AI call), and
-// whether the household put it off for later. The audit write (ADR-0008)
-// happens only after the read succeeds.
+// overview's window, largest first, each with a suggestion drawn from the
+// household's own categorized history first and, with nothing from history,
+// a stored AI suggestion when the household asked for one (ADR-0014). The
+// audit write (ADR-0008) happens only after the read succeeds.
 export async function getGuidedCategorizationProps(
   session: HouseholdSession,
   now: Date = new Date(),
+  options: GuidedCategorizationOptions = NO_AI_SUGGESTIONS,
 ): Promise<GuidedCategorizationProps> {
   const [{ sinceLabel, kinds, rows }, hasAccounts, deferredIds] = await Promise.all([
     readCategorizationWindow(session, now),
@@ -157,12 +146,19 @@ export async function getGuidedCategorizationProps(
       currency: row.currency,
       date: row.date,
       categorization: row.categorization,
+      aiSuggestion: options.aiSuggestions.get(row.id),
     })),
+  );
+  const aiPendingGroups = batchForAiSuggestion(
+    aiBatchRowsFor(rows),
+    new Set(options.aiSuggestions.keys()),
+    Number.POSITIVE_INFINITY,
   );
 
   const props: GuidedCategorizationProps = {
     sinceLabel,
     hasAccounts,
+    aiPendingCount: aiPendingGroups.reduce((sum, group) => sum + group.transactionIds.length, 0),
     items: queue.flatMap((item): GuidedItemView[] => {
       const row = rowById.get(item.id);
       if (!row) {

@@ -7,6 +7,7 @@ import {
   DEFAULT_AI_SETTINGS,
   getAiSettings,
 } from "./ai-settings-repository";
+import { householdAiSettings } from "./schema";
 
 describe("household_ai_settings isolation (integration)", () => {
   it("reads only the scoped household's own settings, defaulting to no key", async () => {
@@ -15,6 +16,7 @@ describe("household_ai_settings isolation (integration)", () => {
         apiKey: { ciphertext: "enc:v2:aaa:bbb:ccc:ddd", last4: "ddd1" },
         monthlyFamily: "haiku",
         onDemandFamily: "haiku",
+        categorySuggestionFamily: "haiku",
         updatedByUserId: null,
       });
 
@@ -36,6 +38,7 @@ describe("household_ai_settings isolation (integration)", () => {
         apiKey: undefined,
         monthlyFamily: "sonnet",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "sonnet",
         updatedByUserId: null,
       });
 
@@ -50,12 +53,14 @@ describe("household_ai_settings isolation (integration)", () => {
         apiKey: { ciphertext: "enc:v2:aaa:bbb:ccc:ddd", last4: "ddd1" },
         monthlyFamily: "opus",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "sonnet",
         updatedByUserId: null,
       });
       await createAiSettingsRepository(householdB.scope).save(db, {
         apiKey: { ciphertext: "enc:v2:eee:fff:ggg:hhh", last4: "hhh2" },
         monthlyFamily: "opus",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "sonnet",
         updatedByUserId: null,
       });
 
@@ -78,6 +83,7 @@ describe("household_ai_settings isolation (integration)", () => {
         apiKey: { ciphertext: "enc:v2:aaa:bbb:ccc:ddd", last4: "ddd1" },
         monthlyFamily: "opus",
         onDemandFamily: "sonnet",
+        categorySuggestionFamily: "sonnet",
         updatedByUserId: null,
       });
 
@@ -85,6 +91,7 @@ describe("household_ai_settings isolation (integration)", () => {
         apiKey: undefined,
         monthlyFamily: "haiku",
         onDemandFamily: "haiku",
+        categorySuggestionFamily: "haiku",
         updatedByUserId: null,
       });
 
@@ -99,6 +106,20 @@ describe("household_ai_settings isolation (integration)", () => {
   it("defaults an unseeded household to opus/sonnet with no key", async () => {
     await withTwoHouseholds(async ({ db, householdB }) => {
       expect(await getAiSettings(householdB.scope, db)).toEqual(DEFAULT_AI_SETTINGS);
+    });
+  });
+
+  it("defaults the new category_suggestion_family column to haiku for a row saved before it existed", async () => {
+    await withTwoHouseholds(async ({ db, householdA }) => {
+      await db.insert(householdAiSettings).values({
+        householdId: householdA.scope.householdId,
+        monthlyFamily: "opus",
+        onDemandFamily: "sonnet",
+      });
+
+      expect(await getAiSettings(householdA.scope, db)).toMatchObject({
+        categorySuggestionFamily: "haiku",
+      });
     });
   });
 });

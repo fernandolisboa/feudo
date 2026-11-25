@@ -118,6 +118,7 @@ export type AiSettingsSectionProps =
       canManage: boolean;
       monthlyFamily: AiFamily;
       onDemandFamily: AiFamily;
+      categorySuggestionFamily: AiFamily;
     }
   | {
       status: "available";
@@ -126,6 +127,7 @@ export type AiSettingsSectionProps =
       apiKeyLast4: string | null;
       monthlyFamily: AiFamily;
       onDemandFamily: AiFamily;
+      categorySuggestionFamily: AiFamily;
     };
 
 function modelName(model: string | null): string | null {
@@ -388,6 +390,7 @@ export async function getAiSettingsSectionProps(
       canManage,
       monthlyFamily: settings.monthlyFamily,
       onDemandFamily: settings.onDemandFamily,
+      categorySuggestionFamily: settings.categorySuggestionFamily,
     };
   }
   const encryptionKey = hasValidEncryptionKey(env) ? readEncryptionKey(env) : null;
@@ -399,5 +402,6 @@ export async function getAiSettingsSectionProps(
     apiKeyLast4: hasKey ? settings.apiKeyLast4 : null,
     monthlyFamily: settings.monthlyFamily,
     onDemandFamily: settings.onDemandFamily,
+    categorySuggestionFamily: settings.categorySuggestionFamily,
   };
 }
