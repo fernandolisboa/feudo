@@ -19,6 +19,7 @@ vi.mock("@/platform/db/client", () => ({ getDb: () => ({}) }));
 vi.mock("@/modules/audit", () => ({ recordFinancialDataAccess: recordFinancialDataAccessMock }));
 vi.mock("@/modules/ledger", () => ({
   getAiSuggestionCandidates: getAiSuggestionCandidatesMock,
+  productSubcategoriesForPrompt: () => SUBCATEGORIES,
 }));
 vi.mock("@/modules/households", () => ({
   DEFAULT_TIME_ZONE: "America/Sao_Paulo",
@@ -83,7 +84,7 @@ function group(id: string, transactionIds = [id]) {
 }
 
 function okCandidates(groups: ReturnType<typeof group>[]) {
-  return { groups, subcategories: SUBCATEGORIES };
+  return { groups };
 }
 
 function fakeClient(
@@ -327,6 +328,52 @@ describe("requestCategorySuggestions", () => {
       "run-1",
       expect.objectContaining({ suggestedCount: 1, model: "claude-haiku-5-5" }),
     );
+  });
+
+  it("reports failed, and marks the run failed, when saving the answer throws instead of leaving it running", async () => {
+    resetMocks();
+    getAiSuggestionCandidatesMock.mockResolvedValue(okCandidates([group("t1")]));
+    const suggestCategories = vi.fn().mockResolvedValue({
+      status: "ok",
+      output: { suggestions: [{ index: 0, subcategory: "shopping.other" }] },
+      model: "claude-haiku-5-5",
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+    clientForHouseholdMock.mockResolvedValue(fakeClient(suggestCategories));
+    repoMock.saveSuggestions.mockRejectedValue(new Error("connection lost"));
+
+    const outcome = await requestCategorySuggestions(SESSION, DB, DEPS, {
+      now: NOW,
+      deadline: FAR_DEADLINE,
+    });
+
+    expect(outcome).toEqual({ status: "failed" });
+    expect(repoMock.fail).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-1",
+      expect.objectContaining({ failureReason: "unavailable" }),
+    );
+  });
+
+  it("still reports failed when marking the run failed also throws", async () => {
+    resetMocks();
+    getAiSuggestionCandidatesMock.mockResolvedValue(okCandidates([group("t1")]));
+    const suggestCategories = vi.fn().mockResolvedValue({
+      status: "ok",
+      output: { suggestions: [{ index: 0, subcategory: "shopping.other" }] },
+      model: "claude-haiku-5-5",
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+    clientForHouseholdMock.mockResolvedValue(fakeClient(suggestCategories));
+    repoMock.saveSuggestions.mockRejectedValue(new Error("connection lost"));
+    repoMock.fail.mockRejectedValue(new Error("connection lost again"));
+
+    const outcome = await requestCategorySuggestions(SESSION, DB, DEPS, {
+      now: NOW,
+      deadline: FAR_DEADLINE,
+    });
+
+    expect(outcome).toEqual({ status: "failed" });
   });
 });
 

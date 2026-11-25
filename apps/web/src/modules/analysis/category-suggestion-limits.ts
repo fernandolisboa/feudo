@@ -1,0 +1,1 @@
+export const CATEGORY_SUGGESTION_MAX_GROUPS = 40;

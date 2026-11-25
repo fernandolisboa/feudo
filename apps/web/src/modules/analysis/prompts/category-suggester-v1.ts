@@ -24,14 +24,45 @@ Rules:
 // as a different merchant.
 const UNSAFE_PROMPT_CHARS = /[\u0000-\u001f\u007f<>|]/g;
 
+function digitOrMaskGroup(length: number): string {
+  const n = String(length);
+  return `(?:\\d{${n}}|\\*{${n}})`;
+}
+
+// CPF and CNPJ in their formatted shapes, digits or asterisks in every
+// group (a bank or the household itself sometimes masks part of one, e.g.
+// "***.123.456-**"): data minimization beyond what the ADR asked to send.
+const CPF_PATTERN = new RegExp(
+  `${digitOrMaskGroup(3)}\\.${digitOrMaskGroup(3)}\\.${digitOrMaskGroup(3)}-${digitOrMaskGroup(2)}`,
+  "g",
+);
+const CNPJ_PATTERN = new RegExp(
+  `${digitOrMaskGroup(2)}\\.${digitOrMaskGroup(3)}\\.${digitOrMaskGroup(3)}/${digitOrMaskGroup(4)}-${digitOrMaskGroup(2)}`,
+  "g",
+);
+
+// Any other run this long is more likely a document, phone or account
+// number than something the model needs: an installment marker ("3/12"), a
+// store number or a date never reaches 9 digits in a row.
+const LONG_DIGIT_RUN = /\d{9,}/g;
+
 export const DESCRIPTION_MAX_CHARS = 140;
 
+// A description that was nothing but a removed sequence must not render as
+// an empty field: the transaction line would lose a column and the model
+// would read the next line's text as this one's description.
+const EMPTY_DESCRIPTION_PLACEHOLDER = "(descrição removida)";
+
 export function sanitizeDescriptionForPrompt(description: string): string {
-  return description
+  const cleaned = description
+    .replace(CNPJ_PATTERN, " ")
+    .replace(CPF_PATTERN, " ")
+    .replace(LONG_DIGIT_RUN, " ")
     .replace(UNSAFE_PROMPT_CHARS, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, DESCRIPTION_MAX_CHARS);
+  return cleaned.length > 0 ? cleaned : EMPTY_DESCRIPTION_PLACEHOLDER;
 }
 
 export function renderCategorySuggesterV1User(input: CategorySuggestionPromptInput): string {
@@ -55,10 +86,6 @@ export function renderCategorySuggesterV1User(input: CategorySuggestionPromptInp
     "</transactions>",
   ].join("\n");
 }
-
-export type CategorySuggestionAnswer = { index: number; subcategory: string | null };
-
-export type CategorySuggestionOutput = { suggestions: CategorySuggestionAnswer[] };
 
 // The JSON schema sent as output_config.format.schema (anthropic-client.ts):
 // the model can only answer an id it was just shown, or null, never free text.

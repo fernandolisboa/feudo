@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { organization, user } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
+import { getGuidedCategorizationProps } from "@/modules/ledger";
 import { bankTransaction } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
@@ -15,6 +16,7 @@ import type { Database } from "@/platform/db/client";
 import type { AiClient } from "./ai-client";
 import {
   CATEGORY_SUGGESTION_RUNS_PER_DAY,
+  readAiCategorySuggestions,
   requestCategorySuggestions,
 } from "./category-suggestions";
 import { createCategorySuggestionsRepository } from "./category-suggestions-repository";
@@ -142,11 +144,11 @@ describe("category_ai_suggestion isolation (integration)", () => {
       );
 
       const client = createFakeAiClient();
-      const requests: unknown[] = [];
+      const requests: string[] = [];
       const recording: AiClient = {
         ...client,
         suggestCategories(request) {
-          requests.push(request.input);
+          requests.push(request.user);
           return client.suggestCategories(request);
         },
       };
@@ -163,8 +165,9 @@ describe("category_ai_suggestion isolation (integration)", () => {
 
       expect(outcome).toEqual(expect.objectContaining({ status: "ok" }));
       expect(requests).toHaveLength(1);
-      const sent = requests[0] as { items: { description: string }[] };
-      expect(sent.items.map((item) => item.description)).toEqual(["Mercado da Esquina B"]);
+      const sentUserText = requests[0] ?? "";
+      expect(sentUserText).toContain("Mercado da Esquina B");
+      expect(sentUserText).not.toContain("Padaria Estrela A");
     });
   });
 
@@ -447,6 +450,31 @@ describe("category-suggestions prune (integration)", () => {
           .from(categoryAiSuggestion)
           .where(eq(categoryAiSuggestion.householdId, householdA)),
       ).toHaveLength(1);
+    });
+  });
+});
+
+describe("category suggestions feed guided categorization (integration)", () => {
+  it("drops aiPendingCount once a press has asked for the household's only pending transaction", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedPendingTransaction(
+        db,
+        userA,
+        householdScope(userA.session),
+        "a13",
+        "Padaria Estrela A",
+      );
+
+      const before = await getGuidedCategorizationProps(userA.session, NOW);
+      expect(before.aiPendingCount).toBe(1);
+
+      expect(await requestCategorySuggestions(userA.session, db, deps(), options())).toEqual(
+        expect.objectContaining({ status: "ok" }),
+      );
+
+      const aiSuggestions = await readAiCategorySuggestions(userA.session);
+      const after = await getGuidedCategorizationProps(userA.session, NOW, { aiSuggestions });
+      expect(after.aiPendingCount).toBe(0);
     });
   });
 });

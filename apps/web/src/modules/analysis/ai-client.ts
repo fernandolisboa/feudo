@@ -84,6 +84,10 @@ export type CategorySuggestionPromptInput = {
   items: CategorySuggestionPromptItem[];
 };
 
+// Carries only what the real client sends to Anthropic: family, model,
+// system, user and the output schema. The fake client answers from `user`
+// (the rendered prompt) instead of a parallel, unsanitized copy of the
+// input, so this type can never grow a field nothing sends.
 export type CategorySuggestionAiRequest = {
   family: AiFamily;
   model: string;
@@ -91,10 +95,6 @@ export type CategorySuggestionAiRequest = {
   user: string;
   outputSchema: Record<string, unknown>;
   timeoutMs: number;
-  // For the fake client only: the real client reads nothing but `user` and
-  // the other fields above; input stays here so preview and tests can build
-  // a canned answer without parsing the rendered prompt back out.
-  input: CategorySuggestionPromptInput;
 };
 
 export interface AiClient {

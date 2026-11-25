@@ -310,20 +310,6 @@ const CATEGORY_REQUEST = {
   user: "category user prompt",
   outputSchema: CATEGORY_SCHEMA,
   timeoutMs: 25_000,
-  input: {
-    subcategories: [
-      { id: "shopping.other", label: "Compras · Outras compras", kind: "variable" as const },
-    ],
-    items: [
-      {
-        index: 0,
-        type: "debit" as const,
-        absoluteAmountCentavos: 5_000,
-        currency: "BRL",
-        description: "Padaria Estrela",
-      },
-    ],
-  },
 };
 
 function categoryMessage(overrides: Record<string, unknown> = {}) {
@@ -353,19 +339,17 @@ describe("suggestCategories", () => {
       model: "claude-haiku-5-5",
       usage: { inputTokens: 400, outputTokens: 80 },
     });
-    const params = create.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(params).toMatchObject({
+    const params = create.mock.calls[0]?.[0];
+    expect(params).toStrictEqual({
       model: "claude-haiku-5-5",
       max_tokens: 8_000,
       system: "category system prompt",
       messages: [{ role: "user", content: "category user prompt" }],
       output_config: { effort: "low", format: { type: "json_schema", schema: CATEGORY_SCHEMA } },
     });
-    expect(params.betas).toBeUndefined();
-    expect(params.fallbacks).toBeUndefined();
   });
 
-  it("sends the server-side fallback beta for Sonnet and Opus", async () => {
+  it("sends the server-side fallback beta for Sonnet and Opus, and nothing else beyond Haiku's shape", async () => {
     create.mockResolvedValue(categoryMessage({ model: "claude-sonnet-5-5" }));
 
     await createAnthropicAiClient("sk-ant-test").suggestCategories({
@@ -374,7 +358,12 @@ describe("suggestCategories", () => {
       model: "claude-sonnet-5-5",
     });
 
-    expect(create.mock.calls[0]?.[0]).toMatchObject({
+    expect(create.mock.calls[0]?.[0]).toStrictEqual({
+      model: "claude-sonnet-5-5",
+      max_tokens: 8_000,
+      system: "category system prompt",
+      messages: [{ role: "user", content: "category user prompt" }],
+      output_config: { effort: "low", format: { type: "json_schema", schema: CATEGORY_SCHEMA } },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
     });

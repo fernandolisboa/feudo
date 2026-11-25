@@ -1,6 +1,6 @@
 import { localDateOf, type SubcategoryRef } from "@feudo/core";
 
-import { getAiSuggestionCandidates } from "@/modules/ledger";
+import { getAiSuggestionCandidates, productSubcategoriesForPrompt } from "@/modules/ledger";
 import {
   DEFAULT_TIME_ZONE,
   getHouseholdSettings,
@@ -13,6 +13,7 @@ import { recordFinancialDataAccess } from "@/modules/audit";
 import { errorName } from "@/lib/error-name";
 import { getDb, type Database } from "@/platform/db/client";
 import { MIN_ATTEMPT_MS, type AiFailure, type CategorySuggestionPromptItem } from "./ai-client";
+import { CATEGORY_SUGGESTION_MAX_GROUPS } from "./category-suggestion-limits";
 import {
   createCategorySuggestionsRepository,
   type CategorySuggestionAnswerToStore,
@@ -28,7 +29,6 @@ import { createAiProvider, type AiProvider } from "./provider";
 import { clientForHousehold, isAnalysisEnabled, TIMEOUT_MS } from "./service";
 
 export const CATEGORY_SUGGESTION_RUNS_PER_DAY = 5;
-export const CATEGORY_SUGGESTION_MAX_GROUPS = 40;
 
 // The Server Action's own time limit: the maxDuration exported by
 // app/(app)/categorizar/page.tsx, which must stay in step (its page test
@@ -78,6 +78,9 @@ export type CategorySuggestionOutcome =
 
 type CategorySuggestionFailureReason = AiFailure | "invalid_output";
 
+// Best-effort: a run already failed from the caller's point of view, so a
+// second failure writing that down must not escape and leave the row
+// "running" for RUN_STALE_MS instead of reporting what already went wrong.
 async function failRun(
   repository: ReturnType<typeof createCategorySuggestionsRepository>,
   db: Database,
@@ -87,12 +90,16 @@ async function failRun(
   reason: CategorySuggestionFailureReason,
 ): Promise<void> {
   console.warn(`analysis: category suggestion run ${id} failed (${reason})`);
-  await repository.fail(db, id, {
-    model,
-    inputTokens: usage?.inputTokens ?? null,
-    outputTokens: usage?.outputTokens ?? null,
-    failureReason: reason,
-  });
+  try {
+    await repository.fail(db, id, {
+      model,
+      inputTokens: usage?.inputTokens ?? null,
+      outputTokens: usage?.outputTokens ?? null,
+      failureReason: reason,
+    });
+  } catch (error) {
+    console.warn(`analysis: could not mark run ${id} failed (${errorName(error)})`);
+  }
 }
 
 // A member's "Sugerir categorias com IA" (ADR-0014): one Haiku call per
@@ -178,8 +185,9 @@ export async function requestCategorySuggestions(
     currency: group.currency,
     description: group.description,
   }));
-  const sentIds = candidates.subcategories.map((subcategory) => subcategory.id);
-  const promptInput = { subcategories: candidates.subcategories, items };
+  const subcategories = productSubcategoriesForPrompt();
+  const sentIds = subcategories.map((subcategory) => subcategory.id);
+  const promptInput = { subcategories, items };
 
   const result = await client.suggestCategories({
     family,
@@ -188,7 +196,6 @@ export async function requestCategorySuggestions(
     user: deps.prompt.renderUser(promptInput),
     outputSchema: categorySuggestionOutputSchema(sentIds),
     timeoutMs: Math.min(TIMEOUT_MS.light, options.deadline.getTime() - Date.now()),
-    input: promptInput,
   });
 
   if (result.status !== "ok") {
@@ -232,15 +239,21 @@ export async function requestCategorySuggestions(
     }
   }
 
-  await db.transaction(async (tx) => {
-    await repository.saveSuggestions(tx, { promptVersion, model: result.model, answers });
-    await repository.succeed(tx, reservation.id, {
-      model: result.model,
-      inputTokens: result.usage.inputTokens,
-      outputTokens: result.usage.outputTokens,
-      suggestedCount,
+  try {
+    await db.transaction(async (tx) => {
+      await repository.saveSuggestions(tx, { promptVersion, model: result.model, answers });
+      await repository.succeed(tx, reservation.id, {
+        model: result.model,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        suggestedCount,
+      });
     });
-  });
+  } catch (error) {
+    console.warn(`analysis: could not save category suggestions (${errorName(error)})`);
+    await failRun(repository, db, reservation.id, result.model, result.usage, "unavailable");
+    return { status: "failed" };
+  }
 
   return { status: "ok", suggestedCount };
 }

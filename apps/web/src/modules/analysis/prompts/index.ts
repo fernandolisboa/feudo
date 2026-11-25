@@ -35,6 +35,4 @@ export const CURRENT_CATEGORY_SUGGESTER_PROMPT: CategorySuggesterPrompt = {
 export {
   categorySuggestionAnswerSchema,
   categorySuggestionOutputSchema,
-  type CategorySuggestionAnswer,
-  type CategorySuggestionOutput,
 } from "./category-suggester-v1";

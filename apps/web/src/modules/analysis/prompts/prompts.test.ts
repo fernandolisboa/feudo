@@ -128,6 +128,45 @@ describe("category suggester prompt v1", () => {
     expect(sha256(rendered)).toBe(RENDERED_TAXONOMY_SHA256);
   });
 
+  it("sends exactly the taxonomy and the per-transaction index, direction, amount and description, nothing else", () => {
+    const user = renderCategorySuggesterV1User({
+      subcategories: [
+        { id: "shopping.other", label: "Compras · Outras compras", kind: "variable" },
+        { id: "income.salary", label: "Renda · Salário", kind: "income" },
+      ],
+      items: [
+        {
+          index: 0,
+          type: "debit",
+          absoluteAmountCentavos: 12_345,
+          currency: "BRL",
+          description: "Padaria Estrela",
+        },
+        {
+          index: 1,
+          type: "credit",
+          absoluteAmountCentavos: 500_00,
+          currency: "BRL",
+          description: "Pix recebido",
+        },
+      ],
+    });
+
+    expect(user).toBe(
+      [
+        "Subcategories (id | label | kind):",
+        "- shopping.other | Compras · Outras compras | variable",
+        "- income.salary | Renda · Salário | income",
+        "",
+        "Transactions (index | direction | amount | description):",
+        "<transactions>",
+        "0 | debit | R$ 123,45 | Padaria Estrela",
+        "1 | credit | R$ 500,00 | Pix recebido",
+        "</transactions>",
+      ].join("\n"),
+    );
+  });
+
   it("hands the model every transaction's index, direction, formatted amount and sanitized description", () => {
     const user = renderCategorySuggesterV1User({
       subcategories: [
@@ -164,6 +203,40 @@ describe("category suggester prompt v1", () => {
     );
     expect(sanitizeDescriptionForPrompt("x".repeat(200))).toBe("x".repeat(140));
     expect(sanitizeDescriptionForPrompt("x".repeat(200))).toHaveLength(140);
+  });
+
+  it.each([
+    ["Pagamento CPF 123.456.789-00", "Pagamento CPF"],
+    ["Transferência CNPJ 12.345.678/9012-34 Ltda", "Transferência CNPJ Ltda"],
+    ["CPF mascarado ***.123.456-**", "CPF mascarado"],
+    ["CNPJ mascarado **.345.678/****-**", "CNPJ mascarado"],
+    ["Boleto 123456789012345 vencido", "Boleto vencido"],
+    ["Parcela 3/12 da compra", "Parcela 3/12 da compra"],
+    ["Loja 1234 compra do dia 01/02/2026", "Loja 1234 compra do dia 01/02/2026"],
+  ])("removes document-like digit sequences: %s", (input, expected) => {
+    expect(sanitizeDescriptionForPrompt(input)).toBe(expected);
+  });
+
+  it("replaces a description made only of a document-like sequence with a placeholder, never an empty field", () => {
+    const sanitized = sanitizeDescriptionForPrompt("123.456.789-00");
+
+    expect(sanitized).toBe("(descrição removida)");
+    expect(sanitized.length).toBeGreaterThan(0);
+
+    const user = renderCategorySuggesterV1User({
+      subcategories: [],
+      items: [
+        {
+          index: 0,
+          type: "debit",
+          absoluteAmountCentavos: 1_000,
+          currency: "BRL",
+          description: "123.456.789-00",
+        },
+      ],
+    });
+    expect(user).toContain("0 | debit | R$ 10,00 | (descrição removida)");
+    expect(user).not.toMatch(/\| *\n/);
   });
 
   it("constrains the output JSON schema's subcategory enum to exactly the ids sent, and nothing else", () => {

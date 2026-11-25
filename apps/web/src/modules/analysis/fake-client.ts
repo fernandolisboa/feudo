@@ -6,6 +6,30 @@ import {
   type CategorySuggestionAiRequest,
 } from "./ai-client";
 
+type SuggestionLine = { index: number; type: "credit" | "debit" };
+
+// Reads back the same text the real client sends (never a parallel copy of
+// the input): one "<index> | <credit|debit> | <amount> | <description>" line
+// per transaction, between the <transactions> tags category-suggester-v1.ts
+// renders.
+function parseTransactionLines(user: string): SuggestionLine[] {
+  const block = /<transactions>\n([\s\S]*?)\n<\/transactions>/.exec(user);
+  const lines = block?.[1];
+  if (lines === undefined) {
+    return [];
+  }
+  return lines
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [indexText, directionText] = line.split(" | ");
+      return {
+        index: Number(indexText),
+        type: directionText === "credit" ? "credit" : "debit",
+      };
+    });
+}
+
 // Preview and tests only (env.ts refuses it in production): a canned reading
 // that quotes the input's own first facts, so it always passes the number
 // validator and the panel can be exercised without a paid API key. The fake
@@ -40,12 +64,12 @@ export function createFakeAiClient(): AiClient {
       return Promise.resolve({
         status: "ok",
         output: {
-          suggestions: request.input.items.map((item) => ({
-            index: item.index,
+          suggestions: parseTransactionLines(request.user).map((line) => ({
+            index: line.index,
             subcategory:
-              item.index % 3 === 2
+              line.index % 3 === 2
                 ? null
-                : item.type === "credit"
+                : line.type === "credit"
                   ? "income.salary"
                   : "shopping.other",
           })),
