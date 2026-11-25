@@ -78,6 +78,7 @@ describe("guided categorization (integration)", () => {
         value: "product:food.groceries",
         label: "Alimentação · Mercado",
         reason: "1 transação com esta descrição já está em Alimentação · Mercado.",
+        source: "history",
       });
       expect(props.items[1]?.pattern).toBe("PADARIA DO ZE");
     });

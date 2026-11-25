@@ -385,6 +385,7 @@ describe("buildExportDocument (integration)", () => {
           householdId: householdA,
           monthlyFamily: "haiku",
           onDemandFamily: "opus",
+          categorySuggestionFamily: "haiku",
           hasKey: true,
           updatedAt: NOW.toISOString(),
         },
