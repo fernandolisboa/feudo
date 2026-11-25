@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
-import { bankTransaction } from "@/modules/sync/schema";
+import { bankAccount } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
   seedAccount,
@@ -11,21 +11,14 @@ import {
 } from "@/modules/sync/test/seed-synced-connection";
 import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users";
 
+import { computeLinkSuggestions } from "./link-suggestions";
 import { createTransactionLinkRepository } from "./transaction-link-repository";
 import { transactionLink } from "./schema";
+import { transactionIdFor } from "./test/transaction-id-for";
 
 import type { Database } from "@/platform/db/client";
 
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
+const NOW = new Date("2026-10-13T12:00:00.000Z");
 
 async function seedPair(
   db: Database,
@@ -167,13 +160,14 @@ describe("transaction link repository (integration)", () => {
   });
 
   it("stops listing a confirmed link once one of its accounts leaves the reading household", async () => {
-    await withTwoUsers(async ({ db, userA, householdB }) => {
+    await withTwoUsers(async ({ db, userA, userB, householdB }) => {
       const { debitTransactionId, creditTransactionId, accountId } = await seedPair(
         db,
         userA,
         householdScope(userA.session),
       );
       const repoA = createTransactionLinkRepository(householdScope(userA.session));
+      const repoB = createTransactionLinkRepository(householdScope(userB.session));
       expect(
         await repoA.confirm(
           db,
@@ -182,11 +176,62 @@ describe("transaction link repository (integration)", () => {
         ),
       ).toBe("ok");
       expect(await repoA.listConfirmedLinks(db)).toHaveLength(1);
+      expect(await repoB.listConfirmedLinks(db)).toEqual([]);
 
       await joinHousehold(db, userA.id, householdB);
       expect(await moveSeededAccount(db, userA, accountId, householdB)).toBe("ok");
 
       expect(await repoA.listConfirmedLinks(db)).toEqual([]);
+      expect(await repoB.listConfirmedLinks(db)).toEqual([
+        { debitTransactionId, creditTransactionId, kind: "offset" },
+      ]);
+    });
+  });
+
+  it("gives no suggestions and refuses confirm and undo for a transaction whose account is unassigned", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const { debitTransactionId, creditTransactionId, accountId } = await seedPair(
+        db,
+        userA,
+        householdScope(userA.session),
+      );
+      await db.update(bankAccount).set({ householdId: null }).where(eq(bankAccount.id, accountId));
+
+      const { suggestions } = await computeLinkSuggestions(userA.session, NOW);
+      expect(suggestions).toEqual([]);
+
+      const repoA = createTransactionLinkRepository(householdScope(userA.session));
+      expect(
+        await repoA.confirm(
+          db,
+          { debitTransactionId, creditTransactionId, kind: "offset" },
+          userA.id,
+        ),
+      ).toBe("not_found");
+      expect(await repoA.listConfirmedLinks(db)).toEqual([]);
+      expect(await repoA.undo(db, debitTransactionId)).toBe("not_found");
+    });
+  });
+
+  it("refuses to dismiss a pair whose legs sit in two different households, writing nothing", async () => {
+    await withTwoUsers(async ({ db, userA, userB }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [seedTransaction({ providerTransactionId: "cross-a-debit", type: "debit" })],
+      });
+      await seedSyncedConnection(db, userB, {
+        household: householdScope(userB.session),
+        itemId: "item-cross-b",
+        transactions: [
+          seedTransaction({ providerTransactionId: "cross-b-credit", type: "credit" }),
+        ],
+      });
+      const debitTransactionId = await transactionIdFor(db, "cross-a-debit");
+      const creditTransactionId = await transactionIdFor(db, "cross-b-credit");
+      const repoA = createTransactionLinkRepository(householdScope(userA.session));
+
+      expect(await repoA.dismiss(db, debitTransactionId, creditTransactionId)).toBe("not_found");
+      expect(await repoA.listDismissals(db)).toEqual([]);
     });
   });
 

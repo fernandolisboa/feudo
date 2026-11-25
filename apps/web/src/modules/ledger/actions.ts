@@ -24,13 +24,15 @@ import {
   confirmLink,
   dismissLink,
   undoLink,
+  type ConfirmAllLinksOutcome,
   type LinkOutcome,
 } from "./transaction-link-service";
 import {
   addSubcategoryFormSchema,
   categorizeTransactionFormSchema,
   changeKindFormSchema,
-  linkKindFormSchema,
+  confirmAllLinksFormSchema,
+  confirmLinkFormSchema,
   linkPairFormSchema,
   RULE_PATTERN_MAX_LENGTH,
   RULE_PATTERN_MIN_LENGTH,
@@ -57,7 +59,7 @@ function stateFor(outcome: CategorizeOutcome, success: string): ActionState {
   }
 }
 
-function stateForLink(outcome: LinkOutcome, success: string): ActionState {
+function stateForLink(outcome: LinkOutcome | ConfirmAllLinksOutcome, success: string): ActionState {
   switch (outcome.status) {
     case "ok":
       revalidateLedger();
@@ -225,9 +227,10 @@ export async function confirmLinkAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = linkPairFormSchema.safeParse({
+  const parsed = confirmLinkFormSchema.safeParse({
     debitTransactionId: formData.get("debitTransactionId"),
     creditTransactionId: formData.get("creditTransactionId"),
+    kind: formData.get("kind"),
   });
   if (!parsed.success) {
     return { status: "error", message: t.errors.invalidInput };
@@ -240,12 +243,16 @@ export async function confirmAllLinksAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = linkKindFormSchema.safeParse({ kind: formData.get("kind") });
+  const parsed = confirmAllLinksFormSchema.safeParse({
+    kind: formData.get("kind"),
+    debitTransactionIds: formData.get("debitTransactionIds"),
+    creditTransactionIds: formData.get("creditTransactionIds"),
+  });
   if (!parsed.success) {
     return { status: "error", message: t.errors.invalidInput };
   }
   const session = await requireHouseholdSession();
-  return stateForLink(await confirmAllLinks(parsed.data.kind, session, getDb()), t.links.confirmed);
+  return stateForLink(await confirmAllLinks(parsed.data, session, getDb()), t.links.confirmed);
 }
 
 export async function dismissLinkAction(

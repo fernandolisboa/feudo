@@ -1,31 +1,17 @@
 import { formatMoney } from "@feudo/core";
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 
 import { householdScope } from "@/modules/households";
 import { listFinancialDataAccessForExport } from "@/modules/audit";
-import { bankTransaction } from "@/modules/sync/schema";
 import { seedSyncedConnection, seedTransaction } from "@/modules/sync/test/seed-synced-connection";
 import { withTwoUsers } from "@/modules/sync/test/with-two-users";
 
 import { confirmLink } from "./transaction-link-service";
 import { getLinkSuggestionsProps } from "./link-suggestions-page-props";
+import { transactionIdFor } from "./test/transaction-id-for";
 import { t } from "./strings";
 
-import type { Database } from "@/platform/db/client";
-
 const NOW = new Date("2026-10-13T12:00:00.000Z");
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
 
 describe("getLinkSuggestionsProps (integration)", () => {
   it("lists each suggestion with its date, amount, account, both descriptions and kind in words, and records a transactions access", async () => {
@@ -102,6 +88,7 @@ describe("getLinkSuggestionsProps (integration)", () => {
         {
           debitTransactionId: item.debitTransactionId,
           creditTransactionId: item.creditTransactionId,
+          kind: item.kind,
         },
         userA.session,
         db,

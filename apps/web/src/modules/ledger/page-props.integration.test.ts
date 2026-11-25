@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 import { formatMoney } from "@feudo/core";
 
 import { interpolateAll } from "@/lib/interpolate";
 import { householdScope } from "@/modules/households";
-import { bankTransaction } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
   seedAccount,
@@ -17,19 +15,7 @@ import { createCategorizationRepository } from "./categorization-repository";
 import { getTransactionsPageProps } from "./page-props";
 import { t } from "./strings";
 import { DEFAULT_TRANSACTIONS_PAGE_SIZE } from "./href";
-
-import type { Database } from "@/platform/db/client";
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
+import { transactionIdFor } from "./test/transaction-id-for";
 
 // 01:30 UTC on 1 October is still 30 September in America/Sao_Paulo, the
 // default time zone of a household with no settings row.

@@ -9,10 +9,16 @@ import type { HouseholdSession } from "@/modules/households";
 import { householdScope } from "@/modules/households";
 import { getDb } from "@/platform/db/client";
 
-import { readUncategorizedWindow } from "./guided-categorization";
+import { readCategorizationWindow } from "./guided-categorization";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
 import { createTransactionLinkRepository } from "./transaction-link-repository";
 
+// row.internalTransfer is null for a transferMark of false (resolve-ledger.ts
+// B2: false only means "do not pair this as a transfer," it still leaves the
+// transaction eligible for a link), but a transaction the household already
+// told Feudo something about should never be offered as a *new* link
+// suggestion either way: isInternalTransfer here means "has an explicit
+// mark," true or false, not "resolved as a transfer."
 function toLinkable(row: ResolvedLedgerRow): LinkableTransaction {
   return {
     id: row.id,
@@ -24,7 +30,7 @@ function toLinkable(row: ResolvedLedgerRow): LinkableTransaction {
     type: row.type,
     subcategory: row.categorization?.subcategory ?? null,
     kind: row.kind,
-    isInternalTransfer: row.internalTransfer !== null,
+    isInternalTransfer: row.transferMark !== null,
     isLinked: row.link !== null,
   };
 }
@@ -36,7 +42,7 @@ export type LinkSuggestionCandidates = {
 
 // The one read behind both the Vínculos tab and every write that confirms
 // or confirms-all a link: the same window and currency guided categorization
-// reads (readUncategorizedWindow), mapped into packages/core's
+// reads (readCategorizationWindow), mapped into packages/core's
 // LinkableTransaction and run through the one pure suggestLinks function,
 // alongside this household's own dismissals. A write that re-reads this
 // right before confirming is re-validating the pair against the live
@@ -47,7 +53,7 @@ export async function computeLinkSuggestions(
 ): Promise<LinkSuggestionCandidates> {
   const [{ rows }, dismissals]: [{ rows: ResolvedLedgerRow[] }, DismissedLinkPair[]] =
     await Promise.all([
-      readUncategorizedWindow(session, now),
+      readCategorizationWindow(session, now),
       createTransactionLinkRepository(householdScope(session)).listDismissals(getDb()),
     ]);
   const suggestions = suggestLinks(rows.map(toLinkable), dismissals);

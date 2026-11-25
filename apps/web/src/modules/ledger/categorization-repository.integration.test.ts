@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 
 import { member } from "@/modules/auth/schema";
 import { householdScope } from "@/modules/households";
-import { bankTransaction } from "@/modules/sync/schema";
 import {
   moveSeededAccount,
   seedSyncedConnection,
@@ -14,22 +13,12 @@ import { joinHousehold, withTwoUsers } from "@/modules/sync/test/with-two-users"
 import { createCategorizationRepository } from "./categorization-repository";
 import { createHouseholdLedgerRepository } from "./repository";
 import { categorizationDeferral, categorizationRule, transactionCategorization } from "./schema";
+import { transactionIdFor } from "./test/transaction-id-for";
 
 import type { Database } from "@/platform/db/client";
 
 const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
 const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
 
 // Runs sideEffect right after the first read through db resolves, before the
 // caller's next statement: a deterministic stand-in for another request

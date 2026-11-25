@@ -186,7 +186,45 @@ export const linkPairFormSchema = z.object({
 });
 export type LinkPairFormInput = z.infer<typeof linkPairFormSchema>;
 
-export const linkKindFormSchema = z.object({
-  kind: z.enum(["offset", "funding"]),
+const linkKindSchema = z.enum(["offset", "funding"]);
+
+// The kind travels only as the member's own expectation of what they are
+// confirming (ticket B addendum): confirmLink still re-derives the kind from
+// the live suggestion list and refuses when it no longer matches, so a
+// stale or crafted kind can shift nothing it persists.
+export const confirmLinkFormSchema = z.object({
+  debitTransactionId: idSchema,
+  creditTransactionId: idSchema,
+  kind: linkKindSchema,
 });
-export type LinkKindFormInput = z.infer<typeof linkKindFormSchema>;
+export type ConfirmLinkFormInput = z.infer<typeof confirmLinkFormSchema>;
+
+export const MAX_CONFIRM_ALL_LINKS_PAIRS = 200;
+
+const transactionIdListSchema = z
+  .string()
+  .transform((value) => value.split(",").filter((part) => part.length > 0))
+  .pipe(z.array(idSchema).min(1).max(MAX_CONFIRM_ALL_LINKS_PAIRS));
+
+// The displayed pairs travel as two same-length lists (a form field only
+// ever carries a flat list of strings); confirmAllLinks zips them back into
+// pairs and confirms only their intersection with the live suggestion list
+// for that kind, never the whole list the server happens to hold (review
+// round 1, finding 2).
+export const confirmAllLinksFormSchema = z
+  .object({
+    kind: linkKindSchema,
+    debitTransactionIds: transactionIdListSchema,
+    creditTransactionIds: transactionIdListSchema,
+  })
+  .refine((data) => data.debitTransactionIds.length === data.creditTransactionIds.length, {
+    message: "mismatched pairs",
+  })
+  .transform((data) => ({
+    kind: data.kind,
+    pairs: data.debitTransactionIds.flatMap((debitTransactionId, index) => {
+      const creditTransactionId = data.creditTransactionIds[index];
+      return creditTransactionId === undefined ? [] : [{ debitTransactionId, creditTransactionId }];
+    }),
+  }));
+export type ConfirmAllLinksFormInput = z.infer<typeof confirmAllLinksFormSchema>;

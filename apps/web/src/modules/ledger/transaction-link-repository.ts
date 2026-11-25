@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import type { DismissedLinkPair, TransactionLink, TransactionLinkKind } from "@feudo/core";
 
 import { bankAccount, bankTransaction } from "@/modules/sync/schema";
+import { hasSqlState } from "@/platform/db/sql-state";
 
 import { transactionLink, transactionLinkDismissal } from "./schema";
 
@@ -11,6 +12,8 @@ import type { HouseholdScope } from "@/modules/households";
 import type { DatabaseOrTransaction } from "@/platform/db/client";
 
 type Database = DatabaseOrTransaction;
+
+const POSTGRES_UNIQUE_VIOLATION = "23505";
 
 export type ConfirmLinkInput = {
   debitTransactionId: string;
@@ -137,8 +140,11 @@ export function createTransactionLinkRepository(scope: HouseholdScope) {
         .select(values)
         .returning({ id: transactionLink.id });
       return written.length > 0 ? "ok" : "not_found";
-    } catch {
-      return "not_found";
+    } catch (error) {
+      if (hasSqlState(error, POSTGRES_UNIQUE_VIOLATION)) {
+        return "not_found";
+      }
+      throw error;
     }
   }
 

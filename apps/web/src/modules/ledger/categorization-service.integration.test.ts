@@ -15,22 +15,10 @@ import {
 } from "./categorization-service";
 import { createCategorizationRepository } from "./categorization-repository";
 import { readHouseholdLedger } from "./ledger-read";
-
-import type { Database } from "@/platform/db/client";
+import { transactionIdFor } from "./test/transaction-id-for";
 
 const UNKNOWN_ID = "00000000-0000-0000-0000-000000000000";
 const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30" };
-
-async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
-  const [row] = await db
-    .select({ id: bankTransaction.id })
-    .from(bankTransaction)
-    .where(eq(bankTransaction.providerTransactionId, providerTransactionId));
-  if (!row) {
-    throw new Error(`seed did not create transaction ${providerTransactionId}`);
-  }
-  return row.id;
-}
 
 describe("categorizeTransaction (integration)", () => {
   it("sets the manual choice and saves the rule together when createRule is on", async () => {

@@ -10,6 +10,8 @@ import {
   user,
 } from "@/modules/auth/schema";
 import { householdSettings } from "@/modules/households/schema";
+import { transactionLink, transactionLinkDismissal } from "@/modules/ledger/schema";
+import { transactionIdFor } from "@/modules/ledger/test/transaction-id-for";
 import { pushSubscription } from "@/modules/notifications/schema";
 import { seedPushDevice } from "@/modules/notifications/test/fake-push-sender";
 import {
@@ -271,6 +273,21 @@ describe("account deletion (integration)", () => {
   it("hard-deletes the user, their connections, accounts and transactions, passes ownership on and erases the household they were alone in", async () => {
     await withTestDb(async (db) => {
       const { ana, bia, caio, casa, anaSolo, anaConnection, biaConnection } = await seedCasa(db);
+      const a1 = await transactionIdFor(db, "a1");
+      const a2 = await transactionIdFor(db, "a2");
+      // Only the cascade matters here, not whether a1/a2 are a valid link
+      // shape; inserting directly skips the repository's own shape check.
+      await db.insert(transactionLink).values({
+        debitTransactionId: a1,
+        creditTransactionId: a2,
+        kind: "offset",
+      });
+      await db.insert(transactionLinkDismissal).values({
+        householdId: casa,
+        debitTransactionId: a1,
+        creditTransactionId: a2,
+      });
+
       await requestAccountDeletion(ana.session, db, deps(recordingSender().sender));
 
       expect(await purgeAccount(db, ana.id, GRACE_END)).toBe("purged");
@@ -292,6 +309,8 @@ describe("account deletion (integration)", () => {
           .from(bankTransaction)
           .where(inArray(bankTransaction.accountId, anaAccountIds)),
       ).toEqual([]);
+      expect(await db.select().from(transactionLink)).toEqual([]);
+      expect(await db.select().from(transactionLinkDismissal)).toEqual([]);
 
       const casaMembers = await db.select().from(member).where(eq(member.organizationId, casa));
       expect(
