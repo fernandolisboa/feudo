@@ -11,11 +11,17 @@ vi.mock("../actions", () => ({
 import { interpolate } from "@/lib/interpolate";
 import type { LinkSuggestionRow } from "../link-suggestions-page-props";
 import { t } from "../strings";
+import { MAX_CONFIRM_ALL_LINKS_PAIRS } from "../validation";
 import { TransactionLinksView } from "./transaction-links-view";
 
 afterEach(() => {
   cleanup();
 });
+
+function formField(data: FormData, name: string): string {
+  const value = data.get(name);
+  return typeof value === "string" ? value : "";
+}
 
 function suggestion(overrides: Partial<LinkSuggestionRow> = {}): LinkSuggestionRow {
   return {
@@ -139,5 +145,47 @@ describe("TransactionLinksView", () => {
     const fundingData = new FormData(fundingForm);
     expect(fundingData.get("debitTransactionIds")).toBe("d3,d4");
     expect(fundingData.get("creditTransactionIds")).toBe("c3,c4");
+  });
+
+  it("sends every suggested pair of the kind, not only the table's first page, matching the button's count", () => {
+    const pageCrossingCount = 25;
+    const items = Array.from({ length: pageCrossingCount }, (_unused, index) =>
+      suggestion({
+        debitTransactionId: `d${String(index)}`,
+        creditTransactionId: `c${String(index)}`,
+      }),
+    );
+    render(<TransactionLinksView items={items} pendingCount={items.length} />);
+
+    const button = screen.getByRole("button", {
+      name: interpolate(t.links.confirmAllOffset, "{count}", String(pageCrossingCount)),
+    });
+    const form = button.closest("form");
+    if (!form) throw new Error("form missing");
+    const data = new FormData(form);
+    expect(formField(data, "debitTransactionIds").split(",")).toHaveLength(pageCrossingCount);
+    expect(formField(data, "creditTransactionIds").split(",")).toHaveLength(pageCrossingCount);
+  });
+
+  it("caps Vincular todos at MAX_CONFIRM_ALL_LINKS_PAIRS, sending exactly that many of the first-displayed pairs", () => {
+    const overCapCount = MAX_CONFIRM_ALL_LINKS_PAIRS + 1;
+    const items = Array.from({ length: overCapCount }, (_unused, index) =>
+      suggestion({
+        debitTransactionId: `d${String(index)}`,
+        creditTransactionId: `c${String(index)}`,
+      }),
+    );
+    render(<TransactionLinksView items={items} pendingCount={items.length} />);
+
+    const button = screen.getByRole("button", {
+      name: interpolate(t.links.confirmAllOffset, "{count}", String(MAX_CONFIRM_ALL_LINKS_PAIRS)),
+    });
+    const form = button.closest("form");
+    if (!form) throw new Error("form missing");
+    const data = new FormData(form);
+    const debitIds = formField(data, "debitTransactionIds").split(",");
+    expect(debitIds).toHaveLength(MAX_CONFIRM_ALL_LINKS_PAIRS);
+    expect(debitIds[0]).toBe("d0");
+    expect(debitIds.at(-1)).toBe(`d${String(MAX_CONFIRM_ALL_LINKS_PAIRS - 1)}`);
   });
 });

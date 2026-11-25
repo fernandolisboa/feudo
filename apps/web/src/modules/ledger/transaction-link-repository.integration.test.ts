@@ -195,6 +195,10 @@ describe("transaction link repository (integration)", () => {
         userA,
         householdScope(userA.session),
       );
+
+      const { suggestions: before } = await computeLinkSuggestions(userA.session, NOW);
+      expect(before).toEqual([{ debitTransactionId, creditTransactionId, kind: "funding" }]);
+
       await db.update(bankAccount).set({ householdId: null }).where(eq(bankAccount.id, accountId));
 
       const { suggestions } = await computeLinkSuggestions(userA.session, NOW);

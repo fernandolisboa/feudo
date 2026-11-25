@@ -78,6 +78,37 @@ const sameBucketTransactionsArb: fc.Arbitrary<LinkableTransaction[]> = fc
     })),
   );
 
+// Pinning isInternalTransfer/isLinked/subcategory to the values that keep a
+// pair a candidate edge at all, on top of sameBucketTransactionsArb's own
+// one-bucket density: with the full account/day/currency/amount spread,
+// randomizing those three (as baseTransactionArb does) or spreading
+// transactions across buckets (as transactionsArb does) both leave too few
+// candidate edges sharing a bucket for compareEdges's known-vs-unknown gap
+// bug to ever surface, so this property passed against the old comparator
+// regardless of which of those two was pinned alone.
+const orderIndependentTransactionsArb: fc.Arbitrary<LinkableTransaction[]> = fc
+  .array(
+    fc.record({
+      occurredAt: occurredAtArb,
+      type: fc.constantFrom<TransactionDirection>("credit", "debit"),
+      kind: fc.constantFrom(...KINDS),
+    }),
+    { minLength: 2, maxLength: 8 },
+  )
+  .map((items) =>
+    items.map((item, index) => ({
+      ...item,
+      id: `t${String(index)}`,
+      accountId: "acc-1",
+      date: "2026-09-25",
+      amountCentavos: 5000,
+      currency: "BRL",
+      subcategory: null,
+      isInternalTransfer: false,
+      isLinked: false,
+    })),
+  );
+
 function sameSubcategory(a: SubcategoryRef | null, b: SubcategoryRef | null): boolean {
   if (a === null || b === null) return false;
   return a.type === b.type && a.id === b.id;
@@ -101,7 +132,7 @@ describe("suggestLinks property tests", () => {
 
   it("is independent of the input order", () => {
     fc.assert(
-      fc.property(transactionsArb, dismissedArb, (transactions, dismissed) => {
+      fc.property(orderIndependentTransactionsArb, dismissedArb, (transactions, dismissed) => {
         const forward = suggestLinks(transactions, dismissed);
         const reversed = suggestLinks([...transactions].reverse(), dismissed);
         expect(reversed).toEqual(forward);

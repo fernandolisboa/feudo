@@ -19,7 +19,7 @@ export type { OverviewPageProps } from "./overview-page-props";
 export { overviewTabOf } from "./validation";
 export type { OverviewSearchParams, OverviewTab } from "./validation";
 export { categorizeTabOf } from "./validation";
-export type { CategorizeSearchParams, CategorizeTab } from "./validation";
+export type { CategorizeSearchParams } from "./validation";
 export { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 export { getLedgerAnalysisFacts } from "./analysis-facts";
 export { getLedgerExportAnnotations } from "./export";
@@ -36,4 +36,3 @@ export {
   getLinkSuggestionsPendingCount,
   getLinkSuggestionsProps,
 } from "./link-suggestions-page-props";
-export type { LinkSuggestionRow, LinkSuggestionsProps } from "./link-suggestions-page-props";

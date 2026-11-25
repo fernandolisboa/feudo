@@ -44,7 +44,12 @@ beforeEach(() => {
 
 describe("confirmAllLinksAction feedback", () => {
   it("reports every pair linked when all requested pairs are confirmed", async () => {
-    confirmAllLinksMock.mockResolvedValue({ status: "ok", confirmedCount: 2, requestedCount: 2 });
+    confirmAllLinksMock.mockResolvedValue({
+      status: "ok",
+      confirmedCount: 2,
+      requestedCount: 2,
+      interrupted: false,
+    });
 
     const result = await confirmAllLinksAction({ status: "idle" }, formDataWith(BASE_FIELDS));
 
@@ -55,7 +60,12 @@ describe("confirmAllLinksAction feedback", () => {
   });
 
   it("reports a single pair with the singular copy when only one is requested and confirmed", async () => {
-    confirmAllLinksMock.mockResolvedValue({ status: "ok", confirmedCount: 1, requestedCount: 1 });
+    confirmAllLinksMock.mockResolvedValue({
+      status: "ok",
+      confirmedCount: 1,
+      requestedCount: 1,
+      interrupted: false,
+    });
 
     const result = await confirmAllLinksAction(
       { status: "idle" },
@@ -66,13 +76,34 @@ describe("confirmAllLinksAction feedback", () => {
   });
 
   it("names how many of how many landed, and that the rest are gone, on a partial confirm", async () => {
-    confirmAllLinksMock.mockResolvedValue({ status: "ok", confirmedCount: 1, requestedCount: 2 });
+    confirmAllLinksMock.mockResolvedValue({
+      status: "ok",
+      confirmedCount: 1,
+      requestedCount: 2,
+      interrupted: false,
+    });
 
     const result = await confirmAllLinksAction({ status: "idle" }, formDataWith(BASE_FIELDS));
 
     expect(result).toEqual({
       status: "success",
       message: t.links.confirmedPartial.replace("{confirmed}", "1").replace("{requested}", "2"),
+    });
+  });
+
+  it("tells the member to try again for the rest, not that they are gone, when the batch was interrupted", async () => {
+    confirmAllLinksMock.mockResolvedValue({
+      status: "ok",
+      confirmedCount: 1,
+      requestedCount: 2,
+      interrupted: true,
+    });
+
+    const result = await confirmAllLinksAction({ status: "idle" }, formDataWith(BASE_FIELDS));
+
+    expect(result).toEqual({
+      status: "success",
+      message: t.links.confirmedInterrupted.replace("{confirmed}", "1").replace("{requested}", "2"),
     });
   });
 

@@ -376,6 +376,7 @@ const en = {
     confirmedMany: "{count} pairs linked.",
     confirmedPartial:
       "{confirmed} of {requested} pairs linked. The others are no longer available.",
+    confirmedInterrupted: "{confirmed} of {requested} pairs linked. Try again for the rest.",
     confirmed: "Link confirmed.",
     dismissed: "Marked as not a link.",
     error: {
@@ -804,6 +805,8 @@ const ptBR = {
     confirmedMany: "{count} pares vinculados.",
     confirmedPartial:
       "{confirmed} de {requested} pares vinculados. Os outros não estão mais disponíveis.",
+    confirmedInterrupted:
+      "{confirmed} de {requested} pares vinculados. Tente de novo para os demais.",
     confirmed: "Vínculo confirmado.",
     dismissed: "Sugestão de vínculo descartada.",
     error: {

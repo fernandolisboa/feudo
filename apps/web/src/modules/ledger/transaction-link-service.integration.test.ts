@@ -245,7 +245,12 @@ describe("transaction link service (integration)", () => {
         db,
         NOW,
       );
-      expect(outcome).toEqual({ status: "ok", confirmedCount: 2, requestedCount: 2 });
+      expect(outcome).toEqual({
+        status: "ok",
+        confirmedCount: 2,
+        requestedCount: 2,
+        interrupted: false,
+      });
 
       const { suggestions } = await computeLinkSuggestions(userA.session, NOW);
       expect(suggestions).toEqual([
@@ -474,7 +479,12 @@ describe("transaction link service (integration)", () => {
         db,
         NOW,
       );
-      expect(outcome).toEqual({ status: "ok", confirmedCount: 1, requestedCount: 2 });
+      expect(outcome).toEqual({
+        status: "ok",
+        confirmedCount: 1,
+        requestedCount: 2,
+        interrupted: false,
+      });
 
       const { suggestions } = await computeLinkSuggestions(userA.session, NOW);
       expect(suggestions).toEqual([

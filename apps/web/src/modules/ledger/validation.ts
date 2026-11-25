@@ -209,7 +209,10 @@ const transactionIdListSchema = z
 // The displayed pairs travel as two same-length lists (a form field only
 // ever carries a flat list of strings); confirmAllLinks zips them back into
 // pairs and confirms only their intersection with the live suggestion list
-// for that kind, never the whole list the server happens to hold.
+// for that kind, never the whole list the server happens to hold. A pair
+// repeated in the posted lists (a crafted form, a double-submitted field)
+// de-duplicates here, before any database work, so requestedCount always
+// counts distinct pairs and the service never issues the same insert twice.
 export const confirmAllLinksFormSchema = z
   .object({
     kind: linkKindSchema,
@@ -219,11 +222,17 @@ export const confirmAllLinksFormSchema = z
   .refine((data) => data.debitTransactionIds.length === data.creditTransactionIds.length, {
     message: "mismatched pairs",
   })
-  .transform((data) => ({
-    kind: data.kind,
-    pairs: data.debitTransactionIds.flatMap((debitTransactionId, index) => {
+  .transform((data) => {
+    const seen = new Set<string>();
+    const pairs: { debitTransactionId: string; creditTransactionId: string }[] = [];
+    data.debitTransactionIds.forEach((debitTransactionId, index) => {
       const creditTransactionId = data.creditTransactionIds[index];
-      return creditTransactionId === undefined ? [] : [{ debitTransactionId, creditTransactionId }];
-    }),
-  }));
+      if (creditTransactionId === undefined) return;
+      const key = `${debitTransactionId}:${creditTransactionId}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      pairs.push({ debitTransactionId, creditTransactionId });
+    });
+    return { kind: data.kind, pairs };
+  });
 export type ConfirmAllLinksFormInput = z.infer<typeof confirmAllLinksFormSchema>;

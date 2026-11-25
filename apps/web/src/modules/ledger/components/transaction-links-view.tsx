@@ -7,6 +7,7 @@ import type { PageSize } from "@/lib/page-size";
 import { confirmAllLinksAction, confirmLinkAction, dismissLinkAction } from "../actions";
 import type { LinkSuggestionRow, LinkSuggestionsProps } from "../link-suggestions-page-props";
 import { t } from "../strings";
+import { MAX_CONFIRM_ALL_LINKS_PAIRS } from "../validation";
 import { FormActionButton } from "./form-action-button";
 
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
@@ -41,9 +42,14 @@ export function TransactionLinksView({ items, pendingCount }: LinkSuggestionsPro
     return header;
   }
 
+  // "Vincular todos" acts on every suggested pair of the chosen kind, across
+  // every page of the table, not only the one the member is looking at
+  // (CONTEXT.md, Link suggestion); capped to MAX_CONFIRM_ALL_LINKS_PAIRS, the
+  // same bound confirmAllLinksFormSchema enforces, so the button can never
+  // post more pairs than the form accepts.
   const byKind = {
-    offset: items.filter((item) => item.kind === "offset"),
-    funding: items.filter((item) => item.kind === "funding"),
+    offset: items.filter((item) => item.kind === "offset").slice(0, MAX_CONFIRM_ALL_LINKS_PAIRS),
+    funding: items.filter((item) => item.kind === "funding").slice(0, MAX_CONFIRM_ALL_LINKS_PAIRS),
   };
 
   return (

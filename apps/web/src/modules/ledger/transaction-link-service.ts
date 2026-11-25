@@ -16,7 +16,7 @@ import type {
 export type LinkOutcome = SimpleOutcome<"ok" | "not_found" | "failed">;
 
 export type ConfirmAllLinksOutcome = Outcome<
-  { confirmedCount: number; requestedCount: number },
+  { confirmedCount: number; requestedCount: number; interrupted: boolean },
   "not_found" | "failed"
 >;
 
@@ -66,9 +66,15 @@ export async function confirmLink(
 // posted) are confirmed, each intersected against the live suggestion list
 // for that kind first, so a pair that arrived after the member looked never
 // rides along. Each surviving pair goes through the same repository
-// re-check as a single confirm. "ok" once at least one lands; nothing left
-// to confirm (the list moved under the member, or they double-pressed)
-// refuses with "not_found" rather than silently doing nothing.
+// re-check as a single confirm. An unexpected error from one pair's confirm
+// (not the ordinary 23505 refusal, which confirm already turns into
+// "not_found") stops the loop there rather than letting the next pair mask
+// it: whatever confirmed before the interruption still counts, reported
+// with interrupted: true, so the member knows to try again for the rest
+// instead of re-confirming pairs that already landed. "ok" once at least
+// one lands; nothing left to confirm (the list moved under the member, they
+// double-pressed, or the first pair itself failed unexpectedly) refuses
+// with "not_found" or "failed" exactly as a single confirm would.
 export async function confirmAllLinks(
   input: ConfirmAllLinksFormInput,
   session: HouseholdSession,
@@ -91,14 +97,20 @@ export async function confirmAllLinks(
     }
     const repository = createTransactionLinkRepository(householdScope(session));
     let confirmedCount = 0;
+    let interrupted = false;
     for (const suggestion of matching) {
-      const status = await repository.confirm(db, suggestion, session.userId);
-      if (status === "ok") confirmedCount += 1;
+      try {
+        const status = await repository.confirm(db, suggestion, session.userId);
+        if (status === "ok") confirmedCount += 1;
+      } catch {
+        interrupted = true;
+        break;
+      }
     }
     if (confirmedCount === 0) {
-      return { status: "not_found" };
+      return { status: interrupted ? "failed" : "not_found" };
     }
-    return { status: "ok", confirmedCount, requestedCount: input.pairs.length };
+    return { status: "ok", confirmedCount, requestedCount: input.pairs.length, interrupted };
   } catch {
     return { status: "failed" };
   }

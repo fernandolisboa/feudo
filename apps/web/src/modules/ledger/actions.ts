@@ -71,7 +71,17 @@ function stateForLink(outcome: LinkOutcome, success: string): ActionState {
   }
 }
 
-function confirmAllLinksMessage(confirmedCount: number, requestedCount: number): string {
+function confirmAllLinksMessage(
+  confirmedCount: number,
+  requestedCount: number,
+  interrupted: boolean,
+): string {
+  if (interrupted) {
+    return interpolateAll(t.links.confirmedInterrupted, {
+      confirmed: String(confirmedCount),
+      requested: String(requestedCount),
+    });
+  }
   if (confirmedCount < requestedCount) {
     return interpolateAll(t.links.confirmedPartial, {
       confirmed: String(confirmedCount),
@@ -89,7 +99,11 @@ function stateForConfirmAllLinks(outcome: ConfirmAllLinksOutcome): ActionState {
       revalidateLedger();
       return {
         status: "success",
-        message: confirmAllLinksMessage(outcome.confirmedCount, outcome.requestedCount),
+        message: confirmAllLinksMessage(
+          outcome.confirmedCount,
+          outcome.requestedCount,
+          outcome.interrupted,
+        ),
       };
     case "not_found":
       return { status: "error", message: t.errors.linksNotFound };

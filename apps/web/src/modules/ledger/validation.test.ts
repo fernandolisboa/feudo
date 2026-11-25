@@ -112,6 +112,22 @@ describe("confirmAllLinksFormSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("de-duplicates a pair repeated in the posted lists, so requestedCount counts it once", () => {
+    const parsed = confirmAllLinksFormSchema.parse({
+      kind: "offset",
+      debitTransactionIds: "d1,d2,d1",
+      creditTransactionIds: "c1,c2,c1",
+    });
+
+    expect(parsed).toEqual({
+      kind: "offset",
+      pairs: [
+        { debitTransactionId: "d1", creditTransactionId: "c1" },
+        { debitTransactionId: "d2", creditTransactionId: "c2" },
+      ],
+    });
+  });
 });
 
 describe("month search params bounds", () => {
