@@ -2,13 +2,30 @@ const DIACRITIC_MARKS = /[̀-ͯ]/g;
 const NON_ALPHANUMERIC_RUN = /[^A-Z0-9]+/g;
 const NUMERIC_TOKEN = /^[0-9]+$/;
 
+// One card issuer glues its instalment counter to the truncated merchant
+// name ("SOME MERCHANTPARC10/12", normalized to "SOME MERCHANTPARC10 12"
+// before this runs), so every instalment of the same purchase would
+// otherwise normalize to a different text and never group under one rule or
+// suggestion. Anchored at the end only, and only with exactly two digits on
+// each side, so a merchant name that happens to contain "PARC" elsewhere, or
+// followed by a differently shaped number, is left alone. The total ("/12")
+// is optional because a pattern derived from this text before this rule
+// existed already dropped it as a purely numeric token, leaving only the
+// counter ("SOME STORE PARC03") on the stored pattern.
+const TRAILING_INSTALLMENT_MARKER = /PARC[0-9]{2}(?: [0-9]{2})?$/;
+
+export function stripInstallmentMarker(text: string): string {
+  return text.replace(TRAILING_INSTALLMENT_MARKER, "").trim();
+}
+
 export function normalizeDescription(text: string): string {
-  return text
+  const normalized = text
     .normalize("NFD")
     .replace(DIACRITIC_MARKS, "")
     .toUpperCase()
     .replace(NON_ALPHANUMERIC_RUN, " ")
     .trim();
+  return stripInstallmentMarker(normalized);
 }
 
 // matchesPattern requires a contiguous token run, so the pattern proposed

@@ -225,6 +225,28 @@ describe("orderRules", () => {
   });
 });
 
+describe("categorize with a stored rule pattern carrying an old installment marker", () => {
+  it("still matches every installment of the same purchase", () => {
+    const legacyRule = rule({
+      id: "installments",
+      pattern: "SOME STORE PARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+    });
+
+    for (const installment of ["04/10", "05/10", "10/10"]) {
+      const result = categorize(
+        transaction({ description: `Some Store PARC${installment}` }),
+        orderRules([legacyRule]),
+      );
+      expect(result).toEqual({
+        subcategory: { type: "product", id: "shopping.other" },
+        source: "rule",
+        ruleId: "installments",
+      });
+    }
+  });
+});
+
 describe("categorize with realistic Pluggy-shaped fixtures", () => {
   it("categorizes a PIX transfer description via a household rule", () => {
     const description = "PIX ENVIADO CONDOMINIO RESIDENCIAL";

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { matchesPattern, normalizeDescription, rulePatternFromDescription } from "./description";
+import {
+  matchesPattern,
+  normalizeDescription,
+  rulePatternFromDescription,
+  stripInstallmentMarker,
+} from "./description";
 
 describe("normalizeDescription", () => {
   it("strips diacritics, uppercases and collapses punctuation to single spaces", () => {
@@ -14,6 +19,42 @@ describe("normalizeDescription", () => {
 
   it("returns an empty string for input with no alphanumeric characters", () => {
     expect(normalizeDescription("--- ***")).toBe("");
+  });
+
+  it("strips a trailing installment marker given as its own token", () => {
+    expect(normalizeDescription("Some Store PARC03/10")).toBe("SOME STORE");
+  });
+
+  it("strips a trailing installment marker glued to the truncated merchant name", () => {
+    expect(normalizeDescription("Some MerchantPARC10/12")).toBe("SOME MERCHANT");
+  });
+
+  it("leaves a description with no installment marker unchanged", () => {
+    expect(normalizeDescription("Padaria Estrela")).toBe("PADARIA ESTRELA");
+  });
+
+  it("does not strip a PARC-like run that is not exactly two digits on each side", () => {
+    expect(normalizeDescription("Loja PARC031/100")).toBe("LOJA PARC031 100");
+    expect(normalizeDescription("Loja PARC3/1")).toBe("LOJA PARC3 1");
+  });
+
+  it("does not strip an installment marker that is not at the end of the description", () => {
+    expect(normalizeDescription("Loja PARC03/10 taxa extra")).toBe("LOJA PARC03 10 TAXA EXTRA");
+  });
+});
+
+describe("stripInstallmentMarker", () => {
+  it("strips a trailing installment marker with no following digit pair, as an old stored pattern has it", () => {
+    expect(stripInstallmentMarker("SOME STORE PARC03")).toBe("SOME STORE");
+    expect(stripInstallmentMarker("SOME MERCHANTPARC10")).toBe("SOME MERCHANT");
+  });
+
+  it("is idempotent", () => {
+    expect(stripInstallmentMarker(stripInstallmentMarker("SOME STORE PARC03"))).toBe("SOME STORE");
+  });
+
+  it("leaves a pattern with no installment marker unchanged", () => {
+    expect(stripInstallmentMarker("SOME STORE")).toBe("SOME STORE");
   });
 });
 

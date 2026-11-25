@@ -1,5 +1,5 @@
 import { PRODUCT_DEFAULT_RULES, type ProductDefaultRule } from "./default-rules";
-import { matchesPattern, normalizeDescription } from "./description";
+import { matchesPattern, normalizeDescription, stripInstallmentMarker } from "./description";
 import { mapProviderCategory } from "./provider-mapping";
 import { sameAmountGapCentavos, type AmountInCurrency } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
@@ -61,13 +61,15 @@ export function orderRules(rules: readonly CategorizationRule[]): Categorization
   });
 }
 
+// More tokens first (UBER EATS before UBER); a tie in token count keeps the
+// rules in the order PRODUCT_DEFAULT_RULES declares them (Array.prototype.sort
+// is stable), so a short, unambiguous marker such as IOF or FARMACIA can be
+// declared ahead of a longer merchant name it must still win against on a
+// shared statement line, rather than always losing to whichever pattern
+// happens to be longer.
 const ORDERED_PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
   ...PRODUCT_DEFAULT_RULES,
-].sort((a, b) => {
-  const tokensDelta = tokenCount(b.pattern) - tokenCount(a.pattern);
-  if (tokensDelta !== 0) return tokensDelta;
-  return b.pattern.length - a.pattern.length;
-});
+].sort((a, b) => tokenCount(b.pattern) - tokenCount(a.pattern));
 
 function directionMatches(
   ruleDirection: TransactionDirection | null,
@@ -84,10 +86,14 @@ function householdRuleFor(
   normalizedDescription: string,
   orderedRules: readonly CategorizationRule[],
 ): CategorizationRule | undefined {
+  // A rule's pattern may have been stored by an older release that normalized
+  // it before the trailing installment marker was stripped ("SOME STORE
+  // PARC03"); stripping it again here, idempotently, keeps it matching every
+  // instalment's current description without touching the stored row.
   const matching = orderedRules.filter(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
-      matchesPattern(normalizedDescription, rule.pattern),
+      matchesPattern(normalizedDescription, stripInstallmentMarker(rule.pattern)),
   );
 
   let nearest: { rule: CategorizationRule; gap: number } | null = null;

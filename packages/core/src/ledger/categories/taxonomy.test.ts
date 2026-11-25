@@ -73,4 +73,14 @@ describe("productSubcategory", () => {
   it("throws for an unknown id", () => {
     expect(() => productSubcategory("unknown.unknown" as never)).toThrow();
   });
+
+  it.each([
+    ["investments.assets", "investments", "transfer"],
+    ["income.profit-distribution", "income", "income"],
+    ["housing.domestic-services", "housing", "variable"],
+    ["other.family-support", "other", "variable"],
+    ["leisure.betting", "leisure", "variable"],
+  ] as const)("returns the subcategory shipped for %s", (id, categoryId, kind) => {
+    expect(productSubcategory(id)).toEqual({ id, categoryId, kind });
+  });
 });
