@@ -6,6 +6,10 @@ export type ProductDefaultRule = {
   subcategoryId: ProductSubcategoryId;
 };
 
+// Position is precedence: the first rule whose pattern matches wins, so every
+// more specific pattern (a merchant's own card-bill prefix, an operation
+// marker, a longer merchant name that contains a shorter one) is declared
+// before the pattern it would otherwise be shadowed by.
 export const PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
   { pattern: "PAGAMENTO FATURA", direction: "debit", subcategoryId: "transfers.card-bill" },
   { pattern: "PAGTO FATURA", direction: "debit", subcategoryId: "transfers.card-bill" },
@@ -70,7 +74,6 @@ export const PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
   { pattern: "PRIVALIA", direction: "debit", subcategoryId: "shopping.clothing" },
   { pattern: "LOJAS RENNER", direction: "debit", subcategoryId: "shopping.clothing" },
   { pattern: "RIACHUELO", direction: "debit", subcategoryId: "shopping.clothing" },
-  { pattern: "ZARA", direction: "debit", subcategoryId: "shopping.clothing" },
 
   { pattern: "AIRBNB", direction: "debit", subcategoryId: "leisure.travel" },
   { pattern: "SMILES", direction: "debit", subcategoryId: "leisure.travel" },

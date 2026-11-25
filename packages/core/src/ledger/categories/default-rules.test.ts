@@ -97,7 +97,6 @@ describe("PRODUCT_DEFAULT_RULES, additions", () => {
     ["PRIVALIA COMPRA", "shopping.clothing"],
     ["LOJAS RENNER COMPRA", "shopping.clothing"],
     ["RIACHUELO COMPRA", "shopping.clothing"],
-    ["ZARA LOJA", "shopping.clothing"],
 
     ["AIRBNB RESERVA", "leisure.travel"],
     ["SMILES RESGATE", "leisure.travel"],
@@ -191,5 +190,69 @@ describe("PRODUCT_DEFAULT_RULES, additions", () => {
       [],
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("PRODUCT_DEFAULT_RULES, declaration order wins over word count", () => {
+  const PRECEDENCE_CASES: [description: string, subcategoryId: ProductSubcategoryId][] = [
+    ["IOF DE AMAZON PRIME", "financial.taxes"],
+    ["IOF DE MERCADO LIVRE", "financial.taxes"],
+    ["IOF DE APPLE COM BILL", "financial.taxes"],
+    ["IOF DE BOOKING COM", "financial.taxes"],
+    ["PAGAMENTO FATURA CARTAO PAO DE ACUCAR", "transfers.card-bill"],
+    ["PAGTO FATURA APPLE COM BILL", "transfers.card-bill"],
+  ];
+
+  it.each(PRECEDENCE_CASES)(
+    "resolves %s to %s, the earlier-declared pattern, not the longer one",
+    (description, subcategoryId) => {
+      const result = categorize(debit(description), []);
+      expect(result?.subcategory).toEqual({ type: "product", id: subcategoryId });
+    },
+  );
+});
+
+function patternTokens(pattern: string): string[] {
+  return pattern.split(" ").filter((token) => token !== "");
+}
+
+function containsContiguousRun(haystack: readonly string[], needle: readonly string[]): boolean {
+  if (needle.length === 0 || needle.length > haystack.length) {
+    return false;
+  }
+  for (let start = 0; start <= haystack.length - needle.length; start += 1) {
+    if (needle.every((token, offset) => haystack[start + offset] === token)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+describe("PRODUCT_DEFAULT_RULES, declaration order is the only precedence", () => {
+  it("resolves every rule's own pattern to its own subcategory, so no earlier rule shadows it", () => {
+    for (const rule of PRODUCT_DEFAULT_RULES) {
+      const result = categorize({ ...debit(rule.pattern), type: rule.direction ?? "debit" }, []);
+      expect(result?.subcategory, rule.pattern).toEqual({
+        type: "product",
+        id: rule.subcategoryId,
+      });
+    }
+  });
+
+  it("never lets an earlier pattern's tokens form a contiguous run inside a later, differently-categorized pattern", () => {
+    for (const [earlierIndex, earlier] of PRODUCT_DEFAULT_RULES.entries()) {
+      for (const later of PRODUCT_DEFAULT_RULES.slice(earlierIndex + 1)) {
+        if (earlier.subcategoryId === later.subcategoryId) {
+          continue;
+        }
+        const shadowed = containsContiguousRun(
+          patternTokens(later.pattern),
+          patternTokens(earlier.pattern),
+        );
+        expect(shadowed, `"${earlier.pattern}" (declared first) shadows "${later.pattern}"`).toBe(
+          false,
+        );
+      }
+    }
   });
 });

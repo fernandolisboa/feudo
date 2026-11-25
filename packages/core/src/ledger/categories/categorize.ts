@@ -1,5 +1,9 @@
-import { PRODUCT_DEFAULT_RULES, type ProductDefaultRule } from "./default-rules";
-import { matchesPattern, normalizeDescription, stripInstallmentMarker } from "./description";
+import { PRODUCT_DEFAULT_RULES } from "./default-rules";
+import {
+  matchesPattern,
+  normalizeDescription,
+  stripStoredPatternInstallmentMarker,
+} from "./description";
 import { mapProviderCategory } from "./provider-mapping";
 import { sameAmountGapCentavos, type AmountInCurrency } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
@@ -43,8 +47,25 @@ function compareById(a: string, b: string): number {
   return 0;
 }
 
+// A household's own rule pattern is the one place this normalization still
+// needs a floor: stripping an installment marker off a short stored pattern
+// (B2) must not leave something too short to be a usable pattern (a stored
+// "XPARC03" becoming the one-letter "X", or a stored "PARC03" becoming
+// empty). apps/web's form validation imports this same constant rather than
+// duplicating it, so the two can never disagree.
+export const RULE_PATTERN_MIN_LENGTH = 3;
+
+// The single "prepare rules for matching" step: every caller of
+// householdRuleFor or the rules page goes through this, so a stored
+// pattern's installment marker (B2) is stripped exactly once, before
+// ranking, rather than at match time on every transaction. Stripping below
+// the usable floor keeps the stored pattern instead.
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
-  return [...rules].sort((a, b) => {
+  const prepared = rules.map((rule) => {
+    const stripped = stripStoredPatternInstallmentMarker(rule.pattern);
+    return stripped.length < RULE_PATTERN_MIN_LENGTH ? rule : { ...rule, pattern: stripped };
+  });
+  return prepared.sort((a, b) => {
     const amountBoundDelta = Number(b.amount !== null) - Number(a.amount !== null);
     if (amountBoundDelta !== 0) return amountBoundDelta;
 
@@ -61,16 +82,6 @@ export function orderRules(rules: readonly CategorizationRule[]): Categorization
   });
 }
 
-// More tokens first (UBER EATS before UBER); a tie in token count keeps the
-// rules in the order PRODUCT_DEFAULT_RULES declares them (Array.prototype.sort
-// is stable), so a short, unambiguous marker such as IOF or FARMACIA can be
-// declared ahead of a longer merchant name it must still win against on a
-// shared statement line, rather than always losing to whichever pattern
-// happens to be longer.
-const ORDERED_PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
-  ...PRODUCT_DEFAULT_RULES,
-].sort((a, b) => tokenCount(b.pattern) - tokenCount(a.pattern));
-
 function directionMatches(
   ruleDirection: TransactionDirection | null,
   transactionType: TransactionDirection,
@@ -86,14 +97,10 @@ function householdRuleFor(
   normalizedDescription: string,
   orderedRules: readonly CategorizationRule[],
 ): CategorizationRule | undefined {
-  // A rule's pattern may have been stored by an older release that normalized
-  // it before the trailing installment marker was stripped ("SOME STORE
-  // PARC03"); stripping it again here, idempotently, keeps it matching every
-  // instalment's current description without touching the stored row.
   const matching = orderedRules.filter(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
-      matchesPattern(normalizedDescription, stripInstallmentMarker(rule.pattern)),
+      matchesPattern(normalizedDescription, rule.pattern),
   );
 
   let nearest: { rule: CategorizationRule; gap: number } | null = null;
@@ -122,7 +129,7 @@ export function categorize(
     return { subcategory: householdRule.subcategory, source: "rule", ruleId: householdRule.id };
   }
 
-  const defaultRule = ORDERED_PRODUCT_DEFAULT_RULES.find(
+  const defaultRule = PRODUCT_DEFAULT_RULES.find(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
       matchesPattern(normalizedDescription, rule.pattern),

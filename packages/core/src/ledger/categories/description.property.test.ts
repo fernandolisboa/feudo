@@ -6,6 +6,7 @@ import {
   normalizeDescription,
   rulePatternFromDescription,
   stripInstallmentMarker,
+  stripStoredPatternInstallmentMarker,
 } from "./description";
 
 const wordArb = fc.stringMatching(/^[A-Za-z]{1,10}$/);
@@ -55,9 +56,18 @@ describe("installment marker property tests", () => {
     );
   });
 
-  it("stays idempotent for any description, with or without a marker", () => {
+  const stackedMarkerArb = fc
+    .tuple(
+      noMarkerDescriptionArb.filter((description) => description.trim() !== ""),
+      fc.array(fc.tuple(twoDigitsArb, twoDigitsArb), { minLength: 2, maxLength: 4 }),
+    )
+    .map(([base, markers]) =>
+      [base, ...markers.map(([current, total]) => `PARC${current}/${total}`)].join(" "),
+    );
+
+  it("stays idempotent for any description, with or without a marker, stacked or not", () => {
     fc.assert(
-      fc.property(descriptionArb, (description) => {
+      fc.property(fc.oneof(descriptionArb, stackedMarkerArb), (description) => {
         const once = normalizeDescription(description);
         expect(normalizeDescription(once)).toBe(once);
       }),
@@ -105,7 +115,7 @@ describe("installment marker property tests", () => {
           fc.pre(baseNormalized !== "");
 
           const oldStoredPattern = `${baseNormalized} PARC${storedCurrent}`;
-          const preparedPattern = stripInstallmentMarker(oldStoredPattern);
+          const preparedPattern = stripStoredPatternInstallmentMarker(oldStoredPattern);
           expect(preparedPattern).toBe(baseNormalized);
 
           const freshDescription = `${base} PARC${freshCurrent}/${total}`;
