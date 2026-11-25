@@ -260,7 +260,7 @@ describe("categorization repository (integration)", () => {
     });
   });
 
-  it("interim, until the pattern+direction constraint is dropped: reports a conflict for a second rule on the same pattern and direction with another amount", async () => {
+  it("lets an amount-bound rule and an any-amount rule coexist on the same pattern and direction, and two different amounts coexist", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       const repoA = createCategorizationRepository(householdScope(userA.session));
       const save = (amount: { amountCentavos: number; currency: string } | null) =>
@@ -276,18 +276,20 @@ describe("categorization repository (integration)", () => {
         );
 
       expect(await save(null)).toBe("ok");
-      expect(await save({ amountCentavos: 150000, currency: "BRL" })).toBe("conflict");
-      expect((await repoA.listRules(db)).map((rule) => rule.amount)).toEqual([null]);
-
-      const [anyAmount] = await repoA.listRules(db);
-      expect(await repoA.deleteRule(db, anyAmount?.id ?? "")).toBe("ok");
       expect(await save({ amountCentavos: 150000, currency: "BRL" })).toBe("ok");
-      expect(await save({ amountCentavos: 4200, currency: "BRL" })).toBe("conflict");
-      expect(await save({ amountCentavos: 150000, currency: "USD" })).toBe("conflict");
-      expect(await save(null)).toBe("conflict");
-      expect((await repoA.listRules(db)).map((rule) => rule.amount)).toEqual([
-        { amountCentavos: 150000, currency: "BRL" },
-      ]);
+      expect(await save({ amountCentavos: 4200, currency: "BRL" })).toBe("ok");
+      expect(await save({ amountCentavos: 150000, currency: "USD" })).toBe("ok");
+
+      const amounts = (await repoA.listRules(db)).map((rule) => rule.amount);
+      expect(amounts).toHaveLength(4);
+      expect(amounts).toEqual(
+        expect.arrayContaining([
+          null,
+          { amountCentavos: 150000, currency: "BRL" },
+          { amountCentavos: 4200, currency: "BRL" },
+          { amountCentavos: 150000, currency: "USD" },
+        ]),
+      );
     });
   });
 

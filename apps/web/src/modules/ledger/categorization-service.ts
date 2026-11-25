@@ -80,7 +80,7 @@ export async function categorizeTransaction(
       if (input.createRule === "on") {
         const saved = await saveRuleFor(repository, tx, input, session.userId);
         if (saved !== "ok") {
-          throw new CategorizeRollback(saved === "not_found" ? "not_found" : "failed");
+          throw new CategorizeRollback("not_found");
         }
       }
       return { status: "ok" as const };

@@ -118,14 +118,6 @@ export const categorizationRule = pgTable(
       "categorization_rule_amount_currency_check",
       sql`num_nonnulls(${table.amountCentavos}, ${table.amountCurrency}) in (0, 2)`,
     ),
-    // Kept while the deploy that added amount-bound rules rolls out: the
-    // previous release upserts on this constraint and would fail with 42P10
-    // without it (docs/runbooks/database.md, expand first). Until a later
-    // migration drops it, a household has one rule per pattern and
-    // direction, whatever its amount.
-    unique("categorization_rule_household_pattern_direction_unique")
-      .on(table.householdId, table.pattern, table.direction)
-      .nullsNotDistinct(),
     unique("categorization_rule_household_pattern_direction_amount_unique")
       .on(
         table.householdId,
@@ -217,5 +209,64 @@ export const categorizationDeferral = pgTable(
       columns: [table.householdId, table.transactionId],
     }),
     index("categorization_deferral_transaction_id_idx").on(table.transactionId),
+  ],
+);
+
+export const transactionLinkKindEnum = pgEnum("transaction_link_kind", ["offset", "funding"]);
+
+// Scoped through the two transactions' accounts, like internal_transfer_mark
+// above (ADR-0001): a confirmed link is a fact about the transactions, not
+// about the household that confirmed it, so it travels with the account when
+// either side moves, and every read and write proves both transactions are
+// currently in the session's household (ticket's "Data model"). A
+// transaction is in at most one link, enforced by the two unique
+// constraints below rather than by a single-column id, since either side can
+// be the debit or the credit leg of its own link but never of two.
+export const transactionLink = pgTable(
+  "transaction_link",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    debitTransactionId: text("debit_transaction_id")
+      .notNull()
+      .references(() => bankTransaction.id, { onDelete: "cascade" }),
+    creditTransactionId: text("credit_transaction_id")
+      .notNull()
+      .references(() => bankTransaction.id, { onDelete: "cascade" }),
+    kind: transactionLinkKindEnum("kind").notNull(),
+    linkedByUserId: text("linked_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("transaction_link_debit_transaction_id_unique").on(table.debitTransactionId),
+    unique("transaction_link_credit_transaction_id_unique").on(table.creditTransactionId),
+  ],
+);
+
+// Household-scoped (ADR-0001), like categorization_deferral above: "this
+// pair is not a link" is this household's own call, not a fact about either
+// transaction, so it stays behind when an account moves and a link suggested
+// again for the same pair in a different household starts without it. No
+// author is kept (LGPD data minimization), matching categorization_deferral.
+export const transactionLinkDismissal = pgTable(
+  "transaction_link_dismissal",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    debitTransactionId: text("debit_transaction_id")
+      .notNull()
+      .references(() => bankTransaction.id, { onDelete: "cascade" }),
+    creditTransactionId: text("credit_transaction_id")
+      .notNull()
+      .references(() => bankTransaction.id, { onDelete: "cascade" }),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "transaction_link_dismissal_pk",
+      columns: [table.householdId, table.debitTransactionId, table.creditTransactionId],
+    }),
   ],
 );

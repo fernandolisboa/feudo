@@ -270,7 +270,7 @@ describe("categorizeTransaction (integration)", () => {
     });
   });
 
-  it("interim, until the pattern+direction constraint is dropped: fails and writes nothing when the pattern and direction already have a rule with another amount", async () => {
+  it("lets an amount-bound rule coexist with an any-amount rule already on the same pattern and direction", async () => {
     await withTwoUsers(async ({ db, userA }) => {
       await seedSyncedConnection(db, userA, {
         household: householdScope(userA.session),
@@ -310,11 +310,20 @@ describe("categorizeTransaction (integration)", () => {
         userA.session,
         db,
       );
-      expect(outcome).toEqual({ status: "failed" });
+      expect(outcome).toEqual({ status: "ok" });
 
-      expect(await repository.listRules(db)).toMatchObject([
-        { amount: null, subcategory: { type: "product", id: "food.groceries" } },
-      ]);
+      expect(await repository.listRules(db)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            amount: null,
+            subcategory: { type: "product", id: "food.groceries" },
+          }),
+          expect.objectContaining({
+            amount: { amountCentavos: 150000, currency: "BRL" },
+            subcategory: { type: "product", id: "housing.rent" },
+          }),
+        ]),
+      );
       const { rows } = await readHouseholdLedger(
         db,
         householdScope(userA.session),
@@ -322,7 +331,10 @@ describe("categorizeTransaction (integration)", () => {
         null,
         "America/Sao_Paulo",
       );
-      expect(rows.find((row) => row.id === transactionId)?.categorization).toBeNull();
+      expect(rows.find((row) => row.id === transactionId)?.categorization).toMatchObject({
+        source: "manual",
+        subcategory: { type: "product", id: "housing.rent" },
+      });
     });
   });
 
