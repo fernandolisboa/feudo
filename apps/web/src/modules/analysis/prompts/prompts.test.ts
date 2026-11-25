@@ -250,6 +250,7 @@ describe("category suggester prompt v1", () => {
       "***456789**",
       "•••.456.789-••",
       "XXX.456.789-XX",
+      "xxx456789xx",
       "123456789-00",
     ];
 
@@ -278,6 +279,54 @@ describe("category suggester prompt v1", () => {
       expect(sanitizeDescriptionForPrompt("123 456 789 00")).toBe("(descrição removida)");
     });
 
+    // A document glued to a neighbouring number by a single space (another
+    // short number, a date, a phone number) is removed as one run: the rule
+    // is "11 or more tokens with enough digits", not "exactly a document's
+    // own length", so gluing something else onto it does not save it.
+    const MIXED_REMOVAL_CASES: [input: string, expected: string][] = [
+      ["PIX 123.456.789-00", "PIX"],
+      ["PIX ENVIADO 12345678900 FULANO", "PIX ENVIADO FULANO"],
+      ["BOX 12.345.678/0001-90", "BOX"],
+      ["LOJA 12 123.456.789-00", "LOJA"],
+      ["PAG 123.456.789-00 02/09", "PAG"],
+      ["TEL 11 99999 9999", "TEL"],
+      ["XBOX 360 1234 5678", "XBOX"],
+    ];
+
+    it.each(MIXED_REMOVAL_CASES)(
+      "removes the document-like run from %s, keeping its words",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(input)).toBe(expected);
+      },
+    );
+
+    it.each(MIXED_REMOVAL_CASES)(
+      "removes the document-like run from %s, keeping its words, at the start of a description",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(`${input} compra na loja`)).toBe(
+          `${expected} compra na loja`,
+        );
+      },
+    );
+
+    it.each(MIXED_REMOVAL_CASES)(
+      "removes the document-like run from %s, keeping its words, in the middle of a description",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(`compra ${input} na loja`)).toBe(
+          `compra ${expected} na loja`,
+        );
+      },
+    );
+
+    it.each(MIXED_REMOVAL_CASES)(
+      "removes the document-like run from %s, keeping its words, at the end of a description",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(`compra na loja ${input}`)).toBe(
+          `compra na loja ${expected}`,
+        );
+      },
+    );
+
     const SURVIVORS = [
       "PARC 3/12",
       "PARCELA 03/10",
@@ -290,7 +339,8 @@ describe("category suggester prompt v1", () => {
       "11 99999",
       "UBER TRIP 99",
       "EXTRA 12 345",
-      "XBOX 360 1234 5678",
+      "MAX 1234 5678",
+      "PIX 1234 5678",
     ];
 
     it.each(SURVIVORS)("keeps %s untouched, at the start of a description", (survivor) => {
@@ -310,7 +360,8 @@ describe("category suggester prompt v1", () => {
 
     it("never treats a letter x or X inside an ordinary word as a mask character", () => {
       expect(sanitizeDescriptionForPrompt("EXTRA 12 345")).toBe("EXTRA 12 345");
-      expect(sanitizeDescriptionForPrompt("XBOX 360 1234 5678")).toBe("XBOX 360 1234 5678");
+      expect(sanitizeDescriptionForPrompt("MAX 1234 5678")).toBe("MAX 1234 5678");
+      expect(sanitizeDescriptionForPrompt("PIX 1234 5678")).toBe("PIX 1234 5678");
     });
 
     it("keeps a masked document untouched when a letter sits right at its boundary", () => {

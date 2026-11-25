@@ -29,7 +29,7 @@ const UNSAFE_PROMPT_CHARS = /[\u0000-\u001f\u007f<>|]/g;
 // store number or a date never reaches 9 digits in a row.
 const LONG_DIGIT_RUN = /\d{9,}/g;
 
-const DOCUMENT_CANDIDATE_LENGTHS = new Set([11, 14]);
+const DOCUMENT_CANDIDATE_MIN_TOKENS = 11;
 const DOCUMENT_CANDIDATE_MIN_DIGITS = 6;
 const DOCUMENT_SEPARATORS = new Set([".", "-", "/", " "]);
 const DOCUMENT_MASK_SYMBOLS = new Set(["*", "•"]);
@@ -38,12 +38,8 @@ function isDigitChar(char: string): boolean {
   return char >= "0" && char <= "9";
 }
 
-function isMaskLetter(char: string): boolean {
+function isMaskLetterChar(char: string): boolean {
   return char === "x" || char === "X";
-}
-
-function isDocumentToken(char: string): boolean {
-  return isDigitChar(char) || DOCUMENT_MASK_SYMBOLS.has(char) || isMaskLetter(char);
 }
 
 function isDocumentSeparator(char: string): boolean {
@@ -54,57 +50,77 @@ function isAsciiLetter(char: string): boolean {
   return (char >= "a" && char <= "z") || (char >= "A" && char <= "Z");
 }
 
-// A CPF or CNPJ, formatted, unformatted or partly masked by the bank or the
-// household ("***.123.456-**"), is 11 or 14 characters of digits and mask
-// symbols with at most one separator between any two of them. There is no
-// fixed punctuation to anchor a regex on (a mask can replace any digit, and
-// the separator can be a dot, a dash, a slash or a space), and a
-// lookaround-heavy regex for that shape risks backtracking on an adversarial
-// input; this is a single left-to-right scan instead, O(length). A run is
-// removed only when it is exactly document-length and has enough digits
-// that a word made only of mask characters ("XXXXXXXXXXX") never qualifies;
-// "x"/"X" counts as a mask character like any digit or symbol, so a letter
-// "x" inside an ordinary word ("EXTRA", "XBOX") almost always joins whatever
-// digits follow it into one run whose length is no longer 11 or 14, and
-// survives for that reason rather than by being excluded outright.
-function stripDocumentLikeSequences(text: string): string {
-  let result = "";
+// A letter "x"/"X" is a mask character only when the maximal run of
+// consecutive x/X letters it belongs to has a non-letter (or the string's
+// edge) on both sides: the "x" in "PIX", "BOX", "XBOX", "EXTRA" or "MAX" is
+// an ordinary letter ending a word there, never a digit's mask, while the
+// "XXX" in "XXX.456.789-XX" or "xxx456789xx" is. Computed once per string so
+// the main scan below can treat token-ness as a plain lookup.
+function maskLetterPositions(text: string): boolean[] {
+  const positions = new Array<boolean>(text.length).fill(false);
   let i = 0;
   while (i < text.length) {
-    const char = text[i] ?? "";
-    if (!isDocumentToken(char)) {
-      result += char;
+    if (!isMaskLetterChar(text[i] ?? "")) {
       i += 1;
       continue;
     }
-    const tokens: string[] = [char];
-    let usesMaskLetter = isMaskLetter(char);
+    const start = i;
+    let end = i + 1;
+    while (end < text.length && isMaskLetterChar(text[end] ?? "")) {
+      end += 1;
+    }
+    const before = start > 0 ? (text[start - 1] ?? "") : "";
+    const after = end < text.length ? (text[end] ?? "") : "";
+    if (!isAsciiLetter(before) && !isAsciiLetter(after)) {
+      positions.fill(true, start, end);
+    }
+    i = end;
+  }
+  return positions;
+}
+
+// A CPF or CNPJ, formatted, unformatted or partly masked by the bank or the
+// household ("***.123.456-**"), is a run of 11 or more digits and mask
+// characters with at most one separator between any two of them: real
+// documents are 11 or 14 characters, but a document glued to a neighbouring
+// number, a date or a phone number by a single space is removed as one run
+// too, rather than rescued by the extra characters. There is no fixed
+// punctuation to anchor a regex on (a mask can replace any digit, and the
+// separator can be a dot, a dash, a slash or a space), and a
+// lookaround-heavy regex for that shape risks backtracking on an adversarial
+// input; this is a single left-to-right scan instead, O(length).
+function stripDocumentLikeSequences(text: string): string {
+  const maskLetterAt = maskLetterPositions(text);
+  const isToken = (index: number): boolean => {
+    const char = text[index] ?? "";
+    return isDigitChar(char) || DOCUMENT_MASK_SYMBOLS.has(char) || maskLetterAt[index] === true;
+  };
+  let result = "";
+  let i = 0;
+  while (i < text.length) {
+    if (!isToken(i)) {
+      result += text[i] ?? "";
+      i += 1;
+      continue;
+    }
+    const tokens: string[] = [text[i] ?? ""];
     let j = i + 1;
     while (j < text.length) {
-      const next = text[j] ?? "";
-      if (isDocumentToken(next)) {
-        tokens.push(next);
-        usesMaskLetter = usesMaskLetter || isMaskLetter(next);
+      if (isToken(j)) {
+        tokens.push(text[j] ?? "");
         j += 1;
         continue;
       }
-      const afterSeparator = text[j + 1] ?? "";
-      if (isDocumentSeparator(next) && isDocumentToken(afterSeparator)) {
-        tokens.push(afterSeparator);
-        usesMaskLetter = usesMaskLetter || isMaskLetter(afterSeparator);
+      if (isDocumentSeparator(text[j] ?? "") && isToken(j + 1)) {
+        tokens.push(text[j + 1] ?? "");
         j += 2;
         continue;
       }
       break;
     }
     const digitCount = tokens.filter(isDigitChar).length;
-    const before = i > 0 ? (text[i - 1] ?? "") : "";
-    const after = j < text.length ? (text[j] ?? "") : "";
-    const boundaryIsNotLetter = !isAsciiLetter(before) && !isAsciiLetter(after);
     const isDocumentCandidate =
-      DOCUMENT_CANDIDATE_LENGTHS.has(tokens.length) &&
-      digitCount >= DOCUMENT_CANDIDATE_MIN_DIGITS &&
-      (!usesMaskLetter || boundaryIsNotLetter);
+      tokens.length >= DOCUMENT_CANDIDATE_MIN_TOKENS && digitCount >= DOCUMENT_CANDIDATE_MIN_DIGITS;
     result += isDocumentCandidate ? " " : text.slice(i, j);
     i = j;
   }
