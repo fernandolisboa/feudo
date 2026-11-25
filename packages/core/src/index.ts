@@ -110,6 +110,7 @@ export type {
   LedgerAccountType,
   LedgerContext,
   LedgerTransaction,
+  TransactionLinkRef,
 } from "./ledger/transfers/resolve-ledger";
 export { resolveLedger } from "./ledger/transfers/resolve-ledger";
 

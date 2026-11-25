@@ -8,6 +8,7 @@ import {
 import { kindOf, type KindContext } from "../categories/kinds";
 import type { Kind, ProductSubcategoryId, SubcategoryRef } from "../categories/taxonomy";
 import { pairInternalTransfers, type PairableTransaction } from "./pairing";
+import type { TransactionLink, TransactionLinkKind } from "./links";
 
 export type LedgerAccountType = "checking" | "savings" | "credit_card" | "investment";
 
@@ -23,19 +24,42 @@ export type LedgerContext = {
   rules: readonly CategorizationRule[];
   kinds: KindContext;
   holderDocumentHashes: ReadonlySet<string>;
+  links: readonly TransactionLink[];
 };
 
 export type InternalTransfer =
   { source: "mark" } | { source: "pair"; counterpartId: string; confirmed: boolean };
+
+export type TransactionLinkRef = { counterpartId: string; kind: TransactionLinkKind };
 
 export type ResolvedTransaction = {
   id: string;
   categorization: Categorization | null;
   kind: Kind | null;
   internalTransfer: InternalTransfer | null;
+  link: TransactionLinkRef | null;
 };
 
 type PairInfo = { counterpartId: string; confirmed: boolean };
+
+const PASS_THROUGH_SUBCATEGORY: ProductSubcategoryId = "transfers.pass-through";
+
+function offsetLinkCategorization(): Categorization {
+  return {
+    subcategory: { type: "product", id: PASS_THROUGH_SUBCATEGORY },
+    source: "internal_transfer",
+    ruleId: null,
+  };
+}
+
+function linkRefsById(links: readonly TransactionLink[]): ReadonlyMap<string, TransactionLinkRef> {
+  const byId = new Map<string, TransactionLinkRef>();
+  for (const link of links) {
+    byId.set(link.debitTransactionId, { counterpartId: link.creditTransactionId, kind: link.kind });
+    byId.set(link.creditTransactionId, { counterpartId: link.debitTransactionId, kind: link.kind });
+  }
+  return byId;
+}
 
 function toCategorizable(transaction: LedgerTransaction): CategorizableTransaction {
   return {
@@ -48,7 +72,12 @@ function toCategorizable(transaction: LedgerTransaction): CategorizableTransacti
   };
 }
 
-function isPairingCandidate(transaction: LedgerTransaction, kinds: KindContext): boolean {
+function isPairingCandidate(
+  transaction: LedgerTransaction,
+  kinds: KindContext,
+  linkedIds: ReadonlySet<string>,
+): boolean {
+  if (linkedIds.has(transaction.id)) return false;
   if (transaction.transferMark === false) return false;
   if (transaction.transferMark === true) return true;
   if (transaction.manual !== null && kindOf(transaction.manual, kinds) !== "transfer") return false;
@@ -88,8 +117,10 @@ function resolveTransaction(
   orderedRules: readonly CategorizationRule[],
   pairById: ReadonlyMap<string, PairInfo>,
   accountTypeById: ReadonlyMap<string, LedgerAccountType>,
+  linkById: ReadonlyMap<string, TransactionLinkRef>,
 ): ResolvedTransaction {
   const base = categorize(toCategorizable(transaction), orderedRules);
+  const link = linkById.get(transaction.id) ?? null;
 
   if (transaction.transferMark === true) {
     const pair = pairById.get(transaction.id) ?? null;
@@ -104,18 +135,36 @@ function resolveTransaction(
       ),
       kind: "transfer",
       internalTransfer: { source: "mark" },
+      link,
     };
   }
 
   if (transaction.transferMark === false) {
     if (base !== null && kindOf(base.subcategory, context.kinds) === "transfer") {
-      return { id: transaction.id, categorization: null, kind: null, internalTransfer: null };
+      return {
+        id: transaction.id,
+        categorization: null,
+        kind: null,
+        internalTransfer: null,
+        link,
+      };
     }
     return {
       id: transaction.id,
       categorization: base,
       kind: base ? kindOf(base.subcategory, context.kinds) : null,
       internalTransfer: null,
+      link,
+    };
+  }
+
+  if (link !== null && link.kind === "offset") {
+    return {
+      id: transaction.id,
+      categorization: offsetLinkCategorization(),
+      kind: "transfer",
+      internalTransfer: null,
+      link,
     };
   }
 
@@ -136,6 +185,7 @@ function resolveTransaction(
         counterpartId: pair.counterpartId,
         confirmed: pair.confirmed,
       },
+      link,
     };
   }
 
@@ -144,6 +194,7 @@ function resolveTransaction(
     categorization: base,
     kind: base ? kindOf(base.subcategory, context.kinds) : null,
     internalTransfer: null,
+    link,
   };
 }
 
@@ -156,8 +207,16 @@ export function resolveLedger(
     transactions.map((transaction) => [transaction.id, transaction.accountType]),
   );
 
+  const transactionIds = new Set(transactions.map((transaction) => transaction.id));
+  const validLinks = context.links.filter(
+    (link) =>
+      transactionIds.has(link.debitTransactionId) && transactionIds.has(link.creditTransactionId),
+  );
+  const linkById = linkRefsById(validLinks);
+  const linkedIds = new Set(linkById.keys());
+
   const pairablePool = transactions.filter((transaction) =>
-    isPairingCandidate(transaction, context.kinds),
+    isPairingCandidate(transaction, context.kinds, linkedIds),
   );
   const pairs = pairInternalTransfers(pairablePool, context.holderDocumentHashes);
 
@@ -168,6 +227,6 @@ export function resolveLedger(
   }
 
   return transactions.map((transaction) =>
-    resolveTransaction(transaction, context, orderedRules, pairById, accountTypeById),
+    resolveTransaction(transaction, context, orderedRules, pairById, accountTypeById, linkById),
   );
 }

@@ -82,7 +82,12 @@ export async function readHouseholdLedger(
     accountId: null,
   });
   const localizedTransactions = localizeRowDates(paddedTransactions, timeZone);
-  const padded = resolveLedgerRows(localizedTransactions, { rules, kinds, holderDocumentHashes });
+  const padded = resolveLedgerRows(localizedTransactions, {
+    rules,
+    kinds,
+    holderDocumentHashes,
+    links: [],
+  });
   const rows = padded.filter(
     (row) =>
       row.date >= range.from &&

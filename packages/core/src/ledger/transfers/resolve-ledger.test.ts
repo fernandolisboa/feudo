@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CategorizationRule } from "../categories/categorize";
 import type { KindContext } from "../categories/kinds";
+import type { TransactionLink } from "./links";
 import { resolveLedger, type LedgerContext, type LedgerTransaction } from "./resolve-ledger";
 
 function transaction(overrides: Partial<LedgerTransaction> = {}): LedgerTransaction {
@@ -29,6 +30,16 @@ function context(overrides: Partial<LedgerContext> = {}): LedgerContext {
     rules: [],
     kinds,
     holderDocumentHashes: new Set(),
+    links: [],
+    ...overrides,
+  };
+}
+
+function link(overrides: Partial<TransactionLink> = {}): TransactionLink {
+  return {
+    debitTransactionId: "d1",
+    creditTransactionId: "c1",
+    kind: "offset",
     ...overrides,
   };
 }
@@ -91,6 +102,7 @@ describe("resolveLedger precedence", () => {
       },
       kind: "transfer",
       internalTransfer: { source: "mark" },
+      link: null,
     });
   });
 
@@ -110,6 +122,7 @@ describe("resolveLedger precedence", () => {
       categorization: null,
       kind: null,
       internalTransfer: null,
+      link: null,
     });
   });
 
@@ -134,6 +147,7 @@ describe("resolveLedger precedence", () => {
       },
       kind: "variable",
       internalTransfer: null,
+      link: null,
     });
   });
 
@@ -158,6 +172,7 @@ describe("resolveLedger precedence", () => {
       categorization: { subcategory: manual, source: "manual", ruleId: null },
       kind: "variable",
       internalTransfer: null,
+      link: null,
     });
     expect(resolvedCredit?.internalTransfer).toBeNull();
   });
@@ -177,6 +192,7 @@ describe("resolveLedger precedence", () => {
       categorization: { subcategory: manual, source: "manual", ruleId: null },
       kind: "transfer",
       internalTransfer: { source: "pair", counterpartId: "c1", confirmed: false },
+      link: null,
     });
   });
 
@@ -222,6 +238,7 @@ describe("resolveLedger precedence", () => {
       },
       kind: "transfer",
       internalTransfer: { source: "pair", counterpartId: "c1", confirmed: false },
+      link: null,
     });
     expect(resolvedCredit).toEqual({
       id: "c1",
@@ -232,6 +249,7 @@ describe("resolveLedger precedence", () => {
       },
       kind: "transfer",
       internalTransfer: { source: "pair", counterpartId: "d1", confirmed: false },
+      link: null,
     });
   });
 
@@ -259,6 +277,7 @@ describe("resolveLedger precedence", () => {
       },
       kind: "fixed",
       internalTransfer: null,
+      link: null,
     });
   });
 
@@ -282,6 +301,117 @@ describe("resolveLedger precedence", () => {
       source: "internal_transfer",
       ruleId: null,
     });
+  });
+
+  it("forces both legs of a confirmed offset link into transfers.pass-through", () => {
+    const debit = transaction({ id: "d1", accountId: "checking-1", type: "debit" });
+    const credit = transaction({
+      id: "c1",
+      accountId: "checking-1",
+      type: "credit",
+      providerCategory: "Groceries",
+    });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit],
+      context({ links: [link()] }),
+    );
+    expect(resolvedDebit).toEqual({
+      id: "d1",
+      categorization: {
+        subcategory: { type: "product", id: "transfers.pass-through" },
+        source: "internal_transfer",
+        ruleId: null,
+      },
+      kind: "transfer",
+      internalTransfer: null,
+      link: { counterpartId: "c1", kind: "offset" },
+    });
+    expect(resolvedCredit).toEqual({
+      id: "c1",
+      categorization: {
+        subcategory: { type: "product", id: "transfers.pass-through" },
+        source: "internal_transfer",
+        ruleId: null,
+      },
+      kind: "transfer",
+      internalTransfer: null,
+      link: { counterpartId: "d1", kind: "offset" },
+    });
+  });
+
+  it("changes nothing about categorization or kind for a confirmed funding link, only annotating it", () => {
+    const debit = transaction({
+      id: "d1",
+      accountId: "checking-1",
+      type: "debit",
+      description: "COMPRA CARTAO MERCADO",
+      providerCategory: "Groceries",
+    });
+    const credit = transaction({
+      id: "c1",
+      accountId: "checking-1",
+      type: "credit",
+      providerCategory: "Yields",
+    });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit],
+      context({ links: [link({ kind: "funding" })] }),
+    );
+    expect(resolvedDebit).toEqual({
+      id: "d1",
+      categorization: {
+        subcategory: { type: "product", id: "food.groceries" },
+        source: "provider",
+        ruleId: null,
+      },
+      kind: "variable",
+      internalTransfer: null,
+      link: { counterpartId: "c1", kind: "funding" },
+    });
+    expect(resolvedCredit?.internalTransfer).toBeNull();
+    expect(resolvedCredit?.link).toEqual({ counterpartId: "d1", kind: "funding" });
+  });
+
+  it("lets an internal-transfer mark win over a confirmed offset link", () => {
+    const debit = transaction({
+      id: "d1",
+      accountId: "checking-1",
+      type: "debit",
+      transferMark: true,
+    });
+    const credit = transaction({ id: "c1", accountId: "checking-1", type: "credit" });
+    const [resolvedDebit] = resolveLedger([debit, credit], context({ links: [link()] }));
+    expect(resolvedDebit?.categorization).toEqual({
+      subcategory: { type: "product", id: "transfers.own-accounts" },
+      source: "internal_transfer",
+      ruleId: null,
+    });
+    expect(resolvedDebit?.internalTransfer).toEqual({ source: "mark" });
+    expect(resolvedDebit?.link).toEqual({ counterpartId: "c1", kind: "offset" });
+  });
+
+  it("ignores a link whose two transactions are not both present in the input", () => {
+    const debit = transaction({ id: "d1", accountId: "checking-1", type: "debit" });
+    const [resolvedDebit] = resolveLedger([debit], context({ links: [link()] }));
+    expect(resolvedDebit?.link).toBeNull();
+    expect(resolvedDebit?.categorization).toBeNull();
+  });
+
+  it("excludes a linked transaction, either kind, from automatic pairing", () => {
+    const debit = transaction({ id: "d1", accountId: "checking-1", type: "debit" });
+    const credit = transaction({ id: "c1", accountId: "checking-2", type: "credit" });
+    const unrelatedDebit = transaction({
+      id: "d2",
+      accountId: "checking-2",
+      type: "debit",
+      amountCentavos: 50000,
+    });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit, unrelatedDebit],
+      context({ links: [link({ kind: "funding" })] }),
+    );
+    expect(resolvedDebit?.internalTransfer).toBeNull();
+    expect(resolvedCredit?.internalTransfer).toBeNull();
   });
 
   it("preserves order and length of the input", () => {
