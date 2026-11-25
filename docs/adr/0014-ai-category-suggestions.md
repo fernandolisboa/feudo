@@ -35,14 +35,20 @@ choice, exactly as with a manual categorization today.
   same fingerprint was already asked.
 - **What the model receives, and nothing else.** Feudo's product subcategories as stable ids with
   their pt-BR "Categoria · Subcategoria" labels and kinds (product data, not personal data), and per
-  group: an index, the direction, the absolute amount formatted in BRL, and the description
-  (whitespace collapsed, control characters and `<`/`>`/`|` removed, CPF- and CNPJ-shaped digit
-  sequences and any other run of 9 or more digits removed, cut at 140 characters). No dates, account
-  names or types, institution, connection label, document hash, household subcategory names or
-  examples from the household's categorized history. The description is the bank's own free text,
-  so it can still carry a name, a date or part of a document number the sanitizer's pattern does not
-  catch; the terms, privacy policy and connection consent say so. Descriptions are untrusted data:
-  they sit inside a delimited block the system prompt declares as data, never instructions.
+  group: an index, the direction, the absolute amount formatted in BRL, and the description. The
+  description is first normalized (Unicode NFKC, zero-width characters dropped, every control
+  character and whitespace variant folded to one space) and then scanned for a document-like run: a
+  sequence of 11 or more digits and mask characters (`*`, `•`, or `x`/`X` where it is not part of an
+  ordinary word), with a gap of one or more characters drawn from `. - /` and space between any two
+  of them and at least 6 digits among them, is removed as a whole, alongside any other run of 9 or
+  more digits and a `<`/`>`/`|` character; the result is cut at 140 characters. A gap character drawn
+  from anything else (a comma, a colon, an underscore, a dash that is not a hyphen) is not bridged,
+  and a masked document showing fewer than 6 digits is left as is. No dates, account names or types,
+  institution, connection label, document hash, household subcategory names or examples from the
+  household's categorized history. The description is the bank's own free text, so it can still
+  carry a name, a date or part of a document number the sanitizer does not catch; the terms, privacy
+  policy and connection consent say so. Descriptions are untrusted data: they sit inside a delimited
+  block the system prompt declares as data, never instructions.
 - **Output contract.** Structured outputs (JSON schema) restrict every answer to
   `{ index, subcategory }` where `subcategory` is one of the sent ids or `null`; the reply is then
   parsed with Zod, and an out-of-range index, an unknown id, or a second answer for the same index is

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { analysisOutputSchema, findAnalysisViolations } from "@feudo/core";
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { productSubcategoriesForPrompt } from "@/modules/ledger";
@@ -378,6 +379,77 @@ describe("category suggester prompt v1", () => {
       const elapsedMs = performance.now() - start;
 
       expect(elapsedMs).toBeLessThan(100);
+    });
+
+    // Whitespace and control characters are normalized before the document
+    // scan runs, not after: a fixed-width bank description padded with runs
+    // of spaces, tabs or a non-breaking space, or carrying a stray control
+    // character or a zero-width one in the middle of a document, must not
+    // let that padding hide the document from the scan or leave a remainder
+    // once the padding collapses.
+    const PADDED_DOCUMENT_CASES: [name: string, input: string][] = [
+      ["two spaces between every group", "A 123  456  789  00 B"],
+      ["a tab between every group", "A 123\t456\t789\t00 B"],
+      ["a non-breaking space between every group", "A 123 456 789 00 B"],
+      ["a newline where a CNPJ's dash is", "A 12.345.678/0001\n-90 B"],
+      ["a NUL where a CPF's dash is", "A 123.456.789\u0000-00 B"],
+      ["a zero-width space inside a CPF", "A 123.456.789-0​0 B"],
+      ["full-width digits", "A １２３.４５６.７８９-００ B"],
+    ];
+
+    it.each(PADDED_DOCUMENT_CASES)(
+      "removes the document entirely despite %s, keeping the words around it",
+      (_name, input) => {
+        expect(sanitizeDescriptionForPrompt(input)).toBe("A B");
+      },
+    );
+
+    it("is idempotent and stays within its own limits for any input drawn from its alphabet", () => {
+      const alphabet = [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        ".",
+        "-",
+        "/",
+        " ",
+        "\t",
+        "\n",
+        "\u0000",
+        "*",
+        "•",
+        "x",
+        "X",
+        "A",
+        "B",
+        "<",
+        ">",
+        "|",
+      ];
+      fc.assert(
+        fc.property(
+          fc.array(fc.constantFrom(...alphabet), { maxLength: 200 }).map((chars) => chars.join("")),
+          (text) => {
+            const once = sanitizeDescriptionForPrompt(text);
+            const twice = sanitizeDescriptionForPrompt(once);
+
+            expect(twice).toBe(once);
+            expect(once).not.toContain("|");
+            expect(once).not.toContain("<");
+            expect(once).not.toContain(">");
+            expect(once).not.toContain("\n");
+            expect(once).not.toContain("  ");
+            expect(once.length).toBeLessThanOrEqual(140);
+          },
+        ),
+      );
     });
   });
 

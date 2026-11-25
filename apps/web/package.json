@@ -59,6 +59,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.2",
+    "fast-check": "4.9.0",
     "fflate": "0.8.3",
     "jsdom": "30.0.1",
     "shadcn": "4.19.1",

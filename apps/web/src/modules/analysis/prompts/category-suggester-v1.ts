@@ -24,6 +24,12 @@ Rules:
 // as a different merchant.
 const UNSAFE_PROMPT_CHARS = /[\u0000-\u001f\u007f<>|]/g;
 
+// Deleted rather than collapsed to a space: these carry no width, so a CPF
+// typed with one of these hiding in the middle ("123.456.789-0​0")
+// must read as the same unbroken run of digits the document scan expects,
+// not as two fragments either side of an invisible gap.
+const ZERO_WIDTH_CHARS = /[​‌‍⁠﻿]/g;
+
 // Any other run this long is more likely a document, phone or account
 // number than something the model needs: an installment marker ("3/12"), a
 // store number or a date never reaches 9 digits in a row.
@@ -81,14 +87,17 @@ function maskLetterPositions(text: string): boolean[] {
 
 // A CPF or CNPJ, formatted, unformatted or partly masked by the bank or the
 // household ("***.123.456-**"), is a run of 11 or more digits and mask
-// characters with at most one separator between any two of them: real
-// documents are 11 or 14 characters, but a document glued to a neighbouring
-// number, a date or a phone number by a single space is removed as one run
-// too, rather than rescued by the extra characters. There is no fixed
-// punctuation to anchor a regex on (a mask can replace any digit, and the
-// separator can be a dot, a dash, a slash or a space), and a
-// lookaround-heavy regex for that shape risks backtracking on an adversarial
-// input; this is a single left-to-right scan instead, O(length).
+// characters with a gap of one or more separators between any two of them:
+// real documents are 11 or 14 characters, but a document glued to a
+// neighbouring number, a date or a phone number by a single space is
+// removed as one run too, rather than rescued by the extra characters (a gap
+// can be more than one separator character because whitespace normalized
+// from a tab, a newline or a stray control character can itself land right
+// next to an existing dot, dash or slash). There is no fixed punctuation to
+// anchor a regex on (a mask can replace any digit, and a gap can mix dots,
+// dashes, slashes and spaces), and a lookaround-heavy regex for that shape
+// risks backtracking on an adversarial input; this is a single left-to-right
+// scan instead, O(length).
 function stripDocumentLikeSequences(text: string): string {
   const maskLetterAt = maskLetterPositions(text);
   const isToken = (index: number): boolean => {
@@ -111,9 +120,13 @@ function stripDocumentLikeSequences(text: string): string {
         j += 1;
         continue;
       }
-      if (isDocumentSeparator(text[j] ?? "") && isToken(j + 1)) {
-        tokens.push(text[j + 1] ?? "");
-        j += 2;
+      let gapEnd = j;
+      while (gapEnd < text.length && isDocumentSeparator(text[gapEnd] ?? "")) {
+        gapEnd += 1;
+      }
+      if (gapEnd > j && isToken(gapEnd)) {
+        tokens.push(text[gapEnd] ?? "");
+        j = gapEnd + 1;
         continue;
       }
       break;
@@ -134,13 +147,45 @@ export const DESCRIPTION_MAX_CHARS = 140;
 // would read the next line's text as this one's description.
 const EMPTY_DESCRIPTION_PLACEHOLDER = "(descrição removida)";
 
-export function sanitizeDescriptionForPrompt(description: string): string {
-  const cleaned = stripDocumentLikeSequences(description)
-    .replace(LONG_DIGIT_RUN, " ")
+// Folds full-width digits to ASCII, drops zero-width characters outright
+// (never collapsing them to a visible space) and turns every control
+// character and every kind of whitespace (tab, newline, non-breaking space,
+// the Unicode line/paragraph separators) into one plain space, before the
+// document scan ever runs: a document padded or broken up by any of these
+// must look, to the scan, exactly like one written with plain spaces.
+function normalizeForSanitizing(text: string): string {
+  return text
+    .normalize("NFKC")
+    .replace(ZERO_WIDTH_CHARS, "")
     .replace(UNSAFE_PROMPT_CHARS, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, DESCRIPTION_MAX_CHARS);
+    .replace(/\s+/g, " ");
+}
+
+// Removing a document replaces it with a single space (so the words on
+// either side stay apart), which can itself bridge two shorter, previously
+// unrelated runs into one that is now long enough to qualify; one pass is
+// not always enough, so this repeats until nothing more is removed. Each
+// successful removal strictly shortens the text, so this always terminates;
+// the iteration cap is a safety net, not the expected case.
+function removeDocumentsUntilStable(text: string): string {
+  let current = text;
+  for (let iteration = 0; iteration <= text.length; iteration += 1) {
+    const next = stripDocumentLikeSequences(current)
+      .replace(LONG_DIGIT_RUN, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (next === current) {
+      return next;
+    }
+    current = next;
+  }
+  return current;
+}
+
+export function sanitizeDescriptionForPrompt(description: string): string {
+  const cleaned = removeDocumentsUntilStable(normalizeForSanitizing(description))
+    .slice(0, DESCRIPTION_MAX_CHARS)
+    .trim();
   return cleaned.length > 0 ? cleaned : EMPTY_DESCRIPTION_PLACEHOLDER;
 }
 
