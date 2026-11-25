@@ -64,11 +64,14 @@ function GuidedItem({
   groups: SubcategoryOptionGroup[];
   onDeferHere: () => void;
 }) {
+  const sharesBindableAmount = item.ruleAmountLabel !== null && item.sameAmountCount > 0;
   const [createRule, setCreateRule] = useState(
-    item.similarCount > 0 &&
+    sharesBindableAmount &&
       item.pattern.length >= RULE_PATTERN_MIN_LENGTH &&
       item.pattern.length <= RULE_PATTERN_MAX_LENGTH,
   );
+  const [onlyThisAmount, setOnlyThisAmount] = useState(sharesBindableAmount);
+  const coveredCount = onlyThisAmount ? item.sameAmountCount : item.similarCount;
   const [state, formAction, isSaving] = useActionState(
     categorizeTransactionAction,
     initialActionState,
@@ -131,7 +134,7 @@ function GuidedItem({
                 <span className="text-muted-foreground">{item.suggestion.reason}</span>
               </>
             ) : (
-              <span className="text-muted-foreground">{t.guided.suggestion.none}</span>
+              <span className="text-muted-foreground">{item.noSuggestionReason}</span>
             )}
           </div>
         </div>
@@ -179,11 +182,24 @@ function GuidedItem({
                 maxLength={RULE_PATTERN_MAX_LENGTH}
                 required
               />
+              {item.ruleAmountLabel === null ? null : (
+                <Label className="items-start gap-2 font-normal tabular-nums">
+                  <Checkbox
+                    name="onlyThisAmount"
+                    checked={onlyThisAmount}
+                    onCheckedChange={setOnlyThisAmount}
+                    className="mt-0.5"
+                  />
+                  {interpolate(t.rules.onlyThisAmount, "{amount}", item.ruleAmountLabel)}
+                </Label>
+              )}
             </div>
           ) : null}
-          {createRule && item.similarCount > 0 ? (
+          {createRule && coveredCount > 0 ? (
             <p className="text-muted-foreground pl-6 text-xs">
-              {countLine(item.similarCount, t.guided.similarOne, t.guided.similarMany)}
+              {onlyThisAmount
+                ? countLine(coveredCount, t.guided.sameAmountOne, t.guided.sameAmountMany)
+                : countLine(coveredCount, t.guided.similarOne, t.guided.similarMany)}
             </p>
           ) : null}
         </div>

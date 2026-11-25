@@ -9,6 +9,7 @@ import {
   type Kind,
   type ProductCategoryId,
   type ProductSubcategoryId,
+  type RuleAmount,
   type SubcategoryRef,
   type TransactionDirection,
 } from "@feudo/core";
@@ -113,8 +114,10 @@ export type AddHouseholdSubcategoryResult = { status: "ok"; id: string } | { sta
 export type SaveRuleInput = {
   pattern: string;
   direction: TransactionDirection | null;
+  amount: RuleAmount | null;
   subcategory: SubcategoryRef;
 };
+export type SaveRuleResult = "ok" | "not_found" | "conflict";
 
 // Household-scoped (ADR-0001): every query below is filtered by
 // scope.householdId, and no method accepts a household id. The composite
@@ -265,12 +268,27 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       return updated.length > 0 ? "ok" : "not_found";
     },
 
+    async absoluteAmountOf(db: Database, transactionId: string): Promise<RuleAmount | null> {
+      const [row] = await db
+        .select({
+          amountCentavos: bankTransaction.amountCentavos,
+          currency: bankTransaction.currency,
+        })
+        .from(bankTransaction)
+        .innerJoin(bankAccount, eq(bankAccount.id, bankTransaction.accountId))
+        .where(scopedToHousehold(transactionId))
+        .limit(1);
+      return row ? { amountCentavos: Math.abs(row.amountCentavos), currency: row.currency } : null;
+    },
+
     async listRules(db: Database): Promise<CategorizationRule[]> {
       const rows = await db
         .select({
           id: categorizationRule.id,
           pattern: categorizationRule.pattern,
           direction: categorizationRule.direction,
+          amountCentavos: categorizationRule.amountCentavos,
+          amountCurrency: categorizationRule.amountCurrency,
           productSubcategoryId: categorizationRule.productSubcategoryId,
           householdSubcategoryId: categorizationRule.householdSubcategoryId,
           createdAt: categorizationRule.createdAt,
@@ -291,6 +309,10 @@ export function createCategorizationRepository(scope: HouseholdScope) {
           id: row.id,
           pattern: row.pattern,
           direction: row.direction,
+          amount:
+            row.amountCentavos !== null && row.amountCurrency !== null
+              ? { amountCentavos: row.amountCentavos, currency: row.amountCurrency }
+              : null,
           subcategory,
           createdAt: row.createdAt,
         });
@@ -298,11 +320,7 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       return rules;
     },
 
-    async saveRule(
-      db: Database,
-      input: SaveRuleInput,
-      userId: string,
-    ): Promise<"ok" | "not_found"> {
+    async saveRule(db: Database, input: SaveRuleInput, userId: string): Promise<SaveRuleResult> {
       if (!(await ownsTarget(db, input.subcategory))) {
         return "not_found";
       }
@@ -314,6 +332,8 @@ export function createCategorizationRepository(scope: HouseholdScope) {
             householdId: scope.householdId,
             pattern: input.pattern,
             direction: input.direction,
+            amountCentavos: input.amount?.amountCentavos ?? null,
+            amountCurrency: input.amount?.currency ?? null,
             createdByUserId: userId,
             ...target,
           })
@@ -322,6 +342,8 @@ export function createCategorizationRepository(scope: HouseholdScope) {
               categorizationRule.householdId,
               categorizationRule.pattern,
               categorizationRule.direction,
+              categorizationRule.amountCentavos,
+              categorizationRule.amountCurrency,
             ],
             set: { createdByUserId: userId, createdAt: new Date(), ...target },
           });
@@ -329,6 +351,12 @@ export function createCategorizationRepository(scope: HouseholdScope) {
       } catch (error) {
         if (hasSqlState(error, POSTGRES_FOREIGN_KEY_VIOLATION)) {
           return "not_found";
+        }
+        // Interim (schema.ts): the upsert targets the amount-aware key, so a
+        // rule on the same pattern and direction with another amount trips
+        // the older, narrower constraint instead of being updated.
+        if (hasSqlState(error, POSTGRES_UNIQUE_VIOLATION)) {
+          return "conflict";
         }
         throw error;
       }

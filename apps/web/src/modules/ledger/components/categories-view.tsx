@@ -5,7 +5,7 @@ import { TableCell, TableHead, TableRow } from "@/ui/table";
 import { interpolate } from "@/lib/interpolate";
 
 import { changeSubcategoryKindAction, removeRuleAction } from "../actions";
-import type { CategoriesPageProps } from "../categories-page-props";
+import type { CategoriesPageProps, RuleRow } from "../categories-page-props";
 import { t } from "../strings";
 import { AddSubcategoryDialog } from "./add-subcategory-dialog";
 import { FormActionButton } from "./form-action-button";
@@ -14,6 +14,10 @@ import { KindSelect } from "./kind-select";
 const HEAD_CLASS = "text-muted-foreground text-[11px] tracking-wide uppercase";
 
 const RULES_PAGE_SIZE = 20;
+
+function ruleLabel(rule: RuleRow): string {
+  return rule.amountLabel === null ? rule.pattern : `${rule.pattern} · ${rule.amountLabel}`;
+}
 
 export function CategoriesView({ categories, rules, suggestions }: CategoriesPageProps) {
   return (
@@ -78,8 +82,8 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
             }
             rows={rules.map((rule) => (
               <TableRow key={rule.id} className="h-[var(--density-row)]">
-                <TableCell card="title" className="font-mono text-[13px]">
-                  {rule.pattern}
+                <TableCell card="title" className="font-mono text-[13px] tabular-nums">
+                  {ruleLabel(rule)}
                 </TableCell>
                 <TableCell
                   label={t.categoriesPage.ruleTable.direction}
@@ -96,7 +100,7 @@ export function CategoriesView({ categories, rules, suggestions }: CategoriesPag
                     ariaLabel={interpolate(
                       t.categoriesPage.removeRuleFor,
                       "{pattern}",
-                      rule.pattern,
+                      ruleLabel(rule),
                     )}
                   />
                 </TableCell>

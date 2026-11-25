@@ -30,6 +30,7 @@ const ROW: TransactionsPageProps["transactions"][number] = {
     isInternalTransfer: false,
     hasTransferMark: false,
     suggestedPattern: "COMPRA NO MERCADO",
+    ruleAmountLabel: "R$ 100,00",
   },
 };
 

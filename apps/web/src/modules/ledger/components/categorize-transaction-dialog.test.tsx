@@ -33,6 +33,7 @@ const transaction: CategorizableRow = {
   isInternalTransfer: false,
   hasTransferMark: false,
   suggestedPattern: "PIX ENVIADO CONDOMINIO",
+  ruleAmountLabel: "R$ 100,00",
 };
 
 const groups: SubcategoryOptionGroup[] = [
@@ -75,6 +76,44 @@ describe("CategorizeTransactionDialog", () => {
 
     const patternInput = await screen.findByLabelText<HTMLInputElement>(t.categorize.patternLabel);
     expect(patternInput.value).toBe(transaction.suggestedPattern);
+  });
+
+  it("offers to bind the rule to the transaction's amount, unticked, once the rule is asked for", async () => {
+    render(<CategorizeTransactionDialog transaction={transaction} groups={groups} />);
+
+    openDialog();
+    const dialog = await screen.findByRole("dialog");
+    const onlyThisAmount = interpolate(t.rules.onlyThisAmount, "{amount}", "R$ 100,00");
+
+    expect(screen.queryByRole("checkbox", { name: onlyThisAmount })).toBeNull();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: t.categorize.createRule }));
+
+    const checkbox = screen.getByRole("checkbox", { name: onlyThisAmount });
+    expect(checkbox.getAttribute("aria-checked")).toBe("false");
+    const form = dialog.querySelector("form");
+    if (!form) throw new Error("form missing");
+    expect(new FormData(form).get("onlyThisAmount")).toBeNull();
+
+    fireEvent.click(checkbox);
+
+    expect(new FormData(form).get("onlyThisAmount")).toBe("on");
+  });
+
+  it("does not offer the amount for a transaction of zero", async () => {
+    render(
+      <CategorizeTransactionDialog
+        transaction={{ ...transaction, ruleAmountLabel: null }}
+        groups={groups}
+      />,
+    );
+
+    openDialog();
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("checkbox", { name: t.categorize.createRule }));
+
+    await screen.findByLabelText(t.categorize.patternLabel);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 
   it("offers to mark a transaction that is not an internal transfer as one, with no automatic-detection link", async () => {

@@ -1,3 +1,4 @@
+import { formatMoney } from "@feudo/core";
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
@@ -9,8 +10,13 @@ import type { Database } from "@/platform/db/client";
 
 import { categorizeTransaction, deferCategorization } from "./categorization-service";
 import { getCategorizationNudgeProps, getGuidedCategorizationProps } from "./guided-categorization";
+import { t } from "./strings";
 
 const NOW = new Date("2026-10-13T12:00:00.000Z");
+
+function money(amountCentavos: number): string {
+  return formatMoney({ amountCentavos, currency: "BRL" });
+}
 
 async function transactionIdFor(db: Database, providerTransactionId: string): Promise<string> {
   const [row] = await db
@@ -86,6 +92,91 @@ describe("guided categorization (integration)", () => {
         reason: "1 transação com esta descrição já está em Alimentação · Mercado.",
       });
       expect(props.items[1]?.pattern).toBe("PADARIA DO ZE");
+    });
+  });
+
+  it("prefers history of the same amount, and counts the pending ones that share it", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      const pix = (providerTransactionId: string, date: string, amountCentavos: number) =>
+        seedTransaction({
+          providerTransactionId,
+          date,
+          description: "PIX ENVIADO JOAO SILVA",
+          type: "debit",
+          amountCentavos,
+        });
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          pix("rent-done", "2026-08-05", -150000),
+          pix("lunch-done", "2026-08-10", -4200),
+          pix("lunch-done-2", "2026-08-11", -4300),
+          pix("rent-open", "2026-09-05", -150000),
+          pix("rent-open-2", "2026-10-05", -150000),
+          pix("odd-open", "2026-09-20", -9900),
+          ...["1", "2"].map((suffix) =>
+            seedTransaction({
+              providerTransactionId: `zero-${suffix}`,
+              date: `2026-09-2${suffix}`,
+              description: "AJUSTE SEM VALOR",
+              type: "debit",
+              amountCentavos: 0,
+            }),
+          ),
+        ],
+      });
+      for (const [id, subcategory] of [
+        ["rent-done", "housing.rent"],
+        ["lunch-done", "food.restaurants"],
+        ["lunch-done-2", "food.restaurants"],
+      ] as const) {
+        await categorizeTransaction(
+          {
+            transactionId: await transactionIdFor(db, id),
+            subcategory: { type: "product", id: subcategory },
+            createRule: "off",
+          },
+          userA.session,
+          db,
+        );
+      }
+
+      const props = await getGuidedCategorizationProps(userA.session, NOW);
+
+      expect(
+        props.items.map((item) => [
+          item.amountLabel,
+          item.ruleAmountLabel,
+          item.sameAmountCount,
+          item.similarCount,
+          item.suggestion?.reason ?? null,
+        ]),
+      ).toEqual([
+        [
+          money(-150000),
+          money(150000),
+          1,
+          2,
+          "1 transação com esta descrição e este valor já está em Moradia · Aluguel.",
+        ],
+        [
+          money(-150000),
+          money(150000),
+          1,
+          2,
+          "1 transação com esta descrição e este valor já está em Moradia · Aluguel.",
+        ],
+        [money(-9900), money(9900), 0, 2, null],
+        [money(0), null, 1, 1, null],
+        [money(0), null, 1, 1, null],
+      ]);
+      expect(props.items.map((item) => item.noSuggestionReason)).toEqual([
+        t.guided.suggestion.none,
+        t.guided.suggestion.none,
+        t.guided.suggestion.conflicting,
+        t.guided.suggestion.none,
+        t.guided.suggestion.none,
+      ]);
     });
   });
 

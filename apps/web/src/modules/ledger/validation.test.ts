@@ -51,6 +51,29 @@ describe("categorizeTransactionFormSchema", () => {
     expect(parsed).toMatchObject({ direction: null });
   });
 
+  it("reads the only-this-amount flag, and never an amount, for a rule", () => {
+    const rule = { ...BASE, createRule: "on", pattern: "JOAO SILVA", direction: "debit" };
+
+    expect(categorizeTransactionFormSchema.parse(rule)).not.toHaveProperty("onlyThisAmount");
+    expect(
+      categorizeTransactionFormSchema.parse({
+        ...rule,
+        onlyThisAmount: "on",
+        amountCentavos: "1",
+      }),
+    ).toEqual({
+      transactionId: "tx-1",
+      subcategory: { type: "product", id: "housing.rent" },
+      createRule: "on",
+      pattern: "JOAO SILVA",
+      direction: "debit",
+      onlyThisAmount: "on",
+    });
+    expect(
+      categorizeTransactionFormSchema.safeParse({ ...rule, onlyThisAmount: "yes" }).success,
+    ).toBe(false);
+  });
+
   it("rejects an unknown subcategory value", () => {
     const result = categorizeTransactionFormSchema.safeParse({
       transactionId: "tx-1",

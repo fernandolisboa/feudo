@@ -1,12 +1,16 @@
 import { PRODUCT_DEFAULT_RULES, type ProductDefaultRule } from "./default-rules";
 import { matchesPattern, normalizeDescription } from "./description";
 import { mapProviderCategory } from "./provider-mapping";
+import { sameAmountGapCentavos, type AmountInCurrency } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
+
+export type RuleAmount = AmountInCurrency;
 
 export type CategorizationRule = {
   id: string;
   pattern: string;
   direction: TransactionDirection | null;
+  amount: RuleAmount | null;
   subcategory: SubcategoryRef;
   createdAt: Date;
 };
@@ -14,6 +18,8 @@ export type CategorizationRule = {
 export type CategorizableTransaction = {
   description: string;
   type: TransactionDirection;
+  amountCentavos: number;
+  currency: string;
   providerCategory: string | null;
   manual: SubcategoryRef | null;
 };
@@ -38,6 +44,9 @@ function compareById(a: string, b: string): number {
 
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
   return [...rules].sort((a, b) => {
+    const amountBoundDelta = Number(b.amount !== null) - Number(a.amount !== null);
+    if (amountBoundDelta !== 0) return amountBoundDelta;
+
     const tokensDelta = tokenCount(b.pattern) - tokenCount(a.pattern);
     if (tokensDelta !== 0) return tokensDelta;
 
@@ -66,6 +75,31 @@ function directionMatches(
   return ruleDirection === null || ruleDirection === transactionType;
 }
 
+// Amount-bound rules win over any-amount ones, and among them the one
+// nearest to the transaction's amount (same-amount.ts): an exact amount beats
+// a rounded installment of another. Ties keep the order the rules came in.
+function householdRuleFor(
+  transaction: CategorizableTransaction,
+  normalizedDescription: string,
+  orderedRules: readonly CategorizationRule[],
+): CategorizationRule | undefined {
+  const matching = orderedRules.filter(
+    (rule) =>
+      directionMatches(rule.direction, transaction.type) &&
+      matchesPattern(normalizedDescription, rule.pattern),
+  );
+
+  let nearest: { rule: CategorizationRule; gap: number } | null = null;
+  for (const rule of matching) {
+    if (rule.amount === null) continue;
+    const gap = sameAmountGapCentavos(rule.amount, transaction);
+    if (gap !== null && (nearest === null || gap < nearest.gap)) {
+      nearest = { rule, gap };
+    }
+  }
+  return nearest?.rule ?? matching.find((rule) => rule.amount === null);
+}
+
 export function categorize(
   transaction: CategorizableTransaction,
   orderedRules: readonly CategorizationRule[],
@@ -76,11 +110,7 @@ export function categorize(
 
   const normalizedDescription = normalizeDescription(transaction.description);
 
-  const householdRule = orderedRules.find(
-    (rule) =>
-      directionMatches(rule.direction, transaction.type) &&
-      matchesPattern(normalizedDescription, rule.pattern),
-  );
+  const householdRule = householdRuleFor(transaction, normalizedDescription, orderedRules);
   if (householdRule) {
     return { subcategory: householdRule.subcategory, source: "rule", ruleId: householdRule.id };
   }

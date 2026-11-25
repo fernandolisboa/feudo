@@ -6,6 +6,7 @@ import {
   type CategorizableTransaction,
   type CategorizationRule,
 } from "./categorize";
+import { isSameAmount, sameAmountGapCentavos } from "./same-amount";
 
 const directionArb = fc.constantFrom<"credit" | "debit" | null>("credit", "debit", null);
 const patternWordArb = fc.constantFrom("MERCADO", "UBER", "EATS", "PIX", "CONDOMINIO", "FATURA");
@@ -14,6 +15,15 @@ const ruleArb: fc.Arbitrary<CategorizationRule> = fc.record({
   id: fc.uuid(),
   pattern: fc.array(patternWordArb, { minLength: 1, maxLength: 3 }).map((words) => words.join(" ")),
   direction: directionArb,
+  amount: fc.constantFrom<CategorizationRule["amount"]>(
+    null,
+    null,
+    { amountCentavos: 1000, currency: "BRL" },
+    { amountCentavos: 150000, currency: "BRL" },
+    { amountCentavos: 150004, currency: "BRL" },
+    { amountCentavos: 150011, currency: "BRL" },
+    { amountCentavos: 150000, currency: "USD" },
+  ),
   subcategory: fc.constantFrom(
     { type: "product" as const, id: "food.groceries" as const },
     { type: "product" as const, id: "transport.ride-hailing" as const },
@@ -40,6 +50,8 @@ const transactionArb: fc.Arbitrary<CategorizableTransaction> = fc.record({
     "SOMETHING ELSE ENTIRELY",
   ),
   type: fc.constantFrom<"credit" | "debit">("credit", "debit"),
+  amountCentavos: fc.constantFrom(-150000, -1000, 1000, 150000, 150003, 4200),
+  currency: fc.constantFrom("BRL", "BRL", "USD"),
   providerCategory: fc.constantFrom<string | null>(null, "Groceries", "Other", "Unknown"),
   manual: fc.constant(null),
 });
@@ -51,6 +63,54 @@ describe("categorize property tests", () => {
         expect(categorize(transaction, orderRules(shuffled))).toEqual(
           categorize(transaction, orderRules(rules)),
         );
+      }),
+    );
+  });
+
+  it("only applies an amount-bound rule within the same-amount tolerance, and never a farther one than another that matches", () => {
+    fc.assert(
+      fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
+        const result = categorize(transaction, orderRules(rules));
+        if (result?.source !== "rule") return;
+        const applied = rules.find((rule) => rule.id === result.ruleId);
+        expect(applied).toBeDefined();
+        if (applied?.amount) {
+          expect(isSameAmount(applied.amount, transaction)).toBe(true);
+          const gap = sameAmountGapCentavos(applied.amount, transaction);
+          for (const other of rules) {
+            const otherGap = other.amount ? sameAmountGapCentavos(other.amount, transaction) : null;
+            if (
+              otherGap !== null &&
+              categorize(transaction, [{ ...other, amount: null }])?.source === "rule"
+            ) {
+              expect(gap).toBeLessThanOrEqual(otherGap);
+            }
+          }
+        }
+      }),
+    );
+  });
+
+  it("lets a matching amount-bound rule win over every unbound rule", () => {
+    fc.assert(
+      fc.property(fc.array(ruleArb, { maxLength: 6 }), transactionArb, (rules, transaction) => {
+        const unbound = rules.map((rule) => ({ ...rule, amount: null }));
+        const boundCouldApply = rules.some((rule, index) => {
+          const alone = unbound[index];
+          return (
+            rule.amount?.amountCentavos === Math.abs(transaction.amountCentavos) &&
+            rule.amount.currency === transaction.currency &&
+            alone !== undefined &&
+            categorize(transaction, [alone])?.source === "rule"
+          );
+        });
+        if (!boundCouldApply) return;
+        const result = categorize(transaction, orderRules(rules));
+        const applied = rules.find((rule) => rule.id === result?.ruleId);
+        expect(applied?.amount).toEqual({
+          amountCentavos: Math.abs(transaction.amountCentavos),
+          currency: transaction.currency,
+        });
       }),
     );
   });

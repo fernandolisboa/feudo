@@ -1,4 +1,5 @@
 import {
+  formatMoney,
   orderRules,
   parseYearMonth,
   shiftYearMonth,
@@ -23,6 +24,7 @@ import { buildTaxonomyView, type CategoryView } from "./taxonomy-view";
 export type RuleRow = {
   id: string;
   pattern: string;
+  amountLabel: string | null;
   appliesTo: string;
   target: string;
 };
@@ -108,6 +110,7 @@ async function buildCategoriesPageProps(
         {
           id: rule.id,
           pattern: rule.pattern,
+          amountLabel: rule.amount === null ? null : formatMoney(rule.amount),
           appliesTo: t.categoriesPage.ruleTable[rule.direction ?? "any"],
           target: `${target.categoryLabel} · ${target.label}`,
         },

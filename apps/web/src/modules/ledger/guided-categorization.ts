@@ -22,6 +22,7 @@ import { createCategorizationRepository } from "./categorization-repository";
 import type { SubcategoryOptionGroup } from "./components/categorize-transaction-dialog";
 import { householdHasAccounts, readHouseholdDashboardLines } from "./dashboard-lines";
 import type { ResolvedLedgerRow } from "./resolve-ledger-rows";
+import { ruleAmountLabel } from "./rule-amount-label";
 import { encodeSubcategoryRef } from "./subcategory-ref";
 import { t } from "./strings";
 import { buildTaxonomyView, type TaxonomyView } from "./taxonomy-view";
@@ -36,8 +37,11 @@ export type GuidedItemView = {
   amountLabel: string;
   type: TransactionDirection;
   pattern: string;
+  ruleAmountLabel: string | null;
+  sameAmountCount: number;
   similarCount: number;
   suggestion: GuidedSuggestionView | null;
+  noSuggestionReason: string;
   deferred: boolean;
 };
 
@@ -80,6 +84,13 @@ async function readUncategorizedWindow(
 
 function suggestionReason(suggestion: CategorySuggestion, target: string): string {
   switch (suggestion.reason) {
+    case "history_amount":
+      return interpolateAll(
+        suggestion.matches === 1
+          ? t.guided.suggestion.historyAmountOne
+          : t.guided.suggestion.historyAmountMany,
+        { count: String(suggestion.matches), target },
+      );
     case "history":
       return interpolateAll(
         suggestion.matches === 1 ? t.guided.suggestion.historyOne : t.guided.suggestion.historyMany,
@@ -132,6 +143,7 @@ export async function getGuidedCategorizationProps(
       description: row.description,
       type: row.type,
       amountCentavos: row.amountCentavos,
+      currency: row.currency,
       date: row.date,
       categorization: row.categorization,
     })),
@@ -154,8 +166,13 @@ export async function getGuidedCategorizationProps(
           amountLabel: formatMoney({ amountCentavos: row.amountCentavos, currency: row.currency }),
           type: row.type,
           pattern: item.pattern,
+          ruleAmountLabel: ruleAmountLabel(row),
+          sameAmountCount: item.sameAmountCount,
           similarCount: item.similarCount,
           suggestion: suggestionView(item.suggestion, taxonomy),
+          noSuggestionReason: item.conflictingHistory
+            ? t.guided.suggestion.conflicting
+            : t.guided.suggestion.none,
           deferred: deferredIds.has(row.id),
         },
       ];

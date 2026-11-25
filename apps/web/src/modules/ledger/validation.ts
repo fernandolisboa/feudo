@@ -137,6 +137,7 @@ export const categorizeTransactionFormSchema = z.discriminatedUnion("createRule"
     createRule: z.literal("on"),
     pattern: rulePatternSchema,
     direction: ruleDirectionSchema,
+    onlyThisAmount: z.enum(["on", "off"]).optional(),
   }),
 ]);
 export type CategorizeTransactionFormInput = z.infer<typeof categorizeTransactionFormSchema>;

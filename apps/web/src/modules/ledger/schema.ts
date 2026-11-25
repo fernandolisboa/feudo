@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   foreignKey,
@@ -76,7 +77,9 @@ export const subcategoryKindOverride = pgTable(
 // Household-scoped (ADR-0001): a member's standing rule, applied at read
 // time by packages/core/src/ledger/categories/categorize.ts and never
 // written onto a transaction (design contract's key decision: only manual
-// choices are persisted). direction null matches either. Targets exactly one
+// choices are persisted). direction null matches either; amount_centavos null
+// matches any amount, else only that absolute amount in amount_currency
+// (ADR-0002: an amount always carries its currency). Targets exactly one
 // subcategory, product or the household's own; the composite foreign key
 // only lets it point at this household's own household_subcategory, and the
 // check makes "exactly one target" a database invariant, not just app code.
@@ -91,6 +94,8 @@ export const categorizationRule = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     pattern: text("pattern").notNull(),
     direction: bankTransactionTypeEnum("direction"),
+    amountCentavos: bigint("amount_centavos", { mode: "number" }),
+    amountCurrency: text("amount_currency"),
     productSubcategoryId: text("product_subcategory_id"),
     householdSubcategoryId: text("household_subcategory_id"),
     createdByUserId: text("created_by_user_id").references(() => user.id, {
@@ -108,8 +113,27 @@ export const categorizationRule = pgTable(
       "categorization_rule_target_check",
       sql`num_nonnulls(${table.productSubcategoryId}, ${table.householdSubcategoryId}) = 1`,
     ),
+    check("categorization_rule_amount_check", sql`${table.amountCentavos} > 0`),
+    check(
+      "categorization_rule_amount_currency_check",
+      sql`num_nonnulls(${table.amountCentavos}, ${table.amountCurrency}) in (0, 2)`,
+    ),
+    // Kept while the deploy that added amount-bound rules rolls out: the
+    // previous release upserts on this constraint and would fail with 42P10
+    // without it (docs/runbooks/database.md, expand first). Until a later
+    // migration drops it, a household has one rule per pattern and
+    // direction, whatever its amount.
     unique("categorization_rule_household_pattern_direction_unique")
       .on(table.householdId, table.pattern, table.direction)
+      .nullsNotDistinct(),
+    unique("categorization_rule_household_pattern_direction_amount_unique")
+      .on(
+        table.householdId,
+        table.pattern,
+        table.direction,
+        table.amountCentavos,
+        table.amountCurrency,
+      )
       .nullsNotDistinct(),
   ],
 );

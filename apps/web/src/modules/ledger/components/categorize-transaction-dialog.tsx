@@ -54,6 +54,7 @@ export type CategorizableRow = {
   isInternalTransfer: boolean;
   hasTransferMark: boolean;
   suggestedPattern: string;
+  ruleAmountLabel: string | null;
 };
 
 export function CategorizeTransactionDialog({
@@ -186,6 +187,12 @@ export function CategorizeTransactionDialog({
                 <p className="text-muted-foreground text-xs">
                   {t.categorize.patternHint} {t.categorize.direction[transaction.type]}
                 </p>
+                {transaction.ruleAmountLabel === null ? null : (
+                  <Label className="items-start gap-2 font-normal tabular-nums">
+                    <Checkbox name="onlyThisAmount" className="mt-0.5" />
+                    {interpolate(t.rules.onlyThisAmount, "{amount}", transaction.ruleAmountLabel)}
+                  </Label>
+                )}
               </div>
             ) : null}
           </div>

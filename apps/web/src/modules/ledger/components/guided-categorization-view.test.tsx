@@ -13,6 +13,8 @@ vi.mock("../actions", () => ({
   setTransferMarkAction: vi.fn(),
 }));
 
+import { interpolate } from "@/lib/interpolate";
+
 import type { GuidedCategorizationProps, GuidedItemView } from "../guided-categorization";
 import { categorizeTransactionFormSchema } from "../validation";
 import { t } from "../strings";
@@ -33,16 +35,21 @@ function item(overrides: Partial<GuidedItemView>): GuidedItemView {
     amountLabel: "R$ 9.000,00",
     type: "credit",
     pattern: "TED RECEBIDA EMPRESA X",
+    ruleAmountLabel: "R$ 9.000,00",
+    sameAmountCount: 0,
     similarCount: 0,
     suggestion: {
       value: "product:income.other",
       label: "Renda · Outras rendas",
       reason: t.guided.suggestion.credit,
     },
+    noSuggestionReason: t.guided.suggestion.none,
     deferred: false,
     ...overrides,
   };
 }
+
+const ONLY_THIS_AMOUNT = interpolate(t.rules.onlyThisAmount, "{amount}", "R$ 9.000,00");
 
 function props(overrides: Partial<GuidedCategorizationProps>): GuidedCategorizationProps {
   return {
@@ -100,10 +107,12 @@ describe("GuidedCategorizationView", () => {
     expect(hidden?.value ?? "").toBe("");
   });
 
-  it("offers the rule already ticked, with the proposed text, when the description repeats", () => {
+  it("offers the rule already ticked and bound to the amount when a pending one shares description and amount", () => {
     render(
       <GuidedCategorizationView
-        {...props({ items: [item({ pattern: "UBER TRIP", similarCount: 3 })] })}
+        {...props({
+          items: [item({ pattern: "UBER TRIP", sameAmountCount: 2, similarCount: 3 })],
+        })}
       />,
     );
 
@@ -111,10 +120,67 @@ describe("GuidedCategorizationView", () => {
     expect(checkbox.getAttribute("aria-checked")).toBe("true");
     expect(screen.getByDisplayValue("UBER TRIP")).toBeTruthy();
     expect(
+      screen.getByRole("checkbox", { name: ONLY_THIS_AMOUNT }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByText(
+        "Mais 2 transações sem categoria têm este texto e este valor e vão receber a mesma categoria.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("counts every amount once the rule is no longer bound to this one", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [item({ pattern: "UBER TRIP", sameAmountCount: 1, similarCount: 3 })],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Mais 1 transação sem categoria tem este texto e este valor e vai receber a mesma categoria.",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: ONLY_THIS_AMOUNT }));
+
+    expect(
       screen.getByText(
         "Mais 3 transações sem categoria têm este texto e vão receber a mesma categoria.",
       ),
     ).toBeTruthy();
+    expect(screen.queryByText(/este valor e v/)).toBeNull();
+  });
+
+  it("leaves the rule unticked when the description repeats only with other amounts, and unbound once the member ticks it", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [item({ pattern: "PIX ENVIADO", sameAmountCount: 0, similarCount: 2 })],
+        })}
+      />,
+    );
+
+    const createRule = screen.getByRole("checkbox", { name: t.guided.createRule });
+    expect(createRule.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByRole("checkbox", { name: ONLY_THIS_AMOUNT })).toBeNull();
+    expect(screen.queryByText(/receber a mesma categoria/)).toBeNull();
+
+    fireEvent.click(createRule);
+
+    const onlyThisAmount = screen.getByRole("checkbox", { name: ONLY_THIS_AMOUNT });
+    expect(onlyThisAmount.getAttribute("aria-checked")).toBe("false");
+    expect(
+      screen.getByText(
+        "Mais 2 transações sem categoria têm este texto e vão receber a mesma categoria.",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.click(onlyThisAmount);
+
+    expect(screen.queryByText(/receber a mesma categoria/)).toBeNull();
   });
 
   it("submits fields the categorize action's schema accepts, rule included", () => {
@@ -125,6 +191,7 @@ describe("GuidedCategorizationView", () => {
             item({
               id: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b",
               pattern: "TED RECEBIDA",
+              sameAmountCount: 1,
               similarCount: 1,
             }),
           ],
@@ -141,6 +208,7 @@ describe("GuidedCategorizationView", () => {
       createRule: data.get("createRule") === "on" ? "on" : "off",
       pattern: data.get("pattern"),
       direction: data.get("direction"),
+      onlyThisAmount: data.get("onlyThisAmount") === "on" ? "on" : "off",
     });
 
     expect(parsed.success).toBe(true);
@@ -148,7 +216,58 @@ describe("GuidedCategorizationView", () => {
       createRule: "on",
       pattern: "TED RECEBIDA",
       direction: "credit",
+      onlyThisAmount: "on",
     });
+    expect([...data.keys()].sort()).toEqual([
+      "createRule",
+      "direction",
+      "onlyThisAmount",
+      "pattern",
+      "subcategory",
+      "transactionId",
+    ]);
+  });
+
+  it("gives the reason it was handed when there is no suggestion", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [item({ suggestion: null, noSuggestionReason: t.guided.suggestion.conflicting })],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(t.guided.suggestion.conflicting)).toBeTruthy();
+    expect(screen.queryByText(t.guided.suggestion.none)).toBeNull();
+  });
+
+  it("neither pre-ticks the rule nor offers the amount for a transaction of zero", () => {
+    render(
+      <GuidedCategorizationView
+        {...props({
+          items: [
+            item({
+              pattern: "AJUSTE SEM VALOR",
+              ruleAmountLabel: null,
+              sameAmountCount: 1,
+              similarCount: 1,
+            }),
+          ],
+        })}
+      />,
+    );
+
+    const createRule = screen.getByRole("checkbox", { name: t.guided.createRule });
+    expect(createRule.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(createRule);
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Mais 1 transação sem categoria tem este texto e vai receber a mesma categoria.",
+      ),
+    ).toBeTruthy();
   });
 
   it("leaves the rule unticked for a one-off description", () => {
@@ -302,7 +421,9 @@ describe("GuidedCategorizationView", () => {
   it("does not pre-tick a rule whose proposed text is longer than a rule allows", () => {
     render(
       <GuidedCategorizationView
-        {...props({ items: [item({ pattern: "A".repeat(81), similarCount: 2 })] })}
+        {...props({
+          items: [item({ pattern: "A".repeat(81), sameAmountCount: 2, similarCount: 2 })],
+        })}
       />,
     );
 
@@ -313,7 +434,9 @@ describe("GuidedCategorizationView", () => {
   it("stops promising the similar ones the same category once the rule is unticked", () => {
     render(
       <GuidedCategorizationView
-        {...props({ items: [item({ pattern: "BAZAR DA ESQUINA", similarCount: 2 })] })}
+        {...props({
+          items: [item({ pattern: "BAZAR DA ESQUINA", sameAmountCount: 2, similarCount: 2 })],
+        })}
       />,
     );
 

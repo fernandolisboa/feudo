@@ -69,6 +69,7 @@ const transactionsProps: TransactionsPageProps = {
         isInternalTransfer: false,
         hasTransferMark: false,
         suggestedPattern: "COMPRA NO MERCADO",
+        ruleAmountLabel: "R$ 100,00",
       },
     },
   ],
