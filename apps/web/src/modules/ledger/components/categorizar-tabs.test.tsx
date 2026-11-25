@@ -51,6 +51,20 @@ describe("CategorizarTabs", () => {
     expect(screen.getByRole("tab", { name: t.categorizeTabs.links })).toBeTruthy();
   });
 
+  it("shows no count, and still renders Categorias, when the count could not be read", () => {
+    render(
+      <CategorizarTabs
+        initialTab="categorias"
+        pendingLinksCount={null}
+        categorias={<p>conteúdo de categorias</p>}
+        vinculos={<p>conteúdo de vínculos</p>}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: t.categorizeTabs.links })).toBeTruthy();
+    expect(isShown("conteúdo de categorias")).toBe(true);
+  });
+
   it("opens on the Vínculos tab when told to", () => {
     render(
       <CategorizarTabs

@@ -15,7 +15,7 @@ export function CategorizarTabs({
   vinculos,
 }: {
   initialTab: CategorizeTab;
-  pendingLinksCount: number;
+  pendingLinksCount: number | null;
   categorias: ReactNode;
   vinculos: ReactNode;
 }) {
@@ -24,7 +24,7 @@ export function CategorizarTabs({
     {
       value: "vinculos",
       label:
-        pendingLinksCount > 0
+        pendingLinksCount !== null && pendingLinksCount > 0
           ? interpolate(t.categorizeTabs.linksWithCount, "{count}", String(pendingLinksCount))
           : t.categorizeTabs.links,
       content: vinculos,

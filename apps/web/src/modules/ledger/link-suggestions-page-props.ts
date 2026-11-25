@@ -73,10 +73,18 @@ export const getLinkSuggestionsProps = cache(getLinkSuggestionsPropsUncached);
 
 // The thin accessor /categorizar's page uses for the Vínculos tab label, so
 // the page never reaches into the larger props bag just to read one count.
+// Reads the same cache()-wrapped promise the Vínculos tab's own content
+// awaits inside its error boundary, so a failure the member will see there
+// anyway never also takes the tab label, and the rest of the page, down with
+// it: null stands for "could not count them," never for zero.
 export async function getLinkSuggestionsPendingCount(
   session: HouseholdSession,
   now: Date = new Date(),
-): Promise<number> {
-  const { pendingCount } = await getLinkSuggestionsProps(session, now);
-  return pendingCount;
+): Promise<number | null> {
+  try {
+    const { pendingCount } = await getLinkSuggestionsProps(session, now);
+    return pendingCount;
+  } catch {
+    return null;
+  }
 }
