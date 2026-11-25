@@ -19,33 +19,46 @@ Rules:
 4. A person's name alone, or a bare Pix, TED, boleto or transferência with no merchant, is not enough: answer null.
 5. The amount is context only. Never write any number other than an index.`;
 
-// Collapsed to a space rather than dropped, so two words a description ran
-// together by a control character never fuse into one the model might read
-// as a different merchant.
-const UNSAFE_PROMPT_CHARS = /[\u0000-\u001f\u007f<>|]/g;
-
 // Deleted rather than collapsed to a space: these carry no width, so a CPF
-// split by one of these (a zero-width space, a soft hyphen, a bidi control,
-// a variation selector, the Hangul filler...) must read as the same
-// unbroken run of digits the document scan expects, not as two fragments
-// either side of an invisible gap. \p{Default_Ignorable_Code_Point} is the
-// Unicode property built for exactly this (it already covers every "format"
-// character below); \p{Cf} is unioned in as a safety net in case a runtime's
-// Unicode data disagrees on some code point.
-const INVISIBLE_FORMAT_CHARS = /[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu;
+// split by one of these must read as the same unbroken run of digits the
+// document scan expects, not as two fragments either side of an invisible
+// gap. \p{Default_Ignorable_Code_Point} is the Unicode property built for
+// exactly this (zero-width spaces, bidi controls, variation selectors, the
+// Hangul filler...); \p{Cf} is unioned in as a safety net in case a
+// runtime's Unicode data disagrees on some code point; \p{M} is a combining
+// or enclosing mark NFKC did not compose into a letter (an accent after a
+// digit, the keycap U+20E3) rather than part of a composed letter such as
+// "ã", which NFKC has already turned into one code point by this point.
+const INVISIBLE_OR_MARK_CHARS = /[\p{Default_Ignorable_Code_Point}\p{Cf}\p{M}]/gu;
 
-// Any other run this long is more likely a document, phone or account
-// number than something the model needs: an installment marker ("3/12"), a
-// store number or a date never reaches 9 digits in a row.
-const LONG_DIGIT_RUN = /\d{9,}/g;
+// Collapsed to a space rather than dropped, so two words a description ran
+// together by one of these never fuse into one the model might read as a
+// different merchant: \p{C} is everything "Other" that step one above left
+// standing (C0/C1 controls, lone surrogates, private-use, unassigned),
+// \p{Z} is every separator (space, non-breaking space, line and paragraph
+// separators), and the rest render blank or are structurally unsafe without
+// being covered by either property: the Braille blank, the two replacement
+// characters, and the prompt's own delimiters.
+const SPACE_FOLDED_CHARS = /[\p{C}\p{Z}\u{2800}\u{FFFC}\u{FFFD}<>|]/gu;
+
+// A run of a decimal digit of any script this long is more likely a
+// document, phone or account number than something the model needs: an
+// installment marker ("3/12"), a store number or a date never reaches 9
+// digits in a row.
+const LONG_DIGIT_RUN = /\p{Nd}{9,}/gu;
 
 const DOCUMENT_CANDIDATE_MIN_TOKENS = 11;
 const DOCUMENT_CANDIDATE_MIN_DIGITS = 6;
 const DOCUMENT_SEPARATORS = new Set([".", "-", "/", " "]);
 const DOCUMENT_MASK_SYMBOLS = new Set(["*", "•"]);
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
 
+// NFKC already maps full-width, superscript, circled and mathematical
+// digits to ASCII before this ever runs; this property test is what is left
+// to recognise: a decimal digit of another script (Arabic-Indic and the
+// like) as a digit for the document scan.
 function isDigitChar(char: string): boolean {
-  return char >= "0" && char <= "9";
+  return DECIMAL_DIGIT.test(char);
 }
 
 function isMaskLetterChar(char: string): boolean {
@@ -156,19 +169,42 @@ const RAW_DESCRIPTION_MAX_CHARS = 1_000;
 // would read the next line's text as this one's description.
 const EMPTY_DESCRIPTION_PLACEHOLDER = "(descrição removida)";
 
-// Folds full-width digits to ASCII, drops invisible format characters
-// outright (never collapsing them to a visible space) and turns every
-// control character and every kind of whitespace (tab, newline,
-// non-breaking space, the Unicode line/paragraph separators) into one plain
-// space, before the document scan ever runs: a document padded or broken up
-// by any of these must look, to the scan, exactly like one written with
-// plain spaces.
+// Folds full-width digits to ASCII, deletes every default-ignorable, format
+// and mark character outright (never collapsing them to a visible space,
+// so a document they split still reads as one unbroken run) and turns
+// every other control, private-use, unassigned or separator character into
+// one plain space, before the document scan ever runs: a document padded
+// or broken up by any of these must look, to the scan, exactly like one
+// written with plain spaces.
 function normalizeForSanitizing(text: string): string {
   return text
     .normalize("NFKC")
-    .replace(INVISIBLE_FORMAT_CHARS, "")
-    .replace(UNSAFE_PROMPT_CHARS, " ")
+    .replace(INVISIBLE_OR_MARK_CHARS, "")
+    .replace(SPACE_FOLDED_CHARS, " ")
     .replace(/\s+/g, " ");
+}
+
+// Drawn from what the document scan below treats as part of a document: a
+// decimal digit of any script, a mask character or letter, and the
+// separators a gap between tokens is made of. Applied only when the raw cut
+// removed something, right before the scan: padding that collapsed to
+// nothing during normalization (a run of spaces, zero-width characters, or
+// a character that is itself a surrogate pair) can otherwise push a
+// document across the 1,000-character boundary and leave a fragment too
+// short to be recognised as one, which would then survive untouched.
+const TRAILING_RAW_CUT_RESIDUE = /[\p{Nd}*•xX.\-/ ]+$/u;
+
+const HIGH_SURROGATE_RANGE_START = 0xd800;
+const HIGH_SURROGATE_RANGE_END = 0xdbff;
+
+// The 140-character cut is a plain UTF-16 slice; if it lands between the
+// two code units of a surrogate pair, the lone high surrogate it keeps
+// would make the result an ill-formed string.
+function dropTrailingHighSurrogate(text: string): string {
+  const lastCode = text.charCodeAt(text.length - 1);
+  const endsOnHighSurrogate =
+    lastCode >= HIGH_SURROGATE_RANGE_START && lastCode <= HIGH_SURROGATE_RANGE_END;
+  return endsOnHighSurrogate ? text.slice(0, -1) : text;
 }
 
 // Removing a document replaces it with a single space (so the words on
@@ -193,11 +229,14 @@ function removeDocumentsUntilStable(text: string): string {
 }
 
 export function sanitizeDescriptionForPrompt(description: string): string {
-  const cleaned = removeDocumentsUntilStable(
-    normalizeForSanitizing(description.slice(0, RAW_DESCRIPTION_MAX_CHARS)),
-  )
-    .slice(0, DESCRIPTION_MAX_CHARS)
-    .trim();
+  const rawCutRemovedSomething = description.length > RAW_DESCRIPTION_MAX_CHARS;
+  const normalized = normalizeForSanitizing(description.slice(0, RAW_DESCRIPTION_MAX_CHARS));
+  const beforeScan = rawCutRemovedSomething
+    ? normalized.replace(TRAILING_RAW_CUT_RESIDUE, "")
+    : normalized;
+  const cleaned = dropTrailingHighSurrogate(
+    removeDocumentsUntilStable(beforeScan).slice(0, DESCRIPTION_MAX_CHARS),
+  ).trim();
   return cleaned.length > 0 ? cleaned : EMPTY_DESCRIPTION_PLACEHOLDER;
 }
 

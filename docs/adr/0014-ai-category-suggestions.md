@@ -36,18 +36,24 @@ choice, exactly as with a manual categorization today.
 - **What the model receives, and nothing else.** Feudo's product subcategories as stable ids with
   their pt-BR "Categoria · Subcategoria" labels and kinds (product data, not personal data), and per
   group: an index, the direction, the absolute amount formatted in BRL, and the description. The
-  description is cut to 1,000 raw characters, then normalized (Unicode NFKC, invisible format
-  characters dropped — Unicode default-ignorable and format characters, covering zero-width
-  spaces, bidi controls, variation selectors and the like — every control character and whitespace
-  variant folded to one space) and then scanned for a document-like run: a
-  sequence of 11 or more digits and mask characters (`*`, `•`, or `x`/`X` where it is not part of an
-  ordinary word), with a gap of one or more characters drawn from `. - /` and space between any two
-  of them and at least 6 digits among them, is removed as a whole, alongside any other run of 9 or
-  more digits and a `<`/`>`/`|` character; the result is cut at 140 characters. A gap character drawn
-  from anything else (a comma, a colon, an underscore, a dash that is not a hyphen) is not bridged,
-  and a masked document showing fewer than 6 digits is left as is. No dates, account names or types,
-  institution, connection label, document hash, household subcategory names or examples from the
-  household's categorized history. The description is the bank's own free text, so it can still
+  description is cut to 1,000 raw characters (and, when that cut removed something, a trailing run
+  of digits, mask characters and separators is dropped too, so a document cut in half is not kept);
+  normalized with Unicode NFKC; every default-ignorable, format and combining-mark character is
+  deleted outright (zero-width spaces, bidi controls, variation selectors, an accent or a keycap
+  mark that NFKC did not fold into a letter); every other control, private-use, unassigned or
+  separator character, plus the blank-rendering U+2800, is folded to one space; a decimal digit of
+  any script counts as a digit. It is then scanned for a document-like run: a sequence of 11 or more
+  digits and mask characters (`*`, `•`, or `x`/`X` where it is not part of an ordinary word), with a
+  gap of one or more characters drawn from `. - /` and space between any two of them and at least 6
+  digits among them, is removed as a whole, alongside any other run of 9 or more digits and a
+  `<`/`>`/`|` character; the result is cut at 140 characters. A gap character drawn from anything
+  else (a comma, a colon, an underscore, a dash that is not a hyphen) is not bridged, and a masked
+  document showing fewer than 6 digits is left as is. The aim is data minimisation against what a
+  bank writes in a description, not a defence against someone who controls the description text,
+  who decides what it says in any case; a character the rules above do not name (a letter,
+  punctuation or a visible symbol between two digits) is not bridged. No dates, account names or
+  types, institution, connection label, document hash, household subcategory names or examples from
+  the household's categorized history. The description is the bank's own free text, so it can still
   carry a name, a date or part of a document number the sanitizer does not catch; the terms, privacy
   policy and connection consent say so. Descriptions are untrusted data: they sit inside a delimited
   block the system prompt declares as data, never instructions.

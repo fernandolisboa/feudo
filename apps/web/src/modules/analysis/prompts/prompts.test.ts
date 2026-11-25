@@ -442,6 +442,98 @@ describe("category suggester prompt v1", () => {
       },
     );
 
+    it("keeps a composed accented word intact, and folds its decomposed spelling to the same word", () => {
+      const composed = "PÃO DE AÇÚCAR";
+      const decomposed = composed.normalize("NFD");
+
+      expect(sanitizeDescriptionForPrompt(composed)).toBe(composed);
+      expect(sanitizeDescriptionForPrompt(decomposed)).toBe(composed);
+    });
+
+    describe("folds every C1 control character to a space", () => {
+      const C1_CONTROLS = Array.from({ length: 32 }, (_, index) => 0x80 + index);
+
+      for (const codePoint of C1_CONTROLS) {
+        const char = String.fromCharCode(codePoint);
+        const hex = codePoint.toString(16).toUpperCase().padStart(4, "0");
+
+        it(`removes a CPF split by U+${hex} between two digits, keeping the words around it`, () => {
+          expect(sanitizeDescriptionForPrompt(`A 123.456.789-0${char}0 B`)).toBe("A B");
+        });
+
+        it(`removes a CPF split by U+${hex} right after a separator, keeping the words around it`, () => {
+          expect(sanitizeDescriptionForPrompt(`A 123.456.789-${char}00 B`)).toBe("A B");
+        });
+      }
+    });
+
+    describe("drops a combining or enclosing mark that NFKC did not compose into a letter", () => {
+      const CPF_SAMPLE = "123.456.789-00";
+
+      function withCharAfterEachDigit(sample: string, char: string): string[] {
+        const variants: string[] = [];
+        for (let index = 0; index < sample.length; index += 1) {
+          if (!/\d/.test(sample[index] ?? "")) {
+            continue;
+          }
+          variants.push(sample.slice(0, index + 1) + char + sample.slice(index + 1));
+        }
+        return variants;
+      }
+
+      it.each(withCharAfterEachDigit(CPF_SAMPLE, "\u{0301}"))(
+        "removes a CPF with a combining acute accent after a digit: %s",
+        (variant) => {
+          expect(sanitizeDescriptionForPrompt(`A ${variant} B`)).toBe("A B");
+        },
+      );
+
+      it("removes a CPF written with a keycap sequence for every digit", () => {
+        const keycapCpf = CPF_SAMPLE.replace(/\d/g, (digit) => `${digit}\u{FE0F}\u{20E3}`);
+
+        expect(sanitizeDescriptionForPrompt(`A ${keycapCpf} B`)).toBe("A B");
+      });
+    });
+
+    describe("folds a blank-rendering or Other-category character between two digits to a space", () => {
+      const CASES: [name: string, char: string][] = [
+        ["a Braille blank", "\u{2800}"],
+        ["an object replacement character", "\u{FFFC}"],
+        ["a private-use character", "\u{E000}"],
+        ["a lone high surrogate", "\uD83D"],
+      ];
+
+      it.each(CASES)("removes a CPF split by %s, keeping the words around it", (_name, char) => {
+        expect(sanitizeDescriptionForPrompt(`A 123.456.789-0${char}0 B`)).toBe("A B");
+      });
+    });
+
+    it("folds a NEL control character between two words to a space", () => {
+      expect(sanitizeDescriptionForPrompt("PIX ENVIADO\u{85}FULANO")).toBe("PIX ENVIADO FULANO");
+    });
+
+    describe("treats a decimal digit of any script as a digit", () => {
+      function toArabicIndicDigit(digit: string): string {
+        return String.fromCodePoint(0x0660 + Number(digit));
+      }
+
+      it("removes a CPF written in Arabic-Indic digits, keeping the words around it", () => {
+        const arabicIndicCpf = "123.456.789-00".replace(/\d/g, (digit) =>
+          toArabicIndicDigit(digit),
+        );
+
+        expect(sanitizeDescriptionForPrompt(`A ${arabicIndicCpf} B`)).toBe("A B");
+      });
+
+      it("removes nine or more contiguous Arabic-Indic digits", () => {
+        const nineArabicIndicDigits = Array.from({ length: 9 }, (_, index) =>
+          toArabicIndicDigit(String(index % 10)),
+        ).join("");
+
+        expect(sanitizeDescriptionForPrompt(`A ${nineArabicIndicDigits} B`)).toBe("A B");
+      });
+    });
+
     it("handles a 5,000-character description, cutting well before the document scan runs", () => {
       const longDescription = `${"A".repeat(4_000)}123.456.789-00${"B".repeat(986)}`;
       expect(longDescription).toHaveLength(5_000);
@@ -485,6 +577,10 @@ describe("category suggester prompt v1", () => {
         "‪",
         "⁦",
         "️",
+        "\u{85}",
+        "\u{301}",
+        "\u{2800}",
+        "\u{0666}",
       ];
       fc.assert(
         fc.property(
@@ -503,6 +599,66 @@ describe("category suggester prompt v1", () => {
           },
         ),
       );
+    });
+
+    describe("never keeps half a document straddling the 1,000-character raw cut", () => {
+      const PLACEHOLDER = "(descrição removida)";
+
+      it("drops a document straddle left by plain-space padding", () => {
+        expect(sanitizeDescriptionForPrompt(" ".repeat(990) + "123.456.789-00 B")).toBe(
+          PLACEHOLDER,
+        );
+      });
+
+      it("drops a document straddle left by zero-width-space padding", () => {
+        expect(sanitizeDescriptionForPrompt("\u{200B}".repeat(990) + "123.456.789-00 B")).toBe(
+          PLACEHOLDER,
+        );
+      });
+
+      it("drops a document straddle left by a padding character that is a surrogate pair", () => {
+        expect(sanitizeDescriptionForPrompt("\u{E0041}".repeat(495) + "123.456.789-00 B")).toBe(
+          PLACEHOLDER,
+        );
+      });
+
+      it("keeps the words before a straddling document, dropping only the document", () => {
+        expect(
+          sanitizeDescriptionForPrompt(
+            `PIX ENVIADO ${"\u{200B}".repeat(978)}123.456.789-00 FULANO`,
+          ),
+        ).toBe("PIX ENVIADO");
+      });
+
+      it("drops a masked document straddle cut right after one of its mask letters", () => {
+        expect(sanitizeDescriptionForPrompt(" ".repeat(987) + "123.456.789-XX B")).toBe(
+          PLACEHOLDER,
+        );
+      });
+
+      it("never lets a digit survive the raw cut, whatever position the cut lands on", () => {
+        for (let gapShrink = 0; gapShrink <= 20; gapShrink += 1) {
+          const input = `A ${" ".repeat(998 - gapShrink)}123.456.789-00 B`;
+
+          expect(sanitizeDescriptionForPrompt(input)).not.toMatch(/\d/);
+        }
+      });
+
+      it("does not strip a trailing digit run when the raw description was not cut", () => {
+        const input = `${" ".repeat(991)}LOJA 0042`;
+        expect(input).toHaveLength(1_000);
+
+        expect(sanitizeDescriptionForPrompt(input)).toBe("LOJA 0042");
+      });
+    });
+
+    it("drops a trailing high surrogate left by the 140-character cut, keeping the result well-formed", () => {
+      const input = `${"A".repeat(139)}\u{1F600}`;
+
+      const sanitized = sanitizeDescriptionForPrompt(input);
+
+      expect(sanitized.isWellFormed()).toBe(true);
+      expect(sanitized).toHaveLength(139);
     });
   });
 
