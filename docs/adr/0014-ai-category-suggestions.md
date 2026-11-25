@@ -36,8 +36,10 @@ choice, exactly as with a manual categorization today.
 - **What the model receives, and nothing else.** Feudo's product subcategories as stable ids with
   their pt-BR "Categoria · Subcategoria" labels and kinds (product data, not personal data), and per
   group: an index, the direction, the absolute amount formatted in BRL, and the description. The
-  description is first normalized (Unicode NFKC, zero-width characters dropped, every control
-  character and whitespace variant folded to one space) and then scanned for a document-like run: a
+  description is cut to 1,000 raw characters, then normalized (Unicode NFKC, invisible format
+  characters dropped — Unicode default-ignorable and format characters, covering zero-width
+  spaces, bidi controls, variation selectors and the like — every control character and whitespace
+  variant folded to one space) and then scanned for a document-like run: a
   sequence of 11 or more digits and mask characters (`*`, `•`, or `x`/`X` where it is not part of an
   ordinary word), with a gap of one or more characters drawn from `. - /` and space between any two
   of them and at least 6 digits among them, is removed as a whole, alongside any other run of 9 or

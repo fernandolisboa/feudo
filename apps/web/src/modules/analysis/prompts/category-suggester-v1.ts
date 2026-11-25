@@ -25,10 +25,14 @@ Rules:
 const UNSAFE_PROMPT_CHARS = /[\u0000-\u001f\u007f<>|]/g;
 
 // Deleted rather than collapsed to a space: these carry no width, so a CPF
-// typed with one of these hiding in the middle ("123.456.789-0​0")
-// must read as the same unbroken run of digits the document scan expects,
-// not as two fragments either side of an invisible gap.
-const ZERO_WIDTH_CHARS = /[​‌‍⁠﻿]/g;
+// split by one of these (a zero-width space, a soft hyphen, a bidi control,
+// a variation selector, the Hangul filler...) must read as the same
+// unbroken run of digits the document scan expects, not as two fragments
+// either side of an invisible gap. \p{Default_Ignorable_Code_Point} is the
+// Unicode property built for exactly this (it already covers every "format"
+// character below); \p{Cf} is unioned in as a safety net in case a runtime's
+// Unicode data disagrees on some code point.
+const INVISIBLE_FORMAT_CHARS = /[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu;
 
 // Any other run this long is more likely a document, phone or account
 // number than something the model needs: an installment marker ("3/12"), a
@@ -142,21 +146,27 @@ function stripDocumentLikeSequences(text: string): string {
 
 export const DESCRIPTION_MAX_CHARS = 140;
 
+// The column is unbounded text; cut before any Unicode normalization or
+// scanning runs so a pathological input can't make either cost more than
+// working through this many characters once.
+const RAW_DESCRIPTION_MAX_CHARS = 1_000;
+
 // A description that was nothing but a removed sequence must not render as
 // an empty field: the transaction line would lose a column and the model
 // would read the next line's text as this one's description.
 const EMPTY_DESCRIPTION_PLACEHOLDER = "(descrição removida)";
 
-// Folds full-width digits to ASCII, drops zero-width characters outright
-// (never collapsing them to a visible space) and turns every control
-// character and every kind of whitespace (tab, newline, non-breaking space,
-// the Unicode line/paragraph separators) into one plain space, before the
-// document scan ever runs: a document padded or broken up by any of these
-// must look, to the scan, exactly like one written with plain spaces.
+// Folds full-width digits to ASCII, drops invisible format characters
+// outright (never collapsing them to a visible space) and turns every
+// control character and every kind of whitespace (tab, newline,
+// non-breaking space, the Unicode line/paragraph separators) into one plain
+// space, before the document scan ever runs: a document padded or broken up
+// by any of these must look, to the scan, exactly like one written with
+// plain spaces.
 function normalizeForSanitizing(text: string): string {
   return text
     .normalize("NFKC")
-    .replace(ZERO_WIDTH_CHARS, "")
+    .replace(INVISIBLE_FORMAT_CHARS, "")
     .replace(UNSAFE_PROMPT_CHARS, " ")
     .replace(/\s+/g, " ");
 }
@@ -183,7 +193,9 @@ function removeDocumentsUntilStable(text: string): string {
 }
 
 export function sanitizeDescriptionForPrompt(description: string): string {
-  const cleaned = removeDocumentsUntilStable(normalizeForSanitizing(description))
+  const cleaned = removeDocumentsUntilStable(
+    normalizeForSanitizing(description.slice(0, RAW_DESCRIPTION_MAX_CHARS)),
+  )
     .slice(0, DESCRIPTION_MAX_CHARS)
     .trim();
   return cleaned.length > 0 ? cleaned : EMPTY_DESCRIPTION_PLACEHOLDER;

@@ -404,6 +404,54 @@ describe("category suggester prompt v1", () => {
       },
     );
 
+    // Invisible characters other than the five zero-width ones already
+    // covered above: a soft hyphen, bidi controls, a vowel separator, a
+    // combining joiner and a variation selector carry no width either, so a
+    // document they split must still read, to the scan, as one unbroken run.
+    const INVISIBLE_FORMAT_CHARACTERS: [name: string, char: string][] = [
+      ["a soft hyphen", "­"],
+      ["a left-to-right mark", "‎"],
+      ["a right-to-left mark", "‏"],
+      ["a left-to-right embedding", "‪"],
+      ["a right-to-left embedding", "‫"],
+      ["a pop directional formatting", "‬"],
+      ["a left-to-right override", "‭"],
+      ["a right-to-left override", "‮"],
+      ["a left-to-right isolate", "⁦"],
+      ["a right-to-left isolate", "⁧"],
+      ["a first strong isolate", "⁨"],
+      ["a pop directional isolate", "⁩"],
+      ["a Mongolian vowel separator", "᠎"],
+      ["a function application", "⁡"],
+      ["a combining grapheme joiner", "͏"],
+      ["a variation selector-16", "️"],
+      ["a Hangul filler", "ㅤ"],
+    ];
+
+    it.each(INVISIBLE_FORMAT_CHARACTERS)(
+      "removes a CPF split by %s between two digits, keeping the words around it",
+      (_name, char) => {
+        expect(sanitizeDescriptionForPrompt(`A 123.456.789-0${char}0 B`)).toBe("A B");
+      },
+    );
+
+    it.each(INVISIBLE_FORMAT_CHARACTERS)(
+      "removes a CPF split by %s right after a separator, keeping the words around it",
+      (_name, char) => {
+        expect(sanitizeDescriptionForPrompt(`A 123.456.789-${char}00 B`)).toBe("A B");
+      },
+    );
+
+    it("handles a 5,000-character description, cutting well before the document scan runs", () => {
+      const longDescription = `${"A".repeat(4_000)}123.456.789-00${"B".repeat(986)}`;
+      expect(longDescription).toHaveLength(5_000);
+
+      const sanitized = sanitizeDescriptionForPrompt(longDescription);
+
+      expect(sanitized.length).toBeLessThanOrEqual(140);
+      expect(sanitized).toBe("A".repeat(140));
+    });
+
     it("is idempotent and stays within its own limits for any input drawn from its alphabet", () => {
       const alphabet = [
         "0",
@@ -432,6 +480,11 @@ describe("category suggester prompt v1", () => {
         "<",
         ">",
         "|",
+        "­",
+        "‎",
+        "‪",
+        "⁦",
+        "️",
       ];
       fc.assert(
         fc.property(
