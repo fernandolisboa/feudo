@@ -23,6 +23,15 @@ export const PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
   { pattern: "CESTA DE SERVICOS", direction: "debit", subcategoryId: "financial.bank-fees" },
   { pattern: "RENDIMENTO", direction: "credit", subcategoryId: "income.yields" },
   { pattern: "RENDIMENTOS", direction: "credit", subcategoryId: "income.yields" },
+
+  { pattern: "DROGASIL", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "DROGARIA", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "DROGARIAS", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "DROGA RAIA", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "RAIADROGASILSA", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "PAGUE MENOS", direction: "debit", subcategoryId: "health.pharmacy" },
+  { pattern: "FARMACIA", direction: "debit", subcategoryId: "health.pharmacy" },
+
   { pattern: "UBER EATS", direction: "debit", subcategoryId: "food.delivery" },
   { pattern: "IFOOD", direction: "debit", subcategoryId: "food.delivery" },
   { pattern: "UBER", direction: "debit", subcategoryId: "transport.ride-hailing" },
@@ -44,14 +53,6 @@ export const PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
   { pattern: "GLOBOPLAY", direction: "debit", subcategoryId: "bills.subscriptions" },
   { pattern: "PARAMOUNTPLUS", direction: "debit", subcategoryId: "bills.subscriptions" },
   { pattern: "YOUTUBE PREMIUM", direction: "debit", subcategoryId: "bills.subscriptions" },
-
-  { pattern: "DROGASIL", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "DROGARIA", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "DROGARIAS", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "DROGA RAIA", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "RAIADROGASILSA", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "PAGUE MENOS", direction: "debit", subcategoryId: "health.pharmacy" },
-  { pattern: "FARMACIA", direction: "debit", subcategoryId: "health.pharmacy" },
 
   { pattern: "IFD", direction: "debit", subcategoryId: "food.delivery" },
   { pattern: "99FOOD", direction: "debit", subcategoryId: "food.delivery" },

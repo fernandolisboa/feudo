@@ -1,7 +1,7 @@
 import {
   categoryOf,
+  foldDescription,
   localDateOf,
-  normalizeDescription,
   yearMonthDayRange,
   yearMonthOf,
   type IsoDateRange,
@@ -58,7 +58,7 @@ function matchesKind(row: ResolvedLedgerRow, kind: Kind | null): boolean {
 }
 
 function matchesSearch(row: ResolvedLedgerRow, normalizedQuery: string): boolean {
-  return normalizedQuery === "" || normalizeDescription(row.description).includes(normalizedQuery);
+  return normalizedQuery === "" || foldDescription(row.description).includes(normalizedQuery);
 }
 
 function clampToToday(isoDate: string, todayIso: string): string {
@@ -124,7 +124,7 @@ export async function readFilteredTransactions(
       : null;
   const selectedKind = params.tipo ?? null;
   const rawSearch = params.busca && params.busca.length > 0 ? params.busca : null;
-  const normalizedSearch = rawSearch !== null ? normalizeDescription(rawSearch) : "";
+  const normalizedSearch = rawSearch !== null ? foldDescription(rawSearch) : "";
   const searchQuery = normalizedSearch !== "" ? rawSearch : null;
 
   const {

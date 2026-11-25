@@ -99,12 +99,12 @@ describe("analyst prompt v2", () => {
 
 // A changed hash here means the system prompt's wording changed, which is a
 // new prompt version (ADR-0014), never an edit of this file: bump the
-// version and keep this pin for the old version's history. v1's taxonomy
-// pin (the one below, asserting the rendered block's hash) does not move
-// forward with it: a taxonomy pin only ever guards the current version,
-// because productSubcategoriesForPrompt() renders the taxonomy live rather
-// than from a frozen fixture, so v1's pin retired the moment v2 became
-// current, and v2 carries its own (RENDERED_TAXONOMY_V2_SHA256 below).
+// version and keep this pin for the old version's history. A taxonomy pin
+// only ever guards the current version, because
+// productSubcategoriesForPrompt() renders the taxonomy live rather than
+// from a frozen fixture: a superseded version's taxonomy pin is removed
+// when the next version becomes current, so only the current version's pin
+// exists (RENDERED_TAXONOMY_V2_SHA256 below).
 const CATEGORY_SUGGESTER_V1_SYSTEM_SHA256 =
   "6c311ebe053cbe5f0fbdab3599eeb2a9082c37adc40bdbff2572724c77dbb746";
 

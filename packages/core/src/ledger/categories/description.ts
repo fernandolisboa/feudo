@@ -40,14 +40,22 @@ export function stripStoredPatternInstallmentMarker(pattern: string): string {
   return pattern.replace(STORED_PATTERN_INSTALLMENT_MARKER, "").trim();
 }
 
-export function normalizeDescription(text: string): string {
-  const normalized = text
+// The accent-folding, case-folding and punctuation-collapsing step alone,
+// with no installment-marker stripping: a search box folds a query and a
+// row's description the same way without also erasing the marker a member
+// is searching for ("PARC03/10"), which normalizeDescription's extra step
+// would.
+export function foldDescription(text: string): string {
+  return text
     .normalize("NFD")
     .replace(DIACRITIC_MARKS, "")
     .toUpperCase()
     .replace(NON_ALPHANUMERIC_RUN, " ")
     .trim();
-  return stripInstallmentMarker(normalized);
+}
+
+export function normalizeDescription(text: string): string {
+  return stripInstallmentMarker(foldDescription(text));
 }
 
 // matchesPattern requires a contiguous token run, so the pattern proposed

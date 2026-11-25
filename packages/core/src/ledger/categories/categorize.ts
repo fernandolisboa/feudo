@@ -49,17 +49,15 @@ function compareById(a: string, b: string): number {
 
 // A household's own rule pattern is the one place this normalization still
 // needs a floor: stripping an installment marker off a short stored pattern
-// (B2) must not leave something too short to be a usable pattern (a stored
+// must not leave something too short to be a usable pattern (a stored
 // "XPARC03" becoming the one-letter "X", or a stored "PARC03" becoming
-// empty). apps/web's form validation imports this same constant rather than
-// duplicating it, so the two can never disagree.
+// empty).
 export const RULE_PATTERN_MIN_LENGTH = 3;
 
-// The single "prepare rules for matching" step: every caller of
-// householdRuleFor or the rules page goes through this, so a stored
-// pattern's installment marker (B2) is stripped exactly once, before
-// ranking, rather than at match time on every transaction. Stripping below
-// the usable floor keeps the stored pattern instead.
+// The single "prepare rules for matching" step: every caller goes through
+// this, so a stored pattern's installment marker is stripped exactly once,
+// before ranking, rather than at match time on every transaction. Stripping
+// below the usable floor keeps the stored pattern instead.
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
   const prepared = rules.map((rule) => {
     const stripped = stripStoredPatternInstallmentMarker(rule.pattern);

@@ -63,6 +63,7 @@ export {
 } from "./ledger/categories/taxonomy";
 
 export {
+  foldDescription,
   normalizeDescription,
   rulePatternFromDescription,
   matchesPattern,

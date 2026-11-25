@@ -179,6 +179,19 @@ describe("PRODUCT_DEFAULT_RULES, additions", () => {
     expect(result?.subcategory).toEqual({ type: "product", id: "health.pharmacy" });
   });
 
+  it.each([
+    ["IFOOD FARMACIA X", "health.pharmacy"],
+    ["UBER EATS DROGARIA X", "health.pharmacy"],
+    ["RAPPI DROGARIA X", "health.pharmacy"],
+    ["IFOOD SOME RESTAURANT", "food.delivery"],
+  ] satisfies [description: string, subcategoryId: ProductSubcategoryId][])(
+    "keeps pharmacy rules winning over every delivery rule, old and new: %s resolves to %s",
+    (description, subcategoryId) => {
+      const result = categorize(debit(description), []);
+      expect(result?.subcategory).toEqual({ type: "product", id: subcategoryId });
+    },
+  );
+
   it("does not match AMAZONAS ENERGIA as Amazon", () => {
     const result = categorize(debit("AMAZONAS ENERGIA"), []);
     expect(result).toBeNull();
@@ -210,6 +223,47 @@ describe("PRODUCT_DEFAULT_RULES, declaration order wins over word count", () => 
       expect(result?.subcategory).toEqual({ type: "product", id: subcategoryId });
     },
   );
+});
+
+describe("PRODUCT_DEFAULT_RULES, operation markers win over every other merchant", () => {
+  const MARKER_PATTERNS = [
+    "PAGAMENTO FATURA",
+    "PAGTO FATURA",
+    "PGTO FATURA",
+    "PAG FATURA",
+    "CONDOMINIO",
+    "IPTU",
+    "IPVA",
+    "IOF",
+    "TARIFA",
+    "CESTA DE SERVICOS",
+  ];
+
+  const markerRules = MARKER_PATTERNS.map((pattern) => {
+    const rule = PRODUCT_DEFAULT_RULES.find((candidate) => candidate.pattern === pattern);
+    if (rule === undefined) {
+      throw new Error(`no default rule declared for marker pattern "${pattern}"`);
+    }
+    return rule;
+  });
+
+  const CASES: [description: string, subcategoryId: ProductSubcategoryId][] = markerRules.flatMap(
+    (marker) =>
+      PRODUCT_DEFAULT_RULES.filter(
+        (rule) =>
+          rule.direction === "debit" &&
+          rule.subcategoryId !== marker.subcategoryId &&
+          !MARKER_PATTERNS.includes(rule.pattern),
+      ).map((other): [string, ProductSubcategoryId] => [
+        `${marker.pattern} DE ${other.pattern}`,
+        marker.subcategoryId,
+      ]),
+  );
+
+  it.each(CASES)("resolves %s to the marker's subcategory %s", (description, subcategoryId) => {
+    const result = categorize(debit(description), []);
+    expect(result?.subcategory).toEqual({ type: "product", id: subcategoryId });
+  });
 });
 
 function patternTokens(pattern: string): string[] {

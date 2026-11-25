@@ -83,14 +83,20 @@ whatever category the provider guessed. All additive: no id removed or renamed.
   or length. Every more specific pattern (a merchant's own card-bill prefix, an operation marker,
   a longer merchant name that contains a shorter one) is declared before the pattern it would
   otherwise be shadowed by, and a structural test over the whole array checks that no earlier
-  pattern's tokens form a contiguous run inside a later, differently-categorized one. Two things
+  pattern's tokens form a contiguous run inside a later, differently-categorized one. Three things
   change among the rules that existed before this amendment as a result: an operation marker
   (`CONDOMINIO`, `IPTU`, `IPVA`, `IOF`, `TARIFA`, `CESTA DE SERVICOS`) now also wins over `IFOOD`,
   `UBER`, `99APP`, `NETFLIX` and `SPOTIFY` on a statement line that carries both (for example,
-  "IOF DE NETFLIX" becomes `financial.taxes`), and an earlier-declared merchant wins over a later
-  one when both could match the same line. This does not touch `orderRules`, which still breaks a
-  household rule's token-count tie with the longer pattern, by design (a household's own, more
-  specific rule should win).
+  "IOF DE NETFLIX" becomes `financial.taxes`); among the card-bill family and the operation markers
+  themselves, the earlier-declared one wins on a line that carries two (for example, a line with
+  both `TARIFA` and `IPTU` is now `housing.property-tax`, because `IPTU` is declared first); and an
+  earlier-declared merchant wins over a later one when both could match the same line. The
+  pharmacy rules (`DROGASIL`, `DROGARIA`, `DROGARIAS`, `DROGA RAIA`, `RAIADROGASILSA`,
+  `PAGUE MENOS`, `FARMACIA`) are declared before every delivery rule, old and new, so a delivery
+  app's own pharmacy line (`IFOOD FARMACIA X`, `UBER EATS DROGARIA X`) resolves to
+  `health.pharmacy`. This does not touch `orderRules`, which still breaks a household rule's
+  token-count tie with the longer pattern, by design (a household's own, more specific rule should
+  win).
 - `normalizeDescription` (`description.ts`) strips a trailing installment marker from a
   transaction description: `PARC` plus exactly two digits, followed by a second two-digit group
   (the card issuer's "/10"), either as its own token or glued to the truncated merchant name it
@@ -106,7 +112,12 @@ whatever category the provider guessed. All additive: no id removed or renamed.
   ranking, never at match time and never on a transaction description. Stripping that would leave
   a pattern shorter than `RULE_PATTERN_MIN_LENGTH` (owned by `packages/core`, imported by the web
   form validation rather than duplicated) keeps the stored pattern as it is, so a stored "XPARC03"
-  never becomes the one-letter "X" and a stored "PARC03" never becomes empty.
+  never becomes the one-letter "X" and a stored "PARC03" never becomes empty. A stored pattern
+  kept as stored by this floor (a merchant name of one or two characters followed by the counter)
+  no longer matches new installments, whose descriptions lose the marker; the household's next
+  categorization of that merchant proposes a rule on the description as it is now. The ledger
+  search folds a query and a row's description the same way, without the marker-stripping step, so
+  a member can still find an installment by its marker.
 - Known limitation: a merchant token on a transfer line (a Pix to a person or company whose name
   contains it, or a co-branded card's bill paid under a description outside the card-bill family)
   is filed as that merchant's category; a household rule or a manual choice overrides it.
