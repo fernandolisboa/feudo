@@ -21,6 +21,7 @@ export type ProductCategoryId = (typeof PRODUCT_CATEGORY_IDS)[number];
 export const PRODUCT_SUBCATEGORIES = [
   { id: "income.salary", categoryId: "income", kind: "income" },
   { id: "income.self-employed", categoryId: "income", kind: "income" },
+  { id: "income.profit-distribution", categoryId: "income", kind: "income" },
   { id: "income.benefits", categoryId: "income", kind: "income" },
   { id: "income.yields", categoryId: "income", kind: "income" },
   { id: "income.rent-received", categoryId: "income", kind: "income" },
@@ -32,6 +33,7 @@ export const PRODUCT_SUBCATEGORIES = [
   { id: "housing.utilities", categoryId: "housing", kind: "fixed" },
   { id: "housing.property-tax", categoryId: "housing", kind: "fixed" },
   { id: "housing.repairs", categoryId: "housing", kind: "variable" },
+  { id: "housing.domestic-services", categoryId: "housing", kind: "variable" },
 
   { id: "food.groceries", categoryId: "food", kind: "variable" },
   { id: "food.restaurants", categoryId: "food", kind: "variable" },
@@ -70,6 +72,7 @@ export const PRODUCT_SUBCATEGORIES = [
   { id: "leisure.travel", categoryId: "leisure", kind: "variable" },
   { id: "leisure.outings", categoryId: "leisure", kind: "variable" },
   { id: "leisure.gaming", categoryId: "leisure", kind: "variable" },
+  { id: "leisure.betting", categoryId: "leisure", kind: "variable" },
 
   { id: "financial.bank-fees", categoryId: "financial", kind: "variable" },
   { id: "financial.interest", categoryId: "financial", kind: "variable" },
@@ -78,9 +81,11 @@ export const PRODUCT_SUBCATEGORIES = [
 
   { id: "other.donations", categoryId: "other", kind: "variable" },
   { id: "other.gifts", categoryId: "other", kind: "variable" },
+  { id: "other.family-support", categoryId: "other", kind: "variable" },
   { id: "other.alimony", categoryId: "other", kind: "fixed" },
 
   { id: "investments.movements", categoryId: "investments", kind: "transfer" },
+  { id: "investments.assets", categoryId: "investments", kind: "transfer" },
 
   { id: "transfers.own-accounts", categoryId: "transfers", kind: "transfer" },
   { id: "transfers.card-bill", categoryId: "transfers", kind: "transfer" },

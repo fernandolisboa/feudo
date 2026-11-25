@@ -102,7 +102,11 @@ choice, exactly as with a manual categorization today.
   taxonomy this prompt renders will gain subcategories over time; because the hash pins the exact
   rendered block, adding or renaming one trips the pinned test on purpose — the fix is a new prompt
   version, not editing the expected hash in place, so a changed taxonomy is never served under the
-  version a stored suggestion claims to have seen.
+  version a stored suggestion claims to have seen. The taxonomy pin guards only the current prompt
+  version, because the taxonomy is rendered live, not frozen with the prompt: when a version is
+  superseded, its system text stays frozen and hash-pinned exactly as before, but its taxonomy pin
+  is retired, the rendered block it once asserted is recoverable only from git history, and its
+  stored suggestions are no longer read (the read side below only reads the current version).
 - **Read side.** `buildCategorizationQueue` gains an optional AI suggestion per candidate and a new
   reason `ai`, with precedence `history_amount` → `history` → `ai` → `credit`; an uncategorized
   transaction with no AI row of its own inherits from an uncategorized one with the same fingerprint.

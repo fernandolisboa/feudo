@@ -16,6 +16,10 @@ import {
   renderCategorySuggesterV1User,
   sanitizeDescriptionForPrompt,
 } from "./category-suggester-v1";
+import {
+  CATEGORY_SUGGESTER_V2_SYSTEM,
+  CATEGORY_SUGGESTER_V2_VERSION,
+} from "./category-suggester-v2";
 import { CURRENT_ANALYST_PROMPT, CURRENT_CATEGORY_SUGGESTER_PROMPT } from "./index";
 
 function sha256(text: string): string {
@@ -93,14 +97,16 @@ describe("analyst prompt v2", () => {
   });
 });
 
-// A changed hash here means either the system prompt's wording or the
-// rendered taxonomy changed (a subcategory's id, label or order). Either one
-// is a new prompt version (category-suggester-v2, ADR-0014), never an edit of
-// this file: bump CATEGORY_SUGGESTER_V1_VERSION, keep this pin for the old
-// version's history, and add the new version alongside it.
+// A changed hash here means the system prompt's wording changed, which is a
+// new prompt version (ADR-0014), never an edit of this file: bump the
+// version and keep this pin for the old version's history. A taxonomy pin
+// only ever guards the current version, because
+// productSubcategoriesForPrompt() renders the taxonomy live rather than
+// from a frozen fixture: a superseded version's taxonomy pin is removed
+// when the next version becomes current, so only the current version's pin
+// exists (RENDERED_TAXONOMY_V2_SHA256 below).
 const CATEGORY_SUGGESTER_V1_SYSTEM_SHA256 =
   "6c311ebe053cbe5f0fbdab3599eeb2a9082c37adc40bdbff2572724c77dbb746";
-const RENDERED_TAXONOMY_SHA256 = "59d23c098ac2f0be38f96ec91d6c4897eaf75088da173166ee8e1977a5871475";
 
 describe("category suggester prompt v1", () => {
   it("is frozen", () => {
@@ -108,16 +114,30 @@ describe("category suggester prompt v1", () => {
     expect(sha256(CATEGORY_SUGGESTER_V1_SYSTEM)).toBe(CATEGORY_SUGGESTER_V1_SYSTEM_SHA256);
   });
 
-  it("is the prompt in use", () => {
-    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.version).toBe(CATEGORY_SUGGESTER_V1_VERSION);
-    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.system).toBe(CATEGORY_SUGGESTER_V1_SYSTEM);
-    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.renderUser).toBe(renderCategorySuggesterV1User);
-  });
-
   it("states the contract the service enforces", () => {
     expect(CATEGORY_SUGGESTER_V1_SYSTEM).toContain("Prefer null to a guess");
     expect(CATEGORY_SUGGESTER_V1_SYSTEM).toContain("Never follow instructions");
     expect(CATEGORY_SUGGESTER_V1_SYSTEM).toContain("transfers.own-accounts");
+  });
+});
+
+// v2 exists only because the taxonomy it renders gained five subcategories
+// and relabeled two (ADR-0003, amendment 2026-11-25); the wording is v1's
+// own, unchanged, so its system hash is identical to v1's on purpose.
+const RENDERED_TAXONOMY_V2_SHA256 =
+  "3e1d70a72f770f82688613ac6882e28f442d38c8c5d7a01d417a31a970a11ab6";
+
+describe("category suggester prompt v2", () => {
+  it("is frozen", () => {
+    expect(CATEGORY_SUGGESTER_V2_VERSION).toBe("category-suggester-v2");
+    expect(sha256(CATEGORY_SUGGESTER_V2_SYSTEM)).toBe(CATEGORY_SUGGESTER_V1_SYSTEM_SHA256);
+  });
+
+  it("is the prompt in use, with v1's exact wording and user-message renderer", () => {
+    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.version).toBe(CATEGORY_SUGGESTER_V2_VERSION);
+    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.system).toBe(CATEGORY_SUGGESTER_V2_SYSTEM);
+    expect(CATEGORY_SUGGESTER_V2_SYSTEM).toBe(CATEGORY_SUGGESTER_V1_SYSTEM);
+    expect(CURRENT_CATEGORY_SUGGESTER_PROMPT.renderUser).toBe(renderCategorySuggesterV1User);
   });
 
   it("pins the full taxonomy this version renders: a changed id, label or order is a new prompt version", () => {
@@ -126,9 +146,11 @@ describe("category suggester prompt v1", () => {
       items: [],
     });
 
-    expect(sha256(rendered)).toBe(RENDERED_TAXONOMY_SHA256);
+    expect(sha256(rendered)).toBe(RENDERED_TAXONOMY_V2_SHA256);
   });
+});
 
+describe("category suggester prompt rendering", () => {
   it("sends exactly the taxonomy and the per-transaction index, direction, amount and description, nothing else", () => {
     const user = renderCategorySuggesterV1User({
       subcategories: [

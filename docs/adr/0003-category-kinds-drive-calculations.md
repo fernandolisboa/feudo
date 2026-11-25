@@ -62,6 +62,66 @@ A generic statement description ("Transferência enviada pelo Pix", "Pagamento d
 - Precedence among household rules: amount-bound rules come before unbound ones, then the 2026-09-26 ordering (more words, then longer, then newest) applies within each group. The rest of the chain (mark, manual choice, pair, household rule, product default, provider category) is unchanged.
 - The categorization suggestion prefers the same amount: among categorized history matching the proposed pattern in the same direction (pairing-only categorizations still excluded), the subcategory most often given to the rows of the same absolute amount and currency; with no such row, the subcategory every matching row agrees on; when they disagree, no suggestion from history, and the screen says so apart from having no history at all (credits keep the income fallback). Guided categorization pre-ticks "create rule" only when another uncategorized transaction shares both pattern and a non-zero amount, and then pre-ticks the amount binding too.
 
+## Amendment 2026-11-25: taxonomy additions, more product default rules, installment-marker normalization
+
+The product taxonomy had no home for a one-off purchase or sale of an asset, for profit
+distributions as distinct from salary, for domestic services, for regular support to relatives, or
+for games mixed with betting; a long tail of common, recognisable merchants resolved only through
+whatever category the provider guessed. All additive: no id removed or renamed.
+
+- Five new product subcategories: `investments.assets` (transfer), `income.profit-distribution`
+  (income), `housing.domestic-services` (variable), `other.family-support` (variable),
+  `leisure.betting` (variable). Two label changes, ids unchanged: `leisure.gaming` is now "Jogos"
+  (games only), `financial.taxes` is now "Impostos e taxas". The Pluggy categories `Gambling`,
+  `Lottery` and `Online bet` now map to `leisure.betting` instead of `leisure.gaming`.
+- `PRODUCT_DEFAULT_RULES` gained 85 patterns for recognisable Brazilian and international merchants
+  (streaming and AI subscriptions, pharmacies, delivery apps, marketplaces, personal care,
+  clothing, travel, gaming platforms, vehicle taxes, fuel, tolls, utilities, health insurers,
+  groceries), still all `direction: "debit"`.
+- Product default rules carry exactly one precedence: declaration order. The first rule in
+  `PRODUCT_DEFAULT_RULES` whose pattern matches wins, nothing else; there is no sort by word count
+  or length. Every more specific pattern (a merchant's own card-bill prefix, an operation marker,
+  a longer merchant name that contains a shorter one) is declared before the pattern it would
+  otherwise be shadowed by, and a structural test over the whole array checks that no earlier
+  pattern's tokens form a contiguous run inside a later, differently-categorized one. Three things
+  change among the rules that existed before this amendment as a result: an operation marker
+  (`CONDOMINIO`, `IPTU`, `IPVA`, `IOF`, `TARIFA`, `CESTA DE SERVICOS`) now also wins over `IFOOD`,
+  `UBER`, `99APP`, `NETFLIX` and `SPOTIFY` on a statement line that carries both (for example,
+  "IOF DE NETFLIX" becomes `financial.taxes`); among the card-bill family and the operation markers
+  themselves, the earlier-declared one wins on a line that carries two (for example, a line with
+  both `TARIFA` and `IPTU` is now `housing.property-tax`, because `IPTU` is declared first); and an
+  earlier-declared merchant wins over a later one when both could match the same line. The
+  pharmacy rules (`DROGASIL`, `DROGARIA`, `DROGARIAS`, `DROGA RAIA`, `RAIADROGASILSA`,
+  `PAGUE MENOS`, `FARMACIA`) are declared before every delivery rule, old and new, so a delivery
+  app's own pharmacy line (`IFOOD FARMACIA X`, `UBER EATS DROGARIA X`) resolves to
+  `health.pharmacy`. This does not touch `orderRules`, which still breaks a household rule's
+  token-count tie with the longer pattern, by design (a household's own, more specific rule should
+  win).
+- `normalizeDescription` (`description.ts`) strips a trailing installment marker from a
+  transaction description: `PARC` plus exactly two digits, followed by a second two-digit group
+  (the card issuer's "/10"), either as its own token or glued to the truncated merchant name it
+  follows ("SOME STOREPARC03" normalizes the same as "SOME STORE PARC03/10"). Only at the end of
+  the text, and only with two-digit numbers on each side, so a merchant name that happens to
+  contain "PARC" elsewhere is left alone; stripping runs in a loop so several installments
+  restated on one line reach their final shape in one call, and a text that is only the marker is
+  left as it normalizes rather than stripped to nothing. The total is required here because a
+  description always carries one. A rule pattern stored before this normalization existed can
+  carry only the counter, with no total (`rulePatternFromDescription` already dropped the total as
+  a purely numeric token, leaving "SOME STORE PARC03" on the stored row); a second function strips
+  that optional-total shape, called once by `orderRules` while it prepares every rule's pattern for
+  ranking, never at match time and never on a transaction description. Stripping that would leave
+  a pattern shorter than `RULE_PATTERN_MIN_LENGTH` (owned by `packages/core`, imported by the web
+  form validation rather than duplicated) keeps the stored pattern as it is, so a stored "XPARC03"
+  never becomes the one-letter "X" and a stored "PARC03" never becomes empty. A stored pattern
+  kept as stored by this floor (a merchant name of one or two characters followed by the counter)
+  no longer matches new installments, whose descriptions lose the marker; the household's next
+  categorization of that merchant proposes a rule on the description as it is now. The ledger
+  search folds a query and a row's description the same way, without the marker-stripping step, so
+  a member can still find an installment by its marker.
+- Known limitation: a merchant token on a transfer line (a Pix to a person or company whose name
+  contains it, or a co-branded card's bill paid under a description outside the card-bill family)
+  is filed as that merchant's category; a household rule or a manual choice overrides it.
+
 ## Amendment 2026-11-25: the transaction link, recommended, never silent
 
 Pairing (the 2026-09-28 amendment, #16) only ever joins two **different** accounts, and does it without asking. Two more shapes turned up in real households: a savings-pot withdrawal that only exists to fund a bill paid moments later on the same account, and an inflow and an outflow on the same account and day that cancel each other (a reimbursement, a payment and its refund). Neither is a transfer between the household's own accounts, so pairing cannot and should not claim them; both are common enough, and ambiguous enough, that Feudo only ever recommends joining them, and a member decides.

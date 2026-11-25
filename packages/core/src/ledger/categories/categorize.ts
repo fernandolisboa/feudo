@@ -1,5 +1,9 @@
-import { PRODUCT_DEFAULT_RULES, type ProductDefaultRule } from "./default-rules";
-import { matchesPattern, normalizeDescription } from "./description";
+import { PRODUCT_DEFAULT_RULES } from "./default-rules";
+import {
+  matchesPattern,
+  normalizeDescription,
+  stripStoredPatternInstallmentMarker,
+} from "./description";
 import { mapProviderCategory } from "./provider-mapping";
 import { sameAmountGapCentavos, type AmountInCurrency } from "./same-amount";
 import type { SubcategoryRef, TransactionDirection } from "./taxonomy";
@@ -43,8 +47,23 @@ function compareById(a: string, b: string): number {
   return 0;
 }
 
+// A household's own rule pattern is the one place this normalization still
+// needs a floor: stripping an installment marker off a short stored pattern
+// must not leave something too short to be a usable pattern (a stored
+// "XPARC03" becoming the one-letter "X", or a stored "PARC03" becoming
+// empty).
+export const RULE_PATTERN_MIN_LENGTH = 3;
+
+// The single "prepare rules for matching" step: every caller goes through
+// this, so a stored pattern's installment marker is stripped exactly once,
+// before ranking, rather than at match time on every transaction. Stripping
+// below the usable floor keeps the stored pattern instead.
 export function orderRules(rules: readonly CategorizationRule[]): CategorizationRule[] {
-  return [...rules].sort((a, b) => {
+  const prepared = rules.map((rule) => {
+    const stripped = stripStoredPatternInstallmentMarker(rule.pattern);
+    return stripped.length < RULE_PATTERN_MIN_LENGTH ? rule : { ...rule, pattern: stripped };
+  });
+  return prepared.sort((a, b) => {
     const amountBoundDelta = Number(b.amount !== null) - Number(a.amount !== null);
     if (amountBoundDelta !== 0) return amountBoundDelta;
 
@@ -60,14 +79,6 @@ export function orderRules(rules: readonly CategorizationRule[]): Categorization
     return compareById(a.id, b.id);
   });
 }
-
-const ORDERED_PRODUCT_DEFAULT_RULES: readonly ProductDefaultRule[] = [
-  ...PRODUCT_DEFAULT_RULES,
-].sort((a, b) => {
-  const tokensDelta = tokenCount(b.pattern) - tokenCount(a.pattern);
-  if (tokensDelta !== 0) return tokensDelta;
-  return b.pattern.length - a.pattern.length;
-});
 
 function directionMatches(
   ruleDirection: TransactionDirection | null,
@@ -116,7 +127,7 @@ export function categorize(
     return { subcategory: householdRule.subcategory, source: "rule", ruleId: householdRule.id };
   }
 
-  const defaultRule = ORDERED_PRODUCT_DEFAULT_RULES.find(
+  const defaultRule = PRODUCT_DEFAULT_RULES.find(
     (rule) =>
       directionMatches(rule.direction, transaction.type) &&
       matchesPattern(normalizedDescription, rule.pattern),

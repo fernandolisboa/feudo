@@ -40,6 +40,10 @@ describe("mapProviderCategory", () => {
     expect(mapProviderCategory("Some Unknown Category")).toBeNull();
   });
 
+  it.each(["Gambling", "Lottery", "Online bet"])("maps %s to betting, not gaming", (category) => {
+    expect(mapProviderCategory(category)).toBe("leisure.betting");
+  });
+
   it("returns null for a null category", () => {
     expect(mapProviderCategory(null)).toBeNull();
   });

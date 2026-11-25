@@ -99,6 +99,84 @@ describe("handleTransactionsSpreadsheetRequest (integration)", () => {
     });
   });
 
+  it.each(["parc", "parc03", "parc03/10", "loja"])(
+    "finds a row with a trailing installment marker by %j",
+    async (query) => {
+      await withTwoUsers(async ({ db, userA }) => {
+        await seedSyncedConnection(db, userA, {
+          household: householdScope(userA.session),
+          transactions: [
+            seedTransaction({
+              providerTransactionId: "a-installment",
+              date: "2026-09-10",
+              description: "LOJA PARC03/10",
+            }),
+            seedTransaction({
+              providerTransactionId: "a-bakery",
+              date: "2026-09-11",
+              description: "PADARIA",
+            }),
+          ],
+        });
+
+        const response = await handleTransactionsSpreadsheetRequest(
+          request(`formato=csv&mes=2026-09&busca=${encodeURIComponent(query)}`),
+          { getSession: () => Promise.resolve(userA.session), now: () => NOW },
+        );
+        const body = await response.text();
+
+        expect(body).toContain("LOJA PARC03/10");
+        expect(body).not.toContain("PADARIA");
+      });
+    },
+  );
+
+  it("still finds a row with no installment marker by its description", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "a-bakery",
+            date: "2026-09-11",
+            description: "PADARIA",
+          }),
+        ],
+      });
+
+      const response = await handleTransactionsSpreadsheetRequest(
+        request("formato=csv&mes=2026-09&busca=padaria"),
+        { getSession: () => Promise.resolve(userA.session), now: () => NOW },
+      );
+      const body = await response.text();
+
+      expect(body).toContain("PADARIA");
+    });
+  });
+
+  it("treats a punctuation-only query as no search at all", async () => {
+    await withTwoUsers(async ({ db, userA }) => {
+      await seedSyncedConnection(db, userA, {
+        household: householdScope(userA.session),
+        transactions: [
+          seedTransaction({
+            providerTransactionId: "a-bakery",
+            date: "2026-09-11",
+            description: "PADARIA",
+          }),
+        ],
+      });
+
+      const response = await handleTransactionsSpreadsheetRequest(
+        request(`formato=csv&mes=2026-09&busca=${encodeURIComponent("---")}`),
+        { getSession: () => Promise.resolve(userA.session), now: () => NOW },
+      );
+      const body = await response.text();
+
+      expect(body).toContain("PADARIA");
+    });
+  });
+
   it("never exports another household's rows, even when the URL names that household's account", async () => {
     await withTwoUsers(async ({ db, userA, userB }) => {
       const other = await seedSyncedConnection(db, userB, {

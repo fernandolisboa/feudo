@@ -223,6 +223,113 @@ describe("orderRules", () => {
     );
     expect(result?.subcategory).toEqual({ type: "product", id: "food.delivery" });
   });
+
+  it("prepares a stored pattern's installment marker once, ahead of ranking", () => {
+    const legacy = rule({ id: "a", pattern: "SOME STORE PARC03" });
+    expect(orderRules([legacy])[0]?.pattern).toBe("SOME STORE");
+  });
+
+  it("keeps the stored pattern as it is when stripping would fall below the minimum length", () => {
+    const tooShortOnceStripped = rule({ id: "a", pattern: "XPARC03" });
+    expect(orderRules([tooShortOnceStripped])[0]?.pattern).toBe("XPARC03");
+  });
+});
+
+describe("categorize with a stored rule pattern carrying an old installment marker", () => {
+  it("still matches every installment of the same purchase", () => {
+    const legacyRule = rule({
+      id: "installments",
+      pattern: "SOME STORE PARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+    });
+
+    for (const installment of ["04/10", "05/10", "10/10"]) {
+      const result = categorize(
+        transaction({ description: `Some Store PARC${installment}` }),
+        orderRules([legacyRule]),
+      );
+      expect(result).toEqual({
+        subcategory: { type: "product", id: "shopping.other" },
+        source: "rule",
+        ruleId: "installments",
+      });
+    }
+  });
+
+  it("lets the newest rule win once the legacy pattern is prepared down to the same text", () => {
+    const legacy = rule({
+      id: "legacy",
+      pattern: "SOME STORE PARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    const newer = rule({
+      id: "newer",
+      pattern: "SOME STORE",
+      subcategory: { type: "product", id: "shopping.clothing" },
+      createdAt: new Date("2026-06-01T00:00:00Z"),
+    });
+    const ordered = orderRules([legacy, newer]);
+
+    for (const installment of ["05/10", "06/10"]) {
+      const result = categorize(
+        transaction({ description: `Some Store PARC${installment}` }),
+        ordered,
+      );
+      expect(result?.ruleId).toBe("newer");
+    }
+  });
+
+  it("lets a more specific legacy pattern beat a shorter one once both are prepared", () => {
+    const short = rule({
+      id: "short",
+      pattern: "LOJA PARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+    });
+    const specific = rule({
+      id: "specific",
+      pattern: "LOJA BH",
+      subcategory: { type: "product", id: "shopping.clothing" },
+    });
+
+    const result = categorize(
+      transaction({ description: "Loja BH PARC02/05" }),
+      orderRules([short, specific]),
+    );
+    expect(result?.ruleId).toBe("specific");
+  });
+
+  it("keeps a stored pattern too short once stripped, guarded by the minimum rule-pattern length", () => {
+    const tooShortOnceStripped = rule({
+      id: "too-short",
+      pattern: "XPARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+    });
+
+    const result = categorize(
+      transaction({ description: "X Y Z" }),
+      orderRules([tooShortOnceStripped]),
+    );
+    expect(result).toBeNull();
+  });
+
+  it("keeps a bare counter pattern matching only a description that still carries that token", () => {
+    const bareCounter = rule({
+      id: "bare-counter",
+      pattern: "PARC03",
+      subcategory: { type: "product", id: "shopping.other" },
+    });
+    const ordered = orderRules([bareCounter]);
+
+    const stillCarriesTheToken = categorize(transaction({ description: "Compra PARC03" }), ordered);
+    expect(stillCarriesTheToken?.ruleId).toBe("bare-counter");
+
+    const strippedByNormalization = categorize(
+      transaction({ description: "Loja PARC03/10" }),
+      ordered,
+    );
+    expect(strippedByNormalization).toBeNull();
+  });
 });
 
 describe("categorize with realistic Pluggy-shaped fixtures", () => {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { matchesPattern, normalizeDescription, rulePatternFromDescription } from "./description";
+import {
+  matchesPattern,
+  normalizeDescription,
+  rulePatternFromDescription,
+  stripInstallmentMarker,
+  stripStoredPatternInstallmentMarker,
+} from "./description";
 
 describe("normalizeDescription", () => {
   it("strips diacritics, uppercases and collapses punctuation to single spaces", () => {
@@ -14,6 +20,76 @@ describe("normalizeDescription", () => {
 
   it("returns an empty string for input with no alphanumeric characters", () => {
     expect(normalizeDescription("--- ***")).toBe("");
+  });
+
+  it("strips a trailing installment marker given as its own token", () => {
+    expect(normalizeDescription("Some Store PARC03/10")).toBe("SOME STORE");
+  });
+
+  it("strips a trailing installment marker glued to the truncated merchant name", () => {
+    expect(normalizeDescription("Some MerchantPARC10/12")).toBe("SOME MERCHANT");
+  });
+
+  it("leaves a description with no installment marker unchanged", () => {
+    expect(normalizeDescription("Padaria Estrela")).toBe("PADARIA ESTRELA");
+  });
+
+  it("does not strip a PARC-like run that is not exactly two digits on each side", () => {
+    expect(normalizeDescription("Loja PARC031/100")).toBe("LOJA PARC031 100");
+    expect(normalizeDescription("Loja PARC3/1")).toBe("LOJA PARC3 1");
+  });
+
+  it("does not strip an installment marker that is not at the end of the description", () => {
+    expect(normalizeDescription("Loja PARC03/10 taxa extra")).toBe("LOJA PARC03 10 TAXA EXTRA");
+  });
+
+  it("leaves a marker with no total unchanged, since a description always carries one", () => {
+    expect(normalizeDescription("Compra PARC12")).toBe("COMPRA PARC12");
+  });
+
+  it("strips stacked installment markers down to their base text in one call", () => {
+    expect(normalizeDescription("Loja PARC01/02 PARC03/04")).toBe("LOJA");
+  });
+
+  it("never strips a description down to nothing: a marker-only text is left as it normalizes", () => {
+    expect(normalizeDescription("PARC03/10")).toBe("PARC03 10");
+  });
+});
+
+describe("stripInstallmentMarker", () => {
+  it("strips a trailing installment marker with its total, as normalizeDescription feeds it", () => {
+    expect(stripInstallmentMarker("SOME STORE PARC03 10")).toBe("SOME STORE");
+  });
+
+  it("leaves a marker with no total alone", () => {
+    expect(stripInstallmentMarker("SOME STORE PARC03")).toBe("SOME STORE PARC03");
+  });
+
+  it("leaves a pattern with no installment marker unchanged", () => {
+    expect(stripInstallmentMarker("SOME STORE")).toBe("SOME STORE");
+  });
+
+  it("never returns an empty string", () => {
+    expect(stripInstallmentMarker("PARC03 10")).toBe("PARC03 10");
+  });
+});
+
+describe("stripStoredPatternInstallmentMarker", () => {
+  it("strips a trailing installment marker with no following digit pair, as an old stored pattern has it", () => {
+    expect(stripStoredPatternInstallmentMarker("SOME STORE PARC03")).toBe("SOME STORE");
+    expect(stripStoredPatternInstallmentMarker("SOME MERCHANTPARC10")).toBe("SOME MERCHANT");
+  });
+
+  it("also strips a marker that does carry a total, since a stored pattern may have either shape", () => {
+    expect(stripStoredPatternInstallmentMarker("SOME STORE PARC03 10")).toBe("SOME STORE");
+  });
+
+  it("leaves a pattern with no installment marker unchanged", () => {
+    expect(stripStoredPatternInstallmentMarker("SOME STORE")).toBe("SOME STORE");
+  });
+
+  it("can strip a bare counter down to nothing: callers guard the minimum length themselves", () => {
+    expect(stripStoredPatternInstallmentMarker("PARC03")).toBe("");
   });
 });
 

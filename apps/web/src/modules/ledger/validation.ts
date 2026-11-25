@@ -1,6 +1,7 @@
 import {
   KINDS,
   PRODUCT_CATEGORY_IDS,
+  RULE_PATTERN_MIN_LENGTH,
   isYearMonth,
   normalizeDescription,
   type YearMonth,
@@ -11,6 +12,8 @@ import { PAGE_SIZE_OPTIONS } from "@/lib/page-size";
 
 import { MAX_YEAR_MONTH_YEAR, MIN_YEAR_MONTH_YEAR, UNCATEGORIZED_FILTER } from "./href";
 import { decodeSubcategoryRef } from "./subcategory-ref";
+
+export { RULE_PATTERN_MIN_LENGTH };
 
 // isYearMonth's own pattern accepts any four-digit year: "0050-03" parses
 // but Date.UTC folds years 0-99 into 1900-1999 downstream (formatYearMonth,
@@ -122,7 +125,6 @@ const subcategoryRefSchema = z.string().transform((value, context) => {
   return ref;
 });
 
-export const RULE_PATTERN_MIN_LENGTH = 3;
 export const RULE_PATTERN_MAX_LENGTH = 80;
 
 // The pattern is stored normalized (upper case, no accents or punctuation) so

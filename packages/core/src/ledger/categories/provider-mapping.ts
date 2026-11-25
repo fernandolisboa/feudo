@@ -101,9 +101,9 @@ export const PLUGGY_CATEGORY_MAP: Readonly<Record<string, ProductSubcategoryId |
   "Bus tickets": "leisure.travel",
 
   Donations: "other.donations",
-  Gambling: "leisure.gaming",
-  Lottery: "leisure.gaming",
-  "Online bet": "leisure.gaming",
+  Gambling: "leisure.betting",
+  Lottery: "leisure.betting",
+  "Online bet": "leisure.betting",
 
   Taxes: "financial.taxes",
   "Income taxes": "financial.taxes",

@@ -63,6 +63,7 @@ export {
 } from "./ledger/categories/taxonomy";
 
 export {
+  foldDescription,
   normalizeDescription,
   rulePatternFromDescription,
   matchesPattern,
@@ -80,7 +81,7 @@ export type {
   CategorizationSource,
   Categorization,
 } from "./ledger/categories/categorize";
-export { categorize, orderRules } from "./ledger/categories/categorize";
+export { categorize, orderRules, RULE_PATTERN_MIN_LENGTH } from "./ledger/categories/categorize";
 
 export type { KindContext } from "./ledger/categories/kinds";
 export { categoryOf, kindOf } from "./ledger/categories/kinds";
