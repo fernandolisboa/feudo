@@ -378,8 +378,21 @@ describe("category suggester prompt v1", () => {
       ["XXX.456.789-XX\u{0301}B", "B"],
       ["B\u{200B}XXX.456.789-XX", "B"],
       ["XXX.456.789-XX\u{200B}B", "B"],
+      ["B\u{3164}XXX.456.789-XX", "B"],
     ])(
       "turns a deleted invisible character or mark between a letter and a mask run into a space, so the run is still recognised as a mask: %s",
+      (input, expected) => {
+        expect(sanitizeDescriptionForPrompt(input)).toBe(expected);
+      },
+    );
+
+    it.each([
+      ["12345\u{3164}\u{200B}\u{3164}6789", "(descrição removida)"],
+      ["12345\u{3164}\u{3164}\u{3164}6789", "(descrição removida)"],
+      ["12345\u{FFA0}\u{200B}\u{FFA0}6789", "(descrição removida)"],
+      ["PIX 12345\u{115F}\u{200B}\u{1160}6789 FIM", "PIX FIM"],
+    ])(
+      "never lets a Hangul filler bound the inserted space, since the filler is itself deleted a step later and would leave the space next to a digit: %s",
       (input, expected) => {
         expect(sanitizeDescriptionForPrompt(input)).toBe(expected);
       },
@@ -617,6 +630,31 @@ describe("category suggester prompt v1", () => {
             expect(once.length).toBeLessThanOrEqual(140);
           },
         ),
+      );
+    });
+
+    it("never leaves a digit in the output of a digits-only run, however many invisible or mark characters land inside it", () => {
+      const digitsArb = fc.stringMatching(/^[0-9]{9,20}$/);
+      const invisibleOrMarkCharArb = fc.constantFrom(
+        "\u{3164}",
+        "\u{FFA0}",
+        "\u{115F}",
+        "\u{1160}",
+        "\u{200B}",
+        "\u{0301}",
+        "\u{00AD}",
+      );
+      const insertionArb = fc.record({ position: fc.nat(), char: invisibleOrMarkCharArb });
+
+      fc.assert(
+        fc.property(digitsArb, fc.array(insertionArb, { maxLength: 15 }), (digits, insertions) => {
+          const text = insertions.reduce((current, { position, char }) => {
+            const index = position % (current.length + 1);
+            return current.slice(0, index) + char + current.slice(index);
+          }, digits);
+
+          expect(sanitizeDescriptionForPrompt(text)).not.toMatch(/\d/);
+        }),
       );
     });
 

@@ -39,15 +39,16 @@ choice, exactly as with a manual categorization today.
   description is cut to 1,000 raw characters; normalized with Unicode NFKC; every
   default-ignorable, format and combining-mark character is deleted outright (zero-width spaces,
   bidi controls, variation selectors, an accent or a keycap mark that NFKC did not fold into a
-  letter), except a run of them sitting directly between two letters, which becomes a space
-  instead, so deleting it cannot glue the two letters into one word that swallows a mask run
-  starting at the second one; every other control, private-use, unassigned or separator character,
-  plus the blank-rendering U+2800 and the two replacement characters U+FFFC and U+FFFD, is folded
-  to one space; a decimal digit of any script counts as a digit. When the 1,000-character cut
-  removed something, a trailing run of digits, mask characters, separators and a final x/X of a
-  word is then dropped too, right after normalization and just before the scan below, so a document
-  cut in half is not kept; the strip does not check whether that trailing x/X was itself a mask
-  character, since it only ever removes text the model would have received, never adds or changes
+  letter), except a run of them sitting directly between two letters, each a letter that is not
+  itself default-ignorable, which becomes a space instead, so deleting it cannot glue the two
+  letters into one word that swallows a mask run starting at the second one; every other control,
+  private-use, unassigned or separator character, plus the blank-rendering U+2800 and the two
+  replacement characters U+FFFC and U+FFFD, is folded to one space; a decimal digit of any script
+  counts as a digit. When the 1,000-character cut removed something, a trailing run is then
+  dropped too, right after normalization and just before the scan below, so a document cut in half
+  is not kept: every trailing digit, mask symbol, separator and x/X together, not only a final x/X
+  of a word; the strip does not check whether a trailing x/X was itself a mask character, since it
+  only ever removes text the model would have received, never adds or changes
   any. It is then scanned for a document-like run: a sequence of 11 or more
   digits and mask characters (`*`, `•`, or `x`/`X` where it is not part of an ordinary word), with a
   gap of one or more characters drawn from `. - /` and space between any two of them and at least 6

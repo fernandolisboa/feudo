@@ -31,7 +31,8 @@ Rules:
 // "ã", which NFKC has already turned into one code point by this point.
 // Built from a shared source so the letter-bounded exception below cannot
 // drift from the deletion it narrows.
-const INVISIBLE_OR_MARK_CHAR_CLASS = "[\\p{Default_Ignorable_Code_Point}\\p{Cf}\\p{M}]";
+const INVISIBLE_OR_MARK_CHAR_CLASS_CONTENTS = "\\p{Default_Ignorable_Code_Point}\\p{Cf}\\p{M}";
+const INVISIBLE_OR_MARK_CHAR_CLASS = `[${INVISIBLE_OR_MARK_CHAR_CLASS_CONTENTS}]`;
 const INVISIBLE_OR_MARK_CHARS = new RegExp(INVISIBLE_OR_MARK_CHAR_CLASS, "gu");
 
 // A letter on both sides is the one case deletion must not win: removing the
@@ -40,8 +41,23 @@ const INVISIBLE_OR_MARK_CHARS = new RegExp(INVISIBLE_OR_MARK_CHAR_CLASS, "gu");
 // document survives. A space keeps the letter and the run apart, exactly as
 // if the bank had written one there; every other occurrence (next to a
 // digit, a separator or the string's edge) stays a deletion.
+//
+// The bounding character on each side must be a letter that this same
+// deletion step keeps, not one it is about to remove: the Hangul fillers
+// (U+3164, U+FFA0, U+115F, U+1160) are both \p{L} and
+// \p{Default_Ignorable_Code_Point}, so a plain \p{L} lookaround lets one of
+// them bound the run, turn it into a space, and then be deleted itself a
+// line later, leaving a bare space between two digits. Excluding the whole
+// deleted class rather than only the default-ignorables that cause it keeps
+// the expression self-proving (\p{Cf} and \p{M} contain no letters, so
+// excluding them here changes nothing, but the expression does not need to
+// assume that). The invariant this holds: the inserted space always has a
+// surviving letter directly on both sides, so it can never land next to a
+// digit.
+const SURVIVING_LETTER_CLASS = `[^\\P{L}${INVISIBLE_OR_MARK_CHAR_CLASS_CONTENTS}]`;
+
 const INVISIBLE_OR_MARK_RUN_BETWEEN_LETTERS = new RegExp(
-  `(?<=\\p{L})${INVISIBLE_OR_MARK_CHAR_CLASS}+(?=\\p{L})`,
+  `(?<=${SURVIVING_LETTER_CLASS})${INVISIBLE_OR_MARK_CHAR_CLASS}+(?=${SURVIVING_LETTER_CLASS})`,
   "gu",
 );
 
