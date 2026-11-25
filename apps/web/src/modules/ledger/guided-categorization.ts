@@ -67,9 +67,9 @@ type UncategorizedWindow = {
 // ADR-0002): what is uncategorized here is exactly what keeps Visão geral and
 // the reserve target incomplete. A foreign-currency row is in no number, so
 // counting it would claim an incompleteness that categorizing cannot fix.
-// Exported for link-suggestions.ts too: the ticket requires link
-// suggestions over this same window and currency, every resolved row, not
-// only the uncategorized ones. Wrapped in React's cache() (same pattern as
+// Exported for link-suggestions.ts too: link suggestions need this same
+// window and currency, every resolved row, not only the uncategorized ones.
+// Wrapped in React's cache() (same pattern as
 // auth/session.ts's getCurrentSession) so the Categorias and Vínculos tabs
 // of one /categorizar request, called with the same `now`, share one DB
 // round trip instead of reading the window twice; outside a request (and

@@ -89,13 +89,13 @@ function occurredAtGapMs(edge: CandidateEdge): number | null {
   return Math.abs(debit.occurredAt.getTime() - credit.occurredAt.getTime());
 }
 
-// A total order (review round 1, finding B1): comparing a known gap against
-// bGap === null directly against an id comparison, with no regard for
-// whether the *other* side of each comparison was itself known, made the
-// relation intransitive (a < b and b < c could still leave c < a), which
-// made suggestLinks depend on input order whenever some candidates had an
-// occurredAt and others did not. Known-gap edges now always sort before
-// unknown ones; id only breaks ties inside each of the two groups.
+// A total order: comparing a known gap against bGap === null directly
+// against an id comparison, with no regard for whether the *other* side of
+// each comparison was itself known, made the relation intransitive (a < b
+// and b < c could still leave c < a), which made suggestLinks depend on
+// input order whenever some candidates had an occurredAt and others did
+// not. Known-gap edges now always sort before unknown ones; id only breaks
+// ties inside each of the two groups.
 function compareEdges(a: CandidateEdge, b: CandidateEdge): number {
   const aGap = occurredAtGapMs(a);
   const bGap = occurredAtGapMs(b);

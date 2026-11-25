@@ -148,14 +148,13 @@ describe("suggestLinks", () => {
     expect(suggestLinks([credit, debit], [])).toEqual(suggestLinks([debit, credit], []));
   });
 
-  // Reviewer's reproduction (review round 1, finding B1): debits q and b
-  // both have a known occurredAt gap to credits cq and cb, debit m has
-  // none. Mixing "both legs known" (sorted by gap) with "at least one leg
-  // unknown" (sorted by id) made compareEdges intransitive: these three
-  // orderings of the exact same five transactions used to return three
-  // different pairings. The correct, order-independent answer takes the
-  // closest known gap first (q-cq, 1h), then the next closest (b-cb, 10h);
-  // m is left over with no credit.
+  // debits q and b both have a known occurredAt gap to credits cq and cb,
+  // debit m has none. Mixing "both legs known" (sorted by gap) with "at
+  // least one leg unknown" (sorted by id) made compareEdges intransitive:
+  // these three orderings of the exact same five transactions used to
+  // return three different pairings. The correct, order-independent answer
+  // takes the closest known gap first (q-cq, 1h), then the next closest
+  // (b-cb, 10h); m is left over with no credit.
   it("orders edges with a known date gap before edges without one, consistently across input orders", () => {
     const q = transaction({ id: "q", occurredAt: new Date("2026-09-25T00:00:00Z") });
     const b = transaction({ id: "b", occurredAt: new Date("2026-09-25T10:00:00Z") });

@@ -218,10 +218,10 @@ export const transactionLinkKindEnum = pgEnum("transaction_link_kind", ["offset"
 // above (ADR-0001): a confirmed link is a fact about the transactions, not
 // about the household that confirmed it, so it travels with the account when
 // either side moves, and every read and write proves both transactions are
-// currently in the session's household (ticket's "Data model"). A
-// transaction is in at most one link, enforced by the two unique
-// constraints below rather than by a single-column id, since either side can
-// be the debit or the credit leg of its own link but never of two.
+// currently in the session's household. A transaction is in at most one
+// link, enforced by the two unique constraints below rather than by a
+// single-column id, since either side can be the debit or the credit leg of
+// its own link but never of two.
 export const transactionLink = pgTable(
   "transaction_link",
   {

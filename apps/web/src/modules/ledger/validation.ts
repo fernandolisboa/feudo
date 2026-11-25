@@ -189,9 +189,9 @@ export type LinkPairFormInput = z.infer<typeof linkPairFormSchema>;
 const linkKindSchema = z.enum(["offset", "funding"]);
 
 // The kind travels only as the member's own expectation of what they are
-// confirming (ticket B addendum): confirmLink still re-derives the kind from
-// the live suggestion list and refuses when it no longer matches, so a
-// stale or crafted kind can shift nothing it persists.
+// confirming: confirmLink still re-derives the kind from the live suggestion
+// list and refuses when it no longer matches, so a stale or crafted kind can
+// shift nothing it persists.
 export const confirmLinkFormSchema = z.object({
   debitTransactionId: idSchema,
   creditTransactionId: idSchema,
@@ -209,8 +209,7 @@ const transactionIdListSchema = z
 // The displayed pairs travel as two same-length lists (a form field only
 // ever carries a flat list of strings); confirmAllLinks zips them back into
 // pairs and confirms only their intersection with the live suggestion list
-// for that kind, never the whole list the server happens to hold (review
-// round 1, finding 2).
+// for that kind, never the whole list the server happens to hold.
 export const confirmAllLinksFormSchema = z
   .object({
     kind: linkKindSchema,

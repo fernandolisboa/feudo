@@ -110,9 +110,9 @@ describe("suggestLinks property tests", () => {
   });
 
   // occurredAt is randomly null in baseTransactionArb, so this also covers
-  // links.test.ts's reviewer-reported shape: a known date gap competing with
-  // an unknown one must not make compareEdges intransitive, which would make
-  // the result depend on the order the input happened to arrive in.
+  // the case where a known date gap competes with an unknown one: that must
+  // not make compareEdges intransitive, which would make the result depend
+  // on the order the input happened to arrive in.
   it("is independent of the input order even when some candidates have no occurredAt", () => {
     fc.assert(
       fc.property(

@@ -139,11 +139,10 @@ function resolveTransaction(
     };
   }
 
-  // Checked before the false-mark branch below (review round 1, finding
-  // B2): a mark of false only says "do not pair this as an internal
-  // transfer," not "never force this into transfer." A confirmed offset
-  // link still wins for a leg marked false, so only a mark of true (above)
-  // outranks it.
+  // Checked before the false-mark branch below: a mark of false only says
+  // "do not pair this as an internal transfer," not "never force this into
+  // transfer." A confirmed offset link still wins for a leg marked false,
+  // so only a mark of true (above) outranks it.
   if (link !== null && link.kind === "offset") {
     return {
       id: transaction.id,

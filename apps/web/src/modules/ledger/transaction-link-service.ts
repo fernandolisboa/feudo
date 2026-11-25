@@ -65,11 +65,10 @@ export async function confirmLink(
 // the pairs the member actually saw (the displayed pair ids the form
 // posted) are confirmed, each intersected against the live suggestion list
 // for that kind first, so a pair that arrived after the member looked never
-// rides along (review round 1, finding 2). Each surviving pair goes through
-// the same repository re-check as a single confirm. "ok" once at least one
-// lands; nothing left to confirm (the list moved under the member, or they
-// double-pressed) refuses with "not_found" rather than silently doing
-// nothing.
+// rides along. Each surviving pair goes through the same repository
+// re-check as a single confirm. "ok" once at least one lands; nothing left
+// to confirm (the list moved under the member, or they double-pressed)
+// refuses with "not_found" rather than silently doing nothing.
 export async function confirmAllLinks(
   input: ConfirmAllLinksFormInput,
   session: HouseholdSession,
