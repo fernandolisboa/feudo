@@ -68,9 +68,9 @@ export type AiResult =
   | { status: AiFailure; model: string | null; usage: AiUsage | null };
 
 // Exactly what the ADR approved, nothing else: one group's index, direction,
-// absolute amount and sanitized description, plus the taxonomy it may answer
-// from (prompts/category-suggester-v1.ts renders both into the prompt; the
-// fake client reads this same object instead of parsing its own output).
+// absolute amount and raw description, plus the taxonomy it may answer from.
+// The description is sanitized only when rendered into the prompt
+// (prompts/category-suggester-v1.ts), never here.
 export type CategorySuggestionPromptItem = {
   index: number;
   type: TransactionDirection;
