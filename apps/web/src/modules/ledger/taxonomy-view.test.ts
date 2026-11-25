@@ -21,6 +21,7 @@ describe("buildTaxonomyView", () => {
       t.subcategories["housing.utilities"],
       t.subcategories["housing.property-tax"],
       t.subcategories["housing.repairs"],
+      t.subcategories["housing.domestic-services"],
       "Alarme",
       "Zelador",
     ]);
