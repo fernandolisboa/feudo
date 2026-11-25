@@ -45,17 +45,17 @@ export async function requestAnalysisAction(): Promise<ActionState> {
       return { status: "error", message: t.outcomes.failed };
     case "quota_exhausted":
       return {
-        status: "error",
+        status: "info",
         message: interpolate(t.outcomes.exhausted, "{limit}", String(ON_DEMAND_ANALYSES_PER_DAY)),
       };
     case "in_progress":
-      return { status: "error", message: t.outcomes.inProgress };
+      return { status: "info", message: t.outcomes.inProgress };
     case "no_accounts":
-      return { status: "error", message: t.outcomes.noAccounts };
+      return { status: "info", message: t.outcomes.noAccounts };
     case "disabled":
-      return { status: "error", message: t.outcomes.disabled };
+      return { status: "info", message: t.outcomes.disabled };
     case "no_time":
-      return { status: "error", message: t.outcomes.noTime };
+      return { status: "info", message: t.outcomes.noTime };
   }
 }
 
@@ -82,20 +82,20 @@ export async function requestCategorySuggestionsAction(): Promise<ActionState> {
       revalidatePath("/categorizar");
       return { status: "error", message: t.categorySuggestions.outcomes.failed };
     case "nothing_to_suggest":
-      return { status: "error", message: t.categorySuggestions.outcomes.nothingToSuggest };
+      return { status: "info", message: t.categorySuggestions.outcomes.nothingToSuggest };
     case "quota_exhausted":
       return {
-        status: "error",
+        status: "info",
         message: interpolateAll(t.categorySuggestions.outcomes.exhausted, {
           limit: String(CATEGORY_SUGGESTION_RUNS_PER_DAY),
         }),
       };
     case "in_progress":
-      return { status: "error", message: t.categorySuggestions.outcomes.inProgress };
+      return { status: "info", message: t.categorySuggestions.outcomes.inProgress };
     case "disabled":
-      return { status: "error", message: t.categorySuggestions.outcomes.disabled };
+      return { status: "info", message: t.categorySuggestions.outcomes.disabled };
     case "no_time":
-      return { status: "error", message: t.categorySuggestions.outcomes.noTime };
+      return { status: "info", message: t.categorySuggestions.outcomes.noTime };
   }
 }
 

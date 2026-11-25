@@ -22,7 +22,7 @@ import {
 
 // The category-suggestions Server Action's own budget (ADR-0014): kept equal
 // to CATEGORY_SUGGESTION_BUDGET_MS so a press always has the full window this
-// page promises it (pinned by page.test.ts).
+// page promises it (pinned by page-route-config.test.ts).
 export const maxDuration = 60;
 
 async function GuidedCategorizationContent({

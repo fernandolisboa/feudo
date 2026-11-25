@@ -91,7 +91,7 @@ const en = {
     },
     monthlyFamilyLabel: "Monthly reading",
     onDemandFamilyLabel: 'On-demand reading ("Gerar nova leitura")',
-    categorySuggestionFamilyLabel: 'Category suggestions ("Sugerir categorias com IA")',
+    categorySuggestionFamilyLabel: "Category suggestions",
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Save",
     viewerNote: "Only an owner or admin can change these.",
@@ -116,6 +116,7 @@ const en = {
     pendingOne: "1 transaction without a suggestion.",
     pendingMany: "{count} transactions without a suggestion.",
     remaining: "{remaining} of {limit} requests left today",
+    remainingOne: "1 of {limit} requests left today",
     outcomes: {
       okOne: "1 suggestion ready. Check it before saving.",
       okMany: "{count} suggestions ready. Check each one before saving.",
@@ -224,7 +225,7 @@ const ptBR = {
     },
     monthlyFamilyLabel: "Leitura mensal",
     onDemandFamilyLabel: 'Leitura sob demanda ("Gerar nova leitura")',
-    categorySuggestionFamilyLabel: 'Sugestões de categoria ("Sugerir categorias com IA")',
+    categorySuggestionFamilyLabel: "Sugestões de categoria",
     familyNames: { haiku: "Haiku", sonnet: "Sonnet", opus: "Opus" },
     save: "Salvar",
     viewerNote: "Só um responsável ou administrador pode alterar isto.",
@@ -249,6 +250,7 @@ const ptBR = {
     pendingOne: "1 transação sem sugestão.",
     pendingMany: "{count} transações sem sugestão.",
     remaining: "Restam {remaining} de {limit} pedidos hoje",
+    remainingOne: "Resta 1 de {limit} pedidos hoje",
     outcomes: {
       okOne: "1 sugestão pronta. Confira antes de salvar.",
       okMany: "{count} sugestões prontas. Confira cada uma antes de salvar.",

@@ -55,7 +55,13 @@ export function RequestAnalysisControl({
       {state.status === "idle" ? null : (
         <p
           role="status"
-          className={state.status === "error" ? "text-destructive text-[13px]" : "text-[13px]"}
+          className={
+            state.status === "error"
+              ? "text-destructive text-[13px]"
+              : state.status === "info"
+                ? "text-muted-foreground text-[13px]"
+                : "text-[13px]"
+          }
         >
           {state.message}
         </p>

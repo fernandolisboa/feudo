@@ -8,10 +8,8 @@ import { initialActionState } from "@/lib/action-state";
 import { interpolateAll } from "@/lib/interpolate";
 
 import { requestCategorySuggestionsAction } from "../actions";
-import {
-  CATEGORY_SUGGESTION_MAX_GROUPS,
-  type SuggestCategoriesButtonProps,
-} from "../category-suggestions";
+import { CATEGORY_SUGGESTION_MAX_GROUPS } from "../category-suggestion-limits";
+import type { SuggestCategoriesButtonProps } from "../category-suggestions";
 import { t } from "../strings";
 
 function pendingText(pendingCount: number): string {
@@ -21,6 +19,9 @@ function pendingText(pendingCount: number): string {
 }
 
 function quotaText(remaining: number, limit: number): string {
+  if (remaining === 1) {
+    return interpolateAll(t.categorySuggestions.remainingOne, { limit: String(limit) });
+  }
   return interpolateAll(t.categorySuggestions.remaining, {
     remaining: String(remaining),
     limit: String(limit),
@@ -39,28 +40,34 @@ export function SuggestCategoriesButton({
 
   return (
     <div className="flex flex-col gap-1.5 border-b pb-4">
-      <p className="text-sm">{pendingText(pendingCount)}</p>
+      <p className="text-sm">
+        <span className="tabular-nums">{pendingText(pendingCount)}</span>{" "}
+        <span className="text-muted-foreground tabular-nums">{quotaText(remaining, limit)}</span>
+      </p>
       <p className="text-muted-foreground text-xs">
         {interpolateAll(t.categorySuggestions.disclosure, {
           limit: String(CATEGORY_SUGGESTION_MAX_GROUPS),
         })}
       </p>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-[13px]">{quotaText(remaining, limit)}</p>
-        <form action={formAction}>
-          <Button type="submit" variant="outline" disabled={isPending || remaining === 0}>
-            <Sparkles
-              aria-hidden
-              className={isPending ? "size-4 animate-pulse motion-reduce:animate-none" : "size-4"}
-            />
-            {isPending ? t.categorySuggestions.pending : t.categorySuggestions.button}
-          </Button>
-        </form>
-      </div>
+      <form action={formAction}>
+        <Button type="submit" variant="outline" disabled={isPending || remaining === 0}>
+          <Sparkles
+            aria-hidden
+            className={isPending ? "size-4 animate-pulse motion-reduce:animate-none" : "size-4"}
+          />
+          {isPending ? t.categorySuggestions.pending : t.categorySuggestions.button}
+        </Button>
+      </form>
       {state.status === "idle" ? null : (
         <p
           role="status"
-          className={state.status === "error" ? "text-destructive text-[13px]" : "text-[13px]"}
+          className={
+            state.status === "error"
+              ? "text-destructive text-[13px]"
+              : state.status === "info"
+                ? "text-muted-foreground text-[13px]"
+                : "text-[13px]"
+          }
         >
           {state.message}
         </p>
