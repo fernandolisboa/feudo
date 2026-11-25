@@ -98,6 +98,14 @@ export type { CounterpartType } from "./ledger/transfers/pairing";
 export { pairingReadRange } from "./ledger/transfers/pairing";
 
 export type {
+  DismissedLinkPair,
+  LinkableTransaction,
+  TransactionLink,
+  TransactionLinkKind,
+} from "./ledger/transfers/links";
+export { suggestLinks } from "./ledger/transfers/links";
+
+export type {
   InternalTransfer,
   LedgerAccountType,
   LedgerContext,
