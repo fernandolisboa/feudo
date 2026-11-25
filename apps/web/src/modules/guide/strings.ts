@@ -383,7 +383,7 @@ const ptBR = {
         },
         {
           title: "Vincular duas transações da mesma conta",
-          body: "Quando um resgate só existe para pagar uma conta momentos depois, ou uma entrada e uma saída do mesmo valor no mesmo dia se anulam, o Feudo sugere vincular as duas na aba Vínculos de Categorizar: ele nunca vincula por conta própria. Uma anula a outra transforma as duas em repasse, que não conta como renda nem como gasto. A entrada cobriu este pagamento só anota as duas; a categoria de nenhuma delas muda. Uma transação vinculada mostra um pequeno ícone ao lado da descrição; abra-a para ver a outra ponta ou desfazer o vínculo.",
+          body: "Quando um resgate só existe para pagar uma conta momentos depois, ou uma entrada e uma saída do mesmo valor no mesmo dia se anulam, o Feudo sugere vincular as duas na aba Vínculos de Categorizar: ele nunca vincula por conta própria. Com “Uma anula a outra”, as duas viram repasse e deixam de contar como renda ou como gasto. Com “A entrada cobriu este pagamento”, o Feudo só anota a ligação entre elas e nenhuma categoria muda. Uma transação vinculada mostra um pequeno ícone ao lado da descrição; abra-a para ver a outra ponta ou desfazer o vínculo.",
         },
         {
           title: "Cartão de crédito",
