@@ -51,6 +51,33 @@ const dismissedArb: fc.Arbitrary<{ debitTransactionId: string; creditTransaction
     { maxLength: 6 },
   );
 
+// Every transaction shares one bucket (account, day, currency, amount), so
+// every debit is a candidate edge against every credit: the densest case for
+// compareEdges, where a known date gap most often competes with an unknown
+// one for the same transaction.
+const sameBucketTransactionsArb: fc.Arbitrary<LinkableTransaction[]> = fc
+  .array(
+    fc.record({
+      occurredAt: occurredAtArb,
+      type: fc.constantFrom<TransactionDirection>("credit", "debit"),
+      kind: fc.constantFrom(...KINDS),
+      subcategory: subcategoryArb,
+      isInternalTransfer: fc.boolean(),
+      isLinked: fc.boolean(),
+    }),
+    { minLength: 2, maxLength: 8 },
+  )
+  .map((items) =>
+    items.map((item, index) => ({
+      ...item,
+      id: `t${String(index)}`,
+      accountId: "acc-1",
+      date: "2026-09-25",
+      amountCentavos: 5000,
+      currency: "BRL",
+    })),
+  );
+
 function sameSubcategory(a: SubcategoryRef | null, b: SubcategoryRef | null): boolean {
   if (a === null || b === null) return false;
   return a.type === b.type && a.id === b.id;
@@ -79,6 +106,35 @@ describe("suggestLinks property tests", () => {
         const reversed = suggestLinks([...transactions].reverse(), dismissed);
         expect(reversed).toEqual(forward);
       }),
+    );
+  });
+
+  // occurredAt is randomly null in baseTransactionArb, so this also covers
+  // links.test.ts's reviewer-reported shape: a known date gap competing with
+  // an unknown one must not make compareEdges intransitive, which would make
+  // the result depend on the order the input happened to arrive in.
+  it("is independent of the input order even when some candidates have no occurredAt", () => {
+    fc.assert(
+      fc.property(
+        sameBucketTransactionsArb.chain((transactions) =>
+          fc.tuple(
+            fc.constant(transactions),
+            fc.shuffledSubarray(transactions, {
+              minLength: transactions.length,
+              maxLength: transactions.length,
+            }),
+          ),
+        ),
+        dismissedArb,
+        ([transactions, shuffled], dismissed) => {
+          const original = suggestLinks(transactions, dismissed);
+          const reshuffled = suggestLinks(shuffled, dismissed);
+          expect(new Set(reshuffled.map((link) => JSON.stringify(link)))).toEqual(
+            new Set(original.map((link) => JSON.stringify(link))),
+          );
+        },
+      ),
+      { numRuns: 500 },
     );
   });
 

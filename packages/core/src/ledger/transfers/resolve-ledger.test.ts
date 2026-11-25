@@ -390,6 +390,91 @@ describe("resolveLedger precedence", () => {
     expect(resolvedDebit?.link).toEqual({ counterpartId: "c1", kind: "offset" });
   });
 
+  it("lets a confirmed offset link win over a false internal-transfer mark on the debit leg", () => {
+    const debit = transaction({
+      id: "d1",
+      accountId: "checking-1",
+      type: "debit",
+      transferMark: false,
+    });
+    const credit = transaction({ id: "c1", accountId: "checking-1", type: "credit" });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit],
+      context({ links: [link()] }),
+    );
+    expect(resolvedDebit).toEqual({
+      id: "d1",
+      categorization: {
+        subcategory: { type: "product", id: "transfers.pass-through" },
+        source: "link",
+        ruleId: null,
+      },
+      kind: "transfer",
+      internalTransfer: null,
+      link: { counterpartId: "c1", kind: "offset" },
+    });
+    expect(resolvedCredit?.kind).toBe("transfer");
+    expect(resolvedCredit?.link).toEqual({ counterpartId: "d1", kind: "offset" });
+  });
+
+  it("lets a confirmed offset link win over a false internal-transfer mark on the credit leg", () => {
+    const debit = transaction({ id: "d1", accountId: "checking-1", type: "debit" });
+    const credit = transaction({
+      id: "c1",
+      accountId: "checking-1",
+      type: "credit",
+      transferMark: false,
+    });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit],
+      context({ links: [link()] }),
+    );
+    expect(resolvedCredit).toEqual({
+      id: "c1",
+      categorization: {
+        subcategory: { type: "product", id: "transfers.pass-through" },
+        source: "link",
+        ruleId: null,
+      },
+      kind: "transfer",
+      internalTransfer: null,
+      link: { counterpartId: "d1", kind: "offset" },
+    });
+    expect(resolvedDebit?.kind).toBe("transfer");
+    expect(resolvedDebit?.link).toEqual({ counterpartId: "c1", kind: "offset" });
+  });
+
+  it("lets a confirmed offset link win over a false internal-transfer mark on both legs", () => {
+    const debit = transaction({
+      id: "d1",
+      accountId: "checking-1",
+      type: "debit",
+      transferMark: false,
+    });
+    const credit = transaction({
+      id: "c1",
+      accountId: "checking-1",
+      type: "credit",
+      transferMark: false,
+    });
+    const [resolvedDebit, resolvedCredit] = resolveLedger(
+      [debit, credit],
+      context({ links: [link()] }),
+    );
+    expect(resolvedDebit?.categorization).toEqual({
+      subcategory: { type: "product", id: "transfers.pass-through" },
+      source: "link",
+      ruleId: null,
+    });
+    expect(resolvedCredit?.categorization).toEqual({
+      subcategory: { type: "product", id: "transfers.pass-through" },
+      source: "link",
+      ruleId: null,
+    });
+    expect(resolvedDebit?.kind).toBe("transfer");
+    expect(resolvedCredit?.kind).toBe("transfer");
+  });
+
   it("ignores a link whose two transactions are not both present in the input", () => {
     const debit = transaction({ id: "d1", accountId: "checking-1", type: "debit" });
     const [resolvedDebit] = resolveLedger([debit], context({ links: [link()] }));
